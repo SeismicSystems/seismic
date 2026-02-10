@@ -4,10 +4,14 @@ Thumbs.db
 
 # Editors
 .idea/
-.vscode/
 *.swp
 *.swo
 *~
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/seismic.code-workspace
 
 # Node (future)
 node_modules/

@@ -24,6 +24,30 @@ See [docs/glossary.md](docs/glossary.md) for full definitions. Quick summary:
 
 When working in a specific repo, also check that repo's README and CLAUDE.md, as well as anything under that repo's `docs/seismic` directory.
 
+## Workspace Layout
+
+All repos live as siblings under a common parent directory. Open `.vscode/seismic.code-workspace` in VS Code for full multi-repo navigation.
+
+```
+seismic/                          # parent directory
+├── seismic/                      # this monorepo (docs, scripts, workspace file)
+├── seismic-reth/                 # execution client (fork of reth)
+├── seismic-foundry/              # dev tools: sforge, sanvil, scast (fork of foundry)
+├── seismic-revm/                 # Mercury EVM (fork of revm)
+├── seismic-evm/                  # block execution layer (fork of alloy-evm)
+├── seismic-alloy/                # Rust SDK: TxSeismic, providers
+├── seismic-alloy-core/           # primitives: FlaggedStorage, shielded types (fork of alloy-core)
+├── seismic-trie/                 # Merkle trie for FlaggedStorage (fork of alloy-trie)
+├── seismic-revm-inspectors/      # EVM tracing (fork of revm-inspectors)
+├── seismic-compilers/            # compiler integration for sforge (fork of foundry-compilers)
+├── seismic-foundry-fork-db/      # fork DB with FlaggedStorage (fork of foundry-fork-db)
+├── seismic-solidity/             # Solidity compiler with shielded types (fork of solidity)
+├── seismic-client/               # TypeScript SDK (Viem + Wagmi)
+└── seismic-contracts/            # Solidity contracts
+```
+
+When working with Claude Code, this monorepo is the primary working directory. Sibling repos are accessible at `../seismic-reth`, `../seismic-revm`, etc.
+
 ## Working Across Repos
 
 - **Building**: All Rust repos use `cargo build`. seismic-reth and seismic-foundry produce binaries (`seismic-reth`, `sforge`, `sanvil`, `scast`).
