@@ -1,0 +1,2 @@
+# seismic
+Seismic Monorepo
