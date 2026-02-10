@@ -1,0 +1,47 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../seismic-reth"
+		},
+		{
+			"path": "../../seismic-foundry"
+		},
+		{
+			"path": "../../seismic-revm"
+		},
+		{
+			"path": "../../seismic-evm"
+		},
+		{
+			"path": "../../seismic-alloy"
+		},
+		{
+			"path": "../../seismic-alloy-core"
+		},
+		{
+			"path": "../../seismic-trie"
+		},
+		{
+			"path": "../../seismic-revm-inspectors"
+		},
+		{
+			"path": "../../seismic-compilers"
+		},
+		{
+			"path": "../../seismic-foundry-fork-db"
+		},
+		{
+			"path": "../../seismic-solidity"
+		},
+		{
+			"path": "../../seismic-client"
+		},
+		{
+			"path": "../../seismic-contracts"
+		}
+	],
+	"settings": {}
+}
