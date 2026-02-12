@@ -1,3 +1,6 @@
+# Claude Code
+.claude/plan.md
+
 # OS
 .DS_Store
 Thumbs.db
@@ -9,7 +12,7 @@ Thumbs.db
 *~
 
 # VS Code
-.vscode/*
+.vscode/**
 !.vscode/settings.json
 !.vscode/seismic.code-workspace
 
