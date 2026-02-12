@@ -1,13 +1,11 @@
 {
 	"folders": [
 		{
-			"path": ".."
+			"path": "..",
+			"name": "seismic (monorepo)"
 		},
 		{
 			"path": "../../seismic-reth"
-		},
-		{
-			"path": "../../seismic-foundry"
 		},
 		{
 			"path": "../../seismic-revm"
@@ -29,6 +27,9 @@
 		},
 		{
 			"path": "../../seismic-compilers"
+		},
+		{
+			"path": "../../seismic-foundry"
 		},
 		{
 			"path": "../../seismic-foundry-fork-db"
