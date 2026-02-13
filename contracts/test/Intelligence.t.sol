@@ -38,15 +38,12 @@ contract IntelligenceTest is Test {
         bobKey = suint256(directory.getKey());
     }
 
-    function extractCT(
-        bytes memory _encryptedData
-    ) internal view returns (bytes memory ct) {
-        (ct, ) = directory.parseEncryptedData(_encryptedData);
+    function extractCT(bytes memory _encryptedData) internal view returns (bytes memory ct) {
+        (ct,) = directory.parseEncryptedData(_encryptedData);
     }
 
     function testEncryptToProviders() public {
-        (bytes32[] memory hashes, bytes[] memory encryptedData) = intelligence
-            .encryptToProviders(sampleMsg);
+        (bytes32[] memory hashes, bytes[] memory encryptedData) = intelligence.encryptToProviders(sampleMsg);
 
         bytes[] memory directCiphertext = new bytes[](2);
         directCiphertext[0] = AesLib.AES256GCMEncrypt(aliceKey, 0, sampleMsg);
@@ -71,13 +68,8 @@ contract IntelligenceTest is Test {
         vm.prank(intelligence.owner());
         intelligence.addProvider(charlie);
 
-        (bytes32[] memory hashes, bytes[] memory encryptedData) = intelligence
-            .encryptToProviders(sampleMsg);
-        bytes memory directCiphertext = AesLib.AES256GCMEncrypt(
-            charlieKey,
-            2,
-            sampleMsg
-        );
+        (bytes32[] memory hashes, bytes[] memory encryptedData) = intelligence.encryptToProviders(sampleMsg);
+        bytes memory directCiphertext = AesLib.AES256GCMEncrypt(charlieKey, 2, sampleMsg);
 
         assertEq(intelligence.numProviders(), 3);
         assertEq(extractCT(encryptedData[2]), directCiphertext);
@@ -93,16 +85,11 @@ contract IntelligenceTest is Test {
         intelligence.removeProvider(alice);
         assertEq(intelligence.numProviders(), 1);
 
-        (bytes32[] memory hashes, bytes[] memory encryptedData) = intelligence
-            .encryptToProviders(sampleMsg);
+        (bytes32[] memory hashes, bytes[] memory encryptedData) = intelligence.encryptToProviders(sampleMsg);
         assertEq(hashes.length, 1);
         assertEq(encryptedData.length, 1);
 
-        bytes memory directCiphertext = AesLib.AES256GCMEncrypt(
-            bobKey,
-            0,
-            sampleMsg
-        );
+        bytes memory directCiphertext = AesLib.AES256GCMEncrypt(bobKey, 0, sampleMsg);
         assertEq(extractCT(encryptedData[0]), directCiphertext);
 
         bytes32 h = directory.keyHash(bob);

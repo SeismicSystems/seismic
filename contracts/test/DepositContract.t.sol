@@ -9,10 +9,13 @@ contract DepositContractTest is Test {
 
     // Test data - valid lengths
     bytes constant NODE_PUBKEY = hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 32 bytes
-    bytes constant CONSENSUS_PUBKEY = hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 48 bytes
+    bytes constant CONSENSUS_PUBKEY =
+        hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 48 bytes
     bytes constant WITHDRAWAL_CREDENTIALS = hex"0100000000000000000000001234567890abcdef1234567890abcdef12345678"; // 32 bytes
-    bytes constant NODE_SIGNATURE = hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 64 bytes
-    bytes constant CONSENSUS_SIGNATURE = hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 96 bytes
+    bytes constant NODE_SIGNATURE =
+        hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 64 bytes
+    bytes constant CONSENSUS_SIGNATURE =
+        hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 96 bytes
 
     event DepositEvent(
         bytes node_pubkey,
@@ -45,23 +48,24 @@ contract DepositContractTest is Test {
 
         bytes memory consensus_sig_first = new bytes(64);
         bytes memory consensus_sig_second = new bytes(32);
-        for (uint i = 0; i < 64; i++) {
+        for (uint256 i = 0; i < 64; i++) {
             consensus_sig_first[i] = consensus_signature[i];
         }
-        for (uint i = 0; i < 32; i++) {
+        for (uint256 i = 0; i < 32; i++) {
             consensus_sig_second[i] = consensus_signature[64 + i];
         }
 
-        bytes32 consensus_signature_hash = sha256(abi.encodePacked(
-            sha256(consensus_sig_first),
-            sha256(abi.encodePacked(consensus_sig_second, bytes32(0)))
-        ));
+        bytes32 consensus_signature_hash = sha256(
+            abi.encodePacked(sha256(consensus_sig_first), sha256(abi.encodePacked(consensus_sig_second, bytes32(0))))
+        );
         bytes32 signature_root = sha256(abi.encodePacked(node_signature_hash, consensus_signature_hash));
 
-        return sha256(abi.encodePacked(
-            sha256(abi.encodePacked(pubkey_root, withdrawal_credentials)),
-            sha256(abi.encodePacked(amountBytes, bytes24(0), signature_root))
-        ));
+        return sha256(
+            abi.encodePacked(
+                sha256(abi.encodePacked(pubkey_root, withdrawal_credentials)),
+                sha256(abi.encodePacked(amountBytes, bytes24(0), signature_root))
+            )
+        );
     }
 
     function to_little_endian_64(uint64 value) internal pure returns (bytes memory ret) {
@@ -84,12 +88,7 @@ contract DepositContractTest is Test {
         uint64 amountInGwei = uint64(depositAmount / 1 gwei);
 
         bytes32 depositDataRoot = computeDepositDataRoot(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            amountInGwei
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, amountInGwei
         );
 
         vm.expectEmit(true, true, true, true);
@@ -104,12 +103,7 @@ contract DepositContractTest is Test {
         );
 
         depositContract.deposit{value: depositAmount}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            depositDataRoot
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, depositDataRoot
         );
 
         // Verify deposit count
@@ -123,21 +117,11 @@ contract DepositContractTest is Test {
         uint64 amountInGwei = uint64(depositAmount / 1 gwei);
 
         bytes32 depositDataRoot = computeDepositDataRoot(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            amountInGwei
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, amountInGwei
         );
 
         depositContract.deposit{value: depositAmount}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            depositDataRoot
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, depositDataRoot
         );
 
         bytes memory countBytes = depositContract.get_deposit_count();
@@ -149,32 +133,17 @@ contract DepositContractTest is Test {
         uint64 amountInGwei = uint64(depositAmount / 1 gwei);
 
         bytes32 depositDataRoot = computeDepositDataRoot(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            amountInGwei
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, amountInGwei
         );
 
         // First deposit
         depositContract.deposit{value: depositAmount}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            depositDataRoot
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, depositDataRoot
         );
 
         // Second deposit (same data is allowed)
         depositContract.deposit{value: depositAmount}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            depositDataRoot
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, depositDataRoot
         );
 
         // Verify deposit count is 2
@@ -189,26 +158,17 @@ contract DepositContractTest is Test {
 
         vm.expectRevert("DepositContract: invalid node_pubkey length");
         depositContract.deposit{value: 32 ether}(
-            shortNodePubkey,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            shortNodePubkey, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
     function test_RevertWhen_NodePubkeyTooLong() public {
-        bytes memory longNodePubkey = hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 40 bytes
+        bytes memory longNodePubkey =
+            hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 40 bytes
 
         vm.expectRevert("DepositContract: invalid node_pubkey length");
         depositContract.deposit{value: 32 ether}(
-            longNodePubkey,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            longNodePubkey, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
@@ -217,26 +177,17 @@ contract DepositContractTest is Test {
 
         vm.expectRevert("DepositContract: invalid consensus_pubkey length");
         depositContract.deposit{value: 32 ether}(
-            NODE_PUBKEY,
-            shortConsensusPubkey,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, shortConsensusPubkey, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
     function test_RevertWhen_ConsensusPubkeyTooLong() public {
-        bytes memory longConsensusPubkey = hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 64 bytes
+        bytes memory longConsensusPubkey =
+            hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 64 bytes
 
         vm.expectRevert("DepositContract: invalid consensus_pubkey length");
         depositContract.deposit{value: 32 ether}(
-            NODE_PUBKEY,
-            longConsensusPubkey,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, longConsensusPubkey, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
@@ -245,12 +196,7 @@ contract DepositContractTest is Test {
 
         vm.expectRevert("DepositContract: invalid withdrawal_credentials length");
         depositContract.deposit{value: 32 ether}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            shortCredentials,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, CONSENSUS_PUBKEY, shortCredentials, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
@@ -260,12 +206,7 @@ contract DepositContractTest is Test {
 
         vm.expectRevert("DepositContract: invalid withdrawal_credentials prefix");
         depositContract.deposit{value: 32 ether}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            invalidPrefixCredentials,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, CONSENSUS_PUBKEY, invalidPrefixCredentials, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
@@ -275,12 +216,7 @@ contract DepositContractTest is Test {
 
         vm.expectRevert("DepositContract: invalid withdrawal_credentials prefix");
         depositContract.deposit{value: 32 ether}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            invalidPrefixCredentials,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, CONSENSUS_PUBKEY, invalidPrefixCredentials, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
@@ -290,12 +226,7 @@ contract DepositContractTest is Test {
 
         vm.expectRevert("DepositContract: invalid withdrawal_credentials padding");
         depositContract.deposit{value: 32 ether}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            invalidPaddingCredentials,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, CONSENSUS_PUBKEY, invalidPaddingCredentials, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
@@ -305,12 +236,7 @@ contract DepositContractTest is Test {
 
         vm.expectRevert("DepositContract: invalid withdrawal_credentials padding");
         depositContract.deposit{value: 32 ether}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            invalidPaddingCredentials,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, CONSENSUS_PUBKEY, invalidPaddingCredentials, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
@@ -319,26 +245,17 @@ contract DepositContractTest is Test {
 
         vm.expectRevert("DepositContract: invalid node_signature length");
         depositContract.deposit{value: 32 ether}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            shortNodeSig,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, shortNodeSig, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
     function test_RevertWhen_ConsensusSignatureTooShort() public {
-        bytes memory shortConsensusSig = hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 64 bytes instead of 96
+        bytes memory shortConsensusSig =
+            hex"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"; // 64 bytes instead of 96
 
         vm.expectRevert("DepositContract: invalid consensus_signature length");
         depositContract.deposit{value: 32 ether}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            shortConsensusSig,
-            bytes32(0)
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, shortConsensusSig, bytes32(0)
         );
     }
 
@@ -347,36 +264,21 @@ contract DepositContractTest is Test {
     function test_RevertWhen_DepositTooLow() public {
         vm.expectRevert("DepositContract: deposit value too low");
         depositContract.deposit{value: 0.5 ether}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
     function test_RevertWhen_DepositZero() public {
         vm.expectRevert("DepositContract: deposit value too low");
         depositContract.deposit{value: 0}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
     function test_RevertWhen_DepositNotGweiMultiple() public {
         vm.expectRevert("DepositContract: deposit value not multiple of gwei");
         depositContract.deposit{value: 1 ether + 1 wei}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
@@ -387,12 +289,7 @@ contract DepositContractTest is Test {
 
         vm.expectRevert("DepositContract: reconstructed DepositData does not match supplied deposit_data_root");
         depositContract.deposit{value: 32 ether}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            wrongRoot
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, wrongRoot
         );
     }
 
@@ -424,7 +321,7 @@ contract DepositContractTest is Test {
         bytes memory countBytes = depositContract.get_deposit_count();
         assertEq(countBytes.length, 8);
         // All bytes should be 0 for count of 0
-        for (uint i = 0; i < 8; i++) {
+        for (uint256 i = 0; i < 8; i++) {
             assertEq(countBytes[i], bytes1(0x00));
         }
     }
@@ -436,21 +333,11 @@ contract DepositContractTest is Test {
         uint64 amountInGwei = uint64(depositAmount / 1 gwei);
 
         bytes32 depositDataRoot = computeDepositDataRoot(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            amountInGwei
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, amountInGwei
         );
 
         depositContract.deposit{value: depositAmount}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            depositDataRoot
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, depositDataRoot
         );
 
         bytes32 newRoot = depositContract.get_deposit_root();
@@ -465,12 +352,7 @@ contract DepositContractTest is Test {
 
         vm.expectRevert("DepositContract: deposit value too low");
         depositContract.deposit{value: amount}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            bytes32(0)
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, bytes32(0)
         );
     }
 
@@ -481,22 +363,12 @@ contract DepositContractTest is Test {
         uint256 depositAmount = uint256(gweiAmount) * 1 gwei;
 
         bytes32 depositDataRoot = computeDepositDataRoot(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            gweiAmount
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, gweiAmount
         );
 
         vm.deal(address(this), depositAmount);
         depositContract.deposit{value: depositAmount}(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            depositDataRoot
+            NODE_PUBKEY, CONSENSUS_PUBKEY, WITHDRAWAL_CREDENTIALS, NODE_SIGNATURE, CONSENSUS_SIGNATURE, depositDataRoot
         );
 
         bytes memory countBytes = depositContract.get_deposit_count();

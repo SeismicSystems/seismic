@@ -78,7 +78,7 @@ contract ProtocolParamsTest is Test {
 
     function test_SetParamAtMaxLength() public {
         bytes memory maxValue = new bytes(100);
-        for (uint i = 0; i < 100; i++) {
+        for (uint256 i = 0; i < 100; i++) {
             maxValue[i] = bytes1(uint8(i));
         }
 
@@ -90,9 +90,7 @@ contract ProtocolParamsTest is Test {
     function test_RevertWhen_SetParamExceedsMaxLength() public {
         bytes memory tooLong = new bytes(101);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(ProtocolParams.ParamTooLarge.selector, 101, 100)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ProtocolParams.ParamTooLarge.selector, 101, 100));
         protocolParams.set_param(1, tooLong);
     }
 
@@ -247,9 +245,7 @@ contract ProtocolParamsTest is Test {
 
         bytes memory tooLong = new bytes(length);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(ProtocolParams.ParamTooLarge.selector, length, 100)
-        );
+        vm.expectRevert(abi.encodeWithSelector(ProtocolParams.ParamTooLarge.selector, length, 100));
         protocolParams.set_param(paramId, tooLong);
     }
 
