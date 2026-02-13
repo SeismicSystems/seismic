@@ -1,0 +1,306 @@
+{
+  "abi": [
+    {
+      "type": "function",
+      "name": "AES_DEC_PRECOMPILE",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "AES_ENC_PRECOMPILE",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "HKDF_PRECOMPILE",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "packEncryptedData",
+      "inputs": [
+        {
+          "name": "_ciphertext",
+          "type": "bytes",
+          "internalType": "bytes"
+        },
+        {
+          "name": "_nonce",
+          "type": "uint96",
+          "internalType": "uint96"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes",
+          "internalType": "bytes"
+        }
+      ],
+      "stateMutability": "pure"
+    },
+    {
+      "type": "function",
+      "name": "parseEncryptedData",
+      "inputs": [
+        {
+          "name": "_encryptedData",
+          "type": "bytes",
+          "internalType": "bytes"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "ciphertext",
+          "type": "bytes",
+          "internalType": "bytes"
+        },
+        {
+          "name": "nonce",
+          "type": "uint96",
+          "internalType": "uint96"
+        }
+      ],
+      "stateMutability": "pure"
+    },
+    {
+      "type": "error",
+      "name": "AESPrecompileCallFailed",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "HKDFPrecompileCallFailed",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidHKDFOutputLength",
+      "inputs": [
+        {
+          "name": "returnedLength",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ]
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234602057600e6024565b6108af61002f8239308150506108af90f35b602a565b60405190565b5f80fdfe60806040526004361015610013575b61049a565b61001d5f3561006c565b8063415028a914610067578063727c346d14610062578063ad28a8161461005d578063baefa307146100585763e8d6c79a0361000e5761046e565b6103db565b61036d565b6102ff565b610245565b60e01c90565b60405190565b5f80fd5b5f80fd5b5f80fd5b5f80fd5b601f801991011690565b634e487b7160e01b5f52604160045260245ffd5b906100b090610088565b810190811067ffffffffffffffff8211176100ca57604052565b610092565b906100e26100db610072565b92836100a6565b565b67ffffffffffffffff8111610102576100fe602091610088565b0190565b610092565b90825f939282370152565b90929192610127610122826100e4565b6100cf565b938185526020850190828401116101435761014192610107565b565b610084565b9080601f830112156101665781602061016393359101610112565b90565b610080565b6bffffffffffffffffffffffff1690565b6101858161016b565b0361018c57565b5f80fd5b9050359061019d8261017c565b565b91906040838203126101df575f8301359067ffffffffffffffff82116101da576101ce816101d7938601610148565b93602001610190565b90565b61007c565b610078565b5190565b60209181520190565b90825f9392825e0152565b61021b61022460209361022993610212816101e4565b938480936101e8565b958691016101f1565b610088565b0190565b6102429160208201915f8184039101526101fc565b90565b61026d61025c61025636600461019f565b90610513565b610264610072565b9182918261022d565b0390f35b5f91031261027b57565b610078565b90565b60018060a01b031690565b90565b6102a56102a06102aa92610280565b61028e565b610283565b90565b6102b690610291565b90565b6102c360686102ad565b90565b6102ce6102b9565b90565b6102da90610283565b90565b6102e6906102d1565b9052565b91906102fd905f602085019401906102dd565b565b61030a366004610271565b6103266103156102c6565b61031d610072565b918291826102ea565b0390f35b90565b61034161033c6103469261032a565b61028e565b610283565b90565b6103529061032d565b90565b61035f6067610349565b90565b61036a610355565b90565b610378366004610271565b610394610383610362565b61038b610072565b918291826102ea565b0390f35b90565b6103af6103aa6103b492610398565b61028e565b610283565b90565b6103c09061039b565b90565b6103cd60666103b7565b90565b6103d86103c3565b90565b6103e6366004610271565b6104026103f16103d0565b6103f9610072565b918291826102ea565b0390f35b90602082820312610436575f82013567ffffffffffffffff81116104315761042e9201610148565b90565b61007c565b610078565b6104449061016b565b9052565b9291602061046461046c9360408701908782035f8901526101fc565b94019061043b565b565b61048161047c366004610406565b610739565b9061049661048d610072565b92839283610448565b0390f35b5f80fd5b606090565b905090565b6104cd6104c4926020926104bb816101e4565b948580936104a3565b938491016101f1565b0190565b60a01b90565b6104e0906104d1565b90565b6104ef6104f49161016b565b6104d7565b9052565b61050861050f91600c94936104a8565b80926104e3565b0190565b6105469061051f61049e565b5061053761052b610072565b938492602084016104f8565b602082018103825203826100a6565b90565b5f90565b90565b90565b61056761056261056c9261054d565b61028e565b610550565b90565b634e487b7160e01b5f52601160045260245ffd5b61059261059891939293610550565b92610550565b82039182116105a357565b61056f565b906105ba6105b5836100e4565b6100cf565b918252565b369037565b906105e96105d1836105a8565b926020806105df86936100e4565b92019103906105bf565b565b90565b6106026105fd610607926105eb565b61028e565b610550565b90565b60016106169101610550565b90565b634e487b7160e01b5f52603260045260245ffd5b90610637826101e4565b81101561064957600160209102010190565b610619565b60ff60f81b1690565b610661905161064e565b90565b61067361067991939293610550565b92610550565b820180921161068457565b61056f565b60200190565b6bffffffffffffffffffffffff60a01b1690565b6106ad905161068f565b90565b1b90565b6106ce6106c96106c3836101e4565b92610689565b6106a3565b90600c81106106dc575b5090565b6106fc906bffffffffffffffffffffffff60a01b90600c036008026106b0565b165f6106d8565b60a01c90565b61071d6107186107229261016b565b61028e565b61016b565b90565b61073161073691610703565b610709565b90565b9061074261049e565b5061074b610549565b50610768610758836101e4565b610762600c610553565b90610583565b610771816105c4565b9061077b5f6105ee565b5b8061078f61078984610550565b91610550565b10156107c6576107c1906107ac6107a787839061062d565b610657565b6107bb859183905f1a9261062d565b5361060a565b61077c565b50926107da6107d5600c610553565b6105c4565b916107e45f6105ee565b5b806107f96107f3600c610553565b91610550565b101561083a576108359061082061081b856108158a8590610664565b9061062d565b610657565b61082f869183905f1a9261062d565b5361060a565b6107e5565b5093505061084a61084f916106b4565b610725565b9056fea2646970667358221220f9203a71c0b6a6da16bf7b2698301c72ec306733882bb85b4d6d1038767c731464736f6c637829302e382e33312d646576656c6f702e323032352e31312e31322b636f6d6d69742e3637366264656363005a",
+    "sourceMap": "470:5000:0:-:0;;;;;;;;:::i;:::-;;;;;;;;;;;;;;:::i;:::-;;;;:::o;:::-;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x60806040526004361015610013575b61049a565b61001d5f3561006c565b8063415028a914610067578063727c346d14610062578063ad28a8161461005d578063baefa307146100585763e8d6c79a0361000e5761046e565b6103db565b61036d565b6102ff565b610245565b60e01c90565b60405190565b5f80fd5b5f80fd5b5f80fd5b5f80fd5b601f801991011690565b634e487b7160e01b5f52604160045260245ffd5b906100b090610088565b810190811067ffffffffffffffff8211176100ca57604052565b610092565b906100e26100db610072565b92836100a6565b565b67ffffffffffffffff8111610102576100fe602091610088565b0190565b610092565b90825f939282370152565b90929192610127610122826100e4565b6100cf565b938185526020850190828401116101435761014192610107565b565b610084565b9080601f830112156101665781602061016393359101610112565b90565b610080565b6bffffffffffffffffffffffff1690565b6101858161016b565b0361018c57565b5f80fd5b9050359061019d8261017c565b565b91906040838203126101df575f8301359067ffffffffffffffff82116101da576101ce816101d7938601610148565b93602001610190565b90565b61007c565b610078565b5190565b60209181520190565b90825f9392825e0152565b61021b61022460209361022993610212816101e4565b938480936101e8565b958691016101f1565b610088565b0190565b6102429160208201915f8184039101526101fc565b90565b61026d61025c61025636600461019f565b90610513565b610264610072565b9182918261022d565b0390f35b5f91031261027b57565b610078565b90565b60018060a01b031690565b90565b6102a56102a06102aa92610280565b61028e565b610283565b90565b6102b690610291565b90565b6102c360686102ad565b90565b6102ce6102b9565b90565b6102da90610283565b90565b6102e6906102d1565b9052565b91906102fd905f602085019401906102dd565b565b61030a366004610271565b6103266103156102c6565b61031d610072565b918291826102ea565b0390f35b90565b61034161033c6103469261032a565b61028e565b610283565b90565b6103529061032d565b90565b61035f6067610349565b90565b61036a610355565b90565b610378366004610271565b610394610383610362565b61038b610072565b918291826102ea565b0390f35b90565b6103af6103aa6103b492610398565b61028e565b610283565b90565b6103c09061039b565b90565b6103cd60666103b7565b90565b6103d86103c3565b90565b6103e6366004610271565b6104026103f16103d0565b6103f9610072565b918291826102ea565b0390f35b90602082820312610436575f82013567ffffffffffffffff81116104315761042e9201610148565b90565b61007c565b610078565b6104449061016b565b9052565b9291602061046461046c9360408701908782035f8901526101fc565b94019061043b565b565b61048161047c366004610406565b610739565b9061049661048d610072565b92839283610448565b0390f35b5f80fd5b606090565b905090565b6104cd6104c4926020926104bb816101e4565b948580936104a3565b938491016101f1565b0190565b60a01b90565b6104e0906104d1565b90565b6104ef6104f49161016b565b6104d7565b9052565b61050861050f91600c94936104a8565b80926104e3565b0190565b6105469061051f61049e565b5061053761052b610072565b938492602084016104f8565b602082018103825203826100a6565b90565b5f90565b90565b90565b61056761056261056c9261054d565b61028e565b610550565b90565b634e487b7160e01b5f52601160045260245ffd5b61059261059891939293610550565b92610550565b82039182116105a357565b61056f565b906105ba6105b5836100e4565b6100cf565b918252565b369037565b906105e96105d1836105a8565b926020806105df86936100e4565b92019103906105bf565b565b90565b6106026105fd610607926105eb565b61028e565b610550565b90565b60016106169101610550565b90565b634e487b7160e01b5f52603260045260245ffd5b90610637826101e4565b81101561064957600160209102010190565b610619565b60ff60f81b1690565b610661905161064e565b90565b61067361067991939293610550565b92610550565b820180921161068457565b61056f565b60200190565b6bffffffffffffffffffffffff60a01b1690565b6106ad905161068f565b90565b1b90565b6106ce6106c96106c3836101e4565b92610689565b6106a3565b90600c81106106dc575b5090565b6106fc906bffffffffffffffffffffffff60a01b90600c036008026106b0565b165f6106d8565b60a01c90565b61071d6107186107229261016b565b61028e565b61016b565b90565b61073161073691610703565b610709565b90565b9061074261049e565b5061074b610549565b50610768610758836101e4565b610762600c610553565b90610583565b610771816105c4565b9061077b5f6105ee565b5b8061078f61078984610550565b91610550565b10156107c6576107c1906107ac6107a787839061062d565b610657565b6107bb859183905f1a9261062d565b5361060a565b61077c565b50926107da6107d5600c610553565b6105c4565b916107e45f6105ee565b5b806107f96107f3600c610553565b91610550565b101561083a576108359061082061081b856108158a8590610664565b9061062d565b610657565b61082f869183905f1a9261062d565b5361060a565b6107e5565b5093505061084a61084f916106b4565b610725565b9056fea2646970667358221220f9203a71c0b6a6da16bf7b2698301c72ec306733882bb85b4d6d1038767c731464736f6c637829302e382e33312d646576656c6f702e323032352e31312e31322b636f6d6d69742e3637366264656363005a",
+    "sourceMap": "470:5000:0:-:0;;;;;;;;;-1:-1:-1;470:5000:0;:::i;:::-;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::i;:::-;;;;:::o;:::-;;;;:::o;:::-;;;;;;;;;;;;;;;;;;;;;;;;:::o;:::-;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;:::o;:::-;;:::i;:::-;;;;;:::i;:::-;;;;:::i;:::-;:::o;:::-;;;;;;;;;;:::i;:::-;;;:::o;:::-;;:::i;:::-;;;;;;;;;;:::o;:::-;;;;;;;;;:::i;:::-;;:::i;:::-;;;;;;;;;;;;;;;;;;:::i;:::-;:::o;:::-;;:::i;:::-;;;;;;;;;;;;;;;;;;:::i;:::-;;:::o;:::-;;:::i;:::-;;;;:::o;:::-;;;;:::i;:::-;;;;:::o;:::-;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;:::i;:::-;;:::o;:::-;;:::i;:::-;;:::i;:::-;;;:::o;:::-;;;;;;;:::o;:::-;;;;;;;;;;:::o;:::-;;;;;;;;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::i;:::-;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;;;:::i;:::-;;:::o;:::-;;;;;;;:::i;:::-;;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;;;;;;:::o;:::-;;:::i;:::-;;:::o;:::-;;;;;;;;:::o;:::-;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;:::o;1096:55::-;1138:13;1146:4;1138:13;:::i;:::-;1096:55;:::o;:::-;;;:::i;:::-;;:::o;470:5000::-;;;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;:::i;:::-;;;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;:::o;939:58::-;984:13;992:4;984:13;:::i;:::-;939:58;:::o;:::-;;;:::i;:::-;;:::o;470:5000::-;;;;;:::i;:::-;;;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;:::o;787:58::-;832:13;840:4;832:13;:::i;:::-;787:58;:::o;:::-;;;:::i;:::-;;:::o;470:5000::-;;;;;:::i;:::-;;;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;:::o;:::-;;:::i;:::-;;:::i;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;:::i;:::-;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;;;;:::i;:::-;;;;;;:::i;:::-;;;;;;;;;;;:::o;:::-;;;;:::o;:::-;;;;;;;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::i;:::-;;;:::o;:::-;;;;:::o;:::-;;;;:::i;:::-;;:::o;:::-;;;;;:::i;:::-;;:::i;:::-;;;:::o;:::-;;;;;;;;:::i;:::-;;;;:::i;:::-;;;:::o;4728:164::-;4848:37;4728:164;4817:12;;:::i;:::-;4865:11;4848:37;;;:::i;:::-;;;;;;;;:::i;:::-;;;;;;;;;;;:::i;:::-;4841:44;:::o;470:5000::-;;;:::o;:::-;;:::o;:::-;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;:::i;:::-;;;;;;;;:::o;:::-;;:::i;:::-;;;;;;:::i;:::-;;:::i;:::-;;;;:::o;:::-;;;;:::o;:::-;;;;;;:::i;:::-;;;;;;;;:::i;:::-;;;;;;;:::i;:::-;:::o;:::-;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;;;:::i;:::-;;:::o;:::-;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;:::o;:::-;;:::i;:::-;;;;;;:::o;:::-;;;;;:::i;:::-;;:::o;:::-;;;;;;;;:::i;:::-;;;:::i;:::-;;;;;;;;:::o;:::-;;:::i;:::-;;;;:::o;:::-;;;;;;:::o;:::-;;;;;:::i;:::-;;:::o;:::-;;;:::o;:::-;;;;;;:::i;:::-;;;:::i;:::-;;:::i;:::-;;;;;;;;;;:::o;:::-;;;;;;;;;;;;:::i;:::-;;;;;;;;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;;:::i;:::-;;:::i;:::-;;:::o;4898:570::-;;5000:23;;:::i;:::-;5025:12;;;:::i;:::-;5074:14;:26;:21;:14;:21;:::i;:::-;:26;5098:2;5074:26;:::i;:::-;;;:::i;:::-;5124:21;5134:10;5124:21;:::i;:::-;5172:1;5160:13;5172:1;5160:13;:::i;:::-;5191:3;5175:1;:14;;5179:10;5175:14;:::i;:::-;;;:::i;:::-;;;;;5191:3;5226:14;:17;;:14;5241:1;5226:17;;:::i;:::-;;:::i;:::-;5210:33;:10;5221:1;;5210:33;;;;;:::i;:::-;;5191:3;:::i;:::-;5160:13;;5175:14;;;5290:13;;5300:2;5290:13;:::i;:::-;;:::i;:::-;5330:1;5318:13;5330:1;5318:13;:::i;:::-;5341:3;5333:1;:6;;5337:2;5333:6;:::i;:::-;;;:::i;:::-;;;;;5341:3;5376:14;:30;;:14;5391;:10;5404:1;5391:14;;:::i;:::-;5376:30;;:::i;:::-;;:::i;:::-;5360:46;:10;5371:1;;5360:46;;;;;:::i;:::-;;5341:3;:::i;:::-;5318:13;;5333:6;;;;;5441:19;5434:27;5333:6;5441:19;:::i;:::-;5434:27;:::i;:::-;4898:570;:::o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "AES_DEC_PRECOMPILE()": "ad28a816",
+    "AES_ENC_PRECOMPILE()": "baefa307",
+    "HKDF_PRECOMPILE()": "727c346d",
+    "packEncryptedData(bytes,uint96)": "415028a9",
+    "parseEncryptedData(bytes)": "e8d6c79a"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.31-develop.2025.11.12+commit.676bdecc\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"AESPrecompileCallFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"HKDFPrecompileCallFailed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"returnedLength\",\"type\":\"uint256\"}],\"name\":\"InvalidHKDFOutputLength\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AES_DEC_PRECOMPILE\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"AES_ENC_PRECOMPILE\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"HKDF_PRECOMPILE\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_ciphertext\",\"type\":\"bytes\"},{\"internalType\":\"uint96\",\"name\":\"_nonce\",\"type\":\"uint96\"}],\"name\":\"packEncryptedData\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"_encryptedData\",\"type\":\"bytes\"}],\"name\":\"parseEncryptedData\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"ciphertext\",\"type\":\"bytes\"},{\"internalType\":\"uint96\",\"name\":\"nonce\",\"type\":\"uint96\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"It includes three constants referencing the addresses of the precompiled      contracts:        > AES_ENC_PRECOMPILE (encryption),        > AES_DEC_PRECOMPILE (decryption),        > HKDF_PRECOMPILE (key derivation).\",\"errors\":{\"AESPrecompileCallFailed()\":[{\"details\":\"Custom errors for more gas-efficient reverts.\"}]},\"kind\":\"dev\",\"methods\":{},\"title\":\"AesLib\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"AES_DEC_PRECOMPILE()\":{\"notice\":\"The address of the AES decryption precompiled contract.\"},\"AES_ENC_PRECOMPILE()\":{\"notice\":\"The address of the AES encryption precompiled contract.\"},\"HKDF_PRECOMPILE()\":{\"notice\":\"The address of the HKDF key derivation precompiled contract.\"}},\"notice\":\"This library provides functions to interact with AES-256-GCM         encryption/decryption and HKDF key derivation precompiled contracts.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"lib/AesLib.sol\":\"AesLib\"},\"evmVersion\":\"mercury\",\"libraries\":{\"lib/AesLib.sol:AesLib\":\"0x1000000000000000000000000000000000000003\"},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[\":@openzeppelin/=lib/openzeppelin-contracts/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/\",\":seismic-std-lib/=src/seismic-std-lib/\",\":solady/=lib/solady/src/\"],\"viaIR\":true},\"sources\":{\"lib/AesLib.sol\":{\"keccak256\":\"0x206a4ed1e4ac45b4e90c778f8da3045e6300cb0ed2a8fdaaa420880c89638e45\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://a7f5f7a4c7340868365f088271d60b9eb4df19de2e42c08ec70ddfdd66196a5d\",\"dweb:/ipfs/QmUAH923baFKGTrfmJvnMNT3uHntFjSjyD2LnGZePskeQr\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.31-develop.2025.11.12+commit.676bdecc"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "AESPrecompileCallFailed"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "HKDFPrecompileCallFailed"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "returnedLength",
+              "type": "uint256"
+            }
+          ],
+          "type": "error",
+          "name": "InvalidHKDFOutputLength"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "AES_DEC_PRECOMPILE",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "AES_ENC_PRECOMPILE",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "HKDF_PRECOMPILE",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes",
+              "name": "_ciphertext",
+              "type": "bytes"
+            },
+            {
+              "internalType": "uint96",
+              "name": "_nonce",
+              "type": "uint96"
+            }
+          ],
+          "stateMutability": "pure",
+          "type": "function",
+          "name": "packEncryptedData",
+          "outputs": [
+            {
+              "internalType": "bytes",
+              "name": "",
+              "type": "bytes"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes",
+              "name": "_encryptedData",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "pure",
+          "type": "function",
+          "name": "parseEncryptedData",
+          "outputs": [
+            {
+              "internalType": "bytes",
+              "name": "ciphertext",
+              "type": "bytes"
+            },
+            {
+              "internalType": "uint96",
+              "name": "nonce",
+              "type": "uint96"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {
+          "AES_DEC_PRECOMPILE()": {
+            "notice": "The address of the AES decryption precompiled contract."
+          },
+          "AES_ENC_PRECOMPILE()": {
+            "notice": "The address of the AES encryption precompiled contract."
+          },
+          "HKDF_PRECOMPILE()": {
+            "notice": "The address of the HKDF key derivation precompiled contract."
+          }
+        },
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        "@openzeppelin/=lib/openzeppelin-contracts/",
+        "erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/",
+        "forge-std/=lib/forge-std/src/",
+        "halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/",
+        "openzeppelin-contracts/=lib/openzeppelin-contracts/",
+        "seismic-std-lib/=src/seismic-std-lib/",
+        "solady/=lib/solady/src/"
+      ],
+      "optimizer": {
+        "enabled": false,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "lib/AesLib.sol": "AesLib"
+      },
+      "evmVersion": "mercury",
+      "libraries": {
+        "lib/AesLib.sol:AesLib": "0x1000000000000000000000000000000000000003"
+      },
+      "viaIR": true
+    },
+    "sources": {
+      "lib/AesLib.sol": {
+        "keccak256": "0x206a4ed1e4ac45b4e90c778f8da3045e6300cb0ed2a8fdaaa420880c89638e45",
+        "urls": [
+          "bzz-raw://a7f5f7a4c7340868365f088271d60b9eb4df19de2e42c08ec70ddfdd66196a5d",
+          "dweb:/ipfs/QmUAH923baFKGTrfmJvnMNT3uHntFjSjyD2LnGZePskeQr"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "id": 0
+}
