@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 
-import {AesLib} from "../lib/AesLib.sol";
+import {CryptoUtils} from "seismic-std-lib/utils/precompiles/CryptoUtils.sol";
 
 import {Directory} from "../src/directory/Directory.sol";
 import {Intelligence} from "../src/intelligence/Intelligence.sol";
@@ -46,8 +46,8 @@ contract IntelligenceTest is Test {
         (bytes32[] memory hashes, bytes[] memory encryptedData) = intelligence.encryptToProviders(sampleMsg);
 
         bytes[] memory directCiphertext = new bytes[](2);
-        directCiphertext[0] = AesLib.AES256GCMEncrypt(aliceKey, 0, sampleMsg);
-        directCiphertext[1] = AesLib.AES256GCMEncrypt(bobKey, 1, sampleMsg);
+        directCiphertext[0] = CryptoUtils.encrypt(aliceKey, 0, sampleMsg);
+        directCiphertext[1] = CryptoUtils.encrypt(bobKey, 1, sampleMsg);
         assertEq(extractCT(encryptedData[0]), directCiphertext[0]);
         assertEq(extractCT(encryptedData[1]), directCiphertext[1]);
 
@@ -69,7 +69,7 @@ contract IntelligenceTest is Test {
         intelligence.addProvider(charlie);
 
         (bytes32[] memory hashes, bytes[] memory encryptedData) = intelligence.encryptToProviders(sampleMsg);
-        bytes memory directCiphertext = AesLib.AES256GCMEncrypt(charlieKey, 2, sampleMsg);
+        bytes memory directCiphertext = CryptoUtils.encrypt(charlieKey, 2, sampleMsg);
 
         assertEq(intelligence.numProviders(), 3);
         assertEq(extractCT(encryptedData[2]), directCiphertext);
@@ -89,7 +89,7 @@ contract IntelligenceTest is Test {
         assertEq(hashes.length, 1);
         assertEq(encryptedData.length, 1);
 
-        bytes memory directCiphertext = AesLib.AES256GCMEncrypt(bobKey, 0, sampleMsg);
+        bytes memory directCiphertext = CryptoUtils.encrypt(bobKey, 0, sampleMsg);
         assertEq(extractCT(encryptedData[0]), directCiphertext);
 
         bytes32 h = directory.keyHash(bob);
