@@ -7,4 +7,6 @@ remappings = [
     "solady/=lib/solady/src/",
     "seismic-std-lib/=src/seismic-std-lib/"
 ]
-via_ir = true
+# --via-ir currently doesn't support shielded types.
+# Track progress in https://github.com/SeismicSystems/seismic-solidity/issues/195
+via_ir = false
