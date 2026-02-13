@@ -2,9 +2,19 @@
 pragma solidity ^0.8.23;
 
 /// @title CryptoUtils
-/// @notice Utility contract for interacting with crypto precompiles
-/// @dev Provides helpers for random nonce generation, encryption, and decryption
-contract CryptoUtils {
+/// @notice Library for interacting with Seismic crypto precompiles (RNG, AES-256-GCM, HKDF)
+library CryptoUtils {
+    ////////////////////////////////////////////////////////////////////////
+    // Errors
+    ////////////////////////////////////////////////////////////////////////
+
+    error RNGPrecompileCallFailed();
+    error AESPrecompileCallFailed();
+    error EncryptionReturnedNoOutput();
+    error CiphertextCannotBeEmpty();
+    error HKDFPrecompileCallFailed();
+    error InvalidHKDFOutputLength(uint256 returnedLength);
+
     ////////////////////////////////////////////////////////////////////////
     // Precompile Addresses
     ////////////////////////////////////////////////////////////////////////
@@ -18,16 +28,18 @@ contract CryptoUtils {
     /// @dev Precompile address for AES decryption
     address private constant AES_DECRYPT_PRECOMPILE = address(0x67);
 
+    /// @dev Precompile address for HKDF key derivation
+    address private constant HKDF_PRECOMPILE = address(0x68);
+
     ////////////////////////////////////////////////////////////////////////
-    // Precompile Interaction Functions
+    // RNG
     ////////////////////////////////////////////////////////////////////////
 
-    /// @notice Calls the RNG precompile to get a random nonce
-    /// @dev Uses precompile at address 0x64 to generate random bytes
+    /// @notice Generates a random 96-bit nonce via the RNG precompile
     /// @return A 96-bit random nonce
-    function _generateRandomNonce() internal view returns (uint96) {
+    function generateRandomNonce() internal view returns (uint96) {
         (bool success, bytes memory output) = RNG_PRECOMPILE.staticcall(abi.encodePacked(uint32(32)));
-        require(success, "RNG Precompile call failed");
+        if (!success) revert RNGPrecompileCallFailed();
 
         bytes32 randomBytes;
         assembly {
@@ -37,13 +49,14 @@ contract CryptoUtils {
         return uint96(uint256(randomBytes));
     }
 
-    function _generateRandomAESKey() internal view returns (suint256) {
-        bytes memory personalization = abi.encodePacked("aes-key", block.timestamp); // or "session-aes" or similar
+    /// @notice Generates a random 256-bit AES key via the RNG precompile
+    /// @return A random shielded uint256 suitable for use as an AES key
+    function generateRandomAESKey() internal view returns (suint256) {
+        bytes memory personalization = abi.encodePacked("aes-key", block.timestamp);
         bytes memory input = abi.encodePacked(uint32(32), personalization);
 
         (bool success, bytes memory output) = RNG_PRECOMPILE.staticcall(input);
-        require(success, "RNG Precompile call failed");
-        require(output.length == 32, "Invalid RNG output length");
+        if (!success) revert RNGPrecompileCallFailed();
 
         bytes32 randomBytes;
         assembly {
@@ -53,44 +66,58 @@ contract CryptoUtils {
         return suint256(randomBytes);
     }
 
-    /// @notice Encrypts the given plaintext with AES key and nonce
-    /// @dev Uses AES encryption precompile at address 0x66
-    /// @param key The AES key to use for encryption
-    /// @param nonce The nonce to use for encryption
+    ////////////////////////////////////////////////////////////////////////
+    // AES-256-GCM
+    ////////////////////////////////////////////////////////////////////////
+
+    /// @notice Encrypts plaintext using AES-256-GCM via the encryption precompile
+    /// @param key The 32-byte AES-256-GCM key
+    /// @param nonce The 96-bit nonce; caller must avoid reuse
     /// @param plaintext The data to encrypt
     /// @return ciphertext The encrypted data
-    function _encrypt(suint256 key, uint96 nonce, bytes memory plaintext)
+    function encrypt(suint256 key, uint96 nonce, bytes memory plaintext)
         internal
         view
         returns (bytes memory ciphertext)
     {
         bytes memory input = abi.encodePacked(key, nonce, plaintext);
-
         (bool success, bytes memory output) = AES_ENCRYPT_PRECOMPILE.staticcall(input);
-        require(success, "AES encrypt precompile call failed");
-        require(output.length > 0, "Encryption call returned no output");
-
+        if (!success) revert AESPrecompileCallFailed();
+        if (output.length == 0) revert EncryptionReturnedNoOutput();
         return output;
     }
 
-    /// @notice Decrypts the given ciphertext with AES key and nonce
-    /// @dev Uses AES decryption precompile at address 0x67
-    /// @param key The AES key to use for decryption
-    /// @param nonce The nonce used during encryption
+    /// @notice Decrypts ciphertext using AES-256-GCM via the decryption precompile
+    /// @param key The 32-byte AES-256-GCM key
+    /// @param nonce The 96-bit nonce used during encryption
     /// @param ciphertext The encrypted data
     /// @return plaintext The decrypted data
-    function _decrypt(suint256 key, uint96 nonce, bytes calldata ciphertext)
+    function decrypt(suint256 key, uint96 nonce, bytes memory ciphertext)
         internal
         view
         returns (bytes memory plaintext)
     {
-        require(ciphertext.length > 0, "Ciphertext cannot be empty");
-
+        if (ciphertext.length == 0) revert CiphertextCannotBeEmpty();
         bytes memory input = abi.encodePacked(key, nonce, ciphertext);
-
         (bool success, bytes memory output) = AES_DECRYPT_PRECOMPILE.staticcall(input);
-        require(success, "AES decrypt precompile call failed");
-
+        if (!success) revert AESPrecompileCallFailed();
         return output;
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    // HKDF
+    ////////////////////////////////////////////////////////////////////////
+
+    /// @notice Derives a 32-byte key using HKDF via the precompile
+    /// @param input Arbitrary input data (salt, info, or keying material)
+    /// @return result The derived 32-byte key as a shielded uint
+    function HKDFDeriveKey(bytes memory input) internal view returns (suint result) {
+        (bool success, bytes memory output) = HKDF_PRECOMPILE.staticcall(input);
+        if (!success) revert HKDFPrecompileCallFailed();
+        if (output.length != 32) revert InvalidHKDFOutputLength(output.length);
+
+        assembly {
+            result := mload(add(output, 32))
+        }
     }
 }

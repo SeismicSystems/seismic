@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {AesLib} from "../../lib/AesLib.sol";
+import {CryptoUtils} from "seismic-std-lib/utils/precompiles/CryptoUtils.sol";
 
 import {IDirectory} from "./IDirectory.sol";
 
@@ -30,8 +30,8 @@ contract Directory is IDirectory {
     function encrypt(address to, bytes memory _plaintext) public returns (bytes memory) {
         suint256 key = keys[to];
 
-        bytes memory ciphertext = AesLib.AES256GCMEncrypt(key, nonce, _plaintext);
-        bytes memory encryptedData = packEncryptedData(ciphertext, nonce);
+        bytes memory ciphertext = CryptoUtils.encrypt(key, nonce, _plaintext);
+        bytes memory encryptedData = CryptoUtils.packEncryptedData(ciphertext, nonce);
 
         nonce++;
         return encryptedData;
@@ -39,7 +39,7 @@ contract Directory is IDirectory {
 
     function decrypt(bytes memory _encryptedData) public view returns (bytes memory) {
         (bytes memory ct, uint96 nce) = parseEncryptedData(_encryptedData);
-        return AesLib.AES256GCMDecrypt(keys[msg.sender], nce, ct);
+        return CryptoUtils.decrypt(keys[msg.sender], nce, ct);
     }
 
     function packEncryptedData(bytes memory _ciphertext, uint96 _nonce) public pure returns (bytes memory) {

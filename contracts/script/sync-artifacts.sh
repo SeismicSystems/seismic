@@ -19,7 +19,7 @@ else
 fi
 
 echo "Building contracts..."
-sforge build --libraries lib/AesLib.sol:AesLib:0x1000000000000000000000000000000000000003
+make build
 
 echo "Syncing genesis contracts..."
 mkdir -p artifacts
