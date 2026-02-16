@@ -28,9 +28,10 @@ seismic-contracts/
 │   └── seismic-std-lib/
 │       ├── DepositContract.sol    # Eth2 staking deposits
 │       ├── ProtocolParams.sol     # Protocol configuration
+│       ├── SRC20.sol              # SRC20 token standard
 │       ├── session-keys/
 │       │   ├── ShieldedDelegationAccount.sol
-│       │   └── interfaces/
+│       │   └── IShieldedDelegationAccount.sol
 │       └── utils/
 │           ├── MultiSend.sol      # Batch execution (from Safe)
 │           ├── EIP7702Utils.sol   # Signature verification
