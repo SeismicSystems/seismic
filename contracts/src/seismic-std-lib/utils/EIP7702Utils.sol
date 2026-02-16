@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import "../session-keys/interfaces/IShieldedDelegationAccount.sol";
+import "../session-keys/IShieldedDelegationAccount.sol";
 import "solady/utils/SignatureCheckerLib.sol";
 import "solady/utils/P256.sol";
 import "solady/utils/WebAuthn.sol";

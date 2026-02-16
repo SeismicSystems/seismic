@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import "forge-std/Test.sol";
 import "seismic-std-lib/session-keys/ShieldedDelegationAccount.sol";
-import "seismic-std-lib/utils/TestToken.sol";
+import "./utils/TestToken.sol";
 import {Base64} from "solady/utils/Base64.sol";
 
 /// @title ShieldedDelegationAccountTest
