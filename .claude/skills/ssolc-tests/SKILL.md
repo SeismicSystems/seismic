@@ -12,7 +12,7 @@ cmake ..
 make -j$(nproc)
 ```
 
-This produces the compiler binary at `<repo-root>/build/solc/solc` (note: the binary is named `solc`, not `ssolc`).
+This produces the compiler binary at `<solidity-repo-root>/build/solc/solc` (note: the binary is named `solc`, not `ssolc`).
 
 ## Running soltest.sh
 
@@ -30,16 +30,16 @@ You can filter tests with `-t`:
 
 ## Running Semantic Tests
 
-Semantic tests use the seismic-revm fork (not evmone). They must be run from `~/code/seismic-workspace/seismic-revm`. See the below sections for the specific commands
+Semantic tests use the seismic-revm fork (not evmone). They must be run from `<workspace-root>/seismic-revm`, where `<workspace-root>` is the parent directory containing all seismic repos as siblings (the same directory that holds `seismic/`, `seismic-revm/`, `seismic-solidity/`, etc.). See the below sections for the specific commands.
 
-**Important:** Replace `<repo-root>` below with the absolute path to the seismic-solidity repo you are working in (e.g., for git worktrees, use the worktree path).
+**Important:** Replace `<solidity-repo-root>` below with the absolute path to the seismic-solidity repo you are working in (e.g., for git worktrees, use the worktree path). Replace `<workspace-root>` with the absolute path to your seismic workspace directory.
 
 Note: the --unsafe-via-ir command will allow us to bypass a restriction in Seismic Solidity that prevents compiling --via-ir or --experimental-via-ir. It does not run all the tests --via-ir necessarily. You can read a more detailed writeup of this argument by calling --help on the `semantics` revme subcommand
 
 ### Without Optimizer, without --via-ir
 
 ```bash
-cd ~/code/seismic-workspace/seismic-revm && cargo run -p revme -- semantics \
+cd <workspace-root>/seismic-revm && cargo run -p revme -- semantics \
   --keep-going --unsafe-via-ir \
   -s "<solidity-repo-root>/build/solc/solc" \
   -t "<solidity-repo-root>/test/libsolidity/semanticTests"
@@ -48,17 +48,17 @@ cd ~/code/seismic-workspace/seismic-revm && cargo run -p revme -- semantics \
 ### With Optimizer, without --via-ir
 
 ```bash
-cd ~/code/seismic-workspace/seismic-revm && cargo run -p revme -- semantics \
+cd <workspace-root>/seismic-revm && cargo run -p revme -- semantics \
   --keep-going --unsafe-via-ir \
   --optimize --optimizer-runs 200 \
-  -s "<repo-root>/build/solc/solc" \
-  -t "<repo-root>/test/libsolidity/semanticTests"
+  -s "<solidity-repo-root>/build/solc/solc" \
+  -t "<solidity-repo-root>/test/libsolidity/semanticTests"
 ```
 
 ### Without Optimizer, with --via-ir
 
 ```bash
-cd ~/code/seismic-workspace/seismic-revm && cargo run -p revme -- semantics \
+cd <workspace-root>/seismic-revm && cargo run -p revme -- semantics \
   --keep-going --unsafe-via-ir --via-ir \
   -s "<solidity-repo-root>/build/solc/solc" \
   -t "<solidity-repo-root>/test/libsolidity/semanticTests"
@@ -67,11 +67,11 @@ cd ~/code/seismic-workspace/seismic-revm && cargo run -p revme -- semantics \
 ### With Optimizer, with --via-ir
 
 ```bash
-cd ~/code/seismic-workspace/seismic-revm && cargo run -p revme -- semantics \
+cd <workspace-root>/seismic-revm && cargo run -p revme -- semantics \
   --keep-going --unsafe-via-ir --via-ir \
   --optimize --optimizer-runs 200 \
-  -s "<repo-root>/build/solc/solc" \
-  -t "<repo-root>/test/libsolidity/semanticTests"
+  -s "<solidity-repo-root>/build/solc/solc" \
+  -t "<solidity-repo-root>/test/libsolidity/semanticTests"
 ```
 
 
@@ -83,10 +83,10 @@ cd ~/code/seismic-workspace/seismic-revm && cargo run -p revme -- semantics \
 
 ```bash
 # Run specific test(s)
-<repo-root>/build/test/tools/isoltest --no-semantic-tests -t "syntaxTests/types/shielded_*"
+<solidity-repo-root>/build/test/tools/isoltest --no-semantic-tests -t "syntaxTests/types/shielded_*"
 
 # Run all syntax tests
-<repo-root>/build/test/tools/isoltest --no-semantic-tests -t "syntaxTests/*"
+<solidity-repo-root>/build/test/tools/isoltest --no-semantic-tests -t "syntaxTests/*"
 ```
 
 ### Auto-updating expectations (`--accept-updates`)
@@ -96,7 +96,7 @@ You may use `--accept-updates` to batch-fix test expectations, but **you must wa
 > **WARNING:** `--accept-updates` will automatically overwrite all failing test expectations. You MUST carefully review every change it produces (via `git diff`) before committing. Blindly accepting updates can mask regressions.
 
 ```bash
-<repo-root>/build/test/tools/isoltest --no-semantic-tests --accept-updates -t "syntaxTests/types/shielded_*"
+<solidity-repo-root>/build/test/tools/isoltest --no-semantic-tests --accept-updates -t "syntaxTests/types/shielded_*"
 ```
 
 ## Notes
