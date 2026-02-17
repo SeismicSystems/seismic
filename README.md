@@ -61,3 +61,4 @@ If working with any specific fork/repo, make sure to read that repo's README and
 - **[Glossary](docs/glossary.md)** — key Seismic concepts: FlaggedStorage, TxSeismic, Mercury Spec, SeismicHost
 - **[Language & VM](docs/language-and-vm.md)** — Mercury EVM spec: shielded types, CLOAD/CSTORE, FlaggedStorage
 - **[Repos](docs/repos.md)** — stack diagram, repos dependency chain, how changes flow
+- **[Claude Code Setup](docs/claude-code-setup.md)** — Claude Code skills setup and symlink instructions
