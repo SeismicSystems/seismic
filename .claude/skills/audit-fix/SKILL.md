@@ -75,4 +75,4 @@ Many codebases are forks of upstream repositories. We want our diffs against the
 - seismic-solidity: `develop`
 
 **Checking if a repo is forked:**
-If unsure whether the current repo is a fork, check: `~/code/seismic/internal/crates/commit-tracker/repos.toml`
+If unsure whether the current repo is a fork, check for an upstream remote (`git remote -v`) or check the repo list in `<workspace-root>/seismic/internal/crates/commit-tracker/repos.toml` (where `<workspace-root>` is the parent directory containing all seismic repos as siblings).
