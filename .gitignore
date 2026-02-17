@@ -1,5 +1,7 @@
 # Claude Code
 .claude/plan.md
+.claude/skills/*/**
+!.claude/skills/*/SKILL.md
 
 # OS
 .DS_Store
