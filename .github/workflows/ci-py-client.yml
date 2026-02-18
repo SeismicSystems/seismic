@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.13"
           enable-cache: true
-      - run: uv sync --dev
+      - run: uv sync --locked --dev
       - run: uv run ruff check src/ tests/
       - run: uv run ruff format --check src/ tests/
 
@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: "3.13"
           enable-cache: true
-      - run: uv sync --dev
+      - run: uv sync --locked --dev
       - run: uv run ty check src/
 
   test:
@@ -46,5 +46,5 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
-      - run: uv sync --dev
+      - run: uv sync --locked --dev
       - run: uv run pytest tests/ -v

@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 echo "==> Installing dependencies"
-uv sync --dev
+uv sync --locked --dev
 
 echo "==> Checking formatting"
 uv run ruff format --check src/ tests/
