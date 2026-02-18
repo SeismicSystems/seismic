@@ -40,9 +40,6 @@
 		{
 			"path": "../../seismic-client"
 		},
-		{
-			"path": "../../seismic-contracts"
-		}
 	],
 	"settings": {}
 }
