@@ -22,7 +22,11 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Typing :: Typed",
 ]
-dependencies = ["web3>=7.0,<8"]
+dependencies = [
+    "web3>=7.0,<8",
+    "coincurve>=20.0",
+    "cryptography>=43.0",
+]
 
 [dependency-groups]
 dev = [
@@ -51,7 +55,9 @@ select = [
     "ANN", # flake8-annotations
     "PT",  # flake8-pytest-style
 ]
-ignore = []
+ignore = [
+    "ANN401",  # allow Any in *args/**kwargs (needed for dynamic ABI args)
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
