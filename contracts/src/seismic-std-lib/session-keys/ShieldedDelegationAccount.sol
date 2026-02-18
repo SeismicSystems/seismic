@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "solady/utils/SignatureCheckerLib.sol";
 import "seismic-std-lib/utils/MultiSend.sol";
-import "seismic-std-lib/utils/precompiles/CryptoUtils.sol";
+import {CryptoUtils} from "seismic-std-lib/utils/precompiles/CryptoUtils.sol";
 import "seismic-std-lib/utils/EIP7702Utils.sol";
 import "./IShieldedDelegationAccount.sol";
 
@@ -14,7 +14,7 @@ import "./IShieldedDelegationAccount.sol";
 /// @dev WARNING: THIS CONTRACT IS AN EXPERIMENT AND HAS NOT BEEN AUDITED
 /// @dev Credits: Inspired by https://github.com/ithacaxyz/exp-0001 by jxom (https://github.com/jxom)
 /// @dev Credits: Inspired by https://github.com/ithacaxyz/account by Tanishk Goyal (https://github.com/legion2002) and vectorized (https://github.com/vectorized)
-contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallOnly, CryptoUtils, EIP7702Utils {
+contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallOnly, EIP7702Utils {
     using ECDSA for bytes32;
 
     ////////////////////////////////////////////////////////////////////////
@@ -147,7 +147,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallO
     /// @notice Sets the AES key
     function setAESKey() external override onlySelf onlyUninitialized {
         ShieldedStorage storage $ = _getStorage();
-        $.aesKey = _generateRandomAESKey();
+        $.aesKey = CryptoUtils.generateRandomAESKey();
         $.aesKeyInitialized = true;
     }
 
@@ -160,10 +160,10 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallO
     /// @return nonce The nonce of the call
     /// @return ciphertext The ciphertext of the call
     function encrypt(bytes calldata plaintext) external view override returns (uint96 nonce, bytes memory ciphertext) {
-        nonce = _generateRandomNonce();
+        nonce = CryptoUtils.generateRandomNonce();
         // Regenerate nonce if it's 0 (extremely unlikely but ensures we can use 0 as sentinel)
-        while (nonce == 0) nonce = _generateRandomNonce();
-        ciphertext = _encrypt(_getStorage().aesKey, nonce, plaintext);
+        while (nonce == 0) nonce = CryptoUtils.generateRandomNonce();
+        ciphertext = CryptoUtils.encrypt(_getStorage().aesKey, nonce, plaintext);
         return (nonce, ciphertext);
     }
 
@@ -184,7 +184,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallO
             if (nonce == 0) {
                 executionData = calls;
             } else {
-                executionData = _decrypt($.aesKey, nonce, calls);
+                executionData = CryptoUtils.decrypt($.aesKey, nonce, calls);
             }
             multiSend(executionData);
         } else {
@@ -199,7 +199,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallO
             if (nonce == 0) {
                 executionData = calls;
             } else {
-                executionData = _decrypt($.aesKey, nonce, calls);
+                executionData = CryptoUtils.decrypt($.aesKey, nonce, calls);
             }
 
             uint256 totalValue = 0;
