@@ -34,6 +34,8 @@ dev = [
     "ty>=0.0.1a1",
     "pytest>=8.0",
     "pytest-asyncio>=0.25",
+    "pytest-timeout>=2.0",
+    "requests>=2.0",
 ]
 
 [tool.ruff]
@@ -77,3 +79,6 @@ error-on-warning = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 strict_markers = true
+markers = [
+    "integration: requires a running seismic node",
+]

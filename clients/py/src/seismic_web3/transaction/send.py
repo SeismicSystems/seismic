@@ -24,6 +24,7 @@ from seismic_web3.transaction.serialize import sign_seismic_tx
 if TYPE_CHECKING:
     from eth_typing import ChecksumAddress
     from web3 import AsyncWeb3, Web3
+    from web3.types import RPCResponse
 
     from seismic_web3._types import PrivateKey
     from seismic_web3.client import EncryptionState
@@ -98,6 +99,14 @@ def _build_metadata_params(
 # ---------------------------------------------------------------------------
 
 
+def _check_rpc_response(response: RPCResponse) -> str:
+    """Extract result from an RPC response, raising on errors."""
+    if "error" in response:
+        error = response["error"]
+        raise RuntimeError(f"RPC error: {error['message']}")
+    return str(response["result"])
+
+
 def send_shielded_raw(w3: Web3, signed_tx: HexBytes) -> HexBytes:
     """Submit a signed Seismic tx via ``eth_sendRawTransaction`` (sync).
 
@@ -111,7 +120,7 @@ def send_shielded_raw(w3: Web3, signed_tx: HexBytes) -> HexBytes:
     response = w3.provider.make_request(
         RPCEndpoint("eth_sendRawTransaction"), [signed_tx.to_0x_hex()]
     )
-    return HexBytes(response["result"])
+    return HexBytes(_check_rpc_response(response))
 
 
 async def async_send_shielded_raw(w3: AsyncWeb3, signed_tx: HexBytes) -> HexBytes:
@@ -127,7 +136,7 @@ async def async_send_shielded_raw(w3: AsyncWeb3, signed_tx: HexBytes) -> HexByte
     response = await w3.provider.make_request(
         RPCEndpoint("eth_sendRawTransaction"), [signed_tx.to_0x_hex()]
     )
-    return HexBytes(response["result"])
+    return HexBytes(_check_rpc_response(response))
 
 
 # ---------------------------------------------------------------------------
@@ -311,10 +320,11 @@ def signed_call(
 
     signed = sign_seismic_tx(tx, private_key)
 
-    # Send signed raw tx as eth_call data
+    # Send signed raw tx directly as first param to eth_call
+    # (matches viem: params = [serializedTransaction, block])
     response = w3.provider.make_request(
         RPCEndpoint("eth_call"),
-        [{"data": signed.to_0x_hex()}, "latest"],
+        [signed.to_0x_hex(), "latest"],
     )
     raw_result: str = response.get("result", "0x")
 
@@ -384,10 +394,11 @@ async def async_signed_call(
 
     signed = sign_seismic_tx(tx, private_key)
 
-    # Send signed raw tx as eth_call data
+    # Send signed raw tx directly as first param to eth_call
+    # (matches viem: params = [serializedTransaction, block])
     response = await w3.provider.make_request(
         RPCEndpoint("eth_call"),
-        [{"data": signed.to_0x_hex()}, "latest"],
+        [signed.to_0x_hex(), "latest"],
     )
     raw_result: str = response.get("result", "0x")
 
