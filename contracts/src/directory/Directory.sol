@@ -31,7 +31,7 @@ contract Directory is IDirectory {
         suint256 key = keys[to];
 
         bytes memory ciphertext = CryptoUtils.encrypt(key, nonce, _plaintext);
-        bytes memory encryptedData = CryptoUtils.packEncryptedData(ciphertext, nonce);
+        bytes memory encryptedData = packEncryptedData(ciphertext, nonce);
 
         nonce++;
         return encryptedData;
