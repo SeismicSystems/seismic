@@ -1,6 +1,6 @@
 # Claude Code
-.claude/plan.md
-.claude/skills/*/**
+.claude/**
+!.claude/settings.json
 !.claude/skills/*/SKILL.md
 
 # OS
