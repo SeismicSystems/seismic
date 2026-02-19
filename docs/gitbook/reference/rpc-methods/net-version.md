@@ -45,7 +45,7 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 
 ## Try It
 
-{% embed url="https://seismicsystems.github.io/seismic/rpc-terminal/index.html?method=net_version" %}
+<iframe src="https://seismicsystems.github.io/seismic/rpc-terminal/index.html?method=net_version" width="100%" height="500" style="border:none; border-radius:8px;"></iframe>
 
 ## Related
 

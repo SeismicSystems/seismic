@@ -49,7 +49,7 @@ The chain ID is important for transaction signing — using the wrong chain ID w
 
 ## Try It
 
-{% embed url="https://seismicsystems.github.io/seismic/rpc-terminal/index.html?method=eth_chainId" %}
+<iframe src="https://seismicsystems.github.io/seismic/rpc-terminal/index.html?method=eth_chainId" width="100%" height="500" style="border:none; border-radius:8px;"></iframe>
 
 ## Related
 
