@@ -9,7 +9,6 @@ from seismic_web3.abis.deposit_contract import (
 from seismic_web3.abis.directory import DIRECTORY_ABI, DIRECTORY_ADDRESS
 from seismic_web3.abis.src20 import SRC20_ABI
 
-
 __all__ = [
     "DEPOSIT_CONTRACT_ABI",
     "DEPOSIT_CONTRACT_ADDRESS",

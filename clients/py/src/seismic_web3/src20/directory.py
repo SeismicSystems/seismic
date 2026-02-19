@@ -13,10 +13,9 @@ from typing import TYPE_CHECKING
 
 from eth_abi import decode as abi_decode
 from eth_hash.auto import keccak
-from hexbytes import HexBytes
 
 from seismic_web3._types import Bytes32
-from seismic_web3.abis.directory import DIRECTORY_ABI, DIRECTORY_ADDRESS
+from seismic_web3.abis.directory import DIRECTORY_ABI
 from seismic_web3.contract.abi import encode_shielded_calldata
 from seismic_web3.transaction.send import (
     async_send_shielded_transaction,
@@ -27,6 +26,7 @@ from seismic_web3.transaction.send import (
 
 if TYPE_CHECKING:
     from eth_typing import ChecksumAddress
+    from hexbytes import HexBytes
     from web3 import AsyncWeb3, Web3
 
     from seismic_web3._types import PrivateKey

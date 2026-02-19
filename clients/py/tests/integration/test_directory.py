@@ -12,12 +12,12 @@ skip marker below.
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 import pytest
 from web3 import Web3
 
 from seismic_web3._types import Bytes32, PrivateKey
-from seismic_web3.client import EncryptionState
 from seismic_web3.src20.directory import (
     check_has_key,
     compute_key_hash,
@@ -25,6 +25,9 @@ from seismic_web3.src20.directory import (
     get_viewing_key,
     register_viewing_key,
 )
+
+if TYPE_CHECKING:
+    from seismic_web3.client import EncryptionState
 
 # ---------------------------------------------------------------------------
 # Skip the entire module unless running against seismic-reth, which is the
@@ -123,7 +126,5 @@ class TestComputeKeyHash:
 
         # Compare local hash with on-chain hash
         local_hash = compute_key_hash(viewing_key)
-        on_chain_hash = get_key_hash(
-            w3, Web3.to_checksum_address(account_address)
-        )
+        on_chain_hash = get_key_hash(w3, Web3.to_checksum_address(account_address))
         assert local_hash == on_chain_hash

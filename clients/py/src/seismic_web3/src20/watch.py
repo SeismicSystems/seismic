@@ -14,15 +14,13 @@ import asyncio
 import contextlib
 import logging
 import threading
-import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from eth_abi import decode as abi_decode
 from eth_hash.auto import keccak
 from hexbytes import HexBytes
 from web3 import Web3
 
-from seismic_web3._types import Bytes32
 from seismic_web3.src20.crypto import decrypt_encrypted_amount
 from seismic_web3.src20.directory import compute_key_hash, get_viewing_key
 from seismic_web3.src20.types import (
@@ -33,8 +31,9 @@ from seismic_web3.src20.types import (
 if TYPE_CHECKING:
     from eth_typing import ChecksumAddress
     from web3 import AsyncWeb3
+    from web3.types import FilterParams
 
-    from seismic_web3._types import PrivateKey
+    from seismic_web3._types import Bytes32, PrivateKey
     from seismic_web3.client import EncryptionState
     from seismic_web3.src20.types import (
         ApprovalCallback,
@@ -257,10 +256,10 @@ class SRC20EventWatcher:
                     current_block,
                     latest,
                 )
-                logs = self._w3.eth.get_logs(params)
+                logs = self._w3.eth.get_logs(cast("FilterParams", params))
 
                 for log in logs:
-                    self._process_log(dict(log))
+                    self._process_log({**log})
 
                 current_block = latest + 1
 
@@ -371,10 +370,10 @@ class AsyncSRC20EventWatcher:
                     current_block,
                     latest,
                 )
-                logs = await self._w3.eth.get_logs(params)
+                logs = await self._w3.eth.get_logs(cast("FilterParams", params))
 
                 for log in logs:
-                    await self._process_log(dict(log))
+                    await self._process_log({**log})
 
                 current_block = latest + 1
 

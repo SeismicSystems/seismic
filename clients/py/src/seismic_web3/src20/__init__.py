@@ -43,19 +43,10 @@ Quick start
     from seismic_web3.src20 import register_viewing_key, get_viewing_key
 """
 
-# -- Types ---------------------------------------------------------------
-from seismic_web3.src20.types import (
-    DecryptedApprovalLog,
-    DecryptedTransferLog,
-)
-
-# -- Crypto --------------------------------------------------------------
 from seismic_web3.src20.crypto import (
     decrypt_encrypted_amount,
     parse_encrypted_data,
 )
-
-# -- Directory helpers ---------------------------------------------------
 from seismic_web3.src20.directory import (
     async_check_has_key,
     async_get_key_hash,
@@ -67,8 +58,10 @@ from seismic_web3.src20.directory import (
     get_viewing_key,
     register_viewing_key,
 )
-
-# -- Watchers ------------------------------------------------------------
+from seismic_web3.src20.types import (
+    DecryptedApprovalLog,
+    DecryptedTransferLog,
+)
 from seismic_web3.src20.watch import (
     AsyncSRC20EventWatcher,
     SRC20EventWatcher,
@@ -79,27 +72,23 @@ from seismic_web3.src20.watch import (
 )
 
 __all__ = [
-    # Types
+    "AsyncSRC20EventWatcher",
     "DecryptedApprovalLog",
     "DecryptedTransferLog",
-    # Crypto
-    "decrypt_encrypted_amount",
-    "parse_encrypted_data",
-    # Directory
+    "SRC20EventWatcher",
     "async_check_has_key",
     "async_get_key_hash",
     "async_get_viewing_key",
     "async_register_viewing_key",
-    "check_has_key",
-    "compute_key_hash",
-    "get_key_hash",
-    "get_viewing_key",
-    "register_viewing_key",
-    # Watchers
-    "AsyncSRC20EventWatcher",
-    "SRC20EventWatcher",
     "async_watch_src20_events",
     "async_watch_src20_events_with_key",
+    "check_has_key",
+    "compute_key_hash",
+    "decrypt_encrypted_amount",
+    "get_key_hash",
+    "get_viewing_key",
+    "parse_encrypted_data",
+    "register_viewing_key",
     "watch_src20_events",
     "watch_src20_events_with_key",
 ]

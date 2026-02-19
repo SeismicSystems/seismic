@@ -5,8 +5,9 @@ Frozen dataclasses for decoded event logs and callback type aliases.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Awaitable, Callable, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from eth_typing import ChecksumAddress
@@ -49,6 +50,6 @@ AsyncApprovalCallback = Callable[[DecryptedApprovalLog], Awaitable[None]]
 AsyncErrorCallback = Callable[[Exception], Awaitable[None]]
 
 # Union types for accept-either-style in factory functions
-AnyTransferCallback = Union[TransferCallback, AsyncTransferCallback]
-AnyApprovalCallback = Union[ApprovalCallback, AsyncApprovalCallback]
-AnyErrorCallback = Union[ErrorCallback, AsyncErrorCallback]
+AnyTransferCallback = TransferCallback | AsyncTransferCallback
+AnyApprovalCallback = ApprovalCallback | AsyncApprovalCallback
+AnyErrorCallback = ErrorCallback | AsyncErrorCallback

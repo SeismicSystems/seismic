@@ -13,15 +13,10 @@ encryption which binds AAD to tx metadata).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from hexbytes import HexBytes
 
 from seismic_web3._types import Bytes32, EncryptionNonce
 from seismic_web3.crypto.aes import AesGcmCrypto
-
-if TYPE_CHECKING:
-    pass
 
 #: Nonce length in bytes (12 bytes = 96-bit AES-GCM nonce).
 NONCE_BYTES = 12

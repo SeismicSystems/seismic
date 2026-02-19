@@ -7,25 +7,25 @@ decrypts them correctly.
 
 from __future__ import annotations
 
-import threading
 import time
+from typing import TYPE_CHECKING
 
 import pytest
 from eth_hash.auto import keccak
 from hexbytes import HexBytes
 from web3 import Web3
 
-from seismic_web3._types import Bytes32, EncryptionNonce, PrivateKey
-from seismic_web3.client import EncryptionState
+from seismic_web3._types import Bytes32, EncryptionNonce
 from seismic_web3.crypto.aes import AesGcmCrypto
 from seismic_web3.src20.crypto import decrypt_encrypted_amount, parse_encrypted_data
-from seismic_web3.src20.directory import compute_key_hash, register_viewing_key
-from seismic_web3.src20.types import DecryptedApprovalLog, DecryptedTransferLog
+from seismic_web3.src20.directory import compute_key_hash
 from seismic_web3.src20.watch import (
     SRC20EventWatcher,
-    watch_src20_events,
     watch_src20_events_with_key,
 )
+
+if TYPE_CHECKING:
+    from seismic_web3.src20.types import DecryptedApprovalLog, DecryptedTransferLog
 from tests.integration.contracts import (
     MOCK_SRC20_EVENTS_ABI,
     MOCK_SRC20_EVENTS_BYTECODE,

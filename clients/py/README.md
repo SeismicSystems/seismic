@@ -436,7 +436,6 @@ Everything importable from `seismic_web3`:
 | `DIRECTORY_ABI` | const | Directory genesis contract ABI |
 | `DIRECTORY_ADDRESS` | const | Directory genesis address (`0x1000…0004`) |
 | `SRC20_ABI` | const | ISRC20 interface ABI (7 functions + 2 events) |
-| `SRC20_ABI` | const | ISRC20 interface ABI (7 functions) |
 | `DEPOSIT_CONTRACT_ABI` | const | Deposit contract ABI (4 functions + 1 event) |
 | `DEPOSIT_CONTRACT_ADDRESS` | const | Deposit contract genesis address |
 | `SEISMIC_TESTNET` | const | Default testnet config (chain 5124) |
