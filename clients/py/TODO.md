@@ -18,12 +18,6 @@ Implemented in `seismic_web3.precompiles` — see `src/seismic_web3/precompiles/
 - Read deposit root and deposit count
 - ABI in `seismic-viem/src/abis/depositContract.ts`
 
-## SRC20 Token Standard
-
-- [x] Token standard with encrypted balances — `SRC20_ABI` constant + integration tests
-- [x] Transfer, approve, balanceOf with shielded types — works via `ShieldedContract`
-- [x] Event watching with viewing keys (requires Directory/Intelligence genesis contracts)
-
 ## Block Explorer URL Helpers
 
 - Generate URLs for addresses, transactions, tokens, blocks
