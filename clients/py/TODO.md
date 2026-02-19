@@ -12,10 +12,6 @@ Implemented in `seismic_web3.precompiles` — see `src/seismic_web3/precompiles/
 - Domain: `{name: "Seismic Transaction", version: "2"}`
 - Reference: `seismic-viem/src/signSeismicTypedData.ts`
 
-## ~~Deposit Contract Actions~~ (Done)
-
-Implemented in `seismic_web3.abis.deposit_contract` — see `src/seismic_web3/abis/deposit_contract.py`.
-
 ## SRC20 Token Standard
 
 - [x] Token standard with encrypted balances — `SRC20_ABI` constant + integration tests
