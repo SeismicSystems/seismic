@@ -6,6 +6,7 @@ Provides ``ChainConfig`` dataclasses for supported Seismic networks
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -15,7 +16,12 @@ from seismic_web3._constants import (
     SEISMIC_TX_TYPE,
     TYPED_DATA_MESSAGE_VERSION,
 )
-from seismic_web3.client import create_async_shielded_web3, create_shielded_web3
+from seismic_web3.client import (
+    create_async_public_client,
+    create_async_wallet_client,
+    create_public_client,
+    create_wallet_client,
+)
 
 if TYPE_CHECKING:
     from web3 import AsyncWeb3, Web3
@@ -55,13 +61,15 @@ class ChainConfig:
     ws_url: str | None = None
     name: str = ""
 
-    def create_client(
+    # -- Wallet (private key required) ----------------------------------
+
+    def wallet_client(
         self,
         private_key: PrivateKey,
         *,
         encryption_sk: PrivateKey | None = None,
     ) -> Web3:
-        """Create a sync ``Web3`` instance configured for this chain.
+        """Create a sync ``Web3`` instance with wallet capabilities.
 
         Args:
             private_key: 32-byte signing key for transactions.
@@ -70,20 +78,20 @@ class ChainConfig:
         Returns:
             A ``Web3`` instance with ``w3.seismic`` namespace attached.
         """
-        return create_shielded_web3(
+        return create_wallet_client(
             self.rpc_url,
             private_key=private_key,
             encryption_sk=encryption_sk,
         )
 
-    async def create_async_client(
+    async def async_wallet_client(
         self,
         private_key: PrivateKey,
         *,
         encryption_sk: PrivateKey | None = None,
         ws: bool = False,
     ) -> AsyncWeb3:
-        """Create an async ``Web3`` instance configured for this chain.
+        """Create an async ``Web3`` instance with wallet capabilities.
 
         When ``ws=True`` and :attr:`ws_url` is set, the WebSocket URL
         is used automatically.
@@ -97,9 +105,79 @@ class ChainConfig:
             An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached.
         """
         url = self.ws_url if ws and self.ws_url else self.rpc_url
-        return await create_async_shielded_web3(
+        return await create_async_wallet_client(
             url,
             private_key=private_key,
+            encryption_sk=encryption_sk,
+            ws=ws,
+        )
+
+    # -- Public (no private key required) --------------------------------
+
+    def public_client(self) -> Web3:
+        """Create a sync ``Web3`` instance with public (read-only) access.
+
+        No private key required.
+
+        Returns:
+            A ``Web3`` instance with ``w3.seismic`` namespace attached
+            (read-only).
+        """
+        return create_public_client(self.rpc_url)
+
+    async def async_public_client(
+        self,
+        *,
+        ws: bool = False,
+    ) -> AsyncWeb3:
+        """Create an async ``Web3`` instance with public (read-only) access.
+
+        No private key required.
+
+        Args:
+            ws: If ``True``, uses ``WebSocketProvider``.
+
+        Returns:
+            An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached
+            (read-only).
+        """
+        url = self.ws_url if ws and self.ws_url else self.rpc_url
+        return await create_async_public_client(url, ws=ws)
+
+    # -- Deprecated aliases ----------------------------------------------
+
+    def create_client(
+        self,
+        private_key: PrivateKey,
+        *,
+        encryption_sk: PrivateKey | None = None,
+    ) -> Web3:
+        """Deprecated: use :meth:`wallet_client` instead."""
+        warnings.warn(
+            "create_client is deprecated, use wallet_client instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.wallet_client(
+            private_key,
+            encryption_sk=encryption_sk,
+        )
+
+    async def create_async_client(
+        self,
+        private_key: PrivateKey,
+        *,
+        encryption_sk: PrivateKey | None = None,
+        ws: bool = False,
+    ) -> AsyncWeb3:
+        """Deprecated: use :meth:`async_wallet_client` instead."""
+        warnings.warn(
+            "create_async_client is deprecated, use async_wallet_client instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return await self.async_wallet_client(
+            private_key,
             encryption_sk=encryption_sk,
             ws=ws,
         )

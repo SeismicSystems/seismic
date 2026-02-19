@@ -28,7 +28,12 @@ from eth_account import Account
 from web3 import Web3
 from web3.middleware import SignAndSendRawMiddlewareBuilder
 
-from seismic_web3 import PrivateKey, create_async_shielded_web3, create_shielded_web3
+from seismic_web3 import (
+    PrivateKey,
+    create_async_wallet_client,
+    create_public_client,
+    create_wallet_client,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -261,7 +266,7 @@ def w3(
     private_key: PrivateKey,
     account_address: ChecksumAddress,
 ) -> Web3:
-    w3 = create_shielded_web3(rpc_url, private_key=private_key)
+    w3 = create_wallet_client(rpc_url, private_key=private_key)
     # Add local signing so twrite works on reth (which has no unlocked keystore)
     acct = Account.from_key(DEV_PRIVATE_KEY_HEX)
     w3.middleware_onion.inject(
@@ -300,4 +305,13 @@ async def async_w3(
     rpc_url: str,
     private_key: PrivateKey,
 ) -> AsyncWeb3:
-    return await create_async_shielded_web3(rpc_url, private_key=private_key)
+    return await create_async_wallet_client(rpc_url, private_key=private_key)
+
+
+@pytest.fixture(scope="session")
+def public_w3(
+    node_process: subprocess.Popen[bytes],
+    rpc_url: str,
+) -> Web3:
+    """Public (read-only) Web3 — no private key."""
+    return create_public_client(rpc_url)

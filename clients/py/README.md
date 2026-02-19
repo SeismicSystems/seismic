@@ -13,7 +13,8 @@ from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
 pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
 
-w3 = SEISMIC_TESTNET.create_client(pk)
+# Wallet client — full capabilities (requires private key)
+w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
@@ -25,7 +26,15 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 result = contract.read.getNumber()
 ```
 
-`ShieldedContract` exposes five namespaces:
+```python
+# Public client — read-only (no private key needed)
+public = SEISMIC_TESTNET.public_client()
+
+contract = public.seismic.contract(address="0x...", abi=ABI)
+result = contract.tread.getNumber()
+```
+
+`ShieldedContract` (from the wallet client) exposes five namespaces:
 
 | Namespace | What it does | On-chain visibility |
 |-----------|-------------|-------------------|

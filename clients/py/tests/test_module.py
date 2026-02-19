@@ -7,8 +7,14 @@ from hexbytes import HexBytes
 
 from seismic_web3._types import CompressedPublicKey, PrivateKey
 from seismic_web3.client import get_encryption
+from seismic_web3.contract.public import AsyncPublicContract, PublicContract
 from seismic_web3.contract.shielded import AsyncShieldedContract, ShieldedContract
-from seismic_web3.module import AsyncSeismicNamespace, SeismicNamespace
+from seismic_web3.module import (
+    AsyncSeismicNamespace,
+    AsyncSeismicPublicNamespace,
+    SeismicNamespace,
+    SeismicPublicNamespace,
+)
 
 _NETWORK_PK = CompressedPublicKey(
     "0x028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0"
@@ -190,3 +196,87 @@ class TestAsyncSeismicNamespace:
         ns = AsyncSeismicNamespace(w3, encryption, pk)
         contract = ns.contract(addr, COUNTER_ABI)
         assert isinstance(contract, AsyncShieldedContract)
+
+
+# ---------------------------------------------------------------------------
+# Public namespace tests
+# ---------------------------------------------------------------------------
+
+
+class TestSeismicPublicNamespace:
+    def test_has_expected_methods(self):
+        w3 = MagicMock()
+        ns = SeismicPublicNamespace(w3)
+
+        assert callable(ns.get_tee_public_key)
+        assert callable(ns.contract)
+        assert callable(ns.get_deposit_root)
+        assert callable(ns.get_deposit_count)
+
+    def test_does_not_have_wallet_methods(self):
+        w3 = MagicMock()
+        ns = SeismicPublicNamespace(w3)
+
+        assert not hasattr(ns, "send_shielded_transaction")
+        assert not hasattr(ns, "signed_call")
+        assert not hasattr(ns, "debug_send_shielded_transaction")
+        assert not hasattr(ns, "deposit")
+        assert not hasattr(ns, "encryption")
+
+    def test_contract_returns_public_contract(self):
+        w3 = MagicMock()
+        addr = "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046"
+
+        ns = SeismicPublicNamespace(w3)
+        contract = ns.contract(addr, COUNTER_ABI)
+        assert isinstance(contract, PublicContract)
+
+    def test_get_deposit_root_calls_eth_call(self):
+        w3 = MagicMock()
+        w3.eth.call.return_value = HexBytes(b"\xff" * 32)
+        ns = SeismicPublicNamespace(w3)
+
+        root = ns.get_deposit_root()
+        assert isinstance(root, bytes)
+        assert len(root) == 32
+        w3.eth.call.assert_called_once()
+
+    def test_get_deposit_count_decodes_le(self):
+        w3 = MagicMock()
+        offset = (32).to_bytes(32, "big")
+        length = (8).to_bytes(32, "big")
+        count_le = (5).to_bytes(8, "little") + b"\x00" * 24
+        w3.eth.call.return_value = HexBytes(offset + length + count_le)
+        ns = SeismicPublicNamespace(w3)
+
+        count = ns.get_deposit_count()
+        assert count == 5
+
+
+class TestAsyncSeismicPublicNamespace:
+    def test_has_expected_methods(self):
+        w3 = MagicMock()
+        ns = AsyncSeismicPublicNamespace(w3)
+
+        assert callable(ns.get_tee_public_key)
+        assert callable(ns.contract)
+        assert callable(ns.get_deposit_root)
+        assert callable(ns.get_deposit_count)
+
+    def test_does_not_have_wallet_methods(self):
+        w3 = MagicMock()
+        ns = AsyncSeismicPublicNamespace(w3)
+
+        assert not hasattr(ns, "send_shielded_transaction")
+        assert not hasattr(ns, "signed_call")
+        assert not hasattr(ns, "debug_send_shielded_transaction")
+        assert not hasattr(ns, "deposit")
+        assert not hasattr(ns, "encryption")
+
+    def test_contract_returns_async_public_contract(self):
+        w3 = MagicMock()
+        addr = "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046"
+
+        ns = AsyncSeismicPublicNamespace(w3)
+        contract = ns.contract(addr, COUNTER_ABI)
+        assert isinstance(contract, AsyncPublicContract)

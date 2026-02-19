@@ -22,12 +22,12 @@ uv add seismic-web3
 ### Quick example
 
 ```python
-from seismic_web3 import create_shielded_web3, PrivateKey
+from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-w3 = create_shielded_web3(
-    "http://127.0.0.1:8545",
-    private_key=PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX")),
-)
+pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+
+# Wallet client — full capabilities (requires private key)
+w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
@@ -37,4 +37,12 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
 # Signed read — encrypted eth_call, proves your identity
 result = contract.read.getNumber()
+```
+
+```python
+# Public client — read-only (no private key needed)
+public = SEISMIC_TESTNET.public_client()
+
+contract = public.seismic.contract(address="0x...", abi=ABI)
+result = contract.tread.getNumber()
 ```

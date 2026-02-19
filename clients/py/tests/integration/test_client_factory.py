@@ -1,9 +1,10 @@
-"""Integration tests for create_shielded_web3 / create_async_shielded_web3."""
+"""Integration tests for wallet and public client factories."""
 
 import pytest
 from web3 import AsyncWeb3, Web3
 
 from seismic_web3 import CompressedPublicKey
+from seismic_web3.module import SeismicPublicNamespace
 
 
 class TestSyncFactory:
@@ -32,3 +33,20 @@ class TestAsyncFactory:
         pk = await async_w3.seismic.get_tee_public_key()  # type: ignore[attr-defined]
         assert isinstance(pk, CompressedPublicKey)
         assert len(pk) == 33
+
+
+class TestPublicSyncFactory:
+    def test_creates_public_namespace(self, public_w3: Web3) -> None:
+        assert hasattr(public_w3, "seismic")
+        assert isinstance(public_w3.seismic, SeismicPublicNamespace)  # type: ignore[attr-defined]
+
+    def test_get_tee_public_key(self, public_w3: Web3) -> None:
+        pk = public_w3.seismic.get_tee_public_key()  # type: ignore[attr-defined]
+        assert isinstance(pk, CompressedPublicKey)
+        assert len(pk) == 33
+
+    def test_no_encryption_state(self, public_w3: Web3) -> None:
+        assert not hasattr(public_w3.seismic, "encryption")  # type: ignore[attr-defined]
+
+    def test_chain_id(self, public_w3: Web3, expected_chain_id: int) -> None:
+        assert public_w3.eth.chain_id == expected_chain_id

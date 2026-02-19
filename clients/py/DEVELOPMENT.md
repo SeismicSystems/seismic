@@ -82,7 +82,7 @@ clients/py/
 │       ├── __init__.py              # Public API exports
 │       ├── _types.py                # PrivateKey, Bytes32, etc.
 │       ├── chains.py                # ChainConfig, SEISMIC_TESTNET, SANVIL
-│       ├── client.py                # create_shielded_web3, EncryptionState
+│       ├── client.py                # create_wallet_client, create_public_client, EncryptionState
 │       ├── module.py                # SeismicNamespace (w3.seismic)
 │       ├── transaction_types.py     # SeismicSecurityParams, TxSeismic types
 │       ├── py.typed                 # PEP 561 type marker

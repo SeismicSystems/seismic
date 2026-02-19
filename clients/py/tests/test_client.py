@@ -1,5 +1,6 @@
-"""Tests for seismic_web3.client — EncryptionState and get_encryption."""
+"""Tests for seismic_web3.client — EncryptionState, get_encryption, and factories."""
 
+import warnings
 from unittest.mock import MagicMock, patch
 
 from hexbytes import HexBytes
@@ -11,8 +12,15 @@ from seismic_web3._types import (
     PrivateKey,
 )
 from seismic_web3.chains import SANVIL, ChainConfig
-from seismic_web3.client import EncryptionState, create_shielded_web3, get_encryption
+from seismic_web3.client import (
+    EncryptionState,
+    create_public_client,
+    create_shielded_web3,
+    create_wallet_client,
+    get_encryption,
+)
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
+from seismic_web3.module import SeismicPublicNamespace
 from seismic_web3.transaction_types import (
     LegacyFields,
     SeismicElements,
@@ -201,3 +209,127 @@ class TestChainConfigCreateAsyncClient:
         await cfg.create_async_client(_TEST_PK)
 
         mock_http.assert_called_once_with("http://test:8545")
+
+
+# ---------------------------------------------------------------------------
+# New wallet/public factory tests
+# ---------------------------------------------------------------------------
+
+
+class TestCreateWalletClient:
+    """create_wallet_client is the new preferred factory."""
+
+    @patch("seismic_web3.client.get_tee_public_key", return_value=_MOCK_TEE_PK)
+    @patch("seismic_web3.client.Web3")
+    def test_accepts_string(self, mock_web3, mock_get_tee):
+        mock_web3.return_value = MagicMock()
+        mock_web3.HTTPProvider = MagicMock()
+
+        create_wallet_client("http://localhost:8545", private_key=_TEST_PK)
+
+        mock_web3.HTTPProvider.assert_called_once_with("http://localhost:8545")
+
+
+class TestCreatePublicClient:
+    """create_public_client does not require a private key."""
+
+    @patch("seismic_web3.client.Web3")
+    def test_no_tee_key_fetch(self, mock_web3):
+        """Public client does not fetch TEE key at construction."""
+        mock_instance = MagicMock()
+        mock_web3.return_value = mock_instance
+        mock_web3.HTTPProvider = MagicMock()
+
+        w3 = create_public_client("http://localhost:8545")
+
+        mock_web3.HTTPProvider.assert_called_once_with("http://localhost:8545")
+        assert isinstance(w3.seismic, SeismicPublicNamespace)
+
+    @patch("seismic_web3.client.Web3")
+    def test_returns_web3_instance(self, mock_web3):
+        mock_web3.return_value = MagicMock()
+        mock_web3.HTTPProvider = MagicMock()
+
+        w3 = create_public_client("http://localhost:8545")
+        assert w3 is mock_web3.return_value
+
+
+class TestDeprecatedCreateShieldedWeb3:
+    """create_shielded_web3 emits a DeprecationWarning."""
+
+    @patch("seismic_web3.client.get_tee_public_key", return_value=_MOCK_TEE_PK)
+    @patch("seismic_web3.client.Web3")
+    def test_emits_deprecation_warning(self, mock_web3, mock_get_tee):
+        mock_web3.return_value = MagicMock()
+        mock_web3.HTTPProvider = MagicMock()
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            create_shielded_web3("http://localhost:8545", private_key=_TEST_PK)
+
+        deprecation_msgs = [
+            w for w in caught if issubclass(w.category, DeprecationWarning)
+        ]
+        assert len(deprecation_msgs) == 1
+        assert "create_wallet_client" in str(deprecation_msgs[0].message)
+
+
+class TestChainConfigWalletClient:
+    """ChainConfig.wallet_client delegates to create_wallet_client."""
+
+    @patch("seismic_web3.client.get_tee_public_key", return_value=_MOCK_TEE_PK)
+    @patch("seismic_web3.client.Web3")
+    def test_wallet_client_uses_rpc_url(self, mock_web3, mock_get_tee):
+        mock_web3.return_value = MagicMock()
+        mock_web3.HTTPProvider = MagicMock()
+
+        cfg = ChainConfig(chain_id=1, rpc_url="http://test:8545")
+        cfg.wallet_client(_TEST_PK)
+
+        mock_web3.HTTPProvider.assert_called_once_with("http://test:8545")
+
+
+class TestChainConfigPublicClient:
+    """ChainConfig.public_client creates a public client."""
+
+    @patch("seismic_web3.client.Web3")
+    def test_public_client_uses_rpc_url(self, mock_web3):
+        mock_web3.return_value = MagicMock()
+        mock_web3.HTTPProvider = MagicMock()
+
+        cfg = ChainConfig(chain_id=1, rpc_url="http://test:8545")
+        w3 = cfg.public_client()
+
+        mock_web3.HTTPProvider.assert_called_once_with("http://test:8545")
+        assert isinstance(w3.seismic, SeismicPublicNamespace)
+
+    @patch("seismic_web3.client.Web3")
+    def test_public_client_with_predefined_chain(self, mock_web3):
+        mock_web3.return_value = MagicMock()
+        mock_web3.HTTPProvider = MagicMock()
+
+        SANVIL.public_client()
+
+        mock_web3.HTTPProvider.assert_called_once_with("http://127.0.0.1:8545")
+
+
+class TestDeprecatedChainConfigCreateClient:
+    """ChainConfig.create_client emits a DeprecationWarning."""
+
+    @patch("seismic_web3.client.get_tee_public_key", return_value=_MOCK_TEE_PK)
+    @patch("seismic_web3.client.Web3")
+    def test_emits_deprecation_warning(self, mock_web3, mock_get_tee):
+        mock_web3.return_value = MagicMock()
+        mock_web3.HTTPProvider = MagicMock()
+
+        cfg = ChainConfig(chain_id=1, rpc_url="http://test:8545")
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            cfg.create_client(_TEST_PK)
+
+        deprecation_msgs = [
+            w for w in caught if issubclass(w.category, DeprecationWarning)
+        ]
+        assert len(deprecation_msgs) == 1
+        assert "wallet_client" in str(deprecation_msgs[0].message)
