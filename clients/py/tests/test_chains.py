@@ -75,3 +75,23 @@ class TestSanvil:
 
     def test_ws_url(self):
         assert SANVIL.ws_url == "ws://127.0.0.1:8545"
+
+
+class TestChainConfigClientMethods:
+    """ChainConfig.create_client and create_async_client."""
+
+    def test_create_client_is_callable(self):
+        cfg = ChainConfig(chain_id=1, rpc_url="http://localhost")
+        assert callable(cfg.create_client)
+
+    def test_create_async_client_is_callable(self):
+        cfg = ChainConfig(chain_id=1, rpc_url="http://localhost")
+        assert callable(cfg.create_async_client)
+
+    def test_frozen_still_works_with_methods(self):
+        cfg = ChainConfig(chain_id=1, rpc_url="http://localhost")
+        try:
+            cfg.chain_id = 2  # type: ignore[misc]
+            raise AssertionError("expected FrozenInstanceError")
+        except AttributeError:
+            pass

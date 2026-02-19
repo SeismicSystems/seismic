@@ -7,26 +7,32 @@ Provides ``ChainConfig`` dataclasses for supported Seismic networks
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-# ---------------------------------------------------------------------------
-# Protocol constants
-# ---------------------------------------------------------------------------
+from seismic_web3._constants import (
+    SANVIL_CHAIN_ID,
+    SEISMIC_TESTNET_CHAIN_ID,
+    SEISMIC_TX_TYPE,
+    TYPED_DATA_MESSAGE_VERSION,
+)
+from seismic_web3.client import create_async_shielded_web3, create_shielded_web3
 
-#: Seismic custom transaction type byte (decimal 74, hex 0x4a).
-SEISMIC_TX_TYPE: int = 0x4A
+if TYPE_CHECKING:
+    from web3 import AsyncWeb3, Web3
 
-#: EIP-712 typed-data message version for JSON-RPC wallet signing.
-TYPED_DATA_MESSAGE_VERSION: int = 2
+    from seismic_web3._types import PrivateKey
 
-# ---------------------------------------------------------------------------
-# Chain IDs
-# ---------------------------------------------------------------------------
-
-#: Chain ID for the Seismic public testnet.
-SEISMIC_TESTNET_CHAIN_ID: int = 5124
-
-#: Chain ID for the local Sanvil (Seismic Anvil) instance.
-SANVIL_CHAIN_ID: int = 31_337
+# Re-export constants for backwards compatibility
+__all__ = [
+    "SANVIL",
+    "SANVIL_CHAIN_ID",
+    "SEISMIC_TESTNET",
+    "SEISMIC_TESTNET_CHAIN_ID",
+    "SEISMIC_TX_TYPE",
+    "TYPED_DATA_MESSAGE_VERSION",
+    "ChainConfig",
+    "make_seismic_testnet",
+]
 
 # ---------------------------------------------------------------------------
 # Chain configuration
@@ -48,6 +54,55 @@ class ChainConfig:
     rpc_url: str
     ws_url: str | None = None
     name: str = ""
+
+    def create_client(
+        self,
+        private_key: PrivateKey,
+        *,
+        encryption_sk: PrivateKey | None = None,
+    ) -> Web3:
+        """Create a sync ``Web3`` instance configured for this chain.
+
+        Args:
+            private_key: 32-byte signing key for transactions.
+            encryption_sk: Optional 32-byte key for ECDH.
+
+        Returns:
+            A ``Web3`` instance with ``w3.seismic`` namespace attached.
+        """
+        return create_shielded_web3(
+            self.rpc_url,
+            private_key=private_key,
+            encryption_sk=encryption_sk,
+        )
+
+    async def create_async_client(
+        self,
+        private_key: PrivateKey,
+        *,
+        encryption_sk: PrivateKey | None = None,
+        ws: bool = False,
+    ) -> AsyncWeb3:
+        """Create an async ``Web3`` instance configured for this chain.
+
+        When ``ws=True`` and :attr:`ws_url` is set, the WebSocket URL
+        is used automatically.
+
+        Args:
+            private_key: 32-byte signing key for transactions.
+            encryption_sk: Optional 32-byte key for ECDH.
+            ws: If ``True``, uses ``WebSocketProvider``.
+
+        Returns:
+            An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached.
+        """
+        url = self.ws_url if ws and self.ws_url else self.rpc_url
+        return await create_async_shielded_web3(
+            url,
+            private_key=private_key,
+            encryption_sk=encryption_sk,
+            ws=ws,
+        )
 
 
 def make_seismic_testnet(n: int = 1) -> ChainConfig:

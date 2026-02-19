@@ -19,7 +19,7 @@ from eth_hash.auto import keccak
 from eth_keys import keys as eth_keys
 from hexbytes import HexBytes
 
-from seismic_web3.chains import SEISMIC_TX_TYPE
+from seismic_web3._constants import SEISMIC_TX_TYPE
 from seismic_web3.transaction_types import Signature
 
 if TYPE_CHECKING:
