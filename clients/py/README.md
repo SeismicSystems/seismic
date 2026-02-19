@@ -6,6 +6,13 @@ Python SDK for [Seismic](https://seismic.systems), built on [web3.py](https://gi
 pip install seismic-web3
 ```
 
+## Client types
+
+The SDK provides two client types:
+
+- **Wallet client** — you provide a private key. Gives you full capabilities: shielded reads/writes, signed calls, deposits.
+- **Public client** — no private key needed. Read-only access via transparent `eth_call`.
+
 ## Quick start
 
 ```python
