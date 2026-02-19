@@ -218,3 +218,107 @@ class TestDepositLifecycle:
         # 8. Root changed again
         final_root = bytes(deposit_contract.tread.get_deposit_root())
         assert final_root != new_root
+
+
+# ---------------------------------------------------------------------------
+# Tests — deposit action sugar (w3.seismic.*)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def deposit_address(
+    plain_w3: Web3,
+    account_address: str,
+) -> str:
+    """Deploy a fresh DepositContract and return its address."""
+    return deploy_contract(
+        plain_w3,
+        DEPOSIT_CONTRACT_BYTECODE,
+        account_address,
+    )
+
+
+class TestDepositActions:
+    """Test the syntactic sugar methods on ``w3.seismic``."""
+
+    def test_get_deposit_count_initial(
+        self,
+        w3: Web3,
+        deposit_address: str,
+    ) -> None:
+        count = w3.seismic.get_deposit_count(address=deposit_address)
+        assert count == 0
+
+    def test_get_deposit_root_initial(
+        self,
+        w3: Web3,
+        deposit_address: str,
+    ) -> None:
+        root = w3.seismic.get_deposit_root(address=deposit_address)
+        assert isinstance(root, bytes)
+        assert len(root) == 32
+
+    def test_deposit_and_count(
+        self,
+        w3: Web3,
+        deposit_address: str,
+    ) -> None:
+        amount_gwei = 32_000_000_000
+        deposit_data_root = compute_deposit_data_root(
+            NODE_PUBKEY,
+            CONSENSUS_PUBKEY,
+            WITHDRAWAL_CREDENTIALS,
+            NODE_SIGNATURE,
+            CONSENSUS_SIGNATURE,
+            amount_gwei,
+        )
+        tx_hash = w3.seismic.deposit(
+            NODE_PUBKEY,
+            CONSENSUS_PUBKEY,
+            WITHDRAWAL_CREDENTIALS,
+            NODE_SIGNATURE,
+            CONSENSUS_SIGNATURE,
+            deposit_data_root,
+            value=32 * 10**18,
+            address=deposit_address,
+        )
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
+        assert receipt["status"] == 1
+
+        count = w3.seismic.get_deposit_count(address=deposit_address)
+        assert count == 1
+
+    def test_deposit_changes_root(
+        self,
+        w3: Web3,
+        deposit_address: str,
+    ) -> None:
+        root_before = w3.seismic.get_deposit_root(
+            address=deposit_address,
+        )
+
+        amount_gwei = 32_000_000_000
+        deposit_data_root = compute_deposit_data_root(
+            NODE_PUBKEY,
+            CONSENSUS_PUBKEY,
+            WITHDRAWAL_CREDENTIALS,
+            NODE_SIGNATURE,
+            CONSENSUS_SIGNATURE,
+            amount_gwei,
+        )
+        tx_hash = w3.seismic.deposit(
+            NODE_PUBKEY,
+            CONSENSUS_PUBKEY,
+            WITHDRAWAL_CREDENTIALS,
+            NODE_SIGNATURE,
+            CONSENSUS_SIGNATURE,
+            deposit_data_root,
+            value=32 * 10**18,
+            address=deposit_address,
+        )
+        w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
+
+        root_after = w3.seismic.get_deposit_root(
+            address=deposit_address,
+        )
+        assert root_before != root_after

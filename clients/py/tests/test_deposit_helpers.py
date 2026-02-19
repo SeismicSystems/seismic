@@ -140,25 +140,17 @@ class TestComputeDepositDataRoot:
 
 class TestConstants:
     def test_abi_has_deposit_function(self) -> None:
-        fn_names = [
-            e["name"] for e in DEPOSIT_CONTRACT_ABI
-            if e["type"] == "function"
-        ]
+        fn_names = [e["name"] for e in DEPOSIT_CONTRACT_ABI if e["type"] == "function"]
         assert "deposit" in fn_names
 
     def test_abi_has_view_functions(self) -> None:
-        fn_names = [
-            e["name"] for e in DEPOSIT_CONTRACT_ABI
-            if e["type"] == "function"
-        ]
+        fn_names = [e["name"] for e in DEPOSIT_CONTRACT_ABI if e["type"] == "function"]
         assert "get_deposit_root" in fn_names
         assert "get_deposit_count" in fn_names
         assert "supportsInterface" in fn_names
 
     def test_abi_has_event(self) -> None:
-        events = [
-            e for e in DEPOSIT_CONTRACT_ABI if e["type"] == "event"
-        ]
+        events = [e for e in DEPOSIT_CONTRACT_ABI if e["type"] == "event"]
         assert len(events) == 1
         assert events[0]["name"] == "DepositEvent"
 

@@ -12,6 +12,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from seismic_web3.abis.deposit_contract import (
+    DEPOSIT_CONTRACT_ABI,
+    DEPOSIT_CONTRACT_ADDRESS,
+)
+from seismic_web3.contract.abi import encode_shielded_calldata
 from seismic_web3.contract.shielded import AsyncShieldedContract, ShieldedContract
 from seismic_web3.rpc import async_get_tee_public_key, get_tee_public_key
 from seismic_web3.transaction.send import (
@@ -204,6 +209,105 @@ class SeismicNamespace:
             security=security,
         )
 
+    # ------------------------------------------------------------------
+    # Deposit contract actions
+    # ------------------------------------------------------------------
+
+    def deposit(
+        self,
+        node_pubkey: bytes,
+        consensus_pubkey: bytes,
+        withdrawal_credentials: bytes,
+        node_signature: bytes,
+        consensus_signature: bytes,
+        deposit_data_root: bytes,
+        *,
+        value: int,
+        address: str = DEPOSIT_CONTRACT_ADDRESS,
+    ) -> HexBytes:
+        """Submit a validator deposit (sync).
+
+        Encodes and sends a transparent ``deposit()`` call to the
+        deposit contract.  Equivalent to
+        ``contract.twrite.deposit(...)`` but without instantiating
+        a ``ShieldedContract``.
+
+        Args:
+            node_pubkey: 32-byte ED25519 public key.
+            consensus_pubkey: 48-byte BLS12-381 public key.
+            withdrawal_credentials: 32-byte withdrawal credentials.
+            node_signature: 64-byte ED25519 signature.
+            consensus_signature: 96-byte BLS12-381 signature.
+            deposit_data_root: 32-byte deposit data root hash.
+            value: Deposit amount in wei (e.g. ``32 * 10**18``).
+            address: Deposit contract address (defaults to genesis).
+
+        Returns:
+            Transaction hash.
+        """
+        data = encode_shielded_calldata(
+            DEPOSIT_CONTRACT_ABI,
+            "deposit",
+            [
+                node_pubkey,
+                consensus_pubkey,
+                withdrawal_credentials,
+                node_signature,
+                consensus_signature,
+                deposit_data_root,
+            ],
+        )
+        return self._w3.eth.send_transaction(
+            {"to": address, "data": data.to_0x_hex(), "value": value},
+        )
+
+    def get_deposit_root(
+        self,
+        *,
+        address: str = DEPOSIT_CONTRACT_ADDRESS,
+    ) -> bytes:
+        """Read the current deposit Merkle root (sync).
+
+        Args:
+            address: Deposit contract address (defaults to genesis).
+
+        Returns:
+            32-byte deposit root hash.
+        """
+        data = encode_shielded_calldata(
+            DEPOSIT_CONTRACT_ABI,
+            "get_deposit_root",
+            [],
+        )
+        raw = self._w3.eth.call({"to": address, "data": data})
+        return bytes(raw[:32])
+
+    def get_deposit_count(
+        self,
+        *,
+        address: str = DEPOSIT_CONTRACT_ADDRESS,
+    ) -> int:
+        """Read the current deposit count (sync).
+
+        The on-chain value is an 8-byte little-endian integer.
+
+        Args:
+            address: Deposit contract address (defaults to genesis).
+
+        Returns:
+            Number of deposits as a Python ``int``.
+        """
+        data = encode_shielded_calldata(
+            DEPOSIT_CONTRACT_ABI,
+            "get_deposit_count",
+            [],
+        )
+        raw = self._w3.eth.call({"to": address, "data": data})
+        # ABI-encoded bytes: 32-byte offset + 32-byte length + data
+        # The actual 8-byte LE count starts after the 64-byte header.
+        count_bytes = bytes(raw[64:72])
+        return int.from_bytes(count_bytes, "little")
+
 
 class AsyncSeismicNamespace:
     """Async Seismic namespace -- attached as ``w3.seismic``.
@@ -375,3 +479,101 @@ class AsyncSeismicNamespace:
             gas_price=gas_price,
             security=security,
         )
+
+    # ------------------------------------------------------------------
+    # Deposit contract actions
+    # ------------------------------------------------------------------
+
+    async def deposit(
+        self,
+        node_pubkey: bytes,
+        consensus_pubkey: bytes,
+        withdrawal_credentials: bytes,
+        node_signature: bytes,
+        consensus_signature: bytes,
+        deposit_data_root: bytes,
+        *,
+        value: int,
+        address: str = DEPOSIT_CONTRACT_ADDRESS,
+    ) -> HexBytes:
+        """Submit a validator deposit (async).
+
+        Encodes and sends a transparent ``deposit()`` call to the
+        deposit contract.  Equivalent to
+        ``await contract.twrite.deposit(...)`` but without
+        instantiating an ``AsyncShieldedContract``.
+
+        Args:
+            node_pubkey: 32-byte ED25519 public key.
+            consensus_pubkey: 48-byte BLS12-381 public key.
+            withdrawal_credentials: 32-byte withdrawal credentials.
+            node_signature: 64-byte ED25519 signature.
+            consensus_signature: 96-byte BLS12-381 signature.
+            deposit_data_root: 32-byte deposit data root hash.
+            value: Deposit amount in wei (e.g. ``32 * 10**18``).
+            address: Deposit contract address (defaults to genesis).
+
+        Returns:
+            Transaction hash.
+        """
+        data = encode_shielded_calldata(
+            DEPOSIT_CONTRACT_ABI,
+            "deposit",
+            [
+                node_pubkey,
+                consensus_pubkey,
+                withdrawal_credentials,
+                node_signature,
+                consensus_signature,
+                deposit_data_root,
+            ],
+        )
+        return await self._w3.eth.send_transaction(
+            {"to": address, "data": data.to_0x_hex(), "value": value},
+        )
+
+    async def get_deposit_root(
+        self,
+        *,
+        address: str = DEPOSIT_CONTRACT_ADDRESS,
+    ) -> bytes:
+        """Read the current deposit Merkle root (async).
+
+        Args:
+            address: Deposit contract address (defaults to genesis).
+
+        Returns:
+            32-byte deposit root hash.
+        """
+        data = encode_shielded_calldata(
+            DEPOSIT_CONTRACT_ABI,
+            "get_deposit_root",
+            [],
+        )
+        raw = await self._w3.eth.call({"to": address, "data": data})
+        return bytes(raw[:32])
+
+    async def get_deposit_count(
+        self,
+        *,
+        address: str = DEPOSIT_CONTRACT_ADDRESS,
+    ) -> int:
+        """Read the current deposit count (async).
+
+        The on-chain value is an 8-byte little-endian integer.
+
+        Args:
+            address: Deposit contract address (defaults to genesis).
+
+        Returns:
+            Number of deposits as a Python ``int``.
+        """
+        data = encode_shielded_calldata(
+            DEPOSIT_CONTRACT_ABI,
+            "get_deposit_count",
+            [],
+        )
+        raw = await self._w3.eth.call({"to": address, "data": data})
+        # ABI-encoded bytes: 32-byte offset + 32-byte length + data
+        count_bytes = bytes(raw[64:72])
+        return int.from_bytes(count_bytes, "little")

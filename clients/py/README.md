@@ -201,23 +201,21 @@ tx_hash = token.write.approve("0xSpender...", 500)
 
 ## Deposit Contract
 
-The SDK ships with `DEPOSIT_CONTRACT_ABI` and helpers for Seismic's Eth2-style validator deposit contract. Validators deposit ETH (minimum 1 ETH, typically 32 ETH) along with their public keys, signatures, and withdrawal credentials.
+The SDK provides first-class action methods for Seismic's Eth2-style validator deposit contract. Validators deposit ETH (minimum 1 ETH, typically 32 ETH) along with their public keys, signatures, and withdrawal credentials.
 
-The deposit contract uses **no shielded types** — all parameters are standard `bytes` and `bytes32`. Use transparent namespaces (`.twrite` / `.tread`) for interactions.
+### Direct actions (recommended)
+
+Call deposit actions directly on `w3.seismic` — no ABI or contract instantiation needed:
 
 ```python
 from seismic_web3 import (
     create_shielded_web3,
-    DEPOSIT_CONTRACT_ABI,
-    DEPOSIT_CONTRACT_ADDRESS,
     compute_deposit_data_root,
     make_withdrawal_credentials,
     PrivateKey,
 )
 
 w3 = create_shielded_web3("http://127.0.0.1:8545", private_key=PrivateKey(...))
-
-deposit = w3.seismic.contract(address=DEPOSIT_CONTRACT_ADDRESS, abi=DEPOSIT_CONTRACT_ABI)
 
 # Build withdrawal credentials from your Ethereum address
 withdrawal_creds = make_withdrawal_credentials("0xYourAddress...")
@@ -233,17 +231,39 @@ deposit_data_root = compute_deposit_data_root(
     amount_gwei=amount_gwei,
 )
 
-# Deposit 32 ETH — transparent write (payable)
-tx_hash = deposit.twrite.deposit(
+# Deposit 32 ETH
+tx_hash = w3.seismic.deposit(
     node_pk, consensus_pk, withdrawal_creds,
     node_sig, consensus_sig, deposit_data_root,
     value=32 * 10**18,
 )
 receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
-# Read deposit count and root — transparent reads
-count_bytes = deposit.tread.get_deposit_count()     # 8-byte little-endian
-root = deposit.tread.get_deposit_root()              # bytes32
+# Read deposit count and root
+count = w3.seismic.get_deposit_count()   # int
+root = w3.seismic.get_deposit_root()     # bytes (32 bytes)
+```
+
+All three methods accept an optional `address` keyword to target a custom deployment instead of the genesis contract.
+
+### Manual contract approach
+
+For advanced use cases (custom ABI, event filtering), you can use the `ShieldedContract` pattern. The deposit contract uses **no shielded types** — use transparent namespaces (`.twrite` / `.tread`):
+
+```python
+from seismic_web3 import DEPOSIT_CONTRACT_ABI, DEPOSIT_CONTRACT_ADDRESS
+
+deposit = w3.seismic.contract(
+    address=DEPOSIT_CONTRACT_ADDRESS, abi=DEPOSIT_CONTRACT_ABI,
+)
+
+tx_hash = deposit.twrite.deposit(
+    node_pk, consensus_pk, withdrawal_creds,
+    node_sig, consensus_sig, deposit_data_root,
+    value=32 * 10**18,
+)
+count_bytes = deposit.tread.get_deposit_count()   # raw bytes
+root = deposit.tread.get_deposit_root()           # raw bytes
 ```
 
 | Export | Kind | Description |
@@ -321,8 +341,8 @@ Everything importable from `seismic_web3`:
 | `make_withdrawal_credentials` | function | Build 32-byte withdrawal credentials from address |
 | `ShieldedContract` | class | Sync contract with `.write`/`.read`/`.twrite`/`.tread`/`.dwrite` |
 | `AsyncShieldedContract` | class | Async version of `ShieldedContract` |
-| `SeismicNamespace` | class | Sync namespace attached as `w3.seismic` |
-| `AsyncSeismicNamespace` | class | Async namespace attached as `w3.seismic` |
+| `SeismicNamespace` | class | Sync namespace (`w3.seismic`) — includes `deposit`, `get_deposit_root`, `get_deposit_count` |
+| `AsyncSeismicNamespace` | class | Async namespace (`w3.seismic`) — async versions of all methods |
 | `EncryptionState` | class | ECDH-derived AES key + keypair |
 | `ChainConfig` | class | Immutable chain configuration (chain_id, rpc_url, ws_url) |
 | `SeismicSecurityParams` | class | Per-transaction security overrides |
@@ -445,6 +465,7 @@ clients/py/
     ├── test_transaction_types.py
     ├── test_precompiles.py
     ├── test_types.py
+    ├── test_deposit_helpers.py
     └── integration/
         ├── conftest.py
         ├── contracts.py
@@ -453,6 +474,7 @@ clients/py/
         ├── test_namespace.py
         ├── test_precompiles.py
         ├── test_seismic_counter.py
+        ├── test_deposit_contract.py
         ├── test_src20_token.py
         └── test_transparent_counter.py
 ```
