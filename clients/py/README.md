@@ -38,7 +38,7 @@ result = contract.read.getNumber()
 
 ## Shielded Contracts
 
-`ShieldedContract` exposes four namespaces:
+`ShieldedContract` exposes five namespaces:
 
 | Namespace | What it does | On-chain visibility |
 |-----------|-------------|-------------------|
@@ -46,6 +46,7 @@ result = contract.read.getNumber()
 | `.read` | Encrypted signed `eth_call` | Calldata + result hidden |
 | `.twrite` | Standard `eth_sendTransaction` | Calldata visible |
 | `.tread` | Standard `eth_call` | Calldata visible |
+| `.dwrite` | Debug write — like `.write` but returns plaintext + encrypted views | Calldata hidden |
 
 ```python
 contract = w3.seismic.contract(address="0x...", abi=ABI)
@@ -61,6 +62,12 @@ tx_hash = contract.twrite.setNumber(42)
 
 # Transparent read — standard eth_call, returns raw bytes
 result = contract.tread.getNumber()
+
+# Debug write — sends encrypted tx, returns plaintext + encrypted views + hash
+debug = contract.dwrite.setNumber(42)
+debug.plaintext_tx.data  # unencrypted calldata
+debug.shielded_tx.data   # encrypted calldata
+debug.tx_hash            # transaction hash
 ```
 
 Write namespaces accept optional keyword arguments:
@@ -140,6 +147,12 @@ result = w3.seismic.signed_call(
     data=HexBytes("0x..."),
     gas=30_000_000,
 )
+
+# Debug shielded transaction — sends + returns plaintext/encrypted views
+debug = w3.seismic.debug_send_shielded_transaction(
+    to="0x...",
+    data=HexBytes("0x..."),
+)
 ```
 
 You can also encode calldata for shielded types separately:
@@ -152,6 +165,7 @@ from seismic_web3.contract.abi import encode_shielded_calldata
 data = encode_shielded_calldata(abi, "setNumber", [42])
 ```
 
+<<<<<<< py-src20-standard
 ## SRC20 Tokens
 
 The SDK ships with `SRC20_ABI`, the ABI for Seismic's [SRC20 token standard](https://docs.seismic.systems) — a privacy-preserving ERC20 where balances and transfer amounts use shielded types (`suint256`).
@@ -186,6 +200,44 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 tx_hash = token.write.approve("0xSpender...", 500)
 ```
 
+=======
+## Precompiles
+
+Call Mercury EVM precompiles directly via `eth_call`. No encryption state needed — just a `Web3` instance connected to a Seismic node.
+
+```python
+from seismic_web3.precompiles import rng, ecdh, aes_gcm_encrypt, aes_gcm_decrypt, hkdf, secp256k1_sign
+from seismic_web3 import Bytes32, PrivateKey, CompressedPublicKey
+
+# On-chain random number generation (0x64)
+random_val = rng(w3, num_bytes=32)
+
+# On-chain ECDH key exchange (0x65)
+shared_secret = ecdh(w3, sk=my_private_key, pk=their_public_key)
+
+# On-chain AES-GCM encrypt/decrypt (0x66 / 0x67)
+ciphertext = aes_gcm_encrypt(w3, aes_key=key, nonce=1, plaintext=b"secret")
+plaintext = aes_gcm_decrypt(w3, aes_key=key, nonce=1, ciphertext=bytes(ciphertext))
+
+# On-chain HKDF key derivation (0x68)
+derived_key = hkdf(w3, b"input key material")
+
+# On-chain secp256k1 signing (0x69)
+signature = secp256k1_sign(w3, sk=my_private_key, message="hello")
+```
+
+All functions have async variants (`async_rng`, `async_ecdh`, etc.).
+
+| Precompile | Address | Function | Returns |
+|---|---|---|---|
+| RNG | `0x64` | `rng(w3, num_bytes=, pers=)` | `int` |
+| ECDH | `0x65` | `ecdh(w3, sk=, pk=)` | `Bytes32` |
+| AES Encrypt | `0x66` | `aes_gcm_encrypt(w3, aes_key=, nonce=, plaintext=)` | `HexBytes` |
+| AES Decrypt | `0x67` | `aes_gcm_decrypt(w3, aes_key=, nonce=, ciphertext=)` | `HexBytes` |
+| HKDF | `0x68` | `hkdf(w3, ikm)` | `Bytes32` |
+| secp256k1 Sign | `0x69` | `secp256k1_sign(w3, sk=, message=)` | `HexBytes` |
+
+>>>>>>> main
 ## Security Parameters
 
 Override per-transaction security defaults with `SeismicSecurityParams`:
@@ -214,7 +266,7 @@ Everything importable from `seismic_web3`:
 | `create_async_shielded_web3` | function | Create async `AsyncWeb3` with `w3.seismic` namespace |
 | `get_encryption` | function | Derive `EncryptionState` from a TEE public key |
 | `make_seismic_testnet` | function | Factory for GCP testnet `ChainConfig` |
-| `ShieldedContract` | class | Sync contract with `.write`/`.read`/`.twrite`/`.tread` |
+| `ShieldedContract` | class | Sync contract with `.write`/`.read`/`.twrite`/`.tread`/`.dwrite` |
 | `AsyncShieldedContract` | class | Async version of `ShieldedContract` |
 | `SeismicNamespace` | class | Sync namespace attached as `w3.seismic` |
 | `AsyncSeismicNamespace` | class | Async namespace attached as `w3.seismic` |
@@ -234,6 +286,8 @@ Everything importable from `seismic_web3`:
 | `TxSeismicMetadata` | type | Transaction metadata (used as AES-GCM AAD) |
 | `LegacyFields` | type | Standard EVM tx fields (chain_id, nonce, to, value) |
 | `Signature` | type | ECDSA signature components (v, r, s) |
+| `PlaintextTx` | type | Unencrypted transaction view (for debug writes) |
+| `DebugWriteResult` | type | Result from `.dwrite` (plaintext tx + shielded tx + hash) |
 
 ---
 
@@ -303,12 +357,19 @@ clients/py/
 │       │   └── src20.py              # ISRC20 interface ABI
 │       ├── contract/
 │       │   ├── abi.py               # ABI encoding, shielded type remapping
-│       │   └── shielded.py          # ShieldedContract (4-namespace pattern)
+│       │   └── shielded.py          # ShieldedContract (5-namespace pattern)
 │       ├── crypto/
 │       │   ├── aes.py               # AES-GCM encryption
 │       │   ├── ecdh.py              # ECDH key agreement
 │       │   ├── nonce.py             # Nonce generation
 │       │   └── secp.py              # secp256k1 utilities
+│       ├── precompiles/
+│       │   ├── _base.py             # Precompile framework (call, gas helpers)
+│       │   ├── rng.py               # RNG precompile (0x64)
+│       │   ├── ecdh.py              # ECDH precompile (0x65)
+│       │   ├── aes.py               # AES encrypt/decrypt (0x66, 0x67)
+│       │   ├── hkdf.py              # HKDF precompile (0x68)
+│       │   └── secp256k1.py         # secp256k1 sign precompile (0x69)
 │       └── transaction/
 │           ├── aead.py              # AAD construction
 │           ├── metadata.py          # Transaction metadata
@@ -326,6 +387,7 @@ clients/py/
     ├── test_send.py
     ├── test_serialize.py
     ├── test_transaction_types.py
+    ├── test_precompiles.py
     ├── test_types.py
     └── integration/
         ├── conftest.py
@@ -333,6 +395,7 @@ clients/py/
         ├── artifacts/                # Compiled contract JSON
         ├── test_client_factory.py
         ├── test_namespace.py
+        ├── test_precompiles.py
         ├── test_seismic_counter.py
         ├── test_src20_token.py
         └── test_transparent_counter.py

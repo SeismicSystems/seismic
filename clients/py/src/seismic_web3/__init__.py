@@ -14,7 +14,8 @@ Public API
 **Transaction types** (``seismic_web3.transaction_types``):
     :class:`SeismicElements`, :class:`SeismicSecurityParams`,
     :class:`UnsignedSeismicTx`, :class:`TxSeismicMetadata`,
-    :class:`Signature`, :class:`LegacyFields`
+    :class:`Signature`, :class:`LegacyFields`,
+    :class:`PlaintextTx`, :class:`DebugWriteResult`
 
 **Client** (``seismic_web3.client``):
     :class:`EncryptionState`, :func:`get_encryption`,
@@ -71,7 +72,9 @@ from seismic_web3.module import (
 
 # -- Transaction types -------------------------------------------------------
 from seismic_web3.transaction_types import (
+    DebugWriteResult,
     LegacyFields,
+    PlaintextTx,
     SeismicElements,
     SeismicSecurityParams,
     Signature,
@@ -89,9 +92,11 @@ __all__ = [
     "Bytes32",
     "ChainConfig",
     "CompressedPublicKey",
+    "DebugWriteResult",
     "EncryptionNonce",
     "EncryptionState",
     "LegacyFields",
+    "PlaintextTx",
     "PrivateKey",
     "SeismicElements",
     "SeismicNamespace",
