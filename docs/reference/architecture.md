@@ -16,16 +16,16 @@ Seismic is an EVM-compatible L1 blockchain with native on-chain privacy. The sys
 
 All three components are designed so that private data is only ever accessible inside the Trusted Execution Environment. No plaintext shielded data leaves the TEE boundary at any point in the pipeline.
 
----
+***
 
 ## Seismic Node
 
 The Seismic node is a fork of [reth](https://github.com/paradigmxyz/reth) (the Rust Ethereum execution client). It handles:
 
-- **RPC**: Accepts incoming transactions and read requests. Serves responses to clients, redacting shielded data from public queries.
-- **EVM execution**: Runs a modified EVM that supports `CLOAD`/`CSTORE` opcodes and the six Seismic [precompiles](precompiles.md). This is built on a forked version of `revm`.
-- **State management**: Maintains the world state using FlaggedStorage, where each storage slot is tagged as public or private.
-- **Transaction pool**: Receives both standard Ethereum transactions and Seismic transactions (type `0x4A`). Encrypted calldata in Seismic transactions is decrypted inside the TEE before execution.
+* **RPC**: Accepts incoming transactions and read requests. Serves responses to clients, redacting shielded data from public queries.
+* **EVM execution**: Runs a modified EVM that supports `CLOAD`/`CSTORE` opcodes and the six Seismic [precompiles](../the-case-for-seismic/precompiles.md). This is built on a forked version of `revm`.
+* **State management**: Maintains the world state using FlaggedStorage, where each storage slot is tagged as public or private.
+* **Transaction pool**: Receives both standard Ethereum transactions and Seismic transactions (type `0x4A`). Encrypted calldata in Seismic transactions is decrypted inside the TEE before execution.
 
 The entire node process runs inside an Intel TDX Trusted Execution Environment. This means the node operator cannot inspect memory, attach debuggers, or extract keys from the running process.
 
@@ -39,25 +39,25 @@ alloy-core  -->  revm  -->  reth
 seismic-alloy  seismic-revm  seismic-reth
 ```
 
-- **seismic-alloy** (fork of alloy-core): Adds the Seismic transaction type (`0x4A`) and FlaggedStorage primitives to the core types.
-- **seismic-revm** (fork of revm): Implements `CLOAD`/`CSTORE` opcodes and the Seismic precompiles in the EVM interpreter. Enforces the FlaggedStorage access rules at the opcode level.
-- **seismic-reth** (fork of reth): Integrates the modified EVM into the full node, adding Enclave communication, modified RPC behavior (redacting private data), and TEE attestation.
+* **seismic-alloy** (fork of alloy-core): Adds the Seismic transaction type (`0x4A`) and FlaggedStorage primitives to the core types.
+* **seismic-revm** (fork of revm): Implements `CLOAD`/`CSTORE` opcodes and the Seismic precompiles in the EVM interpreter. Enforces the FlaggedStorage access rules at the opcode level.
+* **seismic-reth** (fork of reth): Integrates the modified EVM into the full node, adding Enclave communication, modified RPC behavior (redacting private data), and TEE attestation.
 
 FlaggedStorage flows through every layer of this stack. At the alloy level, it is a type definition. At the revm level, it governs opcode behavior. At the reth level, it determines what the RPC returns to callers.
 
----
+***
 
 ## Summit (Consensus)
 
 Summit is Seismic's consensus layer, built on [Commonware](https://github.com/commonwarexyz/monorepo) primitives. It handles:
 
-- **Block production**: Ordering transactions into blocks with ~600ms block times.
-- **Consensus**: Reaching agreement among validators on the canonical chain.
-- **Finality**: Single-block finality -- once a block is produced and agreed upon, it is final.
+* **Block production**: Ordering transactions into blocks with \~600ms block times.
+* **Consensus**: Reaching agreement among validators on the canonical chain.
+* **Finality**: Single-block finality -- once a block is produced and agreed upon, it is final.
 
 Summit communicates with the Seismic node to receive transactions from the mempool and to deliver finalized blocks for execution.
 
----
+***
 
 ## Enclave
 
@@ -65,9 +65,9 @@ The Enclave component manages all TEE-related operations. It is the trust anchor
 
 ### Key management
 
-- **Genesis node**: When the network starts, the genesis node generates a root key inside the TEE. This key never leaves the enclave.
-- **Peer nodes**: When a new node joins the network, it must pass remote attestation before receiving the root key. The existing nodes verify that the new node is running identical, approved code inside a genuine TEE.
-- **Encryption secret key**: The root key is used to derive the network's encryption secret key. This key is used to decrypt the calldata of Seismic transactions (type `0x4A`).
+* **Genesis node**: When the network starts, the genesis node generates a root key inside the TEE. This key never leaves the enclave.
+* **Peer nodes**: When a new node joins the network, it must pass remote attestation before receiving the root key. The existing nodes verify that the new node is running identical, approved code inside a genuine TEE.
+* **Encryption secret key**: The root key is used to derive the network's encryption secret key. This key is used to decrypt the calldata of Seismic transactions (type `0x4A`).
 
 ### Attestation
 
@@ -80,7 +80,7 @@ Remote attestation is the process by which one TEE proves to another that it is 
 
 This ensures that every node in the network is running the same software and that no node can be modified to leak private data.
 
----
+***
 
 ## How the components interact
 
@@ -102,9 +102,9 @@ Inside the TEE, the Enclave component decrypts the calldata using the network's 
 
 The modified EVM executes the transaction. When the contract reads shielded storage, it uses `CLOAD`. When it writes shielded storage, it uses `CSTORE`. The FlaggedStorage model ensures that:
 
-- `CSTORE` sets `is_private = true` on the storage slot.
-- `CLOAD` can read slots where `is_private = true`.
-- `SLOAD` returns zero for slots where `is_private = true`.
+* `CSTORE` sets `is_private = true` on the storage slot.
+* `CLOAD` can read slots where `is_private = true`.
+* `SLOAD` returns zero for slots where `is_private = true`.
 
 ### 5. State tree is updated
 
@@ -114,11 +114,11 @@ The world state trie is updated with the new FlaggedStorage values. Each slot st
 
 When external callers query the node:
 
-- `eth_getStorageAt` fails for private slots.
-- Transaction traces redact shielded values (replaced with `0x000`).
-- Event logs contain only the data that was explicitly emitted (encrypted bytes if the developer used the AES precompiles, or public values if the event parameters are unshielded).
+* `eth_getStorageAt` fails for private slots.
+* Transaction traces redact shielded values (replaced with `0x000`).
+* Event logs contain only the data that was explicitly emitted (encrypted bytes if the developer used the AES precompiles, or public values if the event parameters are unshielded).
 
----
+***
 
 ## TEE guarantees
 
@@ -138,6 +138,6 @@ Cryptographic keys (the root key, encryption secret key, and any derived keys) a
 
 ### What TEEs do not protect against
 
-- **Side-channel attacks**: While Intel TDX mitigates many known side-channel attacks, this is an active area of research. Seismic's design minimizes the attack surface, but hardware-level side channels remain a theoretical concern.
-- **Bugs in the node software**: If the approved node code has a bug that leaks private data through a public channel (e.g., writing shielded values to public storage), the TEE will faithfully execute that buggy code. This is why the code is open-source and subject to audit.
-- **Transaction metadata**: The TEE protects calldata and storage values, but metadata such as sender address, gas usage, and the target contract address remain visible on-chain.
+* **Side-channel attacks**: While Intel TDX mitigates many known side-channel attacks, this is an active area of research. Seismic's design minimizes the attack surface, but hardware-level side channels remain a theoretical concern.
+* **Bugs in the node software**: If the approved node code has a bug that leaks private data through a public channel (e.g., writing shielded values to public storage), the TEE will faithfully execute that buggy code. This is why the code is open-source and subject to audit.
+* **Transaction metadata**: The TEE protects calldata and storage values, but metadata such as sender address, gas usage, and the target contract address remain visible on-chain.

@@ -50,5 +50,5 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 ```
 
 {% hint style="info" %}
-Seismic supports almost every RPC endpoint available in [Reth](https://reth.rs/). Only tracing endpoints are modified (shielded data is removed from traces). See [Differences from Ethereum](../../overview/differences-from-ethereum.md#rpc-compatibility) for details.
+Seismic supports almost every RPC endpoint available in [Reth](https://reth.rs/). Only tracing endpoints are modified (shielded data is removed from traces). See [Differences from Ethereum](../../the-case-for-seismic/differences-from-ethereum.md#rpc-compatibility) for details.
 {% endhint %}

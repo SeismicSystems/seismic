@@ -7,7 +7,7 @@ cover:
 coverY: 0
 ---
 
-# Welcome to Seismic !
+# Welcome to Seismic!
 
 **Seismic is an EVM blockchain with native on-chain privacy.** Write Solidity. Use Foundry. Deploy with Viem. The only difference: your users' data stays private.
 
@@ -66,19 +66,19 @@ You just ran shielded contract tests locally. See the [full quickstart](getting-
 
 ### Find what you need
 
-| I want to...                         | Go to                                                   |
-| ------------------------------------ | ------------------------------------------------------- |
-| Understand why Seismic exists        | [Why Seismic](overview/why-seismic.md)                  |
-| See how it works under the hood      | [How Seismic Works](overview/how-seismic-works.md)      |
-| Set up my dev environment            | [Installation](getting-started/installation.md)         |
-| Run my first shielded contract       | [Quickstart](getting-started/quickstart.md)             |
-| Build a complete app step by step    | [Walnut App Tutorial](tutorials/walnut/)                |
-| Build a private ERC20 token          | [SRC20 Tutorial](tutorials/src20/)                      |
-| Learn about shielded types           | [Shielded Types](seismic-solidity/shielded-types/)      |
-| Integrate a frontend                 | [Client Libraries](client-libraries/overview.md)        |
-| Deploy to testnet or mainnet         | [Networks](networks/testnet.md)                         |
-| Understand the transaction lifecycle | [Seismic Transaction](reference/seismic-transaction.md) |
-| Run a node                           | [Node Operator FAQ](reference/node-operator-faq.md)     |
+| I want to...                         | Go to                                                                 |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| Understand why Seismic exists        | [Why Seismic](../the-case-for-seismic/why-seismic.md)                 |
+| See how it works under the hood      | [How Seismic Works](../reference/how-seismic-works.md)                |
+| Set up my dev environment            | [Installation](getting-started/installation.md)                       |
+| Run my first shielded contract       | [Quickstart](getting-started/quickstart.md)                           |
+| Build a complete app step by step    | [Walnut App Tutorial](/broken/pages/BN5OqFBvn79QEqM2Y5JX)             |
+| Build a private ERC20 token          | [SRC20 Tutorial](../tutorials/src20/)                                 |
+| Learn about shielded types           | [Shielded Types](seismic-solidity/shielded-types/)                    |
+| Integrate a frontend                 | [Client Libraries](client-libraries/overview.md)                      |
+| Deploy to testnet or mainnet         | [Networks](networks/testnet.md)                                       |
+| Understand the transaction lifecycle | [Seismic Transaction](../the-case-for-seismic/seismic-transaction.md) |
+| Run a node                           | [Node Operator FAQ](../reference/node-operator-faq.md)                |
 
 ***
 

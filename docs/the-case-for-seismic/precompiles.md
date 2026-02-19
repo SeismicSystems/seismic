@@ -2,7 +2,7 @@
 icon: microchip
 ---
 
-# Precompiles
+# Precompiled Contracts
 
 ## Overview
 
@@ -19,7 +19,7 @@ Precompiles are called like regular contracts using `staticcall` or `call` to th
 | `0x68`  | HKDF            | Derive cryptographic keys from input key material          |
 | `0x69`  | secp256k1 Sign  | Sign a message hash with a secp256k1 private key           |
 
----
+***
 
 ## RNG (`0x64`)
 
@@ -39,9 +39,9 @@ Securely generate a random number inside the TEE. The randomness is derived from
 
 ### Use cases
 
-- Fair randomness in games, lotteries, and raffles
-- Shuffling hidden card decks or secret orderings
-- Generating nonces for on-chain cryptographic operations
+* Fair randomness in games, lotteries, and raffles
+* Shuffling hidden card decks or secret orderings
+* Generating nonces for on-chain cryptographic operations
 
 ### Solidity example
 
@@ -55,7 +55,7 @@ function getRandomNumber(bytes memory seed) internal view returns (bytes memory)
 }
 ```
 
----
+***
 
 ## ECDH (`0x65`)
 
@@ -76,9 +76,9 @@ Elliptic Curve Diffie-Hellman key agreement on the secp256k1 curve. Given a publ
 
 ### Use cases
 
-- Key agreement between a contract and a user for encrypting event data
-- Establishing shared secrets for private communication channels
-- Enabling per-recipient encryption of on-chain data
+* Key agreement between a contract and a user for encrypting event data
+* Establishing shared secrets for private communication channels
+* Enabling per-recipient encryption of on-chain data
 
 ### Solidity example
 
@@ -95,7 +95,7 @@ function deriveSharedSecret(
 }
 ```
 
----
+***
 
 ## AES-GCM Encrypt (`0x66`)
 
@@ -118,9 +118,9 @@ Encrypt data using AES-GCM (Galois/Counter Mode) authenticated encryption. Suppo
 
 ### Use cases
 
-- Encrypting sensitive event parameters before emission
-- Building encrypted storage helpers
-- Encrypting messages or data for specific recipients
+* Encrypting sensitive event parameters before emission
+* Building encrypted storage helpers
+* Encrypting messages or data for specific recipients
 
 ### Solidity example
 
@@ -139,7 +139,7 @@ function aesEncrypt(
 }
 ```
 
----
+***
 
 ## AES-GCM Decrypt (`0x67`)
 
@@ -162,9 +162,9 @@ Decrypt data that was encrypted with AES-GCM. Verifies the authentication tag be
 
 ### Use cases
 
-- On-chain decryption of previously encrypted data
-- Decrypting messages from other contracts or users
-- Verifying and reading encrypted event data within a contract
+* On-chain decryption of previously encrypted data
+* Decrypting messages from other contracts or users
+* Verifying and reading encrypted event data within a contract
 
 ### Solidity example
 
@@ -183,7 +183,7 @@ function aesDecrypt(
 }
 ```
 
----
+***
 
 ## HKDF (`0x68`)
 
@@ -206,9 +206,9 @@ HMAC-based Key Derivation Function ([RFC 5869](https://datatracker.ietf.org/doc/
 
 ### Use cases
 
-- Deriving AES encryption keys from ECDH shared secrets
-- Generating multiple keys from a single shared secret (e.g., one for encryption, one for MAC)
-- Key stretching and domain separation
+* Deriving AES encryption keys from ECDH shared secrets
+* Generating multiple keys from a single shared secret (e.g., one for encryption, one for MAC)
+* Key stretching and domain separation
 
 ### Solidity example
 
@@ -227,7 +227,7 @@ function deriveKey(
 }
 ```
 
----
+***
 
 ## secp256k1 Sign (`0x69`)
 
@@ -252,9 +252,9 @@ This precompile gives the contract the ability to sign arbitrary messages. The p
 
 ### Use cases
 
-- Generating on-chain attestations or proofs
-- Building contracts that can act as signers (e.g., smart-contract wallets)
-- Creating signed messages for cross-chain verification
+* Generating on-chain attestations or proofs
+* Building contracts that can act as signers (e.g., smart-contract wallets)
+* Creating signed messages for cross-chain verification
 
 ### Solidity example
 
@@ -271,7 +271,7 @@ function signMessage(
 }
 ```
 
----
+***
 
 ## Common pattern: Encrypted events
 
@@ -297,4 +297,4 @@ A frequent use of the precompiles is encrypting event data so that only the inte
 emit EncryptedData(msg.sender, recipient, encrypted);
 ```
 
-For a complete walkthrough of this pattern, see [Events](../seismic-solidity/events.md).
+For a complete walkthrough of this pattern, see [Events](../gitbook/seismic-solidity/events.md).

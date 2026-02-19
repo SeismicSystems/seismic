@@ -73,5 +73,5 @@ If you need caller-specific data (e.g., a user's shielded balance), you must use
 ## Related
 
 * [Signed Reads](/broken/pages/Iy1iEnGF6LoJvAy1G6ix) — how to make authenticated read calls
-* [Shielded Public Client](../../client-libraries/seismic-viem/shielded-public-client.md) — viem client that handles this automatically
-* [Differences from Ethereum](../../overview/differences-from-ethereum.md) — overview of all behavioral differences
+* [Shielded Public Client](../../gitbook/client-libraries/seismic-viem/shielded-public-client.md) — viem client that handles this automatically
+* [Differences from Ethereum](../../the-case-for-seismic/differences-from-ethereum.md) — overview of all behavioral differences

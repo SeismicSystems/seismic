@@ -1,9 +1,27 @@
 ---
-description: "Build a private ERC20 token where balances and transfers are hidden from observers"
+description: >-
+  \Build a private ERC20 token where balances and transfers are hidden from
+  observers
 icon: coins
+layout:
+  width: default
+  title:
+    visible: true
+  description:
+    visible: true
+  tableOfContents:
+    visible: true
+  outline:
+    visible: true
+  pagination:
+    visible: true
+  metadata:
+    visible: true
+  tags:
+    visible: true
 ---
 
-# SRC20: Private Token
+# Build a Private SRC-20 Token
 
 In this tutorial, you will build a fully functional private ERC20 token -- an SRC20 -- where balances, transfer amounts, and allowances are all shielded from external observers. Anyone watching the chain sees `0x000` instead of actual values, yet the token behaves exactly like a standard ERC20 from the user's perspective.
 
@@ -11,11 +29,11 @@ In this tutorial, you will build a fully functional private ERC20 token -- an SR
 
 By the end of this tutorial you will have:
 
-- An SRC20 smart contract with shielded balances, transfers, and allowances
-- Encrypted transfer events that only the sender and recipient can decrypt
-- A signed-read pattern that lets users check their own balance without revealing it
-- Compliance-ready access control through Intelligence Contracts
-- A React frontend that connects everything end-to-end
+* An SRC20 smart contract with shielded balances, transfers, and allowances
+* Encrypted transfer events that only the sender and recipient can decrypt
+* A signed-read pattern that lets users check their own balance without revealing it
+* Compliance-ready access control through Intelligence Contracts
+* A React frontend that connects everything end-to-end
 
 ## What makes this special
 
@@ -27,9 +45,9 @@ This is the power of Seismic's approach: privacy is a type-level annotation, not
 
 Before starting, make sure you have:
 
-- **Seismic development tools installed** -- `sforge`, `sanvil`, and `ssolc`. See the [Installation guide](../../getting-started/installation.md) if you have not set these up yet.
-- **Solidity familiarity** -- You should be comfortable writing and reading Solidity contracts.
-- **Basic understanding of ERC20** -- You should know what `balanceOf`, `transfer`, `approve`, and `transferFrom` do.
+* **Seismic development tools installed** -- `sforge`, `sanvil`, and `ssolc`. See the [Installation guide](../../gitbook/getting-started/installation.md) if you have not set these up yet.
+* **Solidity familiarity** -- You should be comfortable writing and reading Solidity contracts.
+* **Basic understanding of ERC20** -- You should know what `balanceOf`, `transfer`, `approve`, and `transferFrom` do.
 
 ## What you'll learn
 

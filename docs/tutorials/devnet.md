@@ -6,9 +6,9 @@ metaLinks:
     - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/appendix/devnet
 ---
 
-# Devnet
+# Deploy an Encrypted Contract on our Devnet
 
-<figure><img src="../../.gitbook/assets/Screenshot 2025-03-25 at 3.27.58 PM.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/Screenshot 2025-03-25 at 3.27.58 PM.png" alt=""><figcaption></figcaption></figure>
 
 Welcome! This walkthrough is quick. It only requires a minute of actual attention, while the rest is waiting. **If you run into any issues, please check if it's one of the 10 common errors resolved in the** [**FAQ**](devnet.md#faq) **section.** You can also hop in [our discord](https://discord.com/invite/seismic) and ask questions in the `#devnet` channel.
 
@@ -141,7 +141,7 @@ sudo apt-get install jq
 
 Means your wallet has no testnet ETH. Please go to the [faucet](https://faucet-2.seismicdev.net/), enter the address the script gave you, and wait for the green confirmation.
 
-![](<../../.gitbook/assets/Screenshot 2025-03-25 at 4.01.46 PM (1).png>)
+![](<../.gitbook/assets/Screenshot 2025-03-25 at 4.01.46 PM (1).png>)
 
 </details>
 
@@ -184,7 +184,7 @@ If this comes up even after you complete [step #3](devnet.md#id-3.-install-sfoun
 
 Means you aren't selecting an option for your Rust installation. Run the `curl` command again, and press Enter.
 
-![](<../../.gitbook/assets/Screenshot 2025-03-25 at 4.55.36 PM.png>)
+![](<../.gitbook/assets/Screenshot 2025-03-25 at 4.55.36 PM.png>)
 
 </details>
 

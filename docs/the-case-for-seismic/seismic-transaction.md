@@ -4,7 +4,7 @@ icon: dollar-sign
 
 # The Seismic Transaction
 
-<figure><img src="../../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
 ## Tx Lifecycle
 
@@ -14,7 +14,7 @@ icon: dollar-sign
 * Enclave can boot in either `--genesis-node` or `--peers <ip>` mode. The former generates its own root key and shares it with peers after they pass validation. The latter loops through its peer IPs until it receives the root key from one of them
 * Enclave then derives a few different keys from that root key. Most importantly, it derives the encryption secret key. This is the key used to decrypt Seismic transaction calldata
 * When [`seismic-reth`](https://github.com/SeismicSystems/seismic-reth/tree/seismic/bin/seismic-reth) boots, it requests the derived keys from the enclave and keeps them in memory
-* We exposed a new RPC method, [`seismic_getTeePublicKey`](rpc-methods/seismic-get-tee-public-key.md). Its response is the public key of the aforementioned secret key that decrypts Seismic transactions. Calling this endpoint is the first step that a client takes to build a Seismic transaction
+* We exposed a new RPC method, [`seismic_getTeePublicKey`](../reference/rpc-methods/seismic-get-tee-public-key.md). Its response is the public key of the aforementioned secret key that decrypts Seismic transactions. Calling this endpoint is the first step that a client takes to build a Seismic transaction
 * Clients also generate their own secret key, which can be either ephemeral (default) or long-lived, if they prefer to manage this themselves
 * Their secret key and the network public key combine to create an AES key, which is used to encrypt calldata
 

@@ -48,7 +48,7 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 ```
 
 {% hint style="info" %}
-You typically don't call this method directly. Client libraries like [seismic-viem](../../client-libraries/seismic-viem/) handle transaction construction, encryption, and submission automatically.
+You typically don't call this method directly. Client libraries like [seismic-viem](../../gitbook/client-libraries/seismic-viem/) handle transaction construction, encryption, and submission automatically.
 {% endhint %}
 
 ## Seismic Transaction Validation
@@ -63,6 +63,6 @@ The node rejects transactions in these cases:
 
 ## Related
 
-* [The Seismic Transaction](../seismic-transaction.md) — transaction type specification
+* [The Seismic Transaction](../../the-case-for-seismic/seismic-transaction.md) — transaction type specification
 * [Tx Lifecycle](/broken/pages/xCs9tpFaGc4bynMxW8zk) — end-to-end transaction flow
-* [Shielded Writes](../../client-libraries/seismic-viem/shielded-writes.md) — sending transactions with seismic-viem
+* [Shielded Writes](../../gitbook/client-libraries/seismic-viem/shielded-writes.md) — sending transactions with seismic-viem

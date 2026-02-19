@@ -4,7 +4,7 @@ icon: key
 
 # seismic\_getTeePublicKey
 
-Returns the TEE's encryption public key. This is the first step in building a [Seismic transaction](../seismic-transaction.md) — clients use this public key with their own ephemeral key to derive a shared AES encryption key via ECDH.
+Returns the TEE's encryption public key. This is the first step in building a [Seismic transaction](../../the-case-for-seismic/seismic-transaction.md) — clients use this public key with their own ephemeral key to derive a shared AES encryption key via ECDH.
 
 ## Try It
 
@@ -46,5 +46,5 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 ## Related
 
 * [Tx Lifecycle](/broken/pages/xCs9tpFaGc4bynMxW8zk) — how this key is used in transaction encryption
-* [Encryption (seismic-viem)](../../client-libraries/seismic-viem/encryption.md) — client-side key exchange
-* [ECDH Precompile](../precompiles.md#ecdh-0x65) — on-chain ECDH
+* [Encryption (seismic-viem)](../../gitbook/client-libraries/seismic-viem/encryption.md) — client-side key exchange
+* [ECDH Precompile](../../the-case-for-seismic/precompiles.md#ecdh-0x65) — on-chain ECDH

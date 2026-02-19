@@ -23,7 +23,7 @@ The Seismic development suite replaces Foundry's tools with privacy-aware equiva
 | `anvil`       | `sanvil`           | Local development node |
 | `solc`        | `ssolc`            | Solidity compiler      |
 
-Install the Seismic toolchain by following the [Installation](../getting-started/installation.md) guide. The short version:
+Install the Seismic toolchain by following the [Installation](../gitbook/getting-started/installation.md) guide. The short version:
 
 ```bash
 # Install sfoundryup
@@ -89,7 +89,7 @@ uint256 public totalSupply;                      // stays public
 
 The compiler handles the rest. Shielded types compile to `CLOAD`/`CSTORE` instead of `SLOAD`/`SSTORE`. Arithmetic, comparisons, and assignments work exactly the same way.
 
-For details on each shielded type, see [Shielded Types](../seismic-solidity/shielded-types/).
+For details on each shielded type, see [Shielded Types](../gitbook/seismic-solidity/shielded-types/).
 
 ***
 
@@ -151,7 +151,7 @@ function transfer(address to, suint256 amount) external {
 }
 ```
 
-For a complete walkthrough of the encrypted events pattern, see [Events](../seismic-solidity/events.md).
+For a complete walkthrough of the encrypted events pattern, see [Events](../gitbook/seismic-solidity/events.md).
 
 ***
 
@@ -172,7 +172,7 @@ Key changes in client code:
 * Use **signed reads** instead of plain `eth_call` when reading shielded data that checks `msg.sender`.
 * Listen for encrypted events and decrypt them client-side using the shared secret derived from ECDH.
 
-For library-specific guides, see [Client Libraries](../client-libraries/overview.md).
+For library-specific guides, see [Client Libraries](../gitbook/client-libraries/overview.md).
 
 ***
 
@@ -215,7 +215,7 @@ sforge script script/Deploy.s.sol \
     --broadcast
 ```
 
-For network details (RPC URLs, chain IDs, faucets), see [Devnet](devnet.md) and [Testnet](testnet.md).
+For network details (RPC URLs, chain IDs, faucets), see [Devnet](../tutorials/devnet.md) and [Testnet](../gitbook/networks/testnet.md).
 
 ***
 

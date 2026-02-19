@@ -1,20 +1,20 @@
 ---
-description: "Connect your SRC20 contract to a React frontend with seismic-react"
+description: Connect your SRC20 contract to a React frontend with seismic-react
 icon: browser
 ---
 
 # Building the Frontend
 
-This chapter connects the SRC20 contract to a React frontend using `seismic-react`, which composes with wagmi to provide shielded reads, shielded writes, and encrypted communication out of the box. _Estimated time: ~25 minutes._
+This chapter connects the SRC20 contract to a React frontend using `seismic-react`, which composes with wagmi to provide shielded reads, shielded writes, and encrypted communication out of the box. _Estimated time: \~25 minutes._
 
 ## Overview
 
 By the end of this chapter you will have a React application that can:
 
-- Connect a wallet through a `ShieldedWalletProvider`
-- Display the user's shielded balance (via signed reads)
-- Transfer tokens (via shielded writes)
-- Listen for Transfer events and decrypt the encrypted amounts
+* Connect a wallet through a `ShieldedWalletProvider`
+* Display the user's shielded balance (via signed reads)
+* Transfer tokens (via shielded writes)
+* Listen for Transfer events and decrypt the encrypted amounts
 
 The patterns here mirror standard wagmi usage. If you have built a dApp with wagmi before, the `seismic-react` equivalents will feel familiar.
 
@@ -294,7 +294,7 @@ function TokenDashboard() {
 ```
 
 {% hint style="info" %}
-In a production application, you should not hardcode private keys. Use a wallet provider (such as RainbowKit, Privy, or AppKit) to manage keys securely. See the [Wallet Guides](../../client-libraries/seismic-react/wallet-guides/README.md) for integration details.
+In a production application, you should not hardcode private keys. Use a wallet provider (such as RainbowKit, Privy, or AppKit) to manage keys securely. See the [Wallet Guides](../../gitbook/client-libraries/seismic-react/wallet-guides/) for integration details.
 {% endhint %}
 
 ## Next steps
@@ -303,7 +303,7 @@ You now have a complete SRC20 token: a private ERC20 with shielded balances, enc
 
 From here, you can:
 
-- **Explore the client library docs** -- The [Client Libraries section](../../client-libraries/overview.md) has detailed API references for `seismic-viem` and `seismic-react`, including all available hooks, wallet client methods, and precompile utilities.
-- **Add wallet integration** -- See the [Wallet Guides](../../client-libraries/seismic-react/wallet-guides/README.md) for step-by-step instructions on integrating RainbowKit, Privy, or AppKit with `seismic-react`.
-- **Deploy to testnet** -- The [Testnet page](../../networks/testnet.md) has network configuration and faucet information for deploying your SRC20 to a live Seismic network.
-- **Extend the contract** -- Consider adding features like shielded `saddress` for the recipient (hiding who receives tokens), burn functions, or governance mechanisms.
+* **Explore the client library docs** -- The [Client Libraries section](../../gitbook/client-libraries/overview.md) has detailed API references for `seismic-viem` and `seismic-react`, including all available hooks, wallet client methods, and precompile utilities.
+* **Add wallet integration** -- See the [Wallet Guides](../../gitbook/client-libraries/seismic-react/wallet-guides/) for step-by-step instructions on integrating RainbowKit, Privy, or AppKit with `seismic-react`.
+* **Deploy to testnet** -- The [Testnet page](../../gitbook/networks/testnet.md) has network configuration and faucet information for deploying your SRC20 to a live Seismic network.
+* **Extend the contract** -- Consider adding features like shielded `saddress` for the recipient (hiding who receives tokens), burn functions, or governance mechanisms.
