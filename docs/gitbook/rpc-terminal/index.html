@@ -422,6 +422,98 @@
         background: var(--text-faint);
       }
 
+      /* -- Embed compact mode -- */
+      .embed .container {
+        padding: 8px 12px 10px 12px;
+        gap: 8px;
+      }
+      .embed .header {
+        padding-bottom: 6px;
+        gap: 8px;
+      }
+      .embed .header-icon {
+        width: 16px;
+        height: 16px;
+      }
+      .embed .header h1 {
+        font-size: 15px;
+      }
+      .embed label {
+        font-size: 10px;
+        margin-bottom: 4px;
+      }
+      .embed .endpoint-row {
+        gap: 6px;
+      }
+      .embed select,
+      .embed input[type="text"] {
+        padding: 5px 10px;
+        font-size: 12px;
+        border-radius: 4px;
+      }
+      .embed select {
+        padding-right: 26px;
+      }
+      .embed .tab-bar {
+        margin: 0;
+      }
+      .embed .tab-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+      .embed .panel {
+        border-radius: 6px;
+      }
+      .embed .panel-header {
+        padding: 5px 10px;
+        font-size: 10px;
+      }
+      .embed .panel-header .badge {
+        font-size: 9px;
+        padding: 1px 5px;
+      }
+      .embed textarea {
+        min-height: 90px;
+        padding: 8px 10px;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .embed .send-row {
+        gap: 8px;
+      }
+      .embed .send-btn {
+        padding: 7px 16px;
+        font-size: 12px;
+        border-radius: 4px;
+      }
+      .embed .status-text {
+        font-size: 11px;
+      }
+      .embed .response-content {
+        padding: 8px 10px;
+        min-height: 50px;
+        max-height: 200px;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .embed .response-content.empty {
+        min-height: 50px;
+      }
+      .embed .code-panel pre {
+        padding: 10px;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .embed .copy-btn {
+        padding: 3px 8px;
+        font-size: 10px;
+        top: 6px;
+        right: 6px;
+      }
+      .embed #tab-jsonrpc > div {
+        gap: 8px !important;
+      }
+
       /* -- Responsive -- */
       @media (max-width: 500px) {
         .container {
@@ -584,6 +676,13 @@
     <script>
       (function () {
         "use strict";
+
+        // ── Embed mode detection ──
+        if (
+          new URLSearchParams(window.location.search).get("embed") === "true"
+        ) {
+          document.documentElement.classList.add("embed");
+        }
 
         // ── Default params per method ──
         var DEFAULT_PARAMS = {

@@ -48,7 +48,7 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 
 ## Try It
 
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_getBalance" %}
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_getBalance%26embed%3Dtrue" %}
 
 ## Related
 

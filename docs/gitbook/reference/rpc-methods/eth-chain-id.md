@@ -49,7 +49,7 @@ The chain ID is important for transaction signing — using the wrong chain ID w
 
 ## Try It
 
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_chainId" %}
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_chainId%26embed%3Dtrue" %}
 
 ## Related
 

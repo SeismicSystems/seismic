@@ -69,7 +69,7 @@ If you need caller-specific data (e.g., a user's shielded balance), you must use
 
 ## Try It
 
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_call" %}
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_call%26embed%3Dtrue" %}
 
 ## Related
 

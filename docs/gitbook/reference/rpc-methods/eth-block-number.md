@@ -47,7 +47,7 @@ Seismic can produce multiple blocks per second. Block timestamps are stored in m
 
 ## Try It
 
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_blockNumber" %}
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_blockNumber%26embed%3Dtrue" %}
 
 ## Related
 

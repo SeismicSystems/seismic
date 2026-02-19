@@ -68,7 +68,7 @@ If you need to read shielded data, use a [signed read](../seismic-transaction/si
 
 ## Try It
 
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_getStorageAt" %}
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_getStorageAt%26embed%3Dtrue" %}
 
 ## Related
 
