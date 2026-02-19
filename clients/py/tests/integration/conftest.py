@@ -124,8 +124,8 @@ def _start_reth(port: int) -> _StartResult:
         "node",
         # Dev mode
         "--dev",
-        "--dev.block-time",
-        "2s",
+        "--dev.block-max-transactions",
+        "1",
         # HTTP RPC
         "--http",
         "--http.port",
