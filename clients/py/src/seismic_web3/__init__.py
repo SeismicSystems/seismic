@@ -26,6 +26,11 @@ Public API
 
 **Module** (``seismic_web3.module``):
     :class:`SeismicNamespace`, :class:`AsyncSeismicNamespace`
+
+**EIP-712** (``seismic_web3.transaction.eip712``):
+    :func:`sign_seismic_tx_eip712`, :func:`eip712_signing_hash`,
+    :func:`domain_separator`, :func:`struct_hash`,
+    :func:`build_seismic_typed_data`
 """
 
 __version__ = "0.1.0"
@@ -78,6 +83,15 @@ from seismic_web3.module import (
     SeismicNamespace,
 )
 
+# -- EIP-712 ----------------------------------------------------------------
+from seismic_web3.transaction.eip712 import (
+    build_seismic_typed_data,
+    domain_separator,
+    eip712_signing_hash,
+    sign_seismic_tx_eip712,
+    struct_hash,
+)
+
 # -- Transaction types -------------------------------------------------------
 from seismic_web3.transaction_types import (
     DebugWriteResult,
@@ -117,10 +131,15 @@ __all__ = [
     "Signature",
     "TxSeismicMetadata",
     "UnsignedSeismicTx",
+    "build_seismic_typed_data",
     "compute_deposit_data_root",
     "create_async_shielded_web3",
     "create_shielded_web3",
+    "domain_separator",
+    "eip712_signing_hash",
     "get_encryption",
     "make_seismic_testnet",
     "make_withdrawal_credentials",
+    "sign_seismic_tx_eip712",
+    "struct_hash",
 ]
