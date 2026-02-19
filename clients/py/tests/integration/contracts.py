@@ -46,6 +46,14 @@ _mock_src20_events: dict[str, Any] = _load_artifact("mock_src20_events.json")
 
 MOCK_SRC20_EVENTS_ABI: list[dict[str, Any]] = _mock_src20_events["abi"]
 MOCK_SRC20_EVENTS_BYTECODE: str = _mock_src20_events["bytecode"]
+_deposit_contract: dict[str, Any] = _load_artifact("deposit_contract.json")
+
+DEPOSIT_CONTRACT_ABI: list[dict[str, Any]] = _deposit_contract["abi"]
+# Foundry artifacts use {"object": "0x..."}, test artifacts use a flat string.
+_dc_bytecode = _deposit_contract["bytecode"]
+DEPOSIT_CONTRACT_BYTECODE: str = (
+    _dc_bytecode["object"] if isinstance(_dc_bytecode, dict) else _dc_bytecode
+)
 
 
 # ---------------------------------------------------------------------------

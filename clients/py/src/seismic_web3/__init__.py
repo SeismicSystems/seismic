@@ -39,7 +39,15 @@ from seismic_web3._types import (
 )
 
 # -- ABIs --------------------------------------------------------------------
-from seismic_web3.abis import DIRECTORY_ABI, DIRECTORY_ADDRESS, SRC20_ABI
+from seismic_web3.abis import (
+    DEPOSIT_CONTRACT_ABI,
+    DEPOSIT_CONTRACT_ADDRESS,
+    DIRECTORY_ABI,
+    DIRECTORY_ADDRESS,
+    SRC20_ABI,
+    compute_deposit_data_root,
+    make_withdrawal_credentials,
+)
 
 # -- Chains ------------------------------------------------------------------
 from seismic_web3.chains import (
@@ -83,6 +91,8 @@ from seismic_web3.transaction_types import (
 )
 
 __all__ = [
+    "DEPOSIT_CONTRACT_ABI",
+    "DEPOSIT_CONTRACT_ADDRESS",
     "DIRECTORY_ABI",
     "DIRECTORY_ADDRESS",
     "SANVIL",
@@ -107,8 +117,10 @@ __all__ = [
     "Signature",
     "TxSeismicMetadata",
     "UnsignedSeismicTx",
+    "compute_deposit_data_root",
     "create_async_shielded_web3",
     "create_shielded_web3",
     "get_encryption",
     "make_seismic_testnet",
+    "make_withdrawal_credentials",
 ]
