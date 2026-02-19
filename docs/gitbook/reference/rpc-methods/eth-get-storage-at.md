@@ -2,7 +2,7 @@
 icon: hard-drive
 ---
 
-# eth_getStorageAt
+# eth\_getStorageAt
 
 Returns the value at a given storage position for an address. On Seismic, this method **fails with an error** if the requested storage slot contains shielded (private) data.
 
@@ -10,7 +10,7 @@ This is a deliberate security measure — shielded storage values are encrypted 
 
 ## Try It
 
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_getStorageAt%26embed%3Dtrue" %}
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_getStorageAt%26embed%3Dtrue" fullWidth="false" %}
 
 ## Parameters
 
@@ -72,6 +72,6 @@ If you need to read shielded data, use a [signed read](../seismic-transaction/si
 
 ## Related
 
-- [Storage](../../seismic-solidity/storage.md) — how shielded storage works in Seismic Solidity
-- [Opcodes](../opcodes.md) — `CLOAD`/`CSTORE` for shielded storage access
-- [Differences from Ethereum](../../overview/differences-from-ethereum.md#rpc-compatibility) — RPC compatibility overview
+* [Storage](../../seismic-solidity/storage.md) — how shielded storage works in Seismic Solidity
+* [Opcodes](../opcodes.md) — `CLOAD`/`CSTORE` for shielded storage access
+* [Differences from Ethereum](../../overview/differences-from-ethereum.md#rpc-compatibility) — RPC compatibility overview

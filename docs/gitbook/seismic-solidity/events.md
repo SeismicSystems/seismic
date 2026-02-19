@@ -1,5 +1,8 @@
 ---
 icon: blog
+metaLinks:
+  alternates:
+    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/core/events
 ---
 
 # Events

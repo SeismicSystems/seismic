@@ -1,5 +1,8 @@
 ---
 description: shielded boolean
+metaLinks:
+  alternates:
+    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/core/basics/sbool
 ---
 
 # sbool

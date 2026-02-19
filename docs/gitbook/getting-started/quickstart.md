@@ -1,6 +1,9 @@
 ---
 description: You're two commands away from running an encrypted protocol
 icon: bullseye-arrow
+metaLinks:
+  alternates:
+    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/onboarding/quickstart
 ---
 
 # Quickstart

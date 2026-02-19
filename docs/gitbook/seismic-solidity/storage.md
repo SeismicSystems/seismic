@@ -1,5 +1,8 @@
 ---
 icon: database
+metaLinks:
+  alternates:
+    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/appendix/storage
 ---
 
 # Storage
@@ -14,8 +17,8 @@ Seismic extends the EVM storage model with **FlaggedStorage**. Every storage slo
 
 The `is_private` flag determines whether a slot holds public or confidential data. This flag is set automatically by the compiler based on the types you use, and enforced at the opcode level:
 
-- **`SSTORE` / `SLOAD`** operate on public storage slots (the standard EVM behavior).
-- **`CSTORE` (`0xB1`) / `CLOAD` (`0xB0`)** operate on confidential storage slots.
+* **`SSTORE` / `SLOAD`** operate on public storage slots (the standard EVM behavior).
+* **`CSTORE` (`0xB1`) / `CLOAD` (`0xB0`)** operate on confidential storage slots.
 
 When you declare a shielded variable (e.g., `suint256`), the compiler generates `CSTORE` and `CLOAD` instructions instead of `SSTORE` and `SLOAD`. This happens automatically -- you do not need to manage opcodes yourself.
 
@@ -112,9 +115,9 @@ If you need to pack multiple shielded values into a single slot for efficiency, 
 
 When using inline assembly for slot packing:
 
-- You must ensure all values packed into a single slot share the same confidentiality level.
-- Incorrect packing can introduce vulnerabilities where private data is partially exposed or corrupted.
-- The compiler cannot verify the correctness of your assembly-level storage operations.
+* You must ensure all values packed into a single slot share the same confidentiality level.
+* Incorrect packing can introduce vulnerabilities where private data is partially exposed or corrupted.
+* The compiler cannot verify the correctness of your assembly-level storage operations.
 
 ```solidity
 // Advanced: Manual slot packing with inline assembly

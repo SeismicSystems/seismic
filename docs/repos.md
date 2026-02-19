@@ -4,7 +4,7 @@ This document describes how the Seismic repos are organized.
 
 ## Stack Overview
 
-![](../assets/repos.png)
+![](.gitbook/assets/repos.png)
 
 ## Repositories
 
@@ -28,11 +28,13 @@ This document describes how the Seismic repos are organized.
 ## Fork Management
 
 Every forked repo has:
-- A `seismic` branch as the default branch containing all Seismic modifications
-- `main`/`master` tracking the upstream original project
-- Periodic rebases or merges from upstream to stay current
+
+* A `seismic` branch as the default branch containing all Seismic modifications
+* `main`/`master` tracking the upstream original project
+* Periodic rebases or merges from upstream to stay current
 
 To see what Seismic has changed in any repo, compare the `seismic` branch against the upstream base:
+
 ```
 https://github.com/SeismicSystems/seismic-reth/compare/main...seismic
 https://github.com/SeismicSystems/seismic-revm/compare/main...seismic
@@ -51,6 +53,7 @@ reth change       → usually isolated
 ```
 
 All repos use `[patch.crates-io]` sections in `Cargo.toml` to pin specific commits of their dependencies. When updating a dependency, you need to:
+
 1. Make the change in the upstream repo (e.g., seismic-revm)
 2. Push and note the commit hash
 3. Update the `[patch]` section in downstream repos (e.g., seismic-reth, seismic-foundry)

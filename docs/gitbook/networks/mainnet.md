@@ -1,5 +1,8 @@
 ---
 icon: cube
+metaLinks:
+  alternates:
+    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/appendix/mainnet
 ---
 
 # Mainnet
@@ -27,4 +30,3 @@ Currently in development
 #### Contract verification
 
 The explorer will support the ability to verify contracts written in Seismic Solidity
-

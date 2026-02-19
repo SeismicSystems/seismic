@@ -1,6 +1,9 @@
 ---
 description: A list of all our codebases
 icon: code
+metaLinks:
+  alternates:
+    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/appendix/codebases
 ---
 
 # Codebases
@@ -28,7 +31,7 @@ Most of the repositories here are forks of the reth stack
 fork of [alloy-rs/core](https://github.com/alloy-rs/core)
 
 * This is the repo that depends on nothing else
-* Upstream: version 1.1.2, commit [`e55993f`](https://github.com/alloy-rs/core/tree/e55993f69d91f36fdb501d54e11a8265f90e42c1)&#x20;
+* Upstream: version 1.1.2, commit [`e55993f`](https://github.com/alloy-rs/core/tree/e55993f69d91f36fdb501d54e11a8265f90e42c1)
 
 #### [Seismic Alloy](https://github.com/SeismicSystems/seismic-alloy)
 
@@ -65,7 +68,7 @@ fork of [alloy-rs/evm](https://github.com/alloy-rs/evm)
   * seismic-alloy
   * seismic-alloy-core
   * seismic-revm
-* Upstream: version 0.9.1, commit [`1c4f35c`](https://github.com/alloy-rs/evm/commit/1c4f35ca45a4d32ec6929be0943ff59618fe8088)&#x20;
+* Upstream: version 0.9.1, commit [`1c4f35c`](https://github.com/alloy-rs/evm/commit/1c4f35ca45a4d32ec6929be0943ff59618fe8088)
 
 #### [Seismic REVM Inspectors](https://github.com/SeismicSystems/seismic-revm-inspectors)
 
@@ -134,8 +137,6 @@ A library for building web applications on Seismic. This repo provides two packa
 * seismic-viem: composes with [viem](https://viem.sh/)
 * seismic-react: composes with [wagmi](https://wagmi.sh/)
 
-
-
 ## Deployment
 
 ### [Deploy](https://github.com/SeismicSystems/deploy)
@@ -153,6 +154,3 @@ A Yocto layer that configures how the image runs Summit, Reth & the enclave serv
 #### [Yocto Manifests](https://github.com/SeismicSystems/yocto-manifests)
 
 #### [Yocto Scripts](https://github.com/SeismicSystems/yocto-scripts)
-
-
-

@@ -1,6 +1,9 @@
 ---
 description: Using stype variables in arrays and maps
 icon: delicious
+metaLinks:
+  alternates:
+    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/core/collections
 ---
 
 # Collections
@@ -38,11 +41,11 @@ m[k] += a[idx];
 
 Observers for any of these operations will not know which elements were read from / written to.
 
-<figure><img src="../.gitbook/assets/figures (1).png" alt=""><figcaption><p>Using an <code>stype</code> as the key and value to a collection shields which element you're using.</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/figures (1).png" alt=""><figcaption><p>Using an <code>stype</code> as the key and value to a collection shields which element you're using.</p></figcaption></figure>
 
 In the previous section, we only knew how to shield what was happening for certain elements. Now, we know how to shield which elements are being modified in the first place.
 
-We can take the ERC20 variant discussed in the [Basics](basics/) section and extend it further to shielded balances, transfer amounts, _and now_ _recipients_.&#x20;
+We can take the ERC20 variant discussed in the [Basics](basics/) section and extend it further to shielded balances, transfer amounts, _and now_ _recipients_.
 
 ```
 mapping(saddress => suint256) public balanceOf;  // key is now saddress

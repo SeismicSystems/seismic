@@ -34,11 +34,11 @@ function transfer(address to, suint256 amount) public {  // shielded transfer am
 }
 ```
 
-<figure><img src="../../.gitbook/assets/1 (1).png" alt=""><figcaption><p>Observers see 0x000 in place of stype variables during transaction submission, execution, and storage.</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/1 (1).png" alt=""><figcaption><p>Observers see 0x000 in place of stype variables during transaction submission, execution, and storage.</p></figcaption></figure>
 
 Shielding user balances is done by changing the values of the `balanceOf` array to `suint256`. Shielding transfer amounts is done by changing the `amount` parameter in `transfer()` to `suint256`. Now we can see what happens at every stage of the tx lifecycle:
 
-1. Submit. The tx is sitting in the mempool. You know that you're sending 12 tokens to your friend. Observers can look at the calldata and figure out that your friend is the recipient, but will see `0x000` instead of the number 12.&#x20;
+1. Submit. The tx is sitting in the mempool. You know that you're sending 12 tokens to your friend. Observers can look at the calldata and figure out that your friend is the recipient, but will see `0x000` instead of the number 12.
 2. Execute. The tx is processed by a full node, and its trace is open. You know that 12 tokens were removed from your balance and 12 were added to your friend's. Observers know that the same number that was deducted from your balance was added to your friend's, but they see `0x000` instead of the number 12.
 3. Store. The effects of the tx are applied to the state tree of all full nodes. You know that your new balance goes down by 12, to 200. You know that your friend's balance went up by 12, but you only see `0x000` for what its final state is. Observers know that your new balance is down the same amount that your friend's new balance is up, but they see `0x000` for both balances.
 
@@ -65,8 +65,8 @@ There are two restrictions in how you can use `stype` variables:
 </strong><strong> * Throws a compiler error
 </strong><strong> */
 </strong><strong>suint256 public v;
-</strong><strong>
-</strong><strong>// ==========
+</strong>
+<strong>// ==========
 </strong>
 /*
  * Throws a compiler error
