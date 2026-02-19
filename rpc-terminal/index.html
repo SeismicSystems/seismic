@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seismic RPC Terminal</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        height: 100%;
+        background: #1a1b26;
+        color: #a9b1d6;
+        font-family:
+          "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", "Consolas",
+          "Liberation Mono", "Menlo", monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 20px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-height: 100%;
+      }
+
+      /* -- Header -- */
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #292e42;
+      }
+
+      .header-icon {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        color: #9ece6a;
+      }
+
+      .header h1 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #c0caf5;
+        letter-spacing: -0.01em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* -- Labels -- */
+      label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #565f89;
+        margin-bottom: 6px;
+      }
+
+      /* -- Endpoint selector -- */
+      .endpoint-row {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+      }
+
+      .endpoint-select-group {
+        flex: 0 1 auto;
+        min-width: 180px;
+      }
+
+      .endpoint-custom-group {
+        flex: 1 1 220px;
+        display: none;
+      }
+
+      .endpoint-custom-group.visible {
+        display: block;
+      }
+
+      select,
+      input[type="text"] {
+        width: 100%;
+        background: #24283b;
+        color: #a9b1d6;
+        border: 1px solid #292e42;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-family: inherit;
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+
+      select:hover,
+      input[type="text"]:hover {
+        border-color: #3b4261;
+      }
+
+      select:focus,
+      input[type="text"]:focus {
+        border-color: #7aa2f7;
+        box-shadow: 0 0 0 2px rgba(122, 162, 247, 0.15);
+      }
+
+      select {
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23565f89' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        padding-right: 30px;
+      }
+
+      /* -- Request panel -- */
+      .panel {
+        background: #24283b;
+        border: 1px solid #292e42;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: #1f2335;
+        border-bottom: 1px solid #292e42;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #565f89;
+      }
+
+      .panel-header .badge {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: #292e42;
+        color: #7aa2f7;
+        font-weight: 600;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 160px;
+        background: transparent;
+        color: #a9b1d6;
+        border: none;
+        padding: 12px;
+        font-family: inherit;
+        font-size: 13px;
+        line-height: 1.6;
+        resize: vertical;
+        outline: none;
+        tab-size: 2;
+      }
+
+      textarea.invalid {
+        box-shadow: inset 0 0 0 1px #f7768e;
+      }
+
+      /* -- Send button -- */
+      .send-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .send-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #9ece6a;
+        color: #1a1b26;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          opacity 0.15s,
+          transform 0.1s;
+        user-select: none;
+      }
+
+      .send-btn:hover {
+        background: #b9e86c;
+      }
+
+      .send-btn:active {
+        transform: scale(0.97);
+      }
+
+      .send-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .send-btn .spinner {
+        display: none;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(26, 27, 38, 0.3);
+        border-top-color: #1a1b26;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+      }
+
+      .send-btn.loading .spinner {
+        display: inline-block;
+      }
+
+      .send-btn.loading .btn-label {
+        display: none;
+      }
+
+      .send-btn.loading .btn-loading-label {
+        display: inline;
+      }
+
+      .btn-loading-label {
+        display: none;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .status-text {
+        font-size: 12px;
+        color: #565f89;
+      }
+
+      .status-text.error {
+        color: #f7768e;
+      }
+
+      .status-text.success {
+        color: #9ece6a;
+      }
+
+      /* -- Response panel -- */
+      .response-content {
+        padding: 12px;
+        min-height: 80px;
+        max-height: 500px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .response-content.empty {
+        color: #3b4261;
+        font-style: italic;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 80px;
+      }
+
+      .response-content.error-response {
+        color: #f7768e;
+      }
+
+      /* Syntax highlighting classes */
+      .json-key {
+        color: #7aa2f7;
+      }
+      .json-string {
+        color: #9ece6a;
+      }
+      .json-number {
+        color: #ff9e64;
+      }
+      .json-boolean {
+        color: #bb9af7;
+      }
+      .json-null {
+        color: #bb9af7;
+      }
+
+      /* -- Scrollbar -- */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #292e42;
+        border-radius: 3px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #3b4261;
+      }
+
+      /* -- Responsive -- */
+      @media (max-width: 500px) {
+        .container {
+          padding: 12px 10px;
+          gap: 12px;
+        }
+
+        .header h1 {
+          font-size: 14px;
+        }
+
+        textarea {
+          min-height: 130px;
+          font-size: 12px;
+        }
+
+        .response-content {
+          font-size: 12px;
+        }
+
+        .send-btn {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <svg
+          class="header-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="4 17 10 11 4 5"></polyline>
+          <line x1="12" y1="19" x2="20" y2="19"></line>
+        </svg>
+        <h1 id="headerTitle">Seismic RPC Terminal</h1>
+      </div>
+
+      <!-- Endpoint selector -->
+      <div>
+        <label for="endpointSelect">Endpoint</label>
+        <div class="endpoint-row">
+          <div class="endpoint-select-group">
+            <select id="endpointSelect">
+              <option value="https://gcp-0.seismictest.net/rpc">Testnet</option>
+              <option value="https://node-2.seismicdev.net/rpc">Devnet</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="endpoint-custom-group" id="customEndpointGroup">
+            <input
+              type="text"
+              id="customEndpoint"
+              placeholder="https://your-node.example.com/rpc"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Request panel -->
+      <div>
+        <div class="panel">
+          <div class="panel-header">
+            <span>Request</span>
+            <span class="badge">JSON-RPC 2.0</span>
+          </div>
+          <textarea
+            id="requestBody"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Send button -->
+      <div class="send-row">
+        <button class="send-btn" id="sendBtn" type="button">
+          <span class="spinner"></span>
+          <span class="btn-label">Send Request</span>
+          <span class="btn-loading-label">Sending...</span>
+        </button>
+        <span class="status-text" id="statusText"></span>
+      </div>
+
+      <!-- Response panel -->
+      <div>
+        <div class="panel">
+          <div class="panel-header">
+            <span>Response</span>
+            <span class="badge" id="responseBadge" style="display: none"></span>
+          </div>
+          <div class="response-content empty" id="responseContent">
+            Response will appear here
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        // -- Default params per method --
+        var DEFAULT_PARAMS = {
+          seismic_getTeePublicKey: [],
+          eth_call: [
+            { to: "0x0000000000000000000000000000000000000000", data: "0x" },
+            "latest",
+          ],
+          eth_sendRawTransaction: ["0x"],
+          eth_getStorageAt: [
+            "0x0000000000000000000000000000000000000000",
+            "0x0",
+            "latest",
+          ],
+          eth_blockNumber: [],
+          eth_getBalance: [
+            "0x0000000000000000000000000000000000000000",
+            "latest",
+          ],
+          eth_chainId: [],
+          net_version: [],
+        };
+
+        // -- Parse URL params --
+        var urlParams = new URLSearchParams(window.location.search);
+        var methodParam = urlParams.get("method") || "";
+        var paramsParam = urlParams.get("params") || "";
+
+        // -- Header --
+        var headerTitle = document.getElementById("headerTitle");
+        if (methodParam) {
+          headerTitle.textContent = methodParam;
+        }
+
+        // -- Build request body --
+        var method = methodParam || "eth_blockNumber";
+        var params = [];
+
+        if (paramsParam) {
+          try {
+            params = JSON.parse(paramsParam);
+            if (!Array.isArray(params)) {
+              params = [params];
+            }
+          } catch (e) {
+            params = DEFAULT_PARAMS[method] || [];
+          }
+        } else {
+          params = DEFAULT_PARAMS[method] || [];
+        }
+
+        var requestObj = {
+          jsonrpc: "2.0",
+          method: method,
+          params: params,
+          id: 1,
+        };
+
+        var requestBody = document.getElementById("requestBody");
+        requestBody.value = JSON.stringify(requestObj, null, 2);
+
+        // -- Endpoint selector --
+        var endpointSelect = document.getElementById("endpointSelect");
+        var customEndpointGroup = document.getElementById(
+          "customEndpointGroup",
+        );
+        var customEndpoint = document.getElementById("customEndpoint");
+
+        endpointSelect.addEventListener("change", function () {
+          if (endpointSelect.value === "custom") {
+            customEndpointGroup.classList.add("visible");
+            customEndpoint.focus();
+          } else {
+            customEndpointGroup.classList.remove("visible");
+          }
+        });
+
+        // -- Validate JSON on input --
+        requestBody.addEventListener("input", function () {
+          try {
+            JSON.parse(requestBody.value);
+            requestBody.classList.remove("invalid");
+          } catch (e) {
+            requestBody.classList.add("invalid");
+          }
+        });
+
+        // -- Syntax highlight JSON --
+        function syntaxHighlight(json) {
+          var str =
+            typeof json === "string" ? json : JSON.stringify(json, null, 2);
+
+          // Escape HTML entities
+          str = str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+
+          // Apply syntax highlighting via regex
+          return str
+            .replace(
+              /("(?:\\.|[^"\\])*")\s*:/g,
+              '<span class="json-key">$1</span>:',
+            )
+            .replace(/:\s*("(?:\\.|[^"\\])*")/g, function (match, p1) {
+              return ': <span class="json-string">' + p1 + "</span>";
+            })
+            .replace(
+              /(?<=[\[,\s])\s*("(?:\\.|[^"\\])*")(?=\s*[,\]\n])/g,
+              '<span class="json-string">$1</span>',
+            )
+            .replace(
+              /:\s*(-?\d+\.?\d*(?:[eE][+-]?\d+)?)\b/g,
+              ': <span class="json-number">$1</span>',
+            )
+            .replace(
+              /:\s*(true|false)\b/g,
+              ': <span class="json-boolean">$1</span>',
+            )
+            .replace(/:\s*(null)\b/g, ': <span class="json-null">$1</span>');
+        }
+
+        // -- Get endpoint URL --
+        function getEndpoint() {
+          if (endpointSelect.value === "custom") {
+            return customEndpoint.value.trim();
+          }
+          return endpointSelect.value;
+        }
+
+        // -- DOM refs --
+        var sendBtn = document.getElementById("sendBtn");
+        var statusText = document.getElementById("statusText");
+        var responseContent = document.getElementById("responseContent");
+        var responseBadge = document.getElementById("responseBadge");
+
+        // -- Send request --
+        sendBtn.addEventListener("click", function () {
+          var endpoint = getEndpoint();
+
+          if (!endpoint) {
+            statusText.textContent = "Please enter a custom endpoint URL.";
+            statusText.className = "status-text error";
+            return;
+          }
+
+          // Validate JSON
+          var body;
+          try {
+            body = JSON.parse(requestBody.value);
+          } catch (e) {
+            statusText.textContent = "Invalid JSON in request body.";
+            statusText.className = "status-text error";
+            requestBody.classList.add("invalid");
+            return;
+          }
+
+          requestBody.classList.remove("invalid");
+
+          // Set loading state
+          sendBtn.classList.add("loading");
+          sendBtn.disabled = true;
+          statusText.textContent = "";
+          statusText.className = "status-text";
+          responseContent.textContent = "";
+          responseContent.className = "response-content empty";
+          responseContent.innerHTML =
+            '<span style="color:#3b4261;font-style:italic;">Waiting for response...</span>';
+          responseBadge.style.display = "none";
+
+          var startTime = Date.now();
+
+          // Abort controller with 10s timeout
+          var controller = new AbortController();
+          var timeoutId = setTimeout(function () {
+            controller.abort();
+          }, 10000);
+
+          fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          })
+            .then(function (response) {
+              clearTimeout(timeoutId);
+              var elapsed = Date.now() - startTime;
+
+              responseBadge.textContent =
+                response.status + " - " + elapsed + "ms";
+              responseBadge.style.display = "inline-block";
+
+              if (response.status >= 200 && response.status < 300) {
+                responseBadge.style.background = "#292e42";
+                responseBadge.style.color = "#9ece6a";
+              } else {
+                responseBadge.style.background = "#292e42";
+                responseBadge.style.color = "#f7768e";
+              }
+
+              return response.text().then(function (text) {
+                return {
+                  text: text,
+                  status: response.status,
+                  elapsed: elapsed,
+                };
+              });
+            })
+            .then(function (result) {
+              var parsed;
+              try {
+                parsed = JSON.parse(result.text);
+              } catch (e) {
+                responseContent.className = "response-content error-response";
+                responseContent.textContent = result.text || "(empty response)";
+                statusText.textContent = "Response is not valid JSON.";
+                statusText.className = "status-text error";
+                return;
+              }
+
+              var pretty = JSON.stringify(parsed, null, 2);
+              responseContent.className = "response-content";
+              responseContent.innerHTML = syntaxHighlight(pretty);
+
+              statusText.textContent = "Completed in " + result.elapsed + "ms";
+              statusText.className = "status-text success";
+            })
+            .catch(function (err) {
+              clearTimeout(timeoutId);
+              responseBadge.style.display = "none";
+              responseContent.className = "response-content error-response";
+
+              if (err.name === "AbortError") {
+                responseContent.textContent =
+                  "Request timed out after 10 seconds.\n\nThe endpoint may be unreachable or slow to respond.";
+                statusText.textContent = "Timeout";
+                statusText.className = "status-text error";
+              } else if (
+                err.message &&
+                err.message.toLowerCase().includes("failed to fetch")
+              ) {
+                responseContent.textContent =
+                  "Network error: Failed to fetch.\n\n" +
+                  "This is likely a CORS issue. The RPC endpoint may not allow\n" +
+                  "cross-origin requests from this page.\n\n" +
+                  "Possible solutions:\n" +
+                  "  1. Use an RPC endpoint that allows CORS\n" +
+                  "  2. Try a different endpoint from the dropdown\n" +
+                  "  3. Use curl or a tool like Postman instead";
+                statusText.textContent = "Network / CORS error";
+                statusText.className = "status-text error";
+              } else {
+                responseContent.textContent =
+                  "Error: " + (err.message || String(err));
+                statusText.textContent = "Request failed";
+                statusText.className = "status-text error";
+              }
+            })
+            .finally(function () {
+              sendBtn.classList.remove("loading");
+              sendBtn.disabled = false;
+            });
+        });
+
+        // -- Keyboard shortcut: Cmd/Ctrl+Enter to send --
+        requestBody.addEventListener("keydown", function (e) {
+          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+            e.preventDefault();
+            sendBtn.click();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
