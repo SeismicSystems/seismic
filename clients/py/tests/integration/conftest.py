@@ -4,8 +4,11 @@ Starts a real Seismic backend (sanvil or seismic-reth), shared across
 the entire test session.
 
 Environment variables:
-    CHAIN        - "anvil" (default) or "reth"
-    SEISMIC_PORT - override the RPC port (default: pick a free port)
+    CHAIN              - "anvil" (default) or "reth"
+    SEISMIC_PORT       - override the RPC port (default: pick a free port)
+    SFOUNDRY_ROOT      - seismic-foundry repo root (target/debug/sanvil)
+    SRETH_ROOT         - seismic-reth repo root (target/debug/seismic-reth)
+    SEISMIC_WORKSPACE  - fallback: parent dir of seismic-foundry/ and seismic-reth/
 """
 
 from __future__ import annotations
@@ -62,11 +65,55 @@ CHAIN_IDS: dict[str, int] = {
     "reth": 5124,
 }
 
-# Binary paths
-SANVIL_BIN: str = os.path.expanduser("~/.seismic/bin/sanvil")
-RETH_BIN: str = os.path.expanduser(
-    "~/code/seismic-workspace/seismic-reth/target/debug/seismic-reth"
-)
+# ---------------------------------------------------------------------------
+# Binary resolution
+# ---------------------------------------------------------------------------
+
+
+def _resolve_binary(
+    specific_env: str,
+    workspace_subdir: str,
+    relative_bin: str,
+) -> str:
+    """Resolve a binary path from environment variables.
+
+    Resolution order:
+        1. ``$<specific_env>/<relative_bin>``
+        2. ``$SEISMIC_WORKSPACE/<workspace_subdir>/<relative_bin>``
+        3. Raise with a clear message listing both options.
+    """
+    root = os.environ.get(specific_env)
+    if root:
+        return os.path.join(os.path.expanduser(root), relative_bin)
+
+    workspace = os.environ.get("SEISMIC_WORKSPACE")
+    if workspace:
+        return os.path.join(
+            os.path.expanduser(workspace), workspace_subdir, relative_bin
+        )
+
+    raise pytest.UsageError(
+        f"Cannot locate {relative_bin!r}. "
+        f"Set {specific_env} (repo root) or SEISMIC_WORKSPACE "
+        f"(parent of all seismic repos).\n"
+        f"Example:\n"
+        f"  export {specific_env}=/path/to/{workspace_subdir}\n"
+        f"  # or\n"
+        f"  export SEISMIC_WORKSPACE=/path/to/seismic-workspace"
+    )
+
+
+def _get_sanvil_bin() -> str:
+    return _resolve_binary(
+        "SFOUNDRY_ROOT", "seismic-foundry", os.path.join("target", "debug", "sanvil")
+    )
+
+
+def _get_reth_bin() -> str:
+    return _resolve_binary(
+        "SRETH_ROOT", "seismic-reth", os.path.join("target", "debug", "seismic-reth")
+    )
+
 
 _StartResult = tuple[subprocess.Popen[bytes], str | None]
 
@@ -106,7 +153,7 @@ def _wait_for_rpc(url: str, timeout: int = 15) -> None:
 
 
 def _start_anvil(port: int) -> _StartResult:
-    cmd = [SANVIL_BIN, "--port", str(port), "--silent"]
+    cmd = [_get_sanvil_bin(), "--port", str(port), "--silent"]
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.DEVNULL,
@@ -120,7 +167,7 @@ def _start_reth(port: int) -> _StartResult:
     """Start seismic-reth in dev mode, matching seismic-viem's CI config."""
     tmpdir = tempfile.mkdtemp(prefix="seismic-reth-")
     cmd = [
-        RETH_BIN,
+        _get_reth_bin(),
         "node",
         # Dev mode
         "--dev",
