@@ -165,7 +165,6 @@ from seismic_web3.contract.abi import encode_shielded_calldata
 data = encode_shielded_calldata(abi, "setNumber", [42])
 ```
 
-<<<<<<< py-src20-standard
 ## SRC20 Tokens
 
 The SDK ships with `SRC20_ABI`, the ABI for Seismic's [SRC20 token standard](https://docs.seismic.systems) — a privacy-preserving ERC20 where balances and transfer amounts use shielded types (`suint256`).
@@ -200,7 +199,6 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 tx_hash = token.write.approve("0xSpender...", 500)
 ```
 
-=======
 ## Precompiles
 
 Call Mercury EVM precompiles directly via `eth_call`. No encryption state needed — just a `Web3` instance connected to a Seismic node.
@@ -237,7 +235,6 @@ All functions have async variants (`async_rng`, `async_ecdh`, etc.).
 | HKDF | `0x68` | `hkdf(w3, ikm)` | `Bytes32` |
 | secp256k1 Sign | `0x69` | `secp256k1_sign(w3, sk=, message=)` | `HexBytes` |
 
->>>>>>> main
 ## Security Parameters
 
 Override per-transaction security defaults with `SeismicSecurityParams`:
