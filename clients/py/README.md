@@ -38,7 +38,7 @@ result = contract.read.getNumber()
 
 ## Shielded Contracts
 
-`ShieldedContract` exposes four namespaces:
+`ShieldedContract` exposes five namespaces:
 
 | Namespace | What it does | On-chain visibility |
 |-----------|-------------|-------------------|
@@ -46,6 +46,7 @@ result = contract.read.getNumber()
 | `.read` | Encrypted signed `eth_call` | Calldata + result hidden |
 | `.twrite` | Standard `eth_sendTransaction` | Calldata visible |
 | `.tread` | Standard `eth_call` | Calldata visible |
+| `.dwrite` | Debug write — like `.write` but returns plaintext + encrypted views | Calldata hidden |
 
 ```python
 contract = w3.seismic.contract(address="0x...", abi=ABI)
@@ -61,6 +62,12 @@ tx_hash = contract.twrite.setNumber(42)
 
 # Transparent read — standard eth_call, returns raw bytes
 result = contract.tread.getNumber()
+
+# Debug write — sends encrypted tx, returns plaintext + encrypted views + hash
+debug = contract.dwrite.setNumber(42)
+debug.plaintext_tx.data  # unencrypted calldata
+debug.shielded_tx.data   # encrypted calldata
+debug.tx_hash            # transaction hash
 ```
 
 Write namespaces accept optional keyword arguments:
@@ -140,6 +147,12 @@ result = w3.seismic.signed_call(
     data=HexBytes("0x..."),
     gas=30_000_000,
 )
+
+# Debug shielded transaction — sends + returns plaintext/encrypted views
+debug = w3.seismic.debug_send_shielded_transaction(
+    to="0x...",
+    data=HexBytes("0x..."),
+)
 ```
 
 You can also encode calldata for shielded types separately:
@@ -180,7 +193,7 @@ Everything importable from `seismic_web3`:
 | `create_async_shielded_web3` | function | Create async `AsyncWeb3` with `w3.seismic` namespace |
 | `get_encryption` | function | Derive `EncryptionState` from a TEE public key |
 | `make_seismic_testnet` | function | Factory for GCP testnet `ChainConfig` |
-| `ShieldedContract` | class | Sync contract with `.write`/`.read`/`.twrite`/`.tread` |
+| `ShieldedContract` | class | Sync contract with `.write`/`.read`/`.twrite`/`.tread`/`.dwrite` |
 | `AsyncShieldedContract` | class | Async version of `ShieldedContract` |
 | `SeismicNamespace` | class | Sync namespace attached as `w3.seismic` |
 | `AsyncSeismicNamespace` | class | Async namespace attached as `w3.seismic` |
@@ -199,6 +212,8 @@ Everything importable from `seismic_web3`:
 | `TxSeismicMetadata` | type | Transaction metadata (used as AES-GCM AAD) |
 | `LegacyFields` | type | Standard EVM tx fields (chain_id, nonce, to, value) |
 | `Signature` | type | ECDSA signature components (v, r, s) |
+| `PlaintextTx` | type | Unencrypted transaction view (for debug writes) |
+| `DebugWriteResult` | type | Result from `.dwrite` (plaintext tx + shielded tx + hash) |
 
 ---
 
@@ -265,7 +280,7 @@ clients/py/
 │       ├── py.typed                 # PEP 561 type marker
 │       ├── contract/
 │       │   ├── abi.py               # ABI encoding, shielded type remapping
-│       │   └── shielded.py          # ShieldedContract (4-namespace pattern)
+│       │   └── shielded.py          # ShieldedContract (5-namespace pattern)
 │       ├── crypto/
 │       │   ├── aes.py               # AES-GCM encryption
 │       │   ├── ecdh.py              # ECDH key agreement

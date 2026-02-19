@@ -21,7 +21,11 @@ from seismic_web3.transaction.metadata import (
     build_metadata,
 )
 from seismic_web3.transaction.serialize import sign_seismic_tx
-from seismic_web3.transaction_types import UnsignedSeismicTx
+from seismic_web3.transaction_types import (
+    DebugWriteResult,
+    PlaintextTx,
+    UnsignedSeismicTx,
+)
 
 if TYPE_CHECKING:
     from eth_typing import ChecksumAddress
@@ -30,7 +34,7 @@ if TYPE_CHECKING:
 
     from seismic_web3._types import PrivateKey
     from seismic_web3.client import EncryptionState
-    from seismic_web3.transaction_types import SeismicSecurityParams
+    from seismic_web3.transaction_types import SeismicSecurityParams, TxSeismicMetadata
 
 #: Default gas limit when not specified.
 _DEFAULT_GAS = 30_000_000
@@ -140,6 +144,98 @@ async def async_send_shielded_raw(w3: AsyncWeb3, signed_tx: HexBytes) -> HexByte
 
 
 # ---------------------------------------------------------------------------
+# Shielded transaction preparation (build + encrypt + sign)
+# ---------------------------------------------------------------------------
+
+
+def _prepare_shielded_transaction(
+    w3: Web3,
+    *,
+    encryption: EncryptionState,
+    private_key: PrivateKey,
+    to: ChecksumAddress,
+    data: HexBytes,
+    value: int = 0,
+    gas: int | None = None,
+    gas_price: int | None = None,
+    security: SeismicSecurityParams | None = None,
+) -> tuple[HexBytes, UnsignedSeismicTx, TxSeismicMetadata]:
+    """Build, encrypt, and sign a shielded transaction (sync).
+
+    Returns the signed bytes, the unsigned tx, and metadata -- but
+    does **not** broadcast.
+
+    Returns:
+        ``(signed_tx_bytes, unsigned_tx, metadata)``
+    """
+    params = _build_metadata_params(private_key, encryption, to, value, security)
+    metadata = build_metadata(w3, params)
+
+    encrypted = encryption.encrypt(
+        data, metadata.seismic_elements.encryption_nonce, metadata
+    )
+
+    resolved_gas_price = gas_price if gas_price is not None else w3.eth.gas_price
+    resolved_gas = gas if gas is not None else _DEFAULT_GAS
+
+    tx = UnsignedSeismicTx(
+        chain_id=metadata.legacy_fields.chain_id,
+        nonce=metadata.legacy_fields.nonce,
+        gas_price=resolved_gas_price,
+        gas=resolved_gas,
+        to=to,
+        value=value,
+        data=HexBytes(encrypted),
+        seismic=metadata.seismic_elements,
+    )
+
+    signed = sign_seismic_tx(tx, private_key)
+    return signed, tx, metadata
+
+
+async def _async_prepare_shielded_transaction(
+    w3: AsyncWeb3,
+    *,
+    encryption: EncryptionState,
+    private_key: PrivateKey,
+    to: ChecksumAddress,
+    data: HexBytes,
+    value: int = 0,
+    gas: int | None = None,
+    gas_price: int | None = None,
+    security: SeismicSecurityParams | None = None,
+) -> tuple[HexBytes, UnsignedSeismicTx, TxSeismicMetadata]:
+    """Build, encrypt, and sign a shielded transaction (async).
+
+    Returns:
+        ``(signed_tx_bytes, unsigned_tx, metadata)``
+    """
+    params = _build_metadata_params(private_key, encryption, to, value, security)
+    metadata = await async_build_metadata(w3, params)
+
+    encrypted = encryption.encrypt(
+        data, metadata.seismic_elements.encryption_nonce, metadata
+    )
+
+    resolved_gas_price = gas_price if gas_price is not None else await w3.eth.gas_price
+    resolved_gas = gas if gas is not None else _DEFAULT_GAS
+
+    tx = UnsignedSeismicTx(
+        chain_id=metadata.legacy_fields.chain_id,
+        nonce=metadata.legacy_fields.nonce,
+        gas_price=resolved_gas_price,
+        gas=resolved_gas,
+        to=to,
+        value=value,
+        data=HexBytes(encrypted),
+        seismic=metadata.seismic_elements,
+    )
+
+    signed = sign_seismic_tx(tx, private_key)
+    return signed, tx, metadata
+
+
+# ---------------------------------------------------------------------------
 # Shielded transaction send (full pipeline)
 # ---------------------------------------------------------------------------
 
@@ -175,28 +271,17 @@ def send_shielded_transaction(
     Returns:
         Transaction hash.
     """
-    params = _build_metadata_params(private_key, encryption, to, value, security)
-    metadata = build_metadata(w3, params)
-
-    encrypted = encryption.encrypt(
-        data, metadata.seismic_elements.encryption_nonce, metadata
-    )
-
-    resolved_gas_price = gas_price if gas_price is not None else w3.eth.gas_price
-    resolved_gas = gas if gas is not None else _DEFAULT_GAS
-
-    tx = UnsignedSeismicTx(
-        chain_id=metadata.legacy_fields.chain_id,
-        nonce=metadata.legacy_fields.nonce,
-        gas_price=resolved_gas_price,
-        gas=resolved_gas,
+    signed, _, _ = _prepare_shielded_transaction(
+        w3,
+        encryption=encryption,
+        private_key=private_key,
         to=to,
+        data=data,
         value=value,
-        data=HexBytes(encrypted),
-        seismic=metadata.seismic_elements,
+        gas=gas,
+        gas_price=gas_price,
+        security=security,
     )
-
-    signed = sign_seismic_tx(tx, private_key)
     return send_shielded_raw(w3, signed)
 
 
@@ -231,29 +316,143 @@ async def async_send_shielded_transaction(
     Returns:
         Transaction hash.
     """
-    params = _build_metadata_params(private_key, encryption, to, value, security)
-    metadata = await async_build_metadata(w3, params)
-
-    encrypted = encryption.encrypt(
-        data, metadata.seismic_elements.encryption_nonce, metadata
-    )
-
-    resolved_gas_price = gas_price if gas_price is not None else await w3.eth.gas_price
-    resolved_gas = gas if gas is not None else _DEFAULT_GAS
-
-    tx = UnsignedSeismicTx(
-        chain_id=metadata.legacy_fields.chain_id,
-        nonce=metadata.legacy_fields.nonce,
-        gas_price=resolved_gas_price,
-        gas=resolved_gas,
+    signed, _, _ = await _async_prepare_shielded_transaction(
+        w3,
+        encryption=encryption,
+        private_key=private_key,
         to=to,
+        data=data,
         value=value,
-        data=HexBytes(encrypted),
-        seismic=metadata.seismic_elements,
+        gas=gas,
+        gas_price=gas_price,
+        security=security,
+    )
+    return await async_send_shielded_raw(w3, signed)
+
+
+# ---------------------------------------------------------------------------
+# Debug shielded transaction (send + return plaintext/shielded views)
+# ---------------------------------------------------------------------------
+
+
+def debug_send_shielded_transaction(
+    w3: Web3,
+    *,
+    encryption: EncryptionState,
+    private_key: PrivateKey,
+    to: ChecksumAddress,
+    data: HexBytes,
+    value: int = 0,
+    gas: int | None = None,
+    gas_price: int | None = None,
+    security: SeismicSecurityParams | None = None,
+) -> DebugWriteResult:
+    """Send a shielded transaction and return debug info (sync).
+
+    Same as :func:`send_shielded_transaction` but also returns
+    the plaintext and encrypted transaction views for debugging.
+
+    Args:
+        w3: Sync ``Web3`` instance.
+        encryption: Encryption state.
+        private_key: 32-byte signing key.
+        to: Recipient address.
+        data: Plaintext calldata (will be encrypted).
+        value: Wei to transfer (default ``0``).
+        gas: Gas limit.  Uses ``30_000_000`` if not specified.
+        gas_price: Gas price in wei.  Fetched from chain if not specified.
+        security: Optional security parameter overrides.
+
+    Returns:
+        :class:`~seismic_web3.transaction_types.DebugWriteResult`
+        with plaintext tx, shielded tx, and transaction hash.
+    """
+    signed, unsigned_tx, _metadata = _prepare_shielded_transaction(
+        w3,
+        encryption=encryption,
+        private_key=private_key,
+        to=to,
+        data=data,
+        value=value,
+        gas=gas,
+        gas_price=gas_price,
+        security=security,
+    )
+    tx_hash = send_shielded_raw(w3, signed)
+
+    plaintext_tx = PlaintextTx(
+        to=to,
+        data=data,
+        nonce=unsigned_tx.nonce,
+        gas=unsigned_tx.gas,
+        gas_price=unsigned_tx.gas_price,
+        value=value,
+    )
+    return DebugWriteResult(
+        plaintext_tx=plaintext_tx,
+        shielded_tx=unsigned_tx,
+        tx_hash=tx_hash,
     )
 
-    signed = sign_seismic_tx(tx, private_key)
-    return await async_send_shielded_raw(w3, signed)
+
+async def async_debug_send_shielded_transaction(
+    w3: AsyncWeb3,
+    *,
+    encryption: EncryptionState,
+    private_key: PrivateKey,
+    to: ChecksumAddress,
+    data: HexBytes,
+    value: int = 0,
+    gas: int | None = None,
+    gas_price: int | None = None,
+    security: SeismicSecurityParams | None = None,
+) -> DebugWriteResult:
+    """Send a shielded transaction and return debug info (async).
+
+    Same as :func:`async_send_shielded_transaction` but also returns
+    the plaintext and encrypted transaction views for debugging.
+
+    Args:
+        w3: Async ``AsyncWeb3`` instance.
+        encryption: Encryption state.
+        private_key: 32-byte signing key.
+        to: Recipient address.
+        data: Plaintext calldata (will be encrypted).
+        value: Wei to transfer (default ``0``).
+        gas: Gas limit.  Uses ``30_000_000`` if not specified.
+        gas_price: Gas price in wei.  Fetched from chain if not specified.
+        security: Optional security parameter overrides.
+
+    Returns:
+        :class:`~seismic_web3.transaction_types.DebugWriteResult`
+        with plaintext tx, shielded tx, and transaction hash.
+    """
+    signed, unsigned_tx, _metadata = await _async_prepare_shielded_transaction(
+        w3,
+        encryption=encryption,
+        private_key=private_key,
+        to=to,
+        data=data,
+        value=value,
+        gas=gas,
+        gas_price=gas_price,
+        security=security,
+    )
+    tx_hash = await async_send_shielded_raw(w3, signed)
+
+    plaintext_tx = PlaintextTx(
+        to=to,
+        data=data,
+        nonce=unsigned_tx.nonce,
+        gas=unsigned_tx.gas,
+        gas_price=unsigned_tx.gas_price,
+        value=value,
+    )
+    return DebugWriteResult(
+        plaintext_tx=plaintext_tx,
+        shielded_tx=unsigned_tx,
+        tx_hash=tx_hash,
+    )
 
 
 # ---------------------------------------------------------------------------

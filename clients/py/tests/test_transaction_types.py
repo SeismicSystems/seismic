@@ -5,7 +5,9 @@ from hexbytes import HexBytes
 
 from seismic_web3._types import Bytes32, CompressedPublicKey, EncryptionNonce
 from seismic_web3.transaction_types import (
+    DebugWriteResult,
     LegacyFields,
+    PlaintextTx,
     SeismicElements,
     SeismicSecurityParams,
     Signature,
@@ -142,6 +144,96 @@ class TestUnsignedSeismicTx:
         )
         with pytest.raises(AttributeError):
             tx.nonce = 5  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# SeismicSecurityParams
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# PlaintextTx
+# ---------------------------------------------------------------------------
+
+
+class TestPlaintextTx:
+    def test_creation(self):
+        pt = PlaintextTx(
+            to=MOCK_SENDER,
+            data=HexBytes("0xdeadbeef"),
+            nonce=5,
+            gas=100_000,
+            gas_price=1_000_000_000,
+            value=0,
+        )
+        assert pt.to == MOCK_SENDER
+        assert pt.data == HexBytes("0xdeadbeef")
+        assert pt.nonce == 5
+        assert pt.gas == 100_000
+
+    def test_frozen(self):
+        pt = PlaintextTx(
+            to=None, data=HexBytes(b""), nonce=0, gas=0, gas_price=0, value=0
+        )
+        with pytest.raises(AttributeError):
+            pt.nonce = 1  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# DebugWriteResult
+# ---------------------------------------------------------------------------
+
+
+class TestDebugWriteResult:
+    def test_creation(self):
+        pt = PlaintextTx(
+            to=MOCK_SENDER,
+            data=HexBytes("0xdeadbeef"),
+            nonce=1,
+            gas=100_000,
+            gas_price=1_000_000_000,
+            value=0,
+        )
+        tx = UnsignedSeismicTx(
+            chain_id=31_337,
+            nonce=1,
+            gas_price=1_000_000_000,
+            gas=100_000,
+            to=MOCK_SENDER,
+            value=0,
+            data=HexBytes("0xaabbccdd"),
+            seismic=_make_seismic_elements(),
+        )
+        result = DebugWriteResult(
+            plaintext_tx=pt,
+            shielded_tx=tx,
+            tx_hash=HexBytes("0x" + "aa" * 32),
+        )
+        assert result.plaintext_tx.data == HexBytes("0xdeadbeef")
+        assert result.shielded_tx.data == HexBytes("0xaabbccdd")
+        assert len(result.tx_hash) == 32
+
+    def test_frozen(self):
+        pt = PlaintextTx(
+            to=None, data=HexBytes(b""), nonce=0, gas=0, gas_price=0, value=0
+        )
+        tx = UnsignedSeismicTx(
+            chain_id=1,
+            nonce=0,
+            gas_price=0,
+            gas=0,
+            to=None,
+            value=0,
+            data=HexBytes(b""),
+            seismic=_make_seismic_elements(),
+        )
+        result = DebugWriteResult(
+            plaintext_tx=pt,
+            shielded_tx=tx,
+            tx_hash=HexBytes("0x" + "00" * 32),
+        )
+        with pytest.raises(AttributeError):
+            result.tx_hash = HexBytes(b"")  # type: ignore[misc]
 
 
 # ---------------------------------------------------------------------------

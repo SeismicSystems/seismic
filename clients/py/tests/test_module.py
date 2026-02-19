@@ -37,10 +37,12 @@ class TestSeismicNamespace:
         assert hasattr(ns, "contract")
         assert hasattr(ns, "send_shielded_transaction")
         assert hasattr(ns, "signed_call")
+        assert hasattr(ns, "debug_send_shielded_transaction")
         assert callable(ns.get_tee_public_key)
         assert callable(ns.contract)
         assert callable(ns.send_shielded_transaction)
         assert callable(ns.signed_call)
+        assert callable(ns.debug_send_shielded_transaction)
 
     def test_exposes_encryption_state(self):
         w3 = MagicMock()
@@ -73,6 +75,7 @@ class TestAsyncSeismicNamespace:
         assert hasattr(ns, "contract")
         assert hasattr(ns, "send_shielded_transaction")
         assert hasattr(ns, "signed_call")
+        assert hasattr(ns, "debug_send_shielded_transaction")
 
     def test_contract_returns_async_shielded_contract(self):
         w3 = MagicMock()
