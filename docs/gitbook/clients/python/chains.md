@@ -20,6 +20,22 @@ SANVIL.chain_id  # 31337
 
 ***
 
+### Creating clients from a chain config
+
+```python
+from seismic_web3 import SEISMIC_TESTNET, PrivateKey
+
+pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+
+# Sync
+w3 = SEISMIC_TESTNET.create_client(pk)
+
+# Async (auto-selects ws_url when ws=True)
+w3 = await SEISMIC_TESTNET.create_async_client(pk, ws=True)
+```
+
+***
+
 ### Other testnet instances
 
 ```python
@@ -38,4 +54,6 @@ custom = ChainConfig(
     ws_url="wss://my-node.example.com/ws",
     name="My Network",
 )
+
+w3 = custom.create_client(pk)
 ```

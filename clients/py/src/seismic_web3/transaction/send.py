@@ -13,6 +13,7 @@ from eth_keys import keys as eth_keys
 from hexbytes import HexBytes
 from web3.types import RPCEndpoint
 
+from seismic_web3._constants import TYPED_DATA_MESSAGE_VERSION
 from seismic_web3.crypto.nonce import random_encryption_nonce
 from seismic_web3.transaction.eip712 import sign_seismic_tx_eip712
 from seismic_web3.transaction.metadata import (
@@ -86,8 +87,6 @@ def _build_metadata_params(
     blocks_window = (
         security.blocks_window if security else None
     ) or DEFAULT_BLOCKS_WINDOW
-
-    from seismic_web3.chains import TYPED_DATA_MESSAGE_VERSION
 
     return MetadataParams(
         sender=sender,

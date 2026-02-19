@@ -9,12 +9,11 @@ pip install seismic-web3
 ## Quick start
 
 ```python
-from seismic_web3 import create_shielded_web3, PrivateKey
+from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-w3 = create_shielded_web3(
-    "http://127.0.0.1:8545",
-    private_key=PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX")),
-)
+pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+
+w3 = SEISMIC_TESTNET.create_client(pk)
 
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
