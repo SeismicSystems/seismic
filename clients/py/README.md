@@ -53,3 +53,7 @@ Full docs are hosted on GitBook: **[docs.seismic.systems/clients/python](https:/
 ## Contributing
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for local setup, running tests, and publishing.
+
+---
+
+> This SDK was entirely vibecoded.
