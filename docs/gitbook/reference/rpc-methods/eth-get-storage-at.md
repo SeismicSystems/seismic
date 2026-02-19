@@ -8,6 +8,10 @@ Returns the value at a given storage position for an address. On Seismic, this m
 
 This is a deliberate security measure — shielded storage values are encrypted and flagged with `is_private = true` in the state trie. Exposing them via RPC would defeat the purpose of confidential storage.
 
+## Try It
+
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_getStorageAt%26embed%3Dtrue" %}
+
 ## Parameters
 
 | Index | Type     | Description                                                               |
@@ -65,10 +69,6 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 {% hint style="warning" %}
 If you need to read shielded data, use a [signed read](../seismic-transaction/signed-reads.md) via `eth_call` with a Seismic transaction. The contract itself must expose a getter function for the shielded value.
 {% endhint %}
-
-## Try It
-
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_getStorageAt%26embed%3Dtrue" %}
 
 ## Related
 

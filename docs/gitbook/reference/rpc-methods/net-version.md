@@ -7,8 +7,12 @@ icon: network-wired
 Returns the current network ID as a string. This method works identically to standard Ethereum.
 
 {% hint style="info" %}
-`net_version` and `eth_chainId` both identify the network, but `net_version` returns a decimal string while `eth_chainId` returns a hex value. Prefer `eth_chainId` for transaction signing.
+`net_version` and `eth_chainId` both identify the network, but `net_version` returns a decimal string while `eth_chainId` returns a hex value. Prefer `eth_chainId` for transaction signing. The chain ID is `0x1404` (5124) on testnet.
 {% endhint %}
+
+## Try It
+
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Dnet_version%26embed%3Dtrue" %}
 
 ## Parameters
 
@@ -43,11 +47,6 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 }
 ```
 
-## Try It
-
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Dnet_version%26embed%3Dtrue" %}
-
 ## Related
 
-- [eth_chainId](eth-chain-id.md) — hex chain ID (preferred for signing)
 - [Testnet](../../networks/testnet.md) — testnet details

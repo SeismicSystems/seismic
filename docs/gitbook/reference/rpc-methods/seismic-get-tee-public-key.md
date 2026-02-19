@@ -6,6 +6,10 @@ icon: key
 
 Returns the TEE's encryption public key. This is the first step in building a [Seismic transaction](../seismic-transaction/README.md) — clients use this public key with their own ephemeral key to derive a shared AES encryption key via ECDH.
 
+## Try It
+
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Dseismic_getTeePublicKey%26embed%3Dtrue" %}
+
 ## Parameters
 
 None.
@@ -38,10 +42,6 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
   "result": "0x02abc123..."
 }
 ```
-
-## Try It
-
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Dseismic_getTeePublicKey%26embed%3Dtrue" %}
 
 ## Related
 

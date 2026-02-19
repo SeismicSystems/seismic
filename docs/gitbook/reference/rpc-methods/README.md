@@ -28,12 +28,11 @@ These standard Ethereum methods work on Seismic but have important behavioral di
 
 These methods work identically to their Ethereum counterparts:
 
-| Method                                   | Description                                       |
-| ---------------------------------------- | ------------------------------------------------- |
-| [`eth_blockNumber`](eth-block-number.md) | Returns the number of the most recent block       |
-| [`eth_getBalance`](eth-get-balance.md)   | Returns the balance of an account in wei          |
-| [`eth_chainId`](eth-chain-id.md)         | Returns the chain ID (`0x1404` / 5124 on testnet) |
-| [`net_version`](net-version.md)          | Returns the current network ID                    |
+| Method                          | Description                    |
+| ------------------------------- | ------------------------------ |
+| [`net_version`](net-version.md) | Returns the current network ID |
+
+All other standard Ethereum RPC methods (`eth_blockNumber`, `eth_getBalance`, `eth_chainId`, etc.) work identically to Ethereum and are fully supported.
 
 ## RPC Endpoints
 

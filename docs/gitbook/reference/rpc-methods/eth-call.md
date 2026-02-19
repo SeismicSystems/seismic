@@ -10,6 +10,10 @@ Executes a message call without creating a transaction on the blockchain. On Sei
 
 2. **Signed reads via type `0x4A`** — To make an `eth_call` that preserves your identity (so the contract can return caller-specific data like balances), you must send a [signed read](../seismic-transaction/signed-reads.md) using Seismic transaction type `0x4A`.
 
+## Try It
+
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_call%26embed%3Dtrue" %}
+
 ## Parameters
 
 | Index | Type     | Description                                                               |
@@ -66,10 +70,6 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 {% hint style="warning" %}
 If you need caller-specific data (e.g., a user's shielded balance), you must use a [signed read](../seismic-transaction/signed-reads.md). A plain `eth_call` will have `from` set to the zero address.
 {% endhint %}
-
-## Try It
-
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_call%26embed%3Dtrue" %}
 
 ## Related
 

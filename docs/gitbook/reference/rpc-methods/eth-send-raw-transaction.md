@@ -8,6 +8,10 @@ Submits a signed transaction to the network. On Seismic, this endpoint accepts b
 
 Seismic transactions (`0x4A`) include encrypted calldata and `SeismicElements` metadata (encryption public key, nonce, recent block hash, expiration block, and message version). The node decrypts the calldata inside the TEE before execution.
 
+## Try It
+
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_sendRawTransaction%26embed%3Dtrue" %}
+
 ## Parameters
 
 | Index | Type     | Description                         |
@@ -56,10 +60,6 @@ The node rejects transactions in these cases:
 - Failed calldata decryption
 - `recentBlockHash` older than 100 blocks
 - Past `expiresAtBlock`
-
-## Try It
-
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_sendRawTransaction%26embed%3Dtrue" %}
 
 ## Related
 
