@@ -28,6 +28,11 @@ dependencies = [
     "cryptography>=43.0",
 ]
 
+[project.urls]
+Documentation = "https://docs.seismic.systems/clients/python"
+Repository = "https://github.com/SeismicSystems/seismic"
+Source = "https://github.com/SeismicSystems/seismic/tree/main/clients/py"
+
 [dependency-groups]
 dev = [
     "ruff>=0.11",
