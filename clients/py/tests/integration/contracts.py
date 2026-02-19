@@ -42,6 +42,10 @@ _test_token: dict[str, Any] = _load_artifact("test_token.json")
 TEST_TOKEN_ABI: list[dict[str, Any]] = _test_token["abi"]
 TEST_TOKEN_BYTECODE: str = _test_token["bytecode"]
 
+_mock_src20_events: dict[str, Any] = _load_artifact("mock_src20_events.json")
+
+MOCK_SRC20_EVENTS_ABI: list[dict[str, Any]] = _mock_src20_events["abi"]
+MOCK_SRC20_EVENTS_BYTECODE: str = _mock_src20_events["bytecode"]
 _deposit_contract: dict[str, Any] = _load_artifact("deposit_contract.json")
 
 DEPOSIT_CONTRACT_ABI: list[dict[str, Any]] = _deposit_contract["abi"]

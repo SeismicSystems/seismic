@@ -8,12 +8,6 @@ Deferred features not included in the initial SDK implementation.
 - Domain: `{name: "Seismic Transaction", version: "2"}`
 - Reference: `seismic-viem/src/signSeismicTypedData.ts`
 
-## SRC20 Token Standard
-
-- [x] Token standard with encrypted balances — `SRC20_ABI` constant + integration tests
-- [x] Transfer, approve, balanceOf with shielded types — works via `ShieldedContract`
-- [ ] Event watching with viewing keys (requires Directory/Intelligence genesis contracts)
-
 ## Block Explorer URL Helpers
 
 - Generate URLs for addresses, transactions, tokens, blocks

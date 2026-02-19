@@ -72,4 +72,67 @@ SRC20_ABI: list[dict[str, Any]] = [
         "outputs": [{"name": "", "type": "bool", "internalType": "bool"}],
         "stateMutability": "nonpayable",
     },
+    # -- Events (encrypted amounts via Directory/Intelligence) ---------------
+    {
+        "type": "event",
+        "name": "Transfer",
+        "inputs": [
+            {
+                "name": "from",
+                "type": "address",
+                "indexed": True,
+                "internalType": "address",
+            },
+            {
+                "name": "to",
+                "type": "address",
+                "indexed": True,
+                "internalType": "address",
+            },
+            {
+                "name": "encryptKeyHash",
+                "type": "bytes32",
+                "indexed": True,
+                "internalType": "bytes32",
+            },
+            {
+                "name": "encryptedAmount",
+                "type": "bytes",
+                "indexed": False,
+                "internalType": "bytes",
+            },
+        ],
+        "anonymous": False,
+    },
+    {
+        "type": "event",
+        "name": "Approval",
+        "inputs": [
+            {
+                "name": "owner",
+                "type": "address",
+                "indexed": True,
+                "internalType": "address",
+            },
+            {
+                "name": "spender",
+                "type": "address",
+                "indexed": True,
+                "internalType": "address",
+            },
+            {
+                "name": "encryptKeyHash",
+                "type": "bytes32",
+                "indexed": True,
+                "internalType": "bytes32",
+            },
+            {
+                "name": "encryptedAmount",
+                "type": "bytes",
+                "indexed": False,
+                "internalType": "bytes",
+            },
+        ],
+        "anonymous": False,
+    },
 ]

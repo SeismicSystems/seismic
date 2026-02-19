@@ -199,6 +199,89 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 tx_hash = token.write.approve("0xSpender...", 500)
 ```
 
+## SRC20 Event Watching
+
+Watch SRC20 Transfer and Approval events and decrypt encrypted amounts using a viewing key. The viewing key is registered in the **Directory** genesis contract (`0x1000…0004`).
+
+### Register a Viewing Key
+
+```python
+from seismic_web3 import Bytes32
+from seismic_web3.src20.directory import register_viewing_key, get_viewing_key, compute_key_hash
+
+# Register a 32-byte AES viewing key in the Directory contract
+key = Bytes32(b"\xab" * 32)
+tx_hash = register_viewing_key(w3, w3.seismic.encryption, w3.seismic._private_key, key)
+w3.eth.wait_for_transaction_receipt(tx_hash)
+
+# Read it back (signed read — authenticates msg.sender)
+stored_key = get_viewing_key(w3, w3.seismic.encryption, w3.seismic._private_key)
+
+# Compute the keccak256 hash used for event topic filtering
+key_hash = compute_key_hash(key)
+```
+
+### Watch Events with an Explicit Viewing Key
+
+```python
+from seismic_web3.src20.watch import watch_src20_events_with_key
+
+watcher = watch_src20_events_with_key(
+    w3,
+    viewing_key=key,
+    token_address="0x...",       # SRC20 token contract
+    on_transfer=lambda log: print(f"Transfer: {log.decrypted_amount}"),
+    on_approval=lambda log: print(f"Approval: {log.decrypted_amount}"),
+    on_error=lambda err: print(f"Error: {err}"),
+    poll_interval=2.0,           # seconds between polls
+    from_block="latest",         # or an int block number
+)
+
+# ... later
+watcher.stop()
+
+# Or use as a context manager
+with watch_src20_events_with_key(w3, viewing_key=key) as watcher:
+    pass  # watcher polls in background thread
+```
+
+### Watch Events with Directory Lookup
+
+If the viewing key is already registered in the Directory, you can let the watcher fetch it automatically:
+
+```python
+from seismic_web3.src20.watch import watch_src20_events
+
+watcher = watch_src20_events(
+    w3,
+    encryption=w3.seismic.encryption,
+    private_key=w3.seismic._private_key,
+    token_address="0x...",
+    on_transfer=lambda log: print(log.decrypted_amount),
+)
+```
+
+### Async Variants
+
+```python
+from seismic_web3.src20.watch import async_watch_src20_events_with_key
+
+watcher = await async_watch_src20_events_with_key(
+    w3,
+    viewing_key=key,
+    token_address="0x...",
+    on_transfer=lambda log: print(log.decrypted_amount),
+)
+await watcher.stop()
+```
+
+### Decrypted Log Types
+
+Both callbacks receive frozen dataclasses:
+
+- **`DecryptedTransferLog`** — `from_address`, `to_address`, `encrypt_key_hash`, `encrypted_amount`, `decrypted_amount`, `transaction_hash`, `block_number`
+- **`DecryptedApprovalLog`** — `owner`, `spender`, `encrypt_key_hash`, `encrypted_amount`, `decrypted_amount`, `transaction_hash`, `block_number`
+
 ## Deposit Contract
 
 The SDK provides first-class action methods for Seismic's Eth2-style validator deposit contract. Validators deposit ETH (minimum 1 ETH, typically 32 ETH) along with their public keys, signatures, and withdrawal credentials.
@@ -350,7 +433,9 @@ Everything importable from `seismic_web3`:
 | `EncryptionState` | class | ECDH-derived AES key + keypair |
 | `ChainConfig` | class | Immutable chain configuration (chain_id, rpc_url, ws_url) |
 | `SeismicSecurityParams` | class | Per-transaction security overrides |
-| `SRC20_ABI` | const | ISRC20 interface ABI (7 functions) |
+| `DIRECTORY_ABI` | const | Directory genesis contract ABI |
+| `DIRECTORY_ADDRESS` | const | Directory genesis address (`0x1000…0004`) |
+| `SRC20_ABI` | const | ISRC20 interface ABI (7 functions + 2 events) |
 | `DEPOSIT_CONTRACT_ABI` | const | Deposit contract ABI (4 functions + 1 event) |
 | `DEPOSIT_CONTRACT_ADDRESS` | const | Deposit contract genesis address |
 | `SEISMIC_TESTNET` | const | Default testnet config (chain 5124) |
@@ -432,9 +517,10 @@ clients/py/
 │       ├── transaction_types.py     # SeismicSecurityParams, TxSeismic types
 │       ├── py.typed                 # PEP 561 type marker
 │       ├── abis/
-│       │   ├── __init__.py           # Re-exports ABI constants
+│       │   ├── __init__.py           # Re-exports SRC20_ABI, DIRECTORY_ABI
 │       │   ├── deposit_contract.py   # Deposit contract ABI + helpers
-│       │   └── src20.py              # ISRC20 interface ABI
+│       │   ├── directory.py          # Directory genesis contract ABI
+│       │   └── src20.py              # ISRC20 interface ABI + events
 │       ├── contract/
 │       │   ├── abi.py               # ABI encoding, shielded type remapping
 │       │   └── shielded.py          # ShieldedContract (5-namespace pattern)
@@ -443,6 +529,12 @@ clients/py/
 │       │   ├── ecdh.py              # ECDH key agreement
 │       │   ├── nonce.py             # Nonce generation
 │       │   └── secp.py              # secp256k1 utilities
+│       ├── src20/
+│       │   ├── __init__.py           # Re-exports public API
+│       │   ├── types.py              # DecryptedTransferLog, DecryptedApprovalLog
+│       │   ├── crypto.py             # AES-GCM decryption of encrypted amounts
+│       │   ├── directory.py          # Directory contract helpers (viewing keys)
+│       │   └── watch.py              # SRC20EventWatcher, factory functions
 │       ├── precompiles/
 │       │   ├── _base.py             # Precompile framework (call, gas helpers)
 │       │   ├── rng.py               # RNG precompile (0x64)
@@ -474,11 +566,13 @@ clients/py/
         ├── conftest.py
         ├── contracts.py
         ├── artifacts/                # Compiled contract JSON
+        ├── test_deposit_contract.py
+        ├── test_directory.py
         ├── test_client_factory.py
         ├── test_namespace.py
         ├── test_precompiles.py
         ├── test_seismic_counter.py
-        ├── test_deposit_contract.py
+        ├── test_src20_events.py
         ├── test_src20_token.py
         └── test_transparent_counter.py
 ```

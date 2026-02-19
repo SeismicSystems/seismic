@@ -42,6 +42,8 @@ from seismic_web3._types import (
 from seismic_web3.abis import (
     DEPOSIT_CONTRACT_ABI,
     DEPOSIT_CONTRACT_ADDRESS,
+    DIRECTORY_ABI,
+    DIRECTORY_ADDRESS,
     SRC20_ABI,
     compute_deposit_data_root,
     make_withdrawal_credentials,
@@ -91,6 +93,8 @@ from seismic_web3.transaction_types import (
 __all__ = [
     "DEPOSIT_CONTRACT_ABI",
     "DEPOSIT_CONTRACT_ADDRESS",
+    "DIRECTORY_ABI",
+    "DIRECTORY_ADDRESS",
     "SANVIL",
     "SEISMIC_TESTNET",
     "SEISMIC_TX_TYPE",
