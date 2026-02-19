@@ -60,7 +60,10 @@ class TestMint:
     """Test minting (admin-only, uses shielded amount)."""
 
     def test_mint_succeeds(
-        self, token: ShieldedContract, w3: Web3, account_address: str
+        self,
+        token: ShieldedContract,
+        w3: Web3,
+        account_address: str,
     ) -> None:
         tx_hash = token.write.mint(account_address, 1000)
         assert len(tx_hash) == 32
@@ -68,7 +71,10 @@ class TestMint:
         assert receipt["status"] == 1
 
     def test_balance_after_mint(
-        self, token: ShieldedContract, w3: Web3, account_address: str
+        self,
+        token: ShieldedContract,
+        w3: Web3,
+        account_address: str,
     ) -> None:
         tx = token.write.mint(account_address, 500)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
@@ -78,7 +84,10 @@ class TestMint:
         assert _decode_uint256(result) == 500
 
     def test_mint_multiple_adds_up(
-        self, token: ShieldedContract, w3: Web3, account_address: str
+        self,
+        token: ShieldedContract,
+        w3: Web3,
+        account_address: str,
     ) -> None:
         tx1 = token.write.mint(account_address, 300)
         w3.eth.wait_for_transaction_receipt(tx1, timeout=30)
@@ -95,7 +104,10 @@ class TestTransfer:
     """Test transfer (shielded amount)."""
 
     def test_transfer_succeeds(
-        self, token: ShieldedContract, w3: Web3, account_address: str
+        self,
+        token: ShieldedContract,
+        w3: Web3,
+        account_address: str,
     ) -> None:
         tx = token.write.mint(account_address, 1000)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
@@ -106,7 +118,10 @@ class TestTransfer:
         assert receipt["status"] == 1
 
     def test_balance_decreases_after_transfer(
-        self, token: ShieldedContract, w3: Web3, account_address: str
+        self,
+        token: ShieldedContract,
+        w3: Web3,
+        account_address: str,
     ) -> None:
         tx = token.write.mint(account_address, 1000)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
@@ -134,7 +149,10 @@ class TestBurn:
     """Test burn (admin-only)."""
 
     def test_burn_reduces_balance(
-        self, token: ShieldedContract, w3: Web3, account_address: str
+        self,
+        token: ShieldedContract,
+        w3: Web3,
+        account_address: str,
     ) -> None:
         tx = token.write.mint(account_address, 1000)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
@@ -151,7 +169,10 @@ class TestSRC20Lifecycle:
     """End-to-end lifecycle: mint -> transfer -> burn -> check balances."""
 
     def test_full_lifecycle(
-        self, token: ShieldedContract, w3: Web3, account_address: str
+        self,
+        token: ShieldedContract,
+        w3: Web3,
+        account_address: str,
     ) -> None:
         # 1. Initial balance is 0
         result = token.read.balanceOf()
