@@ -97,7 +97,7 @@ class TestDepositContractReads:
     ) -> None:
         raw = deposit_contract.tread.get_deposit_count()
         # Returns 8 bytes, little-endian encoded 0
-        count_bytes = bytes(raw[-8:])
+        count_bytes = bytes(raw[64:72])
         assert count_bytes == b"\x00" * 8
 
     def test_initial_deposit_root_is_nonempty(
@@ -133,7 +133,7 @@ class TestDeposit:
     ) -> None:
         _make_deposit(deposit_contract, w3, 32)
         raw = deposit_contract.tread.get_deposit_count()
-        count_bytes = bytes(raw[-8:])
+        count_bytes = bytes(raw[64:72])
         # Little-endian 1
         assert count_bytes[0] == 1
         assert count_bytes[1:] == b"\x00" * 7
@@ -161,7 +161,7 @@ class TestMinimumDeposit:
         assert len(tx_hash) == 32
 
         raw = deposit_contract.tread.get_deposit_count()
-        count_bytes = bytes(raw[-8:])
+        count_bytes = bytes(raw[64:72])
         assert count_bytes[0] == 1
 
 
@@ -177,7 +177,7 @@ class TestMultipleDeposits:
         _make_deposit(deposit_contract, w3, 32)
 
         raw = deposit_contract.tread.get_deposit_count()
-        count_bytes = bytes(raw[-8:])
+        count_bytes = bytes(raw[64:72])
         assert count_bytes[0] == 2
 
 
@@ -191,7 +191,7 @@ class TestDepositLifecycle:
     ) -> None:
         # 1. Initial count is 0
         raw = deposit_contract.tread.get_deposit_count()
-        assert bytes(raw[-8:]) == b"\x00" * 8
+        assert bytes(raw[64:72]) == b"\x00" * 8
 
         # 2. Initial root is some value
         initial_root = bytes(deposit_contract.tread.get_deposit_root())
@@ -202,7 +202,7 @@ class TestDepositLifecycle:
 
         # 4. Count is now 1
         raw = deposit_contract.tread.get_deposit_count()
-        assert bytes(raw[-8:])[0] == 1
+        assert bytes(raw[64:72])[0] == 1
 
         # 5. Root changed
         new_root = bytes(deposit_contract.tread.get_deposit_root())
@@ -213,7 +213,7 @@ class TestDepositLifecycle:
 
         # 7. Count is now 2
         raw = deposit_contract.tread.get_deposit_count()
-        assert bytes(raw[-8:])[0] == 2
+        assert bytes(raw[64:72])[0] == 2
 
         # 8. Root changed again
         final_root = bytes(deposit_contract.tread.get_deposit_root())
