@@ -37,11 +37,24 @@
   * [sbool](core/basics/sbool.md)
 * [Collections](core/collections.md)
 * [Events](core/events.md)
-* [Clients](core/clients.md)
 * [Differences from Ethereum](core/differences-from-ethereum.md)
 * [The Seismic Transaction](core/seismic-transaction/README.md)
   * [Tx Lifecycle](core/seismic-transaction/tx-lifecycle.md)
   * [Signed reads](core/seismic-transaction/signed-reads.md)
+
+## Clients
+
+* [Overview](clients/README.md)
+* [TypeScript — seismic-viem](clients/seismic-viem.md)
+* [Python — seismic-web3](clients/python/README.md)
+  * [Client](clients/python/client.md)
+  * [Contract Instance](clients/python/contract-instance.md)
+  * [Shielded Write](clients/python/shielded-write.md)
+  * [Signed Read](clients/python/signed-reads.md)
+  * [Chains](clients/python/chains.md)
+  * [SRC20 Tokens](clients/python/src20.md)
+  * [Precompiles](clients/python/precompiles.md)
+* [Rust — seismic-alloy](clients/seismic-alloy.md)
 
 ## Appendix
 
