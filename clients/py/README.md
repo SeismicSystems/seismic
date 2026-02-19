@@ -6,6 +6,13 @@ Python SDK for [Seismic](https://seismic.systems), built on [web3.py](https://gi
 pip install seismic-web3
 ```
 
+## Client types
+
+The SDK provides two client types:
+
+- **Wallet client** — you provide a private key. Gives you full capabilities: shielded reads/writes, signed calls, deposits.
+- **Public client** — no private key needed. Read-only access via transparent `eth_call`.
+
 ## Quick start
 
 ```python
@@ -13,7 +20,8 @@ from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
 pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
 
-w3 = SEISMIC_TESTNET.create_client(pk)
+# Wallet client — full capabilities (requires private key)
+w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
@@ -25,7 +33,15 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 result = contract.read.getNumber()
 ```
 
-`ShieldedContract` exposes five namespaces:
+```python
+# Public client — read-only (no private key needed)
+public = SEISMIC_TESTNET.public_client()
+
+contract = public.seismic.contract(address="0x...", abi=ABI)
+result = contract.tread.getNumber()
+```
+
+`ShieldedContract` (from the wallet client) exposes five namespaces:
 
 | Namespace | What it does | On-chain visibility |
 |-----------|-------------|-------------------|
@@ -44,3 +60,7 @@ Full docs are hosted on GitBook: **[docs.seismic.systems/clients/python](https:/
 ## Contributing
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for local setup, running tests, and publishing.
+
+---
+
+> This SDK was entirely vibecoded.

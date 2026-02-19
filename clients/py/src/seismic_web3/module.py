@@ -1,8 +1,15 @@
 """Seismic namespaces for ``Web3`` instances.
 
-Provides :class:`SeismicNamespace` (sync) and
-:class:`AsyncSeismicNamespace` (async) that are attached as
-``w3.seismic`` by the factory functions in :mod:`seismic_web3.client`.
+Provides four namespace classes attached as ``w3.seismic`` by the
+factory functions in :mod:`seismic_web3.client`:
+
+**Public (read-only, no private key):**
+    :class:`SeismicPublicNamespace` (sync),
+    :class:`AsyncSeismicPublicNamespace` (async)
+
+**Wallet (full capabilities, requires private key):**
+    :class:`SeismicNamespace` (sync) -- extends ``SeismicPublicNamespace``
+    :class:`AsyncSeismicNamespace` (async) -- extends ``AsyncSeismicPublicNamespace``
 
 These are plain Python objects (not web3.py ``Module`` subclasses)
 for simplicity and flexibility.
@@ -18,6 +25,7 @@ from seismic_web3.abis.deposit_contract import (
     _check_bytes,
 )
 from seismic_web3.contract.abi import encode_shielded_calldata
+from seismic_web3.contract.public import AsyncPublicContract, PublicContract
 from seismic_web3.contract.shielded import AsyncShieldedContract, ShieldedContract
 from seismic_web3.rpc import async_get_tee_public_key, get_tee_public_key
 from seismic_web3.transaction.send import (
@@ -39,12 +47,193 @@ if TYPE_CHECKING:
     from seismic_web3.transaction_types import DebugWriteResult, SeismicSecurityParams
 
 
-class SeismicNamespace:
+# ---------------------------------------------------------------------------
+# Public (read-only) namespaces
+# ---------------------------------------------------------------------------
+
+
+class SeismicPublicNamespace:
+    """Sync public Seismic namespace -- attached as ``w3.seismic``.
+
+    Provides read-only convenience methods that do not require
+    a private key or encryption state.  Created automatically by
+    :func:`~seismic_web3.client.create_public_client`.
+
+    Args:
+        w3: Sync ``Web3`` instance.
+    """
+
+    def __init__(self, w3: Web3) -> None:
+        self._w3 = w3
+
+    def get_tee_public_key(self) -> CompressedPublicKey:
+        """Fetch the TEE's compressed secp256k1 public key (sync).
+
+        Returns:
+            33-byte compressed public key.
+        """
+        return get_tee_public_key(self._w3)
+
+    def contract(
+        self,
+        address: ChecksumAddress,
+        abi: list[dict[str, Any]],
+    ) -> PublicContract:
+        """Create a :class:`PublicContract` wrapper (sync).
+
+        Args:
+            address: Contract address.
+            abi: Contract ABI (list of function entries).
+
+        Returns:
+            Public contract with ``.tread`` namespace only.
+        """
+        return PublicContract(self._w3, address, abi)
+
+    def get_deposit_root(
+        self,
+        *,
+        address: str = DEPOSIT_CONTRACT_ADDRESS,
+    ) -> bytes:
+        """Read the current deposit Merkle root (sync).
+
+        Args:
+            address: Deposit contract address (defaults to genesis).
+
+        Returns:
+            32-byte deposit root hash.
+        """
+        data = encode_shielded_calldata(
+            DEPOSIT_CONTRACT_ABI,
+            "get_deposit_root",
+            [],
+        )
+        raw = self._w3.eth.call({"to": address, "data": data})
+        return bytes(raw[:32])
+
+    def get_deposit_count(
+        self,
+        *,
+        address: str = DEPOSIT_CONTRACT_ADDRESS,
+    ) -> int:
+        """Read the current deposit count (sync).
+
+        The on-chain value is an 8-byte little-endian integer.
+
+        Args:
+            address: Deposit contract address (defaults to genesis).
+
+        Returns:
+            Number of deposits as a Python ``int``.
+        """
+        data = encode_shielded_calldata(
+            DEPOSIT_CONTRACT_ABI,
+            "get_deposit_count",
+            [],
+        )
+        raw = self._w3.eth.call({"to": address, "data": data})
+        count_bytes = bytes(raw[64:72])
+        return int.from_bytes(count_bytes, "little")
+
+
+class AsyncSeismicPublicNamespace:
+    """Async public Seismic namespace -- attached as ``w3.seismic``.
+
+    Provides read-only convenience methods that do not require
+    a private key or encryption state.  Created automatically by
+    :func:`~seismic_web3.client.create_async_public_client`.
+
+    Args:
+        w3: Async ``AsyncWeb3`` instance.
+    """
+
+    def __init__(self, w3: AsyncWeb3) -> None:
+        self._w3 = w3
+
+    async def get_tee_public_key(self) -> CompressedPublicKey:
+        """Fetch the TEE's compressed secp256k1 public key (async).
+
+        Returns:
+            33-byte compressed public key.
+        """
+        return await async_get_tee_public_key(self._w3)
+
+    def contract(
+        self,
+        address: ChecksumAddress,
+        abi: list[dict[str, Any]],
+    ) -> AsyncPublicContract:
+        """Create an :class:`AsyncPublicContract` wrapper.
+
+        Args:
+            address: Contract address.
+            abi: Contract ABI (list of function entries).
+
+        Returns:
+            Async public contract with ``.tread`` namespace only.
+        """
+        return AsyncPublicContract(self._w3, address, abi)
+
+    async def get_deposit_root(
+        self,
+        *,
+        address: str = DEPOSIT_CONTRACT_ADDRESS,
+    ) -> bytes:
+        """Read the current deposit Merkle root (async).
+
+        Args:
+            address: Deposit contract address (defaults to genesis).
+
+        Returns:
+            32-byte deposit root hash.
+        """
+        data = encode_shielded_calldata(
+            DEPOSIT_CONTRACT_ABI,
+            "get_deposit_root",
+            [],
+        )
+        raw = await self._w3.eth.call({"to": address, "data": data})
+        return bytes(raw[:32])
+
+    async def get_deposit_count(
+        self,
+        *,
+        address: str = DEPOSIT_CONTRACT_ADDRESS,
+    ) -> int:
+        """Read the current deposit count (async).
+
+        The on-chain value is an 8-byte little-endian integer.
+
+        Args:
+            address: Deposit contract address (defaults to genesis).
+
+        Returns:
+            Number of deposits as a Python ``int``.
+        """
+        data = encode_shielded_calldata(
+            DEPOSIT_CONTRACT_ABI,
+            "get_deposit_count",
+            [],
+        )
+        raw = await self._w3.eth.call({"to": address, "data": data})
+        count_bytes = bytes(raw[64:72])
+        return int.from_bytes(count_bytes, "little")
+
+
+# ---------------------------------------------------------------------------
+# Wallet (full capabilities) namespaces — extend public namespaces
+# ---------------------------------------------------------------------------
+
+
+class SeismicNamespace(SeismicPublicNamespace):
     """Sync Seismic namespace -- attached as ``w3.seismic``.
 
-    Provides convenience methods for shielded operations on a sync
-    ``Web3`` instance.  Created automatically by
-    :func:`~seismic_web3.client.create_shielded_web3`.
+    Extends :class:`SeismicPublicNamespace` with wallet capabilities
+    that require a private key: shielded transactions, signed reads,
+    debug writes, and validator deposits.
+
+    Created automatically by
+    :func:`~seismic_web3.client.create_wallet_client`.
 
     Attributes:
         encryption: The :class:`~seismic_web3.client.EncryptionState`
@@ -62,19 +251,11 @@ class SeismicNamespace:
         encryption: EncryptionState,
         private_key: PrivateKey,
     ) -> None:
-        self._w3 = w3
+        super().__init__(w3)
         self.encryption = encryption
         self._private_key = private_key
 
-    def get_tee_public_key(self) -> CompressedPublicKey:
-        """Fetch the TEE's compressed secp256k1 public key (sync).
-
-        Returns:
-            33-byte compressed public key.
-        """
-        return get_tee_public_key(self._w3)
-
-    def contract(
+    def contract(  # type: ignore[override]
         self,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
@@ -89,7 +270,7 @@ class SeismicNamespace:
 
         Returns:
             Shielded contract with ``.write``, ``.read``,
-            ``.twrite``, and ``.tread`` namespaces.
+            ``.twrite``, ``.tread``, and ``.dwrite`` namespaces.
         """
         return ShieldedContract(
             self._w3,
@@ -284,60 +465,16 @@ class SeismicNamespace:
             {"to": address, "data": data.to_0x_hex(), "value": value},
         )
 
-    def get_deposit_root(
-        self,
-        *,
-        address: str = DEPOSIT_CONTRACT_ADDRESS,
-    ) -> bytes:
-        """Read the current deposit Merkle root (sync).
 
-        Args:
-            address: Deposit contract address (defaults to genesis).
-
-        Returns:
-            32-byte deposit root hash.
-        """
-        data = encode_shielded_calldata(
-            DEPOSIT_CONTRACT_ABI,
-            "get_deposit_root",
-            [],
-        )
-        raw = self._w3.eth.call({"to": address, "data": data})
-        return bytes(raw[:32])
-
-    def get_deposit_count(
-        self,
-        *,
-        address: str = DEPOSIT_CONTRACT_ADDRESS,
-    ) -> int:
-        """Read the current deposit count (sync).
-
-        The on-chain value is an 8-byte little-endian integer.
-
-        Args:
-            address: Deposit contract address (defaults to genesis).
-
-        Returns:
-            Number of deposits as a Python ``int``.
-        """
-        data = encode_shielded_calldata(
-            DEPOSIT_CONTRACT_ABI,
-            "get_deposit_count",
-            [],
-        )
-        raw = self._w3.eth.call({"to": address, "data": data})
-        # ABI-encoded bytes: 32-byte offset + 32-byte length + data
-        # The actual 8-byte LE count starts after the 64-byte header.
-        count_bytes = bytes(raw[64:72])
-        return int.from_bytes(count_bytes, "little")
-
-
-class AsyncSeismicNamespace:
+class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
     """Async Seismic namespace -- attached as ``w3.seismic``.
 
-    Provides convenience methods for shielded operations on an async
-    ``AsyncWeb3`` instance.  Created automatically by
-    :func:`~seismic_web3.client.create_async_shielded_web3`.
+    Extends :class:`AsyncSeismicPublicNamespace` with wallet capabilities
+    that require a private key: shielded transactions, signed reads,
+    debug writes, and validator deposits.
+
+    Created automatically by
+    :func:`~seismic_web3.client.create_async_wallet_client`.
 
     Attributes:
         encryption: The :class:`~seismic_web3.client.EncryptionState`
@@ -355,19 +492,11 @@ class AsyncSeismicNamespace:
         encryption: EncryptionState,
         private_key: PrivateKey,
     ) -> None:
-        self._w3 = w3
+        super().__init__(w3)
         self.encryption = encryption
         self._private_key = private_key
 
-    async def get_tee_public_key(self) -> CompressedPublicKey:
-        """Fetch the TEE's compressed secp256k1 public key (async).
-
-        Returns:
-            33-byte compressed public key.
-        """
-        return await async_get_tee_public_key(self._w3)
-
-    def contract(
+    def contract(  # type: ignore[override]
         self,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
@@ -382,7 +511,7 @@ class AsyncSeismicNamespace:
 
         Returns:
             Async shielded contract with ``.write``, ``.read``,
-            ``.twrite``, and ``.tread`` namespaces.
+            ``.twrite``, ``.tread``, and ``.dwrite`` namespaces.
         """
         return AsyncShieldedContract(
             self._w3,
@@ -576,49 +705,3 @@ class AsyncSeismicNamespace:
         return await self._w3.eth.send_transaction(
             {"to": address, "data": data.to_0x_hex(), "value": value},
         )
-
-    async def get_deposit_root(
-        self,
-        *,
-        address: str = DEPOSIT_CONTRACT_ADDRESS,
-    ) -> bytes:
-        """Read the current deposit Merkle root (async).
-
-        Args:
-            address: Deposit contract address (defaults to genesis).
-
-        Returns:
-            32-byte deposit root hash.
-        """
-        data = encode_shielded_calldata(
-            DEPOSIT_CONTRACT_ABI,
-            "get_deposit_root",
-            [],
-        )
-        raw = await self._w3.eth.call({"to": address, "data": data})
-        return bytes(raw[:32])
-
-    async def get_deposit_count(
-        self,
-        *,
-        address: str = DEPOSIT_CONTRACT_ADDRESS,
-    ) -> int:
-        """Read the current deposit count (async).
-
-        The on-chain value is an 8-byte little-endian integer.
-
-        Args:
-            address: Deposit contract address (defaults to genesis).
-
-        Returns:
-            Number of deposits as a Python ``int``.
-        """
-        data = encode_shielded_calldata(
-            DEPOSIT_CONTRACT_ABI,
-            "get_deposit_count",
-            [],
-        )
-        raw = await self._w3.eth.call({"to": address, "data": data})
-        # ABI-encoded bytes: 32-byte offset + 32-byte length + data
-        count_bytes = bytes(raw[64:72])
-        return int.from_bytes(count_bytes, "little")

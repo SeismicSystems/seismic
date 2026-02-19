@@ -8,9 +8,9 @@ icon: coins
 SRC20 is Seismic's privacy-preserving ERC20. Balances and transfer amounts use shielded types (`suint256`), so they're hidden from external observers. The SDK ships with `SRC20_ABI` built in.
 
 ```python
-from seismic_web3 import create_shielded_web3, SRC20_ABI, PrivateKey
+from seismic_web3 import create_wallet_client, SRC20_ABI, PrivateKey
 
-w3 = create_shielded_web3("http://127.0.0.1:8545", private_key=PrivateKey(...))
+w3 = create_wallet_client("http://127.0.0.1:8545", private_key=PrivateKey(...))
 
 token = w3.seismic.contract(address="0x...", abi=SRC20_ABI)
 ```

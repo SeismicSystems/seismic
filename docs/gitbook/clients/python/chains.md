@@ -27,11 +27,14 @@ from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
 pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
 
-# Sync
-w3 = SEISMIC_TESTNET.create_client(pk)
+# Wallet client (requires private key)
+w3 = SEISMIC_TESTNET.wallet_client(pk)
 
-# Async (auto-selects ws_url when ws=True)
-w3 = await SEISMIC_TESTNET.create_async_client(pk, ws=True)
+# Async wallet (auto-selects ws_url when ws=True)
+w3 = await SEISMIC_TESTNET.async_wallet_client(pk, ws=True)
+
+# Public client (no private key needed)
+public = SEISMIC_TESTNET.public_client()
 ```
 
 ***
@@ -55,5 +58,5 @@ custom = ChainConfig(
     name="My Network",
 )
 
-w3 = custom.create_client(pk)
+w3 = custom.wallet_client(pk)
 ```
