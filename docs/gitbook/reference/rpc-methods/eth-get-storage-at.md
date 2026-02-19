@@ -68,7 +68,7 @@ If you need to read shielded data, use a [signed read](../seismic-transaction/si
 
 ## Try It
 
-{% embed url="../rpc-terminal/index.html?method=eth_getStorageAt" %}
+{% embed url="https://seismicsystems.github.io/seismic/rpc-terminal/index.html?method=eth_getStorageAt" %}
 
 ## Related
 

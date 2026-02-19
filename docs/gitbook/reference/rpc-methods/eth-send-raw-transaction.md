@@ -59,7 +59,7 @@ The node rejects transactions in these cases:
 
 ## Try It
 
-{% embed url="../rpc-terminal/index.html?method=eth_sendRawTransaction" %}
+{% embed url="https://seismicsystems.github.io/seismic/rpc-terminal/index.html?method=eth_sendRawTransaction" %}
 
 ## Related
 

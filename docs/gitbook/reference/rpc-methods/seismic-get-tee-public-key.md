@@ -41,7 +41,7 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 
 ## Try It
 
-{% embed url="../rpc-terminal/index.html?method=seismic_getTeePublicKey" %}
+{% embed url="https://seismicsystems.github.io/seismic/rpc-terminal/index.html?method=seismic_getTeePublicKey" %}
 
 ## Related
 

@@ -69,7 +69,7 @@ If you need caller-specific data (e.g., a user's shielded balance), you must use
 
 ## Try It
 
-{% embed url="../rpc-terminal/index.html?method=eth_call" %}
+{% embed url="https://seismicsystems.github.io/seismic/rpc-terminal/index.html?method=eth_call" %}
 
 ## Related
 
