@@ -7,7 +7,7 @@ cover:
 coverY: 0
 ---
 
-# Welcome to Seismic
+# Welcome to Seismic !
 
 **Seismic is an EVM blockchain with native on-chain privacy.** Write Solidity. Use Foundry. Deploy with Viem. The only difference: your users' data stays private.
 
