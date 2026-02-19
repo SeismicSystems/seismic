@@ -37,6 +37,11 @@ SEISMIC_COUNTER_BYTECODE: str = _seismic_counter["bytecode"]
 TRANSPARENT_COUNTER_ABI: list[dict[str, Any]] = _transparent_counter["abi"]
 TRANSPARENT_COUNTER_BYTECODE: str = _transparent_counter["bytecode"]
 
+_test_token: dict[str, Any] = _load_artifact("test_token.json")
+
+TEST_TOKEN_ABI: list[dict[str, Any]] = _test_token["abi"]
+TEST_TOKEN_BYTECODE: str = _test_token["bytecode"]
+
 
 # ---------------------------------------------------------------------------
 # Deploy helper

@@ -20,9 +20,9 @@ Implemented in `seismic_web3.precompiles` — see `src/seismic_web3/precompiles/
 
 ## SRC20 Token Standard
 
-- Token standard with encrypted balances
-- Event watching with viewing keys
-- Transfer, approve, balanceOf with shielded types
+- [x] Token standard with encrypted balances — `SRC20_ABI` constant + integration tests
+- [x] Transfer, approve, balanceOf with shielded types — works via `ShieldedContract`
+- [ ] Event watching with viewing keys (requires Directory/Intelligence genesis contracts)
 
 ## Block Explorer URL Helpers
 

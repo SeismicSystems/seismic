@@ -165,6 +165,40 @@ from seismic_web3.contract.abi import encode_shielded_calldata
 data = encode_shielded_calldata(abi, "setNumber", [42])
 ```
 
+## SRC20 Tokens
+
+The SDK ships with `SRC20_ABI`, the ABI for Seismic's [SRC20 token standard](https://docs.seismic.systems) — a privacy-preserving ERC20 where balances and transfer amounts use shielded types (`suint256`).
+
+Key differences from ERC20:
+
+- **`balanceOf()` takes no arguments** — the contract uses `msg.sender` internally, so you must use a **signed read** (`.read`, not `.tread`). A plain `eth_call` zeros out the `from` field, which means `msg.sender` would be `0x0` and return the wrong balance. A signed read sends a valid Seismic transaction (type `0x4a`) to the `eth_call` endpoint, proving your identity so the contract sees your real address.
+- **Amounts are `suint256`** — transfer values, approvals, and balances are shielded. The SDK's `ShieldedContract` handles the type remapping automatically.
+
+```python
+from seismic_web3 import create_shielded_web3, SRC20_ABI, PrivateKey
+
+w3 = create_shielded_web3("http://127.0.0.1:8545", private_key=PrivateKey(...))
+
+token = w3.seismic.contract(address="0x...", abi=SRC20_ABI)
+
+# Metadata — plain reads (no privacy needed, no msg.sender dependency)
+name = token.tread.name()         # b"TestToken"
+symbol = token.tread.symbol()     # b"TEST"
+decimals = token.tread.decimals() # b'\x12' (18)
+
+# Balance — MUST use signed read (.read), not .tread
+# balanceOf() relies on msg.sender; a plain eth_call zeros the from field
+raw = token.read.balanceOf()
+balance = int.from_bytes(raw, "big")
+
+# Transfer — shielded write (amount is suint256)
+tx_hash = token.write.transfer("0xRecipient...", 100)
+receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+# Approve — shielded write
+tx_hash = token.write.approve("0xSpender...", 500)
+```
+
 ## Precompiles
 
 Call Mercury EVM precompiles directly via `eth_call`. No encryption state needed — just a `Web3` instance connected to a Seismic node.
@@ -236,6 +270,7 @@ Everything importable from `seismic_web3`:
 | `EncryptionState` | class | ECDH-derived AES key + keypair |
 | `ChainConfig` | class | Immutable chain configuration (chain_id, rpc_url, ws_url) |
 | `SeismicSecurityParams` | class | Per-transaction security overrides |
+| `SRC20_ABI` | const | ISRC20 interface ABI (7 functions) |
 | `SEISMIC_TESTNET` | const | Default testnet config (chain 5124) |
 | `SANVIL` | const | Local sanvil config (chain 31337) |
 | `SEISMIC_TX_TYPE` | const | Transaction type byte (`0x4a` / `74`) |
@@ -314,6 +349,9 @@ clients/py/
 │       ├── module.py                # SeismicNamespace (w3.seismic)
 │       ├── transaction_types.py     # SeismicSecurityParams, TxSeismic types
 │       ├── py.typed                 # PEP 561 type marker
+│       ├── abis/
+│       │   ├── __init__.py           # Re-exports SRC20_ABI
+│       │   └── src20.py              # ISRC20 interface ABI
 │       ├── contract/
 │       │   ├── abi.py               # ABI encoding, shielded type remapping
 │       │   └── shielded.py          # ShieldedContract (5-namespace pattern)
@@ -356,5 +394,6 @@ clients/py/
         ├── test_namespace.py
         ├── test_precompiles.py
         ├── test_seismic_counter.py
+        ├── test_src20_token.py
         └── test_transparent_counter.py
 ```
