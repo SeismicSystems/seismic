@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 from seismic_web3._types import CompressedPublicKey, PrivateKey
 from seismic_web3.client import get_encryption
+from seismic_web3.contract.shielded import AsyncShieldedContract, ShieldedContract
 from seismic_web3.module import AsyncSeismicNamespace, SeismicNamespace
 
 _NETWORK_PK = CompressedPublicKey(
@@ -50,8 +51,6 @@ class TestSeismicNamespace:
         assert ns.encryption is encryption
 
     def test_contract_returns_shielded_contract(self):
-        from seismic_web3.contract.shielded import ShieldedContract
-
         w3 = MagicMock()
         encryption = get_encryption(_NETWORK_PK, _CLIENT_SK)
         pk = PrivateKey(b"\x01" * 32)
@@ -76,8 +75,6 @@ class TestAsyncSeismicNamespace:
         assert hasattr(ns, "signed_call")
 
     def test_contract_returns_async_shielded_contract(self):
-        from seismic_web3.contract.shielded import AsyncShieldedContract
-
         w3 = MagicMock()
         encryption = get_encryption(_NETWORK_PK, _CLIENT_SK)
         pk = PrivateKey(b"\x01" * 32)

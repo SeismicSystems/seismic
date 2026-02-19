@@ -25,13 +25,25 @@ from eth_account import Account
 from web3 import Web3
 from web3.middleware import SignAndSendRawMiddlewareBuilder
 
-from seismic_web3 import PrivateKey, create_shielded_web3
+from seismic_web3 import PrivateKey, create_async_shielded_web3, create_shielded_web3
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
     from eth_typing import ChecksumAddress
     from web3 import AsyncWeb3
+
+# ---------------------------------------------------------------------------
+# Pytest hook — print which backend is running at the top of the test output
+# ---------------------------------------------------------------------------
+
+
+def pytest_report_header() -> str:
+    chain = os.environ.get("CHAIN")
+    if chain is None:
+        return "chain: CHAIN not set (defaulting to anvil)"
+    return f"chain: {chain}"
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -241,6 +253,4 @@ async def async_w3(
     rpc_url: str,
     private_key: PrivateKey,
 ) -> AsyncWeb3:
-    from seismic_web3 import create_async_shielded_web3
-
     return await create_async_shielded_web3(rpc_url, private_key=private_key)

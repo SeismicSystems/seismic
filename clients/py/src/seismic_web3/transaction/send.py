@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from eth_keys import keys as eth_keys
 from hexbytes import HexBytes
 from web3.types import RPCEndpoint
 
@@ -20,6 +21,7 @@ from seismic_web3.transaction.metadata import (
     build_metadata,
 )
 from seismic_web3.transaction.serialize import sign_seismic_tx
+from seismic_web3.transaction_types import UnsignedSeismicTx
 
 if TYPE_CHECKING:
     from eth_typing import ChecksumAddress
@@ -43,8 +45,6 @@ def _address_from_key(private_key: PrivateKey) -> ChecksumAddress:
     Returns:
         Checksummed address string (``"0x…"``).
     """
-    from eth_keys import keys as eth_keys
-
     sk = eth_keys.PrivateKey(bytes(private_key))
     return cast("ChecksumAddress", sk.public_key.to_checksum_address())
 
@@ -175,8 +175,6 @@ def send_shielded_transaction(
     Returns:
         Transaction hash.
     """
-    from seismic_web3.transaction_types import UnsignedSeismicTx
-
     params = _build_metadata_params(private_key, encryption, to, value, security)
     metadata = build_metadata(w3, params)
 
@@ -233,8 +231,6 @@ async def async_send_shielded_transaction(
     Returns:
         Transaction hash.
     """
-    from seismic_web3.transaction_types import UnsignedSeismicTx
-
     params = _build_metadata_params(private_key, encryption, to, value, security)
     metadata = await async_build_metadata(w3, params)
 
@@ -294,8 +290,6 @@ def signed_call(
     Returns:
         Decrypted response bytes, or ``None`` if the response is empty.
     """
-    from seismic_web3.transaction_types import UnsignedSeismicTx
-
     params = _build_metadata_params(
         private_key, encryption, to, value, security, signed_read=True
     )
@@ -368,8 +362,6 @@ async def async_signed_call(
     Returns:
         Decrypted response bytes, or ``None`` if the response is empty.
     """
-    from seismic_web3.transaction_types import UnsignedSeismicTx
-
     params = _build_metadata_params(
         private_key, encryption, to, value, security, signed_read=True
     )

@@ -9,6 +9,7 @@ from seismic_web3._types import (
     PrivateKey,
 )
 from seismic_web3.client import EncryptionState, get_encryption
+from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 from seismic_web3.transaction_types import (
     LegacyFields,
     SeismicElements,
@@ -48,8 +49,6 @@ class TestGetEncryption:
 
     def test_pubkey_matches_private_key(self):
         """The encryption_pubkey should be derived from encryption_private_key."""
-        from seismic_web3.crypto.secp import private_key_to_compressed_public_key
-
         state = get_encryption(_NETWORK_PK, _CLIENT_SK)
         expected = private_key_to_compressed_public_key(_CLIENT_SK)
         assert state.encryption_pubkey == expected

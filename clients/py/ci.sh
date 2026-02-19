@@ -59,12 +59,18 @@ uv run pytest tests/ -v --ignore=tests/integration
 # ---------------------------------------------------------------------------
 
 if $run_anvil; then
-  echo "==> Running integration tests (anvil)"
+  echo ""
+  echo "=========================================="
+  echo "  Integration tests: sanvil (anvil)"
+  echo "=========================================="
   CHAIN=anvil uv run pytest tests/integration/ -v --timeout=120
 fi
 
 if $run_reth; then
-  echo "==> Running integration tests (reth)"
+  echo ""
+  echo "=========================================="
+  echo "  Integration tests: seismic-reth"
+  echo "=========================================="
   CHAIN=reth uv run pytest tests/integration/ -v --timeout=120
 fi
 

@@ -82,3 +82,10 @@ strict_markers = true
 markers = [
     "integration: requires a running seismic node",
 ]
+filterwarnings = [
+    # Upstream web3.py issues — not fixable on our side:
+    # https://github.com/ethereum/web3.py/issues — web3 uses the legacy websockets API
+    "ignore::DeprecationWarning:websockets.legacy",
+    # https://github.com/ethereum/web3.py/issues — web3 passes deprecated param to aiohttp
+    "ignore::DeprecationWarning:aiohttp.connector",
+]

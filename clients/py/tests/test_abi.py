@@ -1,6 +1,7 @@
 """Tests for seismic_web3.contract.abi — ABI remapping for shielded types."""
 
 import pytest
+from eth_hash.auto import keccak
 
 from seismic_web3.contract.abi import (
     encode_shielded_calldata,
@@ -129,8 +130,6 @@ class TestEncodeShieldedCalldata:
     def test_selector_uses_original_types(self):
         """The 4-byte selector must be computed from "setNumber(suint256)",
         not "setNumber(uint256)"."""
-        from eth_hash.auto import keccak
-
         calldata = encode_shielded_calldata(COUNTER_ABI, "setNumber", [42])
 
         expected_selector = keccak(b"setNumber(suint256)")[:4]

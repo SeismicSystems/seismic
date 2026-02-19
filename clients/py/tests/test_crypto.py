@@ -4,6 +4,9 @@ Test vectors are taken from seismic-viem's test suite to ensure
 cross-implementation compatibility.
 """
 
+import pytest
+from coincurve import PublicKey as _CoincurvePublicKey
+
 from seismic_web3._types import Bytes32, CompressedPublicKey, PrivateKey
 from seismic_web3.crypto.ecdh import (
     derive_aes_key,
@@ -101,15 +104,11 @@ class TestPrivateKeyToCompressedPublicKey:
 class TestCompressPublicKey:
     def test_roundtrip(self):
         """Compress a key derived from a known private key."""
-        from coincurve import PublicKey as _CoincurvePublicKey
-
         pt = _CoincurvePublicKey.from_secret(bytes(KEYGEN_SK))
         uncompressed = pt.format(compressed=False)  # 65 bytes
         compressed = compress_public_key(uncompressed)
         assert compressed.to_0x_hex() == TEE_PK_HEX
 
     def test_wrong_length_raises(self):
-        import pytest
-
         with pytest.raises(ValueError, match="65-byte"):
             compress_public_key(b"\x04" + b"\x00" * 32)

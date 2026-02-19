@@ -1,6 +1,7 @@
 """Tests for seismic_web3.crypto.aes, crypto.nonce, and transaction.aead."""
 
 import pytest
+from cryptography.exceptions import InvalidTag
 from hexbytes import HexBytes
 
 from seismic_web3._types import Bytes32, CompressedPublicKey, EncryptionNonce
@@ -54,8 +55,6 @@ class TestAesGcmCrypto:
         assert pt == plaintext
 
     def test_wrong_aad_fails(self):
-        from cryptography.exceptions import InvalidTag
-
         key = Bytes32(b"\xcc" * 32)
         nonce = EncryptionNonce(b"\xdd" * 12)
         crypto = AesGcmCrypto(key)

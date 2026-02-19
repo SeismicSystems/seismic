@@ -11,15 +11,18 @@ import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from web3 import AsyncHTTPProvider, AsyncWeb3, Web3, WebSocketProvider
+
 from seismic_web3._types import Bytes32, CompressedPublicKey, PrivateKey
 from seismic_web3.crypto.aes import AesGcmCrypto
 from seismic_web3.crypto.ecdh import generate_aes_key
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
+from seismic_web3.module import AsyncSeismicNamespace, SeismicNamespace
+from seismic_web3.rpc import async_get_tee_public_key, get_tee_public_key
 from seismic_web3.transaction.aead import encode_metadata_as_aad
 
 if TYPE_CHECKING:
     from hexbytes import HexBytes
-    from web3 import AsyncWeb3, Web3
 
     from seismic_web3._types import EncryptionNonce
     from seismic_web3.transaction_types import TxSeismicMetadata
@@ -143,11 +146,6 @@ def create_shielded_web3(
     Returns:
         A ``Web3`` instance with ``w3.seismic`` namespace attached.
     """
-    from web3 import Web3
-
-    from seismic_web3.module import SeismicNamespace
-    from seismic_web3.rpc import get_tee_public_key
-
     w3 = Web3(Web3.HTTPProvider(rpc_url))
     network_pk = get_tee_public_key(w3)
     encryption = get_encryption(network_pk, encryption_sk)
@@ -177,14 +175,7 @@ async def create_async_shielded_web3(
     Returns:
         An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached.
     """
-    from web3 import AsyncHTTPProvider, AsyncWeb3
-
-    from seismic_web3.module import AsyncSeismicNamespace
-    from seismic_web3.rpc import async_get_tee_public_key
-
     if use_websocket:
-        from web3 import WebSocketProvider
-
         provider = WebSocketProvider(provider_url)
     else:
         provider = AsyncHTTPProvider(provider_url)

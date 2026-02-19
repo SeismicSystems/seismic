@@ -9,14 +9,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from seismic_web3._types import Bytes32
 from seismic_web3.crypto.nonce import random_encryption_nonce
+from seismic_web3.transaction_types import (
+    LegacyFields,
+    SeismicElements,
+    TxSeismicMetadata,
+)
 
 if TYPE_CHECKING:
     from eth_typing import ChecksumAddress
     from web3 import AsyncWeb3, Web3
 
-    from seismic_web3._types import Bytes32, CompressedPublicKey, EncryptionNonce
-    from seismic_web3.transaction_types import TxSeismicMetadata
+    from seismic_web3._types import CompressedPublicKey, EncryptionNonce
 
 #: Default number of blocks before a transaction expires.
 DEFAULT_BLOCKS_WINDOW = 100
@@ -65,12 +70,6 @@ def _assemble_metadata(
     encryption_nonce: EncryptionNonce,
 ) -> TxSeismicMetadata:
     """Pure helper: assemble metadata from resolved values."""
-    from seismic_web3.transaction_types import (
-        LegacyFields,
-        SeismicElements,
-        TxSeismicMetadata,
-    )
-
     return TxSeismicMetadata(
         sender=params.sender,
         legacy_fields=LegacyFields(
@@ -103,8 +102,6 @@ def build_metadata(w3: Web3, params: MetadataParams) -> TxSeismicMetadata:
     Returns:
         Fully populated ``TxSeismicMetadata``.
     """
-    from seismic_web3._types import Bytes32
-
     chain_id = w3.eth.chain_id
     nonce = (
         params.nonce
@@ -141,8 +138,6 @@ async def async_build_metadata(
     Returns:
         Fully populated ``TxSeismicMetadata``.
     """
-    from seismic_web3._types import Bytes32
-
     chain_id = await w3.eth.chain_id
     nonce = (
         params.nonce

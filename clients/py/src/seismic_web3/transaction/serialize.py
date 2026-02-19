@@ -16,13 +16,15 @@ from typing import TYPE_CHECKING
 
 import rlp
 from eth_hash.auto import keccak
+from eth_keys import keys as eth_keys
 from hexbytes import HexBytes
 
 from seismic_web3.chains import SEISMIC_TX_TYPE
+from seismic_web3.transaction_types import Signature
 
 if TYPE_CHECKING:
     from seismic_web3._types import PrivateKey
-    from seismic_web3.transaction_types import Signature, UnsignedSeismicTx
+    from seismic_web3.transaction_types import UnsignedSeismicTx
 
 
 def _int_to_rlp_bytes(value: int) -> bytes:
@@ -142,10 +144,6 @@ def sign_seismic_tx(tx: UnsignedSeismicTx, private_key: PrivateKey) -> HexBytes:
     Returns:
         Full signed transaction bytes.
     """
-    from eth_keys import keys as eth_keys
-
-    from seismic_web3.transaction_types import Signature
-
     msg_hash = hash_unsigned(tx)
     sk = eth_keys.PrivateKey(bytes(private_key))
     sig_obj = sk.sign_msg_hash(msg_hash)
