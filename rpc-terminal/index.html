@@ -5,6 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Seismic RPC Terminal</title>
     <style>
+      /* -- Seismic Theme Tokens -- */
+      :root {
+        --bg-black: #161616;
+        --bg-paper: #2b2b2b;
+        --bg-surface: #222222;
+        --text-primary: #d1ccbf;
+        --text-heading: #d1ccbf;
+        --text-muted: #825a6d;
+        --text-faint: #5a5a5a;
+        --accent: #a6924d;
+        --accent-hover: #bba45a;
+        --accent-on: #161616;
+        --mauve: #825a6d;
+        --dark-purple: #523542;
+        --border: #3a3a3a;
+        --border-subtle: #333333;
+        --error: #c75a5a;
+        --font-body: "Suisse Intl", "Helvetica", "Arial", sans-serif;
+        --font-heading: "Suisse Works", "Times New Roman", serif;
+        --font-mono:
+          "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", "Consolas",
+          "Liberation Mono", "Menlo", monospace;
+      }
+
       *,
       *::before,
       *::after {
@@ -16,11 +40,9 @@
       html,
       body {
         height: 100%;
-        background: #1a1b26;
-        color: #a9b1d6;
-        font-family:
-          "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", "Consolas",
-          "Liberation Mono", "Menlo", monospace;
+        background: var(--bg-black);
+        color: var(--text-primary);
+        font-family: var(--font-body);
         font-size: 14px;
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
@@ -42,18 +64,19 @@
         align-items: center;
         gap: 10px;
         padding-bottom: 10px;
-        border-bottom: 1px solid #292e42;
+        border-bottom: 1px solid var(--border);
       }
       .header-icon {
         width: 20px;
         height: 20px;
         flex-shrink: 0;
-        color: #9ece6a;
+        color: var(--accent);
       }
       .header h1 {
-        font-size: 16px;
+        font-family: var(--font-heading);
+        font-size: 18px;
         font-weight: 600;
-        color: #c0caf5;
+        color: var(--text-heading);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -66,7 +89,7 @@
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: #565f89;
+        color: var(--text-muted);
         margin-bottom: 6px;
       }
 
@@ -92,29 +115,29 @@
       select,
       input[type="text"] {
         width: 100%;
-        background: #24283b;
-        color: #a9b1d6;
-        border: 1px solid #292e42;
+        background: var(--bg-paper);
+        color: var(--text-primary);
+        border: 1px solid var(--border);
         border-radius: 6px;
         padding: 8px 12px;
-        font-family: inherit;
+        font-family: var(--font-body);
         font-size: 13px;
         outline: none;
         transition: border-color 0.15s;
       }
       select:hover,
       input[type="text"]:hover {
-        border-color: #3b4261;
+        border-color: var(--text-faint);
       }
       select:focus,
       input[type="text"]:focus {
-        border-color: #7aa2f7;
-        box-shadow: 0 0 0 2px rgba(122, 162, 247, 0.15);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(166, 146, 77, 0.15);
       }
       select {
         cursor: pointer;
         appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23565f89' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E");
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23825A6D' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6l3.5 4 3.5-4z'/%3E%3C/svg%3E");
         background-repeat: no-repeat;
         background-position: right 10px center;
         padding-right: 30px;
@@ -124,7 +147,7 @@
       .tab-bar {
         display: flex;
         gap: 0;
-        border-bottom: 1px solid #292e42;
+        border-bottom: 1px solid var(--border);
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
       }
@@ -132,8 +155,8 @@
         background: none;
         border: none;
         border-bottom: 2px solid transparent;
-        color: #565f89;
-        font-family: inherit;
+        color: var(--text-muted);
+        font-family: var(--font-body);
         font-size: 13px;
         font-weight: 600;
         padding: 10px 16px;
@@ -144,11 +167,11 @@
           border-color 0.15s;
       }
       .tab-btn:hover {
-        color: #a9b1d6;
+        color: var(--text-primary);
       }
       .tab-btn.active {
-        color: #c0caf5;
-        border-bottom-color: #9ece6a;
+        color: var(--text-heading);
+        border-bottom-color: var(--accent);
       }
       .tab-content {
         display: none;
@@ -159,8 +182,8 @@
 
       /* -- Panel -- */
       .panel {
-        background: #24283b;
-        border: 1px solid #292e42;
+        background: var(--bg-paper);
+        border: 1px solid var(--border);
         border-radius: 8px;
         overflow: hidden;
       }
@@ -169,20 +192,20 @@
         align-items: center;
         justify-content: space-between;
         padding: 8px 12px;
-        background: #1f2335;
-        border-bottom: 1px solid #292e42;
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border);
         font-size: 11px;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: #565f89;
+        color: var(--text-muted);
       }
       .panel-header .badge {
         font-size: 10px;
         padding: 2px 6px;
         border-radius: 4px;
-        background: #292e42;
-        color: #7aa2f7;
+        background: var(--dark-purple);
+        color: var(--accent);
         font-weight: 600;
         text-transform: none;
         letter-spacing: 0;
@@ -192,10 +215,10 @@
         width: 100%;
         min-height: 150px;
         background: transparent;
-        color: #a9b1d6;
+        color: var(--text-primary);
         border: none;
         padding: 12px;
-        font-family: inherit;
+        font-family: var(--font-mono);
         font-size: 13px;
         line-height: 1.6;
         resize: vertical;
@@ -203,7 +226,7 @@
         tab-size: 2;
       }
       textarea.invalid {
-        box-shadow: inset 0 0 0 1px #f7768e;
+        box-shadow: inset 0 0 0 1px var(--error);
       }
 
       /* -- Send button -- */
@@ -216,12 +239,12 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        background: #9ece6a;
-        color: #1a1b26;
+        background: var(--accent);
+        color: var(--accent-on);
         border: none;
         border-radius: 6px;
         padding: 10px 20px;
-        font-family: inherit;
+        font-family: var(--font-body);
         font-size: 13px;
         font-weight: 700;
         cursor: pointer;
@@ -231,7 +254,7 @@
           transform 0.1s;
       }
       .send-btn:hover {
-        background: #b9e86c;
+        background: var(--accent-hover);
       }
       .send-btn:active {
         transform: scale(0.97);
@@ -245,8 +268,8 @@
         display: none;
         width: 14px;
         height: 14px;
-        border: 2px solid rgba(26, 27, 38, 0.3);
-        border-top-color: #1a1b26;
+        border: 2px solid rgba(22, 22, 22, 0.3);
+        border-top-color: var(--accent-on);
         border-radius: 50%;
         animation: spin 0.6s linear infinite;
       }
@@ -269,13 +292,13 @@
       }
       .status-text {
         font-size: 12px;
-        color: #565f89;
+        color: var(--text-muted);
       }
       .status-text.error {
-        color: #f7768e;
+        color: var(--error);
       }
       .status-text.success {
-        color: #9ece6a;
+        color: var(--accent);
       }
 
       /* -- Response panel -- */
@@ -286,11 +309,13 @@
         overflow: auto;
         white-space: pre-wrap;
         word-break: break-word;
+        font-family: var(--font-mono);
         font-size: 13px;
         line-height: 1.6;
       }
       .response-content.empty {
-        color: #3b4261;
+        color: var(--text-faint);
+        font-family: var(--font-body);
         font-style: italic;
         display: flex;
         align-items: center;
@@ -298,7 +323,7 @@
         min-height: 80px;
       }
       .response-content.error-response {
-        color: #f7768e;
+        color: var(--error);
       }
 
       /* -- Code snippet panel -- */
@@ -309,9 +334,10 @@
         margin: 0;
         padding: 14px;
         overflow-x: auto;
+        font-family: var(--font-mono);
         font-size: 13px;
         line-height: 1.6;
-        color: #a9b1d6;
+        color: var(--text-primary);
         white-space: pre;
         tab-size: 2;
       }
@@ -319,12 +345,12 @@
         position: absolute;
         top: 8px;
         right: 8px;
-        background: #292e42;
-        color: #a9b1d6;
-        border: 1px solid #3b4261;
+        background: var(--border);
+        color: var(--text-primary);
+        border: 1px solid var(--text-faint);
         border-radius: 5px;
         padding: 5px 10px;
-        font-family: inherit;
+        font-family: var(--font-body);
         font-size: 11px;
         font-weight: 600;
         cursor: pointer;
@@ -334,50 +360,50 @@
         z-index: 2;
       }
       .copy-btn:hover {
-        background: #3b4261;
-        color: #c0caf5;
+        background: var(--text-faint);
+        color: var(--text-heading);
       }
       .copy-btn.copied {
-        background: #9ece6a;
-        color: #1a1b26;
-        border-color: #9ece6a;
+        background: var(--accent);
+        color: var(--accent-on);
+        border-color: var(--accent);
       }
 
-      /* -- Syntax colors -- */
+      /* -- Syntax colors (warm Seismic palette) -- */
       .json-key {
-        color: #7aa2f7;
+        color: var(--accent);
       }
       .json-string {
-        color: #9ece6a;
+        color: #b8a070;
       }
       .json-number {
-        color: #ff9e64;
+        color: #c79a6d;
       }
       .json-boolean,
       .json-null {
-        color: #bb9af7;
+        color: var(--mauve);
       }
       .syn-kw {
-        color: #bb9af7;
+        color: var(--mauve);
       }
       .syn-str {
-        color: #9ece6a;
+        color: #b8a070;
       }
       .syn-num {
-        color: #ff9e64;
+        color: #c79a6d;
       }
       .syn-comment {
-        color: #565f89;
+        color: var(--text-faint);
         font-style: italic;
       }
       .syn-fn {
-        color: #7aa2f7;
+        color: var(--accent);
       }
       .syn-type {
-        color: #2ac3de;
+        color: #9a8a6a;
       }
       .syn-macro {
-        color: #7aa2f7;
+        color: var(--accent);
       }
 
       /* -- Scrollbar -- */
@@ -389,11 +415,11 @@
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #292e42;
+        background: var(--border);
         border-radius: 3px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #3b4261;
+        background: var(--text-faint);
       }
 
       /* -- Responsive -- */
@@ -403,7 +429,7 @@
           gap: 10px;
         }
         .header h1 {
-          font-size: 14px;
+          font-size: 15px;
         }
         textarea {
           min-height: 120px;
@@ -980,7 +1006,7 @@
           statusText.className = "status-text";
           responseContent.className = "response-content empty";
           responseContent.innerHTML =
-            '<span style="color:#3b4261;font-style:italic;">Waiting for response...</span>';
+            '<span style="color:#5a5a5a;font-style:italic;">Waiting for response...</span>';
           responseBadge.style.display = "none";
 
           var startTime = Date.now();
@@ -1001,11 +1027,11 @@
               responseBadge.textContent =
                 response.status + " - " + elapsed + "ms";
               responseBadge.style.display = "inline-block";
-              responseBadge.style.background = "#292e42";
+              responseBadge.style.background = "#523542";
               responseBadge.style.color =
                 response.status >= 200 && response.status < 300
-                  ? "#9ece6a"
-                  : "#f7768e";
+                  ? "#A6924D"
+                  : "#c75a5a";
               return response.text().then(function (text) {
                 return {
                   text: text,
