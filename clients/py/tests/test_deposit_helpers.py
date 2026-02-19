@@ -85,52 +85,73 @@ class TestComputeDepositDataRoot:
         """Same inputs always produce the same root."""
         amount_gwei = 32_000_000_000  # 32 ETH
         root1 = compute_deposit_data_root(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            amount_gwei,
+            node_pubkey=NODE_PUBKEY,
+            consensus_pubkey=CONSENSUS_PUBKEY,
+            withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+            node_signature=NODE_SIGNATURE,
+            consensus_signature=CONSENSUS_SIGNATURE,
+            amount_gwei=amount_gwei,
         )
         root2 = compute_deposit_data_root(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            amount_gwei,
+            node_pubkey=NODE_PUBKEY,
+            consensus_pubkey=CONSENSUS_PUBKEY,
+            withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+            node_signature=NODE_SIGNATURE,
+            consensus_signature=CONSENSUS_SIGNATURE,
+            amount_gwei=amount_gwei,
         )
         assert root1 == root2
 
     def test_returns_32_bytes(self) -> None:
         root = compute_deposit_data_root(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            32_000_000_000,
+            node_pubkey=NODE_PUBKEY,
+            consensus_pubkey=CONSENSUS_PUBKEY,
+            withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+            node_signature=NODE_SIGNATURE,
+            consensus_signature=CONSENSUS_SIGNATURE,
+            amount_gwei=32_000_000_000,
         )
         assert len(root) == 32
 
     def test_different_amount_gives_different_root(self) -> None:
         root_32 = compute_deposit_data_root(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            32_000_000_000,
+            node_pubkey=NODE_PUBKEY,
+            consensus_pubkey=CONSENSUS_PUBKEY,
+            withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+            node_signature=NODE_SIGNATURE,
+            consensus_signature=CONSENSUS_SIGNATURE,
+            amount_gwei=32_000_000_000,
         )
         root_1 = compute_deposit_data_root(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            1_000_000_000,
+            node_pubkey=NODE_PUBKEY,
+            consensus_pubkey=CONSENSUS_PUBKEY,
+            withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+            node_signature=NODE_SIGNATURE,
+            consensus_signature=CONSENSUS_SIGNATURE,
+            amount_gwei=1_000_000_000,
         )
         assert root_32 != root_1
+
+    def test_rejects_wrong_byte_lengths(self) -> None:
+        with pytest.raises(ValueError, match="node_pubkey must be 32"):
+            compute_deposit_data_root(
+                node_pubkey=b"\x00" * 16,
+                consensus_pubkey=CONSENSUS_PUBKEY,
+                withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+                node_signature=NODE_SIGNATURE,
+                consensus_signature=CONSENSUS_SIGNATURE,
+                amount_gwei=32_000_000_000,
+            )
+
+        with pytest.raises(ValueError, match="consensus_pubkey must be 48 bytes"):
+            compute_deposit_data_root(
+                node_pubkey=NODE_PUBKEY,
+                consensus_pubkey=b"\x00" * 32,
+                withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+                node_signature=NODE_SIGNATURE,
+                consensus_signature=CONSENSUS_SIGNATURE,
+                amount_gwei=32_000_000_000,
+            )
 
 
 # ---------------------------------------------------------------------------

@@ -63,12 +63,12 @@ def _make_deposit(
     """Helper: compute root and submit a deposit, return tx hash."""
     amount_gwei = amount_ether * 1_000_000_000
     deposit_data_root = compute_deposit_data_root(
-        NODE_PUBKEY,
-        CONSENSUS_PUBKEY,
-        WITHDRAWAL_CREDENTIALS,
-        NODE_SIGNATURE,
-        CONSENSUS_SIGNATURE,
-        amount_gwei,
+        node_pubkey=NODE_PUBKEY,
+        consensus_pubkey=CONSENSUS_PUBKEY,
+        withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+        node_signature=NODE_SIGNATURE,
+        consensus_signature=CONSENSUS_SIGNATURE,
+        amount_gwei=amount_gwei,
     )
     tx_hash = deposit_contract.twrite.deposit(
         NODE_PUBKEY,
@@ -265,20 +265,20 @@ class TestDepositActions:
     ) -> None:
         amount_gwei = 32_000_000_000
         deposit_data_root = compute_deposit_data_root(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            amount_gwei,
+            node_pubkey=NODE_PUBKEY,
+            consensus_pubkey=CONSENSUS_PUBKEY,
+            withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+            node_signature=NODE_SIGNATURE,
+            consensus_signature=CONSENSUS_SIGNATURE,
+            amount_gwei=amount_gwei,
         )
         tx_hash = w3.seismic.deposit(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            deposit_data_root,
+            node_pubkey=NODE_PUBKEY,
+            consensus_pubkey=CONSENSUS_PUBKEY,
+            withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+            node_signature=NODE_SIGNATURE,
+            consensus_signature=CONSENSUS_SIGNATURE,
+            deposit_data_root=deposit_data_root,
             value=32 * 10**18,
             address=deposit_address,
         )
@@ -299,20 +299,20 @@ class TestDepositActions:
 
         amount_gwei = 32_000_000_000
         deposit_data_root = compute_deposit_data_root(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            amount_gwei,
+            node_pubkey=NODE_PUBKEY,
+            consensus_pubkey=CONSENSUS_PUBKEY,
+            withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+            node_signature=NODE_SIGNATURE,
+            consensus_signature=CONSENSUS_SIGNATURE,
+            amount_gwei=amount_gwei,
         )
         tx_hash = w3.seismic.deposit(
-            NODE_PUBKEY,
-            CONSENSUS_PUBKEY,
-            WITHDRAWAL_CREDENTIALS,
-            NODE_SIGNATURE,
-            CONSENSUS_SIGNATURE,
-            deposit_data_root,
+            node_pubkey=NODE_PUBKEY,
+            consensus_pubkey=CONSENSUS_PUBKEY,
+            withdrawal_credentials=WITHDRAWAL_CREDENTIALS,
+            node_signature=NODE_SIGNATURE,
+            consensus_signature=CONSENSUS_SIGNATURE,
+            deposit_data_root=deposit_data_root,
             value=32 * 10**18,
             address=deposit_address,
         )

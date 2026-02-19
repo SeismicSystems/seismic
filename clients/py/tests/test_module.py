@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock
 
+import pytest
 from hexbytes import HexBytes
 
 from seismic_web3._types import CompressedPublicKey, PrivateKey
@@ -86,12 +87,12 @@ class TestDepositActions:
         ns = SeismicNamespace(w3, encryption, pk)
 
         tx = ns.deposit(
-            b"\x01" * 32,  # node_pubkey
-            b"\x02" * 48,  # consensus_pubkey
-            b"\x03" * 32,  # withdrawal_credentials
-            b"\x04" * 64,  # node_signature
-            b"\x05" * 96,  # consensus_signature
-            b"\x06" * 32,  # deposit_data_root
+            node_pubkey=b"\x01" * 32,
+            consensus_pubkey=b"\x02" * 48,
+            withdrawal_credentials=b"\x03" * 32,
+            node_signature=b"\x04" * 64,
+            consensus_signature=b"\x05" * 96,
+            deposit_data_root=b"\x06" * 32,
             value=32 * 10**18,
         )
         assert tx == HexBytes(b"\xaa" * 32)
@@ -99,6 +100,34 @@ class TestDepositActions:
         call_args = w3.eth.send_transaction.call_args[0][0]
         assert call_args["value"] == 32 * 10**18
         assert "data" in call_args
+
+    def test_deposit_rejects_wrong_byte_lengths(self):
+        w3 = MagicMock()
+        encryption = get_encryption(_NETWORK_PK, _CLIENT_SK)
+        pk = PrivateKey(b"\x01" * 32)
+        ns = SeismicNamespace(w3, encryption, pk)
+
+        with pytest.raises(ValueError, match="node_pubkey must be 32 bytes"):
+            ns.deposit(
+                node_pubkey=b"\x01" * 16,
+                consensus_pubkey=b"\x02" * 48,
+                withdrawal_credentials=b"\x03" * 32,
+                node_signature=b"\x04" * 64,
+                consensus_signature=b"\x05" * 96,
+                deposit_data_root=b"\x06" * 32,
+                value=32 * 10**18,
+            )
+
+        with pytest.raises(ValueError, match="consensus_signature must be 96 bytes"):
+            ns.deposit(
+                node_pubkey=b"\x01" * 32,
+                consensus_pubkey=b"\x02" * 48,
+                withdrawal_credentials=b"\x03" * 32,
+                node_signature=b"\x04" * 64,
+                consensus_signature=b"\x05" * 32,
+                deposit_data_root=b"\x06" * 32,
+                value=32 * 10**18,
+            )
 
     def test_get_deposit_root_calls_eth_call(self):
         w3 = MagicMock()

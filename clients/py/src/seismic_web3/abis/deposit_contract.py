@@ -137,6 +137,13 @@ def _to_little_endian_64(value: int) -> bytes:
     return value.to_bytes(8, byteorder="little")
 
 
+def _check_bytes(name: str, value: bytes, expected: int) -> None:
+    """Raise ``ValueError`` if *value* is not exactly *expected* bytes."""
+    if len(value) != expected:
+        msg = f"{name} must be {expected} bytes, got {len(value)}"
+        raise ValueError(msg)
+
+
 def make_withdrawal_credentials(address: str) -> bytes:
     """Build 32-byte ETH1 withdrawal credentials from an Ethereum address.
 
@@ -159,6 +166,7 @@ def make_withdrawal_credentials(address: str) -> bytes:
 
 
 def compute_deposit_data_root(
+    *,
     node_pubkey: bytes,
     consensus_pubkey: bytes,
     withdrawal_credentials: bytes,
@@ -183,7 +191,16 @@ def compute_deposit_data_root(
 
     Returns:
         32-byte deposit data root hash.
+
+    Raises:
+        ValueError: If any argument has the wrong byte length.
     """
+    _check_bytes("node_pubkey", node_pubkey, 32)
+    _check_bytes("consensus_pubkey", consensus_pubkey, 48)
+    _check_bytes("withdrawal_credentials", withdrawal_credentials, 32)
+    _check_bytes("node_signature", node_signature, 64)
+    _check_bytes("consensus_signature", consensus_signature, 96)
+
     amount = _to_little_endian_64(amount_gwei)
 
     consensus_pubkey_hash = _sha256(consensus_pubkey + b"\x00" * 16)

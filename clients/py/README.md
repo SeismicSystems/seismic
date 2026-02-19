@@ -231,10 +231,14 @@ deposit_data_root = compute_deposit_data_root(
     amount_gwei=amount_gwei,
 )
 
-# Deposit 32 ETH
+# Deposit 32 ETH — all args are keyword-only to prevent mix-ups
 tx_hash = w3.seismic.deposit(
-    node_pk, consensus_pk, withdrawal_creds,
-    node_sig, consensus_sig, deposit_data_root,
+    node_pubkey=node_pk,
+    consensus_pubkey=consensus_pk,
+    withdrawal_credentials=withdrawal_creds,
+    node_signature=node_sig,
+    consensus_signature=consensus_sig,
+    deposit_data_root=deposit_data_root,
     value=32 * 10**18,
 )
 receipt = w3.eth.wait_for_transaction_receipt(tx_hash)

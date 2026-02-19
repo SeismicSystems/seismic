@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 from seismic_web3.abis.deposit_contract import (
     DEPOSIT_CONTRACT_ABI,
     DEPOSIT_CONTRACT_ADDRESS,
+    _check_bytes,
 )
 from seismic_web3.contract.abi import encode_shielded_calldata
 from seismic_web3.contract.shielded import AsyncShieldedContract, ShieldedContract
@@ -215,17 +216,20 @@ class SeismicNamespace:
 
     def deposit(
         self,
+        *,
         node_pubkey: bytes,
         consensus_pubkey: bytes,
         withdrawal_credentials: bytes,
         node_signature: bytes,
         consensus_signature: bytes,
         deposit_data_root: bytes,
-        *,
         value: int,
         address: str = DEPOSIT_CONTRACT_ADDRESS,
     ) -> HexBytes:
         """Submit a validator deposit (sync).
+
+        All parameters are keyword-only to prevent mix-ups between
+        the many ``bytes`` arguments.
 
         Encodes and sends a transparent ``deposit()`` call to the
         deposit contract.  Equivalent to
@@ -244,7 +248,17 @@ class SeismicNamespace:
 
         Returns:
             Transaction hash.
+
+        Raises:
+            ValueError: If any argument has the wrong byte length.
         """
+        _check_bytes("node_pubkey", node_pubkey, 32)
+        _check_bytes("consensus_pubkey", consensus_pubkey, 48)
+        _check_bytes("withdrawal_credentials", withdrawal_credentials, 32)
+        _check_bytes("node_signature", node_signature, 64)
+        _check_bytes("consensus_signature", consensus_signature, 96)
+        _check_bytes("deposit_data_root", deposit_data_root, 32)
+
         data = encode_shielded_calldata(
             DEPOSIT_CONTRACT_ABI,
             "deposit",
@@ -486,17 +500,20 @@ class AsyncSeismicNamespace:
 
     async def deposit(
         self,
+        *,
         node_pubkey: bytes,
         consensus_pubkey: bytes,
         withdrawal_credentials: bytes,
         node_signature: bytes,
         consensus_signature: bytes,
         deposit_data_root: bytes,
-        *,
         value: int,
         address: str = DEPOSIT_CONTRACT_ADDRESS,
     ) -> HexBytes:
         """Submit a validator deposit (async).
+
+        All parameters are keyword-only to prevent mix-ups between
+        the many ``bytes`` arguments.
 
         Encodes and sends a transparent ``deposit()`` call to the
         deposit contract.  Equivalent to
@@ -515,7 +532,17 @@ class AsyncSeismicNamespace:
 
         Returns:
             Transaction hash.
+
+        Raises:
+            ValueError: If any argument has the wrong byte length.
         """
+        _check_bytes("node_pubkey", node_pubkey, 32)
+        _check_bytes("consensus_pubkey", consensus_pubkey, 48)
+        _check_bytes("withdrawal_credentials", withdrawal_credentials, 32)
+        _check_bytes("node_signature", node_signature, 64)
+        _check_bytes("consensus_signature", consensus_signature, 96)
+        _check_bytes("deposit_data_root", deposit_data_root, 32)
+
         data = encode_shielded_calldata(
             DEPOSIT_CONTRACT_ABI,
             "deposit",
