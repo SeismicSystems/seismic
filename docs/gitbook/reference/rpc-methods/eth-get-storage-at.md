@@ -67,7 +67,7 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 ```
 
 {% hint style="warning" %}
-If you need to read shielded data, use a [signed read](../seismic-transaction/signed-reads.md) via `eth_call` with a Seismic transaction. The contract itself must expose a getter function for the shielded value.
+If you need to read shielded data, use a [signed read](/broken/pages/Iy1iEnGF6LoJvAy1G6ix) via `eth_call` with a Seismic transaction. The contract itself must expose a getter function for the shielded value.
 {% endhint %}
 
 ## Related

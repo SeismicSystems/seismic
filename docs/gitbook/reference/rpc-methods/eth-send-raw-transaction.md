@@ -2,7 +2,7 @@
 icon: paper-plane-top
 ---
 
-# eth_sendRawTransaction
+# eth\_sendRawTransaction
 
 Submits a signed transaction to the network. On Seismic, this endpoint accepts both standard Ethereum transaction types and the Seismic transaction type `0x4A`.
 
@@ -48,21 +48,21 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 ```
 
 {% hint style="info" %}
-You typically don't call this method directly. Client libraries like [seismic-viem](../../client-libraries/seismic-viem/README.md) handle transaction construction, encryption, and submission automatically.
+You typically don't call this method directly. Client libraries like [seismic-viem](../../client-libraries/seismic-viem/) handle transaction construction, encryption, and submission automatically.
 {% endhint %}
 
 ## Seismic Transaction Validation
 
 The node rejects transactions in these cases:
 
-- Type `0x4A` with incomplete `SeismicElements`
-- Non-`0x4A` type that contains `SeismicElements`
-- Failed calldata decryption
-- `recentBlockHash` older than 100 blocks
-- Past `expiresAtBlock`
+* Type `0x4A` with incomplete `SeismicElements`
+* Non-`0x4A` type that contains `SeismicElements`
+* Failed calldata decryption
+* `recentBlockHash` older than 100 blocks
+* Past `expiresAtBlock`
 
 ## Related
 
-- [The Seismic Transaction](../seismic-transaction/README.md) — transaction type specification
-- [Tx Lifecycle](../seismic-transaction/tx-lifecycle.md) — end-to-end transaction flow
-- [Shielded Writes](../../client-libraries/seismic-viem/shielded-writes.md) — sending transactions with seismic-viem
+* [The Seismic Transaction](../seismic-transaction.md) — transaction type specification
+* [Tx Lifecycle](/broken/pages/xCs9tpFaGc4bynMxW8zk) — end-to-end transaction flow
+* [Shielded Writes](../../client-libraries/seismic-viem/shielded-writes.md) — sending transactions with seismic-viem

@@ -2,13 +2,12 @@
 icon: phone-arrow-right
 ---
 
-# eth_call
+# eth\_call
 
 Executes a message call without creating a transaction on the blockchain. On Seismic, `eth_call` has two important differences from standard Ethereum:
 
 1. **`from` is zeroed on unsigned calls** — When you send an unsigned `eth_call`, the `from` field is set to `0x0000...0000`. This prevents contracts from using `msg.sender` to leak information about the caller during read operations.
-
-2. **Signed reads via type `0x4A`** — To make an `eth_call` that preserves your identity (so the contract can return caller-specific data like balances), you must send a [signed read](../seismic-transaction/signed-reads.md) using Seismic transaction type `0x4A`.
+2. **Signed reads via type `0x4A`** — To make an `eth_call` that preserves your identity (so the contract can return caller-specific data like balances), you must send a [signed read](/broken/pages/Iy1iEnGF6LoJvAy1G6ix) using Seismic transaction type `0x4A`.
 
 ## Try It
 
@@ -68,11 +67,11 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 ```
 
 {% hint style="warning" %}
-If you need caller-specific data (e.g., a user's shielded balance), you must use a [signed read](../seismic-transaction/signed-reads.md). A plain `eth_call` will have `from` set to the zero address.
+If you need caller-specific data (e.g., a user's shielded balance), you must use a [signed read](/broken/pages/Iy1iEnGF6LoJvAy1G6ix). A plain `eth_call` will have `from` set to the zero address.
 {% endhint %}
 
 ## Related
 
-- [Signed Reads](../seismic-transaction/signed-reads.md) — how to make authenticated read calls
-- [Shielded Public Client](../../client-libraries/seismic-viem/shielded-public-client.md) — viem client that handles this automatically
-- [Differences from Ethereum](../../overview/differences-from-ethereum.md) — overview of all behavioral differences
+* [Signed Reads](/broken/pages/Iy1iEnGF6LoJvAy1G6ix) — how to make authenticated read calls
+* [Shielded Public Client](../../client-libraries/seismic-viem/shielded-public-client.md) — viem client that handles this automatically
+* [Differences from Ethereum](../../overview/differences-from-ethereum.md) — overview of all behavioral differences

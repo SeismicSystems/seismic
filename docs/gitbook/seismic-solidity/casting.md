@@ -92,8 +92,8 @@ suint128 small = suint128(big);       // Narrowing: may truncate
 
 The same rules that apply to regular Solidity integer casting apply here:
 
-- **Widening** (smaller to larger): Always safe, the value is preserved.
-- **Narrowing** (larger to smaller): May truncate the value if it exceeds the target type's range.
+* **Widening** (smaller to larger): Always safe, the value is preserved.
+* **Narrowing** (larger to smaller): May truncate the value if it exceeds the target type's range.
 
 You can also cast between signed and unsigned shielded integers:
 
@@ -121,7 +121,7 @@ function getBalance() external view returns (uint256) {
 ```
 
 {% hint style="info" %}
-Returning an unshielded value from a view function makes it visible to the caller. If the caller should only see their own data, use access control and [signed reads](../reference/seismic-transaction/signed-reads.md) to ensure only authorized users can query it.
+Returning an unshielded value from a view function makes it visible to the caller. If the caller should only see their own data, use access control and [signed reads](/broken/pages/Iy1iEnGF6LoJvAy1G6ix) to ensure only authorized users can query it.
 {% endhint %}
 
 ### Interfacing with non-shielded contracts
