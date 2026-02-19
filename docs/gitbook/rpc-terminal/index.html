@@ -24,16 +24,15 @@
         font-size: 14px;
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
       }
 
       .container {
         max-width: 960px;
         margin: 0 auto;
-        padding: 20px 16px;
+        padding: 20px 16px 80px 16px; /* extra bottom padding for CodeSandbox overlay */
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 14px;
         min-height: 100%;
       }
 
@@ -42,22 +41,19 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        padding-bottom: 12px;
+        padding-bottom: 10px;
         border-bottom: 1px solid #292e42;
       }
-
       .header-icon {
         width: 20px;
         height: 20px;
         flex-shrink: 0;
         color: #9ece6a;
       }
-
       .header h1 {
         font-size: 16px;
         font-weight: 600;
         color: #c0caf5;
-        letter-spacing: -0.01em;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -81,17 +77,14 @@
         align-items: flex-end;
         flex-wrap: wrap;
       }
-
       .endpoint-select-group {
         flex: 0 1 auto;
         min-width: 180px;
       }
-
       .endpoint-custom-group {
         flex: 1 1 220px;
         display: none;
       }
-
       .endpoint-custom-group.visible {
         display: block;
       }
@@ -109,18 +102,15 @@
         outline: none;
         transition: border-color 0.15s;
       }
-
       select:hover,
       input[type="text"]:hover {
         border-color: #3b4261;
       }
-
       select:focus,
       input[type="text"]:focus {
         border-color: #7aa2f7;
         box-shadow: 0 0 0 2px rgba(122, 162, 247, 0.15);
       }
-
       select {
         cursor: pointer;
         appearance: none;
@@ -130,14 +120,50 @@
         padding-right: 30px;
       }
 
-      /* -- Request panel -- */
+      /* -- Tabs -- */
+      .tab-bar {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid #292e42;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .tab-btn {
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: #565f89;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 10px 16px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+      }
+      .tab-btn:hover {
+        color: #a9b1d6;
+      }
+      .tab-btn.active {
+        color: #c0caf5;
+        border-bottom-color: #9ece6a;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+
+      /* -- Panel -- */
       .panel {
         background: #24283b;
         border: 1px solid #292e42;
         border-radius: 8px;
         overflow: hidden;
       }
-
       .panel-header {
         display: flex;
         align-items: center;
@@ -151,7 +177,6 @@
         letter-spacing: 0.05em;
         color: #565f89;
       }
-
       .panel-header .badge {
         font-size: 10px;
         padding: 2px 6px;
@@ -165,7 +190,7 @@
 
       textarea {
         width: 100%;
-        min-height: 160px;
+        min-height: 150px;
         background: transparent;
         color: #a9b1d6;
         border: none;
@@ -177,7 +202,6 @@
         outline: none;
         tab-size: 2;
       }
-
       textarea.invalid {
         box-shadow: inset 0 0 0 1px #f7768e;
       }
@@ -188,7 +212,6 @@
         align-items: center;
         gap: 12px;
       }
-
       .send-btn {
         display: inline-flex;
         align-items: center;
@@ -206,23 +229,18 @@
           background 0.15s,
           opacity 0.15s,
           transform 0.1s;
-        user-select: none;
       }
-
       .send-btn:hover {
         background: #b9e86c;
       }
-
       .send-btn:active {
         transform: scale(0.97);
       }
-
       .send-btn:disabled {
         opacity: 0.6;
         cursor: not-allowed;
         transform: none;
       }
-
       .send-btn .spinner {
         display: none;
         width: 14px;
@@ -232,38 +250,30 @@
         border-radius: 50%;
         animation: spin 0.6s linear infinite;
       }
-
       .send-btn.loading .spinner {
         display: inline-block;
       }
-
       .send-btn.loading .btn-label {
         display: none;
       }
-
       .send-btn.loading .btn-loading-label {
         display: inline;
       }
-
       .btn-loading-label {
         display: none;
       }
-
       @keyframes spin {
         to {
           transform: rotate(360deg);
         }
       }
-
       .status-text {
         font-size: 12px;
         color: #565f89;
       }
-
       .status-text.error {
         color: #f7768e;
       }
-
       .status-text.success {
         color: #9ece6a;
       }
@@ -279,7 +289,6 @@
         font-size: 13px;
         line-height: 1.6;
       }
-
       .response-content.empty {
         color: #3b4261;
         font-style: italic;
@@ -288,12 +297,53 @@
         justify-content: center;
         min-height: 80px;
       }
-
       .response-content.error-response {
         color: #f7768e;
       }
 
-      /* Syntax highlighting classes */
+      /* -- Code snippet panel -- */
+      .code-panel {
+        position: relative;
+      }
+      .code-panel pre {
+        margin: 0;
+        padding: 14px;
+        overflow-x: auto;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #a9b1d6;
+        white-space: pre;
+        tab-size: 2;
+      }
+      .copy-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #292e42;
+        color: #a9b1d6;
+        border: 1px solid #3b4261;
+        border-radius: 5px;
+        padding: 5px 10px;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          color 0.15s;
+        z-index: 2;
+      }
+      .copy-btn:hover {
+        background: #3b4261;
+        color: #c0caf5;
+      }
+      .copy-btn.copied {
+        background: #9ece6a;
+        color: #1a1b26;
+        border-color: #9ece6a;
+      }
+
+      /* -- Syntax colors -- */
       .json-key {
         color: #7aa2f7;
       }
@@ -303,11 +353,31 @@
       .json-number {
         color: #ff9e64;
       }
-      .json-boolean {
-        color: #bb9af7;
-      }
+      .json-boolean,
       .json-null {
         color: #bb9af7;
+      }
+      .syn-kw {
+        color: #bb9af7;
+      }
+      .syn-str {
+        color: #9ece6a;
+      }
+      .syn-num {
+        color: #ff9e64;
+      }
+      .syn-comment {
+        color: #565f89;
+        font-style: italic;
+      }
+      .syn-fn {
+        color: #7aa2f7;
+      }
+      .syn-type {
+        color: #2ac3de;
+      }
+      .syn-macro {
+        color: #7aa2f7;
       }
 
       /* -- Scrollbar -- */
@@ -315,16 +385,13 @@
         width: 6px;
         height: 6px;
       }
-
       ::-webkit-scrollbar-track {
         background: transparent;
       }
-
       ::-webkit-scrollbar-thumb {
         background: #292e42;
         border-radius: 3px;
       }
-
       ::-webkit-scrollbar-thumb:hover {
         background: #3b4261;
       }
@@ -332,26 +399,27 @@
       /* -- Responsive -- */
       @media (max-width: 500px) {
         .container {
-          padding: 12px 10px;
-          gap: 12px;
+          padding: 12px 10px 70px 10px;
+          gap: 10px;
         }
-
         .header h1 {
           font-size: 14px;
         }
-
         textarea {
-          min-height: 130px;
+          min-height: 120px;
           font-size: 12px;
         }
-
-        .response-content {
+        .response-content,
+        .code-panel pre {
           font-size: 12px;
         }
-
         .send-btn {
           width: 100%;
           justify-content: center;
+        }
+        .tab-btn {
+          padding: 8px 12px;
+          font-size: 12px;
         }
       }
     </style>
@@ -396,42 +464,92 @@
         </div>
       </div>
 
-      <!-- Request panel -->
-      <div>
-        <div class="panel">
-          <div class="panel-header">
-            <span>Request</span>
-            <span class="badge">JSON-RPC 2.0</span>
+      <!-- Tab bar -->
+      <div class="tab-bar" id="tabBar">
+        <button class="tab-btn active" data-tab="jsonrpc">JSON-RPC</button>
+        <button class="tab-btn" data-tab="typescript">TypeScript</button>
+        <button class="tab-btn" data-tab="python">Python</button>
+        <button class="tab-btn" data-tab="rust">Rust</button>
+      </div>
+
+      <!-- JSON-RPC tab (interactive) -->
+      <div class="tab-content active" id="tab-jsonrpc">
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <div class="panel">
+            <div class="panel-header">
+              <span>Request</span>
+              <span class="badge">JSON-RPC 2.0</span>
+            </div>
+            <textarea
+              id="requestBody"
+              spellcheck="false"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+            ></textarea>
           </div>
-          <textarea
-            id="requestBody"
-            spellcheck="false"
-            autocomplete="off"
-            autocorrect="off"
-            autocapitalize="off"
-          ></textarea>
+          <div class="send-row">
+            <button class="send-btn" id="sendBtn" type="button">
+              <span class="spinner"></span>
+              <span class="btn-label">Send Request</span>
+              <span class="btn-loading-label">Sending...</span>
+            </button>
+            <span class="status-text" id="statusText"></span>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span>Response</span>
+              <span
+                class="badge"
+                id="responseBadge"
+                style="display: none"
+              ></span>
+            </div>
+            <div class="response-content empty" id="responseContent">
+              Response will appear here
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Send button -->
-      <div class="send-row">
-        <button class="send-btn" id="sendBtn" type="button">
-          <span class="spinner"></span>
-          <span class="btn-label">Send Request</span>
-          <span class="btn-loading-label">Sending...</span>
-        </button>
-        <span class="status-text" id="statusText"></span>
-      </div>
-
-      <!-- Response panel -->
-      <div>
+      <!-- TypeScript tab -->
+      <div class="tab-content" id="tab-typescript">
         <div class="panel">
           <div class="panel-header">
-            <span>Response</span>
-            <span class="badge" id="responseBadge" style="display: none"></span>
+            <span>TypeScript (viem)</span>
+            <span class="badge">seismic-viem compatible</span>
           </div>
-          <div class="response-content empty" id="responseContent">
-            Response will appear here
+          <div class="code-panel">
+            <button class="copy-btn" data-target="tsCode">Copy</button>
+            <pre><code id="tsCode"></code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Python tab -->
+      <div class="tab-content" id="tab-python">
+        <div class="panel">
+          <div class="panel-header">
+            <span>Python (requests)</span>
+            <span class="badge">pip install requests</span>
+          </div>
+          <div class="code-panel">
+            <button class="copy-btn" data-target="pyCode">Copy</button>
+            <pre><code id="pyCode"></code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rust tab -->
+      <div class="tab-content" id="tab-rust">
+        <div class="panel">
+          <div class="panel-header">
+            <span>Rust (reqwest)</span>
+            <span class="badge">tokio + serde_json</span>
+          </div>
+          <div class="code-panel">
+            <button class="copy-btn" data-target="rsCode">Copy</button>
+            <pre><code id="rsCode"></code></pre>
           </div>
         </div>
       </div>
@@ -441,7 +559,7 @@
       (function () {
         "use strict";
 
-        // -- Default params per method --
+        // ── Default params per method ──
         var DEFAULT_PARAMS = {
           seismic_getTeePublicKey: [],
           eth_call: [
@@ -463,27 +581,17 @@
           net_version: [],
         };
 
-        // -- Parse URL params --
+        // ── Parse URL params ──
         var urlParams = new URLSearchParams(window.location.search);
         var methodParam = urlParams.get("method") || "";
         var paramsParam = urlParams.get("params") || "";
-
-        // -- Header --
-        var headerTitle = document.getElementById("headerTitle");
-        if (methodParam) {
-          headerTitle.textContent = methodParam;
-        }
-
-        // -- Build request body --
         var method = methodParam || "eth_blockNumber";
         var params = [];
 
         if (paramsParam) {
           try {
             params = JSON.parse(paramsParam);
-            if (!Array.isArray(params)) {
-              params = [params];
-            }
+            if (!Array.isArray(params)) params = [params];
           } catch (e) {
             params = DEFAULT_PARAMS[method] || [];
           }
@@ -491,17 +599,21 @@
           params = DEFAULT_PARAMS[method] || [];
         }
 
+        // ── Header ──
+        if (methodParam)
+          document.getElementById("headerTitle").textContent = methodParam;
+
+        // ── Request body ──
         var requestObj = {
           jsonrpc: "2.0",
           method: method,
           params: params,
           id: 1,
         };
-
         var requestBody = document.getElementById("requestBody");
         requestBody.value = JSON.stringify(requestObj, null, 2);
 
-        // -- Endpoint selector --
+        // ── Endpoint selector ──
         var endpointSelect = document.getElementById("endpointSelect");
         var customEndpointGroup = document.getElementById(
           "customEndpointGroup",
@@ -515,9 +627,17 @@
           } else {
             customEndpointGroup.classList.remove("visible");
           }
+          updateSnippets();
         });
+        customEndpoint.addEventListener("input", updateSnippets);
 
-        // -- Validate JSON on input --
+        function getEndpoint() {
+          return endpointSelect.value === "custom"
+            ? customEndpoint.value.trim()
+            : endpointSelect.value;
+        }
+
+        // ── Validate JSON on input ──
         requestBody.addEventListener("input", function () {
           try {
             JSON.parse(requestBody.value);
@@ -527,24 +647,242 @@
           }
         });
 
-        // -- Syntax highlight JSON --
-        function syntaxHighlight(json) {
-          var str =
-            typeof json === "string" ? json : JSON.stringify(json, null, 2);
+        // ── Tab switching ──
+        var tabBtns = document.querySelectorAll(".tab-btn");
+        var tabContents = document.querySelectorAll(".tab-content");
 
-          // Escape HTML entities
-          str = str
+        tabBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            tabBtns.forEach(function (b) {
+              b.classList.remove("active");
+            });
+            tabContents.forEach(function (c) {
+              c.classList.remove("active");
+            });
+            btn.classList.add("active");
+            document
+              .getElementById("tab-" + btn.dataset.tab)
+              .classList.add("active");
+          });
+        });
+
+        // ── Copy buttons ──
+        document.querySelectorAll(".copy-btn").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var codeEl = document.getElementById(btn.dataset.target);
+            navigator.clipboard.writeText(codeEl.textContent).then(function () {
+              btn.textContent = "Copied!";
+              btn.classList.add("copied");
+              setTimeout(function () {
+                btn.textContent = "Copy";
+                btn.classList.remove("copied");
+              }, 2000);
+            });
+          });
+        });
+
+        // ── Code snippet generation ──
+
+        // TypeScript templates per method
+        var TS_TEMPLATES = {
+          eth_blockNumber: function (ep) {
+            return (
+              'import { createPublicClient, http } from "viem";\n\nconst client = createPublicClient({\n  transport: http("' +
+              ep +
+              '"),\n});\n\nconst blockNumber = await client.getBlockNumber();\nconsole.log(blockNumber);'
+            );
+          },
+          eth_getBalance: function (ep) {
+            var addr =
+              params[0] || "0x0000000000000000000000000000000000000000";
+            return (
+              'import { createPublicClient, http } from "viem";\n\nconst client = createPublicClient({\n  transport: http("' +
+              ep +
+              '"),\n});\n\nconst balance = await client.getBalance({\n  address: "' +
+              addr +
+              '",\n});\nconsole.log(balance);'
+            );
+          },
+          eth_chainId: function (ep) {
+            return (
+              'import { createPublicClient, http } from "viem";\n\nconst client = createPublicClient({\n  transport: http("' +
+              ep +
+              '"),\n});\n\nconst chainId = await client.getChainId();\nconsole.log(chainId); // 5124 on testnet'
+            );
+          },
+          eth_call: function (ep) {
+            var to =
+              (params[0] && params[0].to) ||
+              "0x0000000000000000000000000000000000000000";
+            var data = (params[0] && params[0].data) || "0x";
+            return (
+              'import { createPublicClient, http } from "viem";\n\nconst client = createPublicClient({\n  transport: http("' +
+              ep +
+              '"),\n});\n\nconst result = await client.call({\n  to: "' +
+              to +
+              '",\n  data: "' +
+              data +
+              '",\n});\nconsole.log(result);\n\n// Note: on Seismic, unsigned eth_call zeroes the `from` field.\n// For caller-specific reads, use a signed read (tx type 0x4A).'
+            );
+          },
+          eth_getStorageAt: function (ep) {
+            var addr =
+              params[0] || "0x0000000000000000000000000000000000000000";
+            var slot = params[1] || "0x0";
+            return (
+              'import { createPublicClient, http } from "viem";\n\nconst client = createPublicClient({\n  transport: http("' +
+              ep +
+              '"),\n});\n\nconst value = await client.getStorageAt({\n  address: "' +
+              addr +
+              '",\n  slot: "' +
+              slot +
+              '",\n});\nconsole.log(value);\n\n// Note: fails if the slot holds shielded (private) data.'
+            );
+          },
+          eth_sendRawTransaction: function (ep) {
+            return (
+              'import { createPublicClient, http } from "viem";\n\nconst client = createPublicClient({\n  transport: http("' +
+              ep +
+              '"),\n});\n\n// For Seismic transactions (type 0x4A), use seismic-viem\n// which handles encryption and SeismicElements automatically.\nconst hash = await client.sendRawTransaction({\n  serializedTransaction: "0x02f87...",\n});\nconsole.log(hash);'
+            );
+          },
+          seismic_getTeePublicKey: function (ep) {
+            return (
+              'import { createPublicClient, http } from "viem";\n\nconst client = createPublicClient({\n  transport: http("' +
+              ep +
+              '"),\n});\n\n// Seismic-specific: get the TEE\'s public key for ECDH\nconst publicKey = await client.request({\n  method: "seismic_getTeePublicKey",\n  params: [],\n});\nconsole.log(publicKey);'
+            );
+          },
+          net_version: function (ep) {
+            return (
+              'import { createPublicClient, http } from "viem";\n\nconst client = createPublicClient({\n  transport: http("' +
+              ep +
+              '"),\n});\n\nconst version = await client.request({\n  method: "net_version",\n  params: [],\n});\nconsole.log(version); // "5124" on testnet'
+            );
+          },
+        };
+
+        function generatePython(ep) {
+          var p = JSON.stringify(params, null, 4).replace(/\n/g, "\n    ");
+          return (
+            'import requests\nimport json\n\nresponse = requests.post(\n    "' +
+            ep +
+            '",\n    json={\n        "jsonrpc": "2.0",\n        "method": "' +
+            method +
+            '",\n        "params": ' +
+            p +
+            ',\n        "id": 1,\n    },\n)\n\nresult = response.json()\nprint(json.dumps(result, indent=2))'
+          );
+        }
+
+        function generateRust(ep) {
+          var p = JSON.stringify(params, null, 4);
+          // indent the json! params to match Rust formatting
+          var pLines = p.split("\n");
+          if (pLines.length > 1) {
+            p = pLines
+              .map(function (l, i) {
+                return i === 0 ? l : "            " + l;
+              })
+              .join("\n");
+          }
+          return (
+            'use reqwest;\nuse serde_json::json;\n\n#[tokio::main]\nasync fn main() -> Result<(), Box<dyn std::error::Error>> {\n    let client = reqwest::Client::new();\n    let res = client\n        .post("' +
+            ep +
+            '")\n        .json(&json!({\n            "jsonrpc": "2.0",\n            "method": "' +
+            method +
+            '",\n            "params": ' +
+            p +
+            ',\n            "id": 1\n        }))\n        .send()\n        .await?;\n\n    let body: serde_json::Value = res.json().await?;\n    println!("{:#}", body);\n    Ok(())\n}'
+          );
+        }
+
+        // ── Syntax highlighting ──
+
+        function escHtml(s) {
+          return s
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
+        }
 
-          // Apply syntax highlighting via regex
+        function highlightTs(code) {
+          var h = escHtml(code);
+          // comments
+          h = h.replace(/(\/\/.*)/g, '<span class="syn-comment">$1</span>');
+          // strings
+          h = h.replace(
+            /("(?:\\.|[^"\\])*")/g,
+            '<span class="syn-str">$1</span>',
+          );
+          // keywords
+          h = h.replace(
+            /\b(import|from|const|let|var|await|async|function|return|new|typeof)\b/g,
+            '<span class="syn-kw">$1</span>',
+          );
+          // types/special
+          h = h.replace(
+            /\b(createPublicClient|http|getBlockNumber|getBalance|getChainId|getStorageAt|sendRawTransaction|request|call)\b/g,
+            '<span class="syn-fn">$1</span>',
+          );
+          // numbers
+          h = h.replace(/\b(\d+)\b/g, '<span class="syn-num">$1</span>');
+          return h;
+        }
+
+        function highlightPy(code) {
+          var h = escHtml(code);
+          h = h.replace(/(#.*)/g, '<span class="syn-comment">$1</span>');
+          h = h.replace(
+            /("(?:\\.|[^"\\])*")/g,
+            '<span class="syn-str">$1</span>',
+          );
+          h = h.replace(
+            /\b(import|from|as|def|return|print|True|False|None)\b/g,
+            '<span class="syn-kw">$1</span>',
+          );
+          h = h.replace(
+            /\b(requests|json|response|result)\b/g,
+            '<span class="syn-fn">$1</span>',
+          );
+          h = h.replace(/\b(\d+)\b/g, '<span class="syn-num">$1</span>');
+          return h;
+        }
+
+        function highlightRs(code) {
+          var h = escHtml(code);
+          h = h.replace(/(\/\/.*)/g, '<span class="syn-comment">$1</span>');
+          h = h.replace(
+            /("(?:\\.|[^"\\])*")/g,
+            '<span class="syn-str">$1</span>',
+          );
+          h = h.replace(
+            /\b(use|async|fn|let|mut|await|pub|move|Ok|Err|self|crate|mod|impl|struct|enum|match|if|else|for|while|loop|break|continue|return)\b/g,
+            '<span class="syn-kw">$1</span>',
+          );
+          h = h.replace(
+            /\b(Result|Box|dyn|std|String|Vec|Option|Some|None)\b/g,
+            '<span class="syn-type">$1</span>',
+          );
+          h = h.replace(
+            /(reqwest|serde_json|json!|println!)/g,
+            '<span class="syn-macro">$1</span>',
+          );
+          h = h.replace(/\b(\d+)\b/g, '<span class="syn-num">$1</span>');
+          return h;
+        }
+
+        // ── JSON syntax highlight (for response) ──
+        function syntaxHighlight(json) {
+          var str =
+            typeof json === "string" ? json : JSON.stringify(json, null, 2);
+          str = escHtml(str);
           return str
             .replace(
               /("(?:\\.|[^"\\])*")\s*:/g,
               '<span class="json-key">$1</span>:',
             )
-            .replace(/:\s*("(?:\\.|[^"\\])*")/g, function (match, p1) {
+            .replace(/:\s*("(?:\\.|[^"\\])*")/g, function (m, p1) {
               return ': <span class="json-string">' + p1 + "</span>";
             })
             .replace(
@@ -562,31 +900,69 @@
             .replace(/:\s*(null)\b/g, ': <span class="json-null">$1</span>');
         }
 
-        // -- Get endpoint URL --
-        function getEndpoint() {
-          if (endpointSelect.value === "custom") {
-            return customEndpoint.value.trim();
-          }
-          return endpointSelect.value;
+        // ── Update code snippets ──
+        function updateSnippets() {
+          var ep = getEndpoint() || "https://gcp-0.seismictest.net/rpc";
+          var tsFn = TS_TEMPLATES[method] || TS_TEMPLATES.eth_blockNumber;
+
+          var tsRaw = tsFn(ep);
+          var pyRaw = generatePython(ep);
+          var rsRaw = generateRust(ep);
+
+          document.getElementById("tsCode").innerHTML = highlightTs(tsRaw);
+          document.getElementById("pyCode").innerHTML = highlightPy(pyRaw);
+          document.getElementById("rsCode").innerHTML = highlightRs(rsRaw);
+
+          // Store raw for copy
+          document.getElementById("tsCode").textContent = tsRaw;
+          document.getElementById("pyCode").textContent = pyRaw;
+          document.getElementById("rsCode").textContent = rsRaw;
+
+          // Re-apply highlight (textContent wipes innerHTML)
+          document.getElementById("tsCode").innerHTML = highlightTs(tsRaw);
+          document.getElementById("pyCode").innerHTML = highlightPy(pyRaw);
+          document.getElementById("rsCode").innerHTML = highlightRs(rsRaw);
         }
 
-        // -- DOM refs --
+        // Initial render
+        updateSnippets();
+
+        // ── Store raw text for copy on code elements ──
+        document.querySelectorAll(".copy-btn").forEach(function (btn) {
+          btn.removeEventListener("click", function () {});
+        });
+        document.querySelectorAll(".copy-btn").forEach(function (btn) {
+          btn.onclick = function () {
+            var codeEl = document.getElementById(btn.dataset.target);
+            // Get raw text by stripping HTML
+            var tmp = document.createElement("div");
+            tmp.innerHTML = codeEl.innerHTML;
+            var raw = tmp.textContent || tmp.innerText;
+            navigator.clipboard.writeText(raw).then(function () {
+              btn.textContent = "Copied!";
+              btn.classList.add("copied");
+              setTimeout(function () {
+                btn.textContent = "Copy";
+                btn.classList.remove("copied");
+              }, 2000);
+            });
+          };
+        });
+
+        // ── Send request (JSON-RPC tab) ──
         var sendBtn = document.getElementById("sendBtn");
         var statusText = document.getElementById("statusText");
         var responseContent = document.getElementById("responseContent");
         var responseBadge = document.getElementById("responseBadge");
 
-        // -- Send request --
         sendBtn.addEventListener("click", function () {
           var endpoint = getEndpoint();
-
           if (!endpoint) {
             statusText.textContent = "Please enter a custom endpoint URL.";
             statusText.className = "status-text error";
             return;
           }
 
-          // Validate JSON
           var body;
           try {
             body = JSON.parse(requestBody.value);
@@ -596,23 +972,18 @@
             requestBody.classList.add("invalid");
             return;
           }
-
           requestBody.classList.remove("invalid");
 
-          // Set loading state
           sendBtn.classList.add("loading");
           sendBtn.disabled = true;
           statusText.textContent = "";
           statusText.className = "status-text";
-          responseContent.textContent = "";
           responseContent.className = "response-content empty";
           responseContent.innerHTML =
             '<span style="color:#3b4261;font-style:italic;">Waiting for response...</span>';
           responseBadge.style.display = "none";
 
           var startTime = Date.now();
-
-          // Abort controller with 10s timeout
           var controller = new AbortController();
           var timeoutId = setTimeout(function () {
             controller.abort();
@@ -620,28 +991,21 @@
 
           fetch(endpoint, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
             signal: controller.signal,
           })
             .then(function (response) {
               clearTimeout(timeoutId);
               var elapsed = Date.now() - startTime;
-
               responseBadge.textContent =
                 response.status + " - " + elapsed + "ms";
               responseBadge.style.display = "inline-block";
-
-              if (response.status >= 200 && response.status < 300) {
-                responseBadge.style.background = "#292e42";
-                responseBadge.style.color = "#9ece6a";
-              } else {
-                responseBadge.style.background = "#292e42";
-                responseBadge.style.color = "#f7768e";
-              }
-
+              responseBadge.style.background = "#292e42";
+              responseBadge.style.color =
+                response.status >= 200 && response.status < 300
+                  ? "#9ece6a"
+                  : "#f7768e";
               return response.text().then(function (text) {
                 return {
                   text: text,
@@ -661,11 +1025,10 @@
                 statusText.className = "status-text error";
                 return;
               }
-
-              var pretty = JSON.stringify(parsed, null, 2);
               responseContent.className = "response-content";
-              responseContent.innerHTML = syntaxHighlight(pretty);
-
+              responseContent.innerHTML = syntaxHighlight(
+                JSON.stringify(parsed, null, 2),
+              );
               statusText.textContent = "Completed in " + result.elapsed + "ms";
               statusText.className = "status-text success";
             })
@@ -673,32 +1036,23 @@
               clearTimeout(timeoutId);
               responseBadge.style.display = "none";
               responseContent.className = "response-content error-response";
-
               if (err.name === "AbortError") {
                 responseContent.textContent =
                   "Request timed out after 10 seconds.\n\nThe endpoint may be unreachable or slow to respond.";
                 statusText.textContent = "Timeout";
-                statusText.className = "status-text error";
               } else if (
                 err.message &&
                 err.message.toLowerCase().includes("failed to fetch")
               ) {
                 responseContent.textContent =
-                  "Network error: Failed to fetch.\n\n" +
-                  "This is likely a CORS issue. The RPC endpoint may not allow\n" +
-                  "cross-origin requests from this page.\n\n" +
-                  "Possible solutions:\n" +
-                  "  1. Use an RPC endpoint that allows CORS\n" +
-                  "  2. Try a different endpoint from the dropdown\n" +
-                  "  3. Use curl or a tool like Postman instead";
+                  "Network error: Failed to fetch.\n\nThis is likely a CORS issue. The RPC endpoint may not allow\ncross-origin requests from this page.\n\nPossible solutions:\n  1. Use an RPC endpoint that allows CORS\n  2. Try a different endpoint from the dropdown\n  3. Use curl or a tool like Postman instead";
                 statusText.textContent = "Network / CORS error";
-                statusText.className = "status-text error";
               } else {
                 responseContent.textContent =
                   "Error: " + (err.message || String(err));
                 statusText.textContent = "Request failed";
-                statusText.className = "status-text error";
               }
+              statusText.className = "status-text error";
             })
             .finally(function () {
               sendBtn.classList.remove("loading");
@@ -706,7 +1060,7 @@
             });
         });
 
-        // -- Keyboard shortcut: Cmd/Ctrl+Enter to send --
+        // Keyboard shortcut
         requestBody.addEventListener("keydown", function (e) {
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
             e.preventDefault();
