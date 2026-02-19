@@ -69,7 +69,7 @@ If you need caller-specific data (e.g., a user's shielded balance), you must use
 
 ## Try It
 
-<iframe src="https://seismicsystems.github.io/seismic/rpc-terminal/index.html?method=eth_call" width="100%" height="500" style="border:none; border-radius:8px;"></iframe>
+{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_call" %}
 
 ## Related
 
