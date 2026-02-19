@@ -165,6 +165,42 @@ from seismic_web3.contract.abi import encode_shielded_calldata
 data = encode_shielded_calldata(abi, "setNumber", [42])
 ```
 
+## Precompiles
+
+Call Mercury EVM precompiles directly via `eth_call`. No encryption state needed — just a `Web3` instance connected to a Seismic node.
+
+```python
+from seismic_web3.precompiles import rng, ecdh, aes_gcm_encrypt, aes_gcm_decrypt, hkdf, secp256k1_sign
+from seismic_web3 import Bytes32, PrivateKey, CompressedPublicKey
+
+# On-chain random number generation (0x64)
+random_val = rng(w3, num_bytes=32)
+
+# On-chain ECDH key exchange (0x65)
+shared_secret = ecdh(w3, sk=my_private_key, pk=their_public_key)
+
+# On-chain AES-GCM encrypt/decrypt (0x66 / 0x67)
+ciphertext = aes_gcm_encrypt(w3, aes_key=key, nonce=1, plaintext=b"secret")
+plaintext = aes_gcm_decrypt(w3, aes_key=key, nonce=1, ciphertext=bytes(ciphertext))
+
+# On-chain HKDF key derivation (0x68)
+derived_key = hkdf(w3, b"input key material")
+
+# On-chain secp256k1 signing (0x69)
+signature = secp256k1_sign(w3, sk=my_private_key, message="hello")
+```
+
+All functions have async variants (`async_rng`, `async_ecdh`, etc.).
+
+| Precompile | Address | Function | Returns |
+|---|---|---|---|
+| RNG | `0x64` | `rng(w3, num_bytes=, pers=)` | `int` |
+| ECDH | `0x65` | `ecdh(w3, sk=, pk=)` | `Bytes32` |
+| AES Encrypt | `0x66` | `aes_gcm_encrypt(w3, aes_key=, nonce=, plaintext=)` | `HexBytes` |
+| AES Decrypt | `0x67` | `aes_gcm_decrypt(w3, aes_key=, nonce=, ciphertext=)` | `HexBytes` |
+| HKDF | `0x68` | `hkdf(w3, ikm)` | `Bytes32` |
+| secp256k1 Sign | `0x69` | `secp256k1_sign(w3, sk=, message=)` | `HexBytes` |
+
 ## Security Parameters
 
 Override per-transaction security defaults with `SeismicSecurityParams`:
@@ -286,6 +322,13 @@ clients/py/
 │       │   ├── ecdh.py              # ECDH key agreement
 │       │   ├── nonce.py             # Nonce generation
 │       │   └── secp.py              # secp256k1 utilities
+│       ├── precompiles/
+│       │   ├── _base.py             # Precompile framework (call, gas helpers)
+│       │   ├── rng.py               # RNG precompile (0x64)
+│       │   ├── ecdh.py              # ECDH precompile (0x65)
+│       │   ├── aes.py               # AES encrypt/decrypt (0x66, 0x67)
+│       │   ├── hkdf.py              # HKDF precompile (0x68)
+│       │   └── secp256k1.py         # secp256k1 sign precompile (0x69)
 │       └── transaction/
 │           ├── aead.py              # AAD construction
 │           ├── metadata.py          # Transaction metadata
@@ -303,6 +346,7 @@ clients/py/
     ├── test_send.py
     ├── test_serialize.py
     ├── test_transaction_types.py
+    ├── test_precompiles.py
     ├── test_types.py
     └── integration/
         ├── conftest.py
@@ -310,6 +354,7 @@ clients/py/
         ├── artifacts/                # Compiled contract JSON
         ├── test_client_factory.py
         ├── test_namespace.py
+        ├── test_precompiles.py
         ├── test_seismic_counter.py
         └── test_transparent_counter.py
 ```

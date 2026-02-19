@@ -2,19 +2,9 @@
 
 Deferred features not included in the initial SDK implementation.
 
-## Precompiles
+## ~~Precompiles~~ (Done)
 
-Mercury EVM precompile wrappers (all on-chain, require a running node):
-
-- **RNG** (`0x64`) — on-chain random number generation
-- **ECDH** (`0x65`) — on-chain elliptic-curve Diffie-Hellman
-- **AES-GCM Encrypt** (`0x66`) — on-chain AES-256-GCM encryption
-- **AES-GCM Decrypt** (`0x67`) — on-chain AES-256-GCM decryption
-- **HKDF** (`0x68`) — on-chain HKDF-SHA256 key derivation
-- **secp256k1 Sign** (`0x69`) — on-chain ECDSA signing
-
-All precompile addresses, gas costs, and parameter encoding are documented in
-`seismic-client/packages/seismic-viem/src/precompiles/`.
+Implemented in `seismic_web3.precompiles` — see `src/seismic_web3/precompiles/`.
 
 ## EIP-712 Typed Data Signing
 
