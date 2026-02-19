@@ -39,8 +39,8 @@ def _make_encryption():
 
 
 class TestShieldedContract:
-    def test_has_five_namespaces(self):
-        """ShieldedContract should have write, read, twrite, tread, dwrite."""
+    def test_has_all_namespaces(self):
+        """ShieldedContract should have all expected namespaces."""
         w3 = MagicMock()
         encryption = _make_encryption()
         pk = PrivateKey(b"\x01" * 32)
@@ -89,8 +89,8 @@ class TestShieldedContract:
 
 
 class TestAsyncShieldedContract:
-    def test_has_five_namespaces(self):
-        """AsyncShieldedContract should have write, read, twrite, tread, dwrite."""
+    def test_has_all_namespaces(self):
+        """AsyncShieldedContract should have all expected namespaces."""
         w3 = MagicMock()
         encryption = _make_encryption()
         pk = PrivateKey(b"\x01" * 32)
