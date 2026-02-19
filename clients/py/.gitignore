@@ -24,3 +24,6 @@ build/
 
 # OS
 .DS_Store
+
+# Environment
+.env
