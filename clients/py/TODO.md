@@ -8,12 +8,6 @@ Deferred features not included in the initial SDK implementation.
 - Domain: `{name: "Seismic Transaction", version: "2"}`
 - Reference: `seismic-viem/src/signSeismicTypedData.ts`
 
-## Deposit Contract Actions
-
-- Deposit 32 ETH for validator staking
-- Read deposit root and deposit count
-- ABI in `seismic-viem/src/abis/depositContract.ts`
-
 ## SRC20 Token Standard
 
 - [x] Token standard with encrypted balances — `SRC20_ABI` constant + integration tests
