@@ -17,7 +17,7 @@ make fmt
 ## Project Structure
 
 ```
-seismic-contracts/
+contracts/
 ├── src/
 │   ├── directory/
 │   │   ├── Directory.sol          # Key management contract
