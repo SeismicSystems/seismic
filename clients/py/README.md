@@ -199,6 +199,60 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 tx_hash = token.write.approve("0xSpender...", 500)
 ```
 
+## Deposit Contract
+
+The SDK ships with `DEPOSIT_CONTRACT_ABI` and helpers for Seismic's Eth2-style validator deposit contract. Validators deposit ETH (minimum 1 ETH, typically 32 ETH) along with their public keys, signatures, and withdrawal credentials.
+
+The deposit contract uses **no shielded types** — all parameters are standard `bytes` and `bytes32`. Use transparent namespaces (`.twrite` / `.tread`) for interactions.
+
+```python
+from seismic_web3 import (
+    create_shielded_web3,
+    DEPOSIT_CONTRACT_ABI,
+    DEPOSIT_CONTRACT_ADDRESS,
+    compute_deposit_data_root,
+    make_withdrawal_credentials,
+    PrivateKey,
+)
+
+w3 = create_shielded_web3("http://127.0.0.1:8545", private_key=PrivateKey(...))
+
+deposit = w3.seismic.contract(address=DEPOSIT_CONTRACT_ADDRESS, abi=DEPOSIT_CONTRACT_ABI)
+
+# Build withdrawal credentials from your Ethereum address
+withdrawal_creds = make_withdrawal_credentials("0xYourAddress...")
+
+# Compute the deposit data root (required by the contract)
+amount_gwei = 32_000_000_000  # 32 ETH
+deposit_data_root = compute_deposit_data_root(
+    node_pubkey=node_pk,          # 32-byte ED25519 public key
+    consensus_pubkey=consensus_pk, # 48-byte BLS12-381 public key
+    withdrawal_credentials=withdrawal_creds,
+    node_signature=node_sig,       # 64-byte ED25519 signature
+    consensus_signature=consensus_sig, # 96-byte BLS12-381 signature
+    amount_gwei=amount_gwei,
+)
+
+# Deposit 32 ETH — transparent write (payable)
+tx_hash = deposit.twrite.deposit(
+    node_pk, consensus_pk, withdrawal_creds,
+    node_sig, consensus_sig, deposit_data_root,
+    value=32 * 10**18,
+)
+receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+# Read deposit count and root — transparent reads
+count_bytes = deposit.tread.get_deposit_count()     # 8-byte little-endian
+root = deposit.tread.get_deposit_root()              # bytes32
+```
+
+| Export | Kind | Description |
+|--------|------|-------------|
+| `DEPOSIT_CONTRACT_ABI` | const | Deposit contract ABI (4 functions + 1 event) |
+| `DEPOSIT_CONTRACT_ADDRESS` | const | Genesis address (`0x00000000219ab540356cBB839Cbe05303d7705Fa`) |
+| `compute_deposit_data_root` | function | Compute SHA-256 SSZ hash tree root for deposit data |
+| `make_withdrawal_credentials` | function | Format an Ethereum address into 32-byte withdrawal credentials |
+
 ## Precompiles
 
 Call Mercury EVM precompiles directly via `eth_call`. No encryption state needed — just a `Web3` instance connected to a Seismic node.
@@ -263,6 +317,8 @@ Everything importable from `seismic_web3`:
 | `create_async_shielded_web3` | function | Create async `AsyncWeb3` with `w3.seismic` namespace |
 | `get_encryption` | function | Derive `EncryptionState` from a TEE public key |
 | `make_seismic_testnet` | function | Factory for GCP testnet `ChainConfig` |
+| `compute_deposit_data_root` | function | Compute SHA-256 deposit data root hash |
+| `make_withdrawal_credentials` | function | Build 32-byte withdrawal credentials from address |
 | `ShieldedContract` | class | Sync contract with `.write`/`.read`/`.twrite`/`.tread`/`.dwrite` |
 | `AsyncShieldedContract` | class | Async version of `ShieldedContract` |
 | `SeismicNamespace` | class | Sync namespace attached as `w3.seismic` |
@@ -271,6 +327,8 @@ Everything importable from `seismic_web3`:
 | `ChainConfig` | class | Immutable chain configuration (chain_id, rpc_url, ws_url) |
 | `SeismicSecurityParams` | class | Per-transaction security overrides |
 | `SRC20_ABI` | const | ISRC20 interface ABI (7 functions) |
+| `DEPOSIT_CONTRACT_ABI` | const | Deposit contract ABI (4 functions + 1 event) |
+| `DEPOSIT_CONTRACT_ADDRESS` | const | Deposit contract genesis address |
 | `SEISMIC_TESTNET` | const | Default testnet config (chain 5124) |
 | `SANVIL` | const | Local sanvil config (chain 31337) |
 | `SEISMIC_TX_TYPE` | const | Transaction type byte (`0x4a` / `74`) |
@@ -350,7 +408,8 @@ clients/py/
 │       ├── transaction_types.py     # SeismicSecurityParams, TxSeismic types
 │       ├── py.typed                 # PEP 561 type marker
 │       ├── abis/
-│       │   ├── __init__.py           # Re-exports SRC20_ABI
+│       │   ├── __init__.py           # Re-exports ABI constants
+│       │   ├── deposit_contract.py   # Deposit contract ABI + helpers
 │       │   └── src20.py              # ISRC20 interface ABI
 │       ├── contract/
 │       │   ├── abi.py               # ABI encoding, shielded type remapping
