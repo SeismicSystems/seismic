@@ -39,7 +39,7 @@ from seismic_web3._types import (
 )
 
 # -- ABIs --------------------------------------------------------------------
-from seismic_web3.abis import SRC20_ABI
+from seismic_web3.abis import DIRECTORY_ABI, DIRECTORY_ADDRESS, SRC20_ABI
 
 # -- Chains ------------------------------------------------------------------
 from seismic_web3.chains import (
@@ -83,6 +83,8 @@ from seismic_web3.transaction_types import (
 )
 
 __all__ = [
+    "DIRECTORY_ABI",
+    "DIRECTORY_ADDRESS",
     "SANVIL",
     "SEISMIC_TESTNET",
     "SEISMIC_TX_TYPE",

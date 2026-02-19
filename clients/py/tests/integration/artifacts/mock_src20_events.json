@@ -1,0 +1,123 @@
+{
+  "abi": [
+    {
+      "type": "function",
+      "name": "emitApproval",
+      "inputs": [
+        {
+          "name": "owner",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "spender",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "encryptKeyHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "encryptedAmount",
+          "type": "bytes",
+          "internalType": "bytes"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "emitTransfer",
+      "inputs": [
+        {
+          "name": "from",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "to",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "encryptKeyHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "encryptedAmount",
+          "type": "bytes",
+          "internalType": "bytes"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "event",
+      "name": "Approval",
+      "inputs": [
+        {
+          "name": "owner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "spender",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "encryptKeyHash",
+          "type": "bytes32",
+          "indexed": true,
+          "internalType": "bytes32"
+        },
+        {
+          "name": "encryptedAmount",
+          "type": "bytes",
+          "indexed": false,
+          "internalType": "bytes"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "Transfer",
+      "inputs": [
+        {
+          "name": "from",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "to",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "encryptKeyHash",
+          "type": "bytes32",
+          "indexed": true,
+          "internalType": "bytes32"
+        },
+        {
+          "name": "encryptedAmount",
+          "type": "bytes",
+          "indexed": false,
+          "internalType": "bytes"
+        }
+      ],
+      "anonymous": false
+    }
+  ],
+  "bytecode": "0x608060405234601c57600e6020565b61038561002b823961038590f35b6026565b60405190565b5f80fdfe60806040526004361015610013575b6101d2565b61001d5f3561003c565b80635ccf664e146100375763fd8bc5eb0361000e5761019b565b610164565b60e01c90565b60405190565b5f80fd5b5f80fd5b5f80fd5b60018060a01b031690565b61006890610054565b90565b6100748161005f565b0361007b57565b5f80fd5b9050359061008c8261006b565b565b90565b61009a8161008e565b036100a157565b5f80fd5b905035906100b282610091565b565b5f80fd5b5f80fd5b5f80fd5b909182601f830112156100fa5781359167ffffffffffffffff83116100f55760200192600183028401116100f057565b6100bc565b6100b8565b6100b4565b9060808282031261015a57610116815f840161007f565b92610124826020850161007f565b9261013283604083016100a5565b92606082013567ffffffffffffffff81116101555761015192016100c0565b9091565b610050565b61004c565b5f0190565b34610196576101806101773660046100ff565b93929092610274565b610188610042565b806101928161015f565b0390f35b610048565b346101cd576101b76101ae3660046100ff565b939290926102ce565b6101bf610042565b806101c98161015f565b0390f35b610048565b5f80fd5b90565b6101ed6101e86101f292610054565b6101d6565b610054565b90565b6101fe906101d9565b90565b61020a906101f5565b90565b6102169061008e565b90565b60209181520190565b90825f939282370152565b601f801991011690565b91906102518161024a8161025695610219565b8095610222565b61022d565b0190565b90916102719260208301925f818503910152610237565b90565b909192936102b46102ae6102a87f80ffa007a69623ef13594f5e8178eee6c4ef2d0cba74c08329e879f695b7d3f694610201565b94610201565b9461020d565b946102c96102c0610042565b9283928361025a565b0390a4565b9091929361030e6103086103027f8ef65e17890b61a4796f8848475471f8895cd361b1de7e7260a6800ba0623f4094610201565b94610201565b9461020d565b9461032361031a610042565b9283928361025a565b0390a456fea26469706673582212200cacbfdda715facf50c3f70c3853b4a0c0a3f3da842819dade63c22c7a6fb14564736f6c637829302e382e33312d646576656c6f702e323032352e31312e31322b636f6d6d69742e3637366264656363005a"
+}
