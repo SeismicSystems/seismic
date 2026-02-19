@@ -72,12 +72,14 @@ class SeismicNamespace:
         self,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        eip712: bool = False,
     ) -> ShieldedContract:
         """Create a :class:`ShieldedContract` wrapper (sync).
 
         Args:
             address: Contract address.
             abi: Contract ABI (list of function entries).
+            eip712: Use EIP-712 typed data signing (default ``False``).
 
         Returns:
             Shielded contract with ``.write``, ``.read``,
@@ -89,6 +91,7 @@ class SeismicNamespace:
             self._private_key,
             address,
             abi,
+            eip712=eip712,
         )
 
     def send_shielded_transaction(
@@ -100,6 +103,7 @@ class SeismicNamespace:
         gas: int | None = None,
         gas_price: int | None = None,
         security: SeismicSecurityParams | None = None,
+        eip712: bool = False,
     ) -> HexBytes:
         """Send a shielded transaction (sync).
 
@@ -128,6 +132,7 @@ class SeismicNamespace:
             gas=gas,
             gas_price=gas_price,
             security=security,
+            eip712=eip712,
         )
 
     def signed_call(
@@ -138,6 +143,7 @@ class SeismicNamespace:
         value: int = 0,
         gas: int = 30_000_000,
         security: SeismicSecurityParams | None = None,
+        eip712: bool = False,
     ) -> HexBytes | None:
         """Execute a signed read (sync).
 
@@ -164,6 +170,7 @@ class SeismicNamespace:
             value=value,
             gas=gas,
             security=security,
+            eip712=eip712,
         )
 
     def debug_send_shielded_transaction(
@@ -175,6 +182,7 @@ class SeismicNamespace:
         gas: int | None = None,
         gas_price: int | None = None,
         security: SeismicSecurityParams | None = None,
+        eip712: bool = False,
     ) -> DebugWriteResult:
         """Send a shielded transaction and return debug info (sync).
 
@@ -202,6 +210,7 @@ class SeismicNamespace:
             gas=gas,
             gas_price=gas_price,
             security=security,
+            eip712=eip712,
         )
 
 
@@ -244,12 +253,14 @@ class AsyncSeismicNamespace:
         self,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        eip712: bool = False,
     ) -> AsyncShieldedContract:
         """Create an :class:`AsyncShieldedContract` wrapper.
 
         Args:
             address: Contract address.
             abi: Contract ABI (list of function entries).
+            eip712: Use EIP-712 typed data signing (default ``False``).
 
         Returns:
             Async shielded contract with ``.write``, ``.read``,
@@ -261,6 +272,7 @@ class AsyncSeismicNamespace:
             self._private_key,
             address,
             abi,
+            eip712=eip712,
         )
 
     async def send_shielded_transaction(
@@ -272,6 +284,7 @@ class AsyncSeismicNamespace:
         gas: int | None = None,
         gas_price: int | None = None,
         security: SeismicSecurityParams | None = None,
+        eip712: bool = False,
     ) -> HexBytes:
         """Send a shielded transaction (async).
 
@@ -300,6 +313,7 @@ class AsyncSeismicNamespace:
             gas=gas,
             gas_price=gas_price,
             security=security,
+            eip712=eip712,
         )
 
     async def signed_call(
@@ -310,6 +324,7 @@ class AsyncSeismicNamespace:
         value: int = 0,
         gas: int = 30_000_000,
         security: SeismicSecurityParams | None = None,
+        eip712: bool = False,
     ) -> HexBytes | None:
         """Execute a signed read (async).
 
@@ -336,6 +351,7 @@ class AsyncSeismicNamespace:
             value=value,
             gas=gas,
             security=security,
+            eip712=eip712,
         )
 
     async def debug_send_shielded_transaction(
@@ -347,6 +363,7 @@ class AsyncSeismicNamespace:
         gas: int | None = None,
         gas_price: int | None = None,
         security: SeismicSecurityParams | None = None,
+        eip712: bool = False,
     ) -> DebugWriteResult:
         """Send a shielded transaction and return debug info (async).
 
@@ -374,4 +391,5 @@ class AsyncSeismicNamespace:
             gas=gas,
             gas_price=gas_price,
             security=security,
+            eip712=eip712,
         )

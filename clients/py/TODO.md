@@ -6,11 +6,9 @@ Deferred features not included in the initial SDK implementation.
 
 Implemented in `seismic_web3.precompiles` — see `src/seismic_web3/precompiles/`.
 
-## EIP-712 Typed Data Signing
+## ~~EIP-712 Typed Data Signing~~ (Done)
 
-- `messageVersion=2` for JSON-RPC wallet accounts (MetaMask, WalletConnect)
-- Domain: `{name: "Seismic Transaction", version: "2"}`
-- Reference: `seismic-viem/src/signSeismicTypedData.ts`
+Implemented in `seismic_web3.transaction.eip712` — see `src/seismic_web3/transaction/eip712.py`.
 
 ## Deposit Contract Actions
 

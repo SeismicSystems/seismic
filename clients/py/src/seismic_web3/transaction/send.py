@@ -14,6 +14,7 @@ from hexbytes import HexBytes
 from web3.types import RPCEndpoint
 
 from seismic_web3.crypto.nonce import random_encryption_nonce
+from seismic_web3.transaction.eip712 import sign_seismic_tx_eip712
 from seismic_web3.transaction.metadata import (
     DEFAULT_BLOCKS_WINDOW,
     MetadataParams,
@@ -60,6 +61,7 @@ def _build_metadata_params(
     value: int,
     security: SeismicSecurityParams | None,
     signed_read: bool = False,
+    eip712: bool = False,
 ) -> MetadataParams:
     """Build ``MetadataParams`` from user-facing arguments.
 
@@ -85,6 +87,8 @@ def _build_metadata_params(
         security.blocks_window if security else None
     ) or DEFAULT_BLOCKS_WINDOW
 
+    from seismic_web3.chains import TYPED_DATA_MESSAGE_VERSION
+
     return MetadataParams(
         sender=sender,
         to=to,
@@ -94,6 +98,7 @@ def _build_metadata_params(
         blocks_window=blocks_window,
         recent_block_hash=security.recent_block_hash if security else None,
         expires_at_block=security.expires_at_block if security else None,
+        message_version=TYPED_DATA_MESSAGE_VERSION if eip712 else 0,
         signed_read=signed_read,
     )
 
@@ -159,6 +164,7 @@ def _prepare_shielded_transaction(
     gas: int | None = None,
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
 ) -> tuple[HexBytes, UnsignedSeismicTx, TxSeismicMetadata]:
     """Build, encrypt, and sign a shielded transaction (sync).
 
@@ -168,7 +174,9 @@ def _prepare_shielded_transaction(
     Returns:
         ``(signed_tx_bytes, unsigned_tx, metadata)``
     """
-    params = _build_metadata_params(private_key, encryption, to, value, security)
+    params = _build_metadata_params(
+        private_key, encryption, to, value, security, eip712=eip712
+    )
     metadata = build_metadata(w3, params)
 
     encrypted = encryption.encrypt(
@@ -189,7 +197,11 @@ def _prepare_shielded_transaction(
         seismic=metadata.seismic_elements,
     )
 
-    signed = sign_seismic_tx(tx, private_key)
+    signed = (
+        sign_seismic_tx_eip712(tx, private_key)
+        if eip712
+        else sign_seismic_tx(tx, private_key)
+    )
     return signed, tx, metadata
 
 
@@ -204,13 +216,16 @@ async def _async_prepare_shielded_transaction(
     gas: int | None = None,
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
 ) -> tuple[HexBytes, UnsignedSeismicTx, TxSeismicMetadata]:
     """Build, encrypt, and sign a shielded transaction (async).
 
     Returns:
         ``(signed_tx_bytes, unsigned_tx, metadata)``
     """
-    params = _build_metadata_params(private_key, encryption, to, value, security)
+    params = _build_metadata_params(
+        private_key, encryption, to, value, security, eip712=eip712
+    )
     metadata = await async_build_metadata(w3, params)
 
     encrypted = encryption.encrypt(
@@ -231,7 +246,11 @@ async def _async_prepare_shielded_transaction(
         seismic=metadata.seismic_elements,
     )
 
-    signed = sign_seismic_tx(tx, private_key)
+    signed = (
+        sign_seismic_tx_eip712(tx, private_key)
+        if eip712
+        else sign_seismic_tx(tx, private_key)
+    )
     return signed, tx, metadata
 
 
@@ -251,6 +270,7 @@ def send_shielded_transaction(
     gas: int | None = None,
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
 ) -> HexBytes:
     """Send a shielded transaction (sync).
 
@@ -281,6 +301,7 @@ def send_shielded_transaction(
         gas=gas,
         gas_price=gas_price,
         security=security,
+        eip712=eip712,
     )
     return send_shielded_raw(w3, signed)
 
@@ -296,6 +317,7 @@ async def async_send_shielded_transaction(
     gas: int | None = None,
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
 ) -> HexBytes:
     """Send a shielded transaction (async).
 
@@ -326,6 +348,7 @@ async def async_send_shielded_transaction(
         gas=gas,
         gas_price=gas_price,
         security=security,
+        eip712=eip712,
     )
     return await async_send_shielded_raw(w3, signed)
 
@@ -346,6 +369,7 @@ def debug_send_shielded_transaction(
     gas: int | None = None,
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
 ) -> DebugWriteResult:
     """Send a shielded transaction and return debug info (sync).
 
@@ -377,6 +401,7 @@ def debug_send_shielded_transaction(
         gas=gas,
         gas_price=gas_price,
         security=security,
+        eip712=eip712,
     )
     tx_hash = send_shielded_raw(w3, signed)
 
@@ -406,6 +431,7 @@ async def async_debug_send_shielded_transaction(
     gas: int | None = None,
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
 ) -> DebugWriteResult:
     """Send a shielded transaction and return debug info (async).
 
@@ -437,6 +463,7 @@ async def async_debug_send_shielded_transaction(
         gas=gas,
         gas_price=gas_price,
         security=security,
+        eip712=eip712,
     )
     tx_hash = await async_send_shielded_raw(w3, signed)
 
@@ -470,6 +497,7 @@ def signed_call(
     value: int = 0,
     gas: int = _DEFAULT_GAS,
     security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
 ) -> HexBytes | None:
     """Execute a signed read (sync).
 
@@ -490,7 +518,7 @@ def signed_call(
         Decrypted response bytes, or ``None`` if the response is empty.
     """
     params = _build_metadata_params(
-        private_key, encryption, to, value, security, signed_read=True
+        private_key, encryption, to, value, security, signed_read=True, eip712=eip712
     )
     metadata = build_metadata(w3, params)
 
@@ -511,7 +539,11 @@ def signed_call(
         seismic=metadata.seismic_elements,
     )
 
-    signed = sign_seismic_tx(tx, private_key)
+    signed = (
+        sign_seismic_tx_eip712(tx, private_key)
+        if eip712
+        else sign_seismic_tx(tx, private_key)
+    )
 
     # Send signed raw tx directly as first param to eth_call
     # (matches viem: params = [serializedTransaction, block])
@@ -542,6 +574,7 @@ async def async_signed_call(
     value: int = 0,
     gas: int = _DEFAULT_GAS,
     security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
 ) -> HexBytes | None:
     """Execute a signed read (async).
 
@@ -562,7 +595,7 @@ async def async_signed_call(
         Decrypted response bytes, or ``None`` if the response is empty.
     """
     params = _build_metadata_params(
-        private_key, encryption, to, value, security, signed_read=True
+        private_key, encryption, to, value, security, signed_read=True, eip712=eip712
     )
     metadata = await async_build_metadata(w3, params)
 
@@ -583,7 +616,11 @@ async def async_signed_call(
         seismic=metadata.seismic_elements,
     )
 
-    signed = sign_seismic_tx(tx, private_key)
+    signed = (
+        sign_seismic_tx_eip712(tx, private_key)
+        if eip712
+        else sign_seismic_tx(tx, private_key)
+    )
 
     # Send signed raw tx directly as first param to eth_call
     # (matches viem: params = [serializedTransaction, block])

@@ -51,12 +51,14 @@ class _ShieldedWriteNamespace:
         private_key: PrivateKey,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        eip712: bool = False,
     ) -> None:
         self._w3 = w3
         self._encryption = encryption
         self._private_key = private_key
         self._address = address
         self._abi = abi
+        self._eip712 = eip712
 
     def __getattr__(self, fn_name: str) -> Callable[..., HexBytes]:
         """Return a callable that sends a shielded write for ``fn_name``."""
@@ -79,6 +81,7 @@ class _ShieldedWriteNamespace:
                 gas=gas,
                 gas_price=gas_price,
                 security=security,
+                eip712=self._eip712,
             )
 
         return call
@@ -94,12 +97,14 @@ class _ShieldedDebugWriteNamespace:
         private_key: PrivateKey,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        eip712: bool = False,
     ) -> None:
         self._w3 = w3
         self._encryption = encryption
         self._private_key = private_key
         self._address = address
         self._abi = abi
+        self._eip712 = eip712
 
     def __getattr__(self, fn_name: str) -> Callable[..., DebugWriteResult]:
         """Return a callable that sends a shielded write and returns debug info."""
@@ -122,6 +127,7 @@ class _ShieldedDebugWriteNamespace:
                 gas=gas,
                 gas_price=gas_price,
                 security=security,
+                eip712=self._eip712,
             )
 
         return call
@@ -137,12 +143,14 @@ class _ShieldedReadNamespace:
         private_key: PrivateKey,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        eip712: bool = False,
     ) -> None:
         self._w3 = w3
         self._encryption = encryption
         self._private_key = private_key
         self._address = address
         self._abi = abi
+        self._eip712 = eip712
 
     def __getattr__(self, fn_name: str) -> Callable[..., HexBytes | None]:
         """Return a callable that executes a signed read for ``fn_name``."""
@@ -163,6 +171,7 @@ class _ShieldedReadNamespace:
                 value=value,
                 gas=gas,
                 security=security,
+                eip712=self._eip712,
             )
 
         return call
@@ -236,12 +245,14 @@ class _AsyncShieldedWriteNamespace:
         private_key: PrivateKey,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        eip712: bool = False,
     ) -> None:
         self._w3 = w3
         self._encryption = encryption
         self._private_key = private_key
         self._address = address
         self._abi = abi
+        self._eip712 = eip712
 
     def __getattr__(self, fn_name: str) -> Callable[..., Any]:
         """Return an async callable that sends a shielded write."""
@@ -264,6 +275,7 @@ class _AsyncShieldedWriteNamespace:
                 gas=gas,
                 gas_price=gas_price,
                 security=security,
+                eip712=self._eip712,
             )
 
         return call
@@ -279,12 +291,14 @@ class _AsyncShieldedDebugWriteNamespace:
         private_key: PrivateKey,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        eip712: bool = False,
     ) -> None:
         self._w3 = w3
         self._encryption = encryption
         self._private_key = private_key
         self._address = address
         self._abi = abi
+        self._eip712 = eip712
 
     def __getattr__(self, fn_name: str) -> Callable[..., Any]:
         """Return an async callable for a debug shielded write."""
@@ -307,6 +321,7 @@ class _AsyncShieldedDebugWriteNamespace:
                 gas=gas,
                 gas_price=gas_price,
                 security=security,
+                eip712=self._eip712,
             )
 
         return call
@@ -322,12 +337,14 @@ class _AsyncShieldedReadNamespace:
         private_key: PrivateKey,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        eip712: bool = False,
     ) -> None:
         self._w3 = w3
         self._encryption = encryption
         self._private_key = private_key
         self._address = address
         self._abi = abi
+        self._eip712 = eip712
 
     def __getattr__(self, fn_name: str) -> Callable[..., Any]:
         """Return an async callable that executes a signed read."""
@@ -348,6 +365,7 @@ class _AsyncShieldedReadNamespace:
                 value=value,
                 gas=gas,
                 security=security,
+                eip712=self._eip712,
             )
 
         return call
@@ -434,6 +452,7 @@ class ShieldedContract:
         private_key: 32-byte signing key.
         address: Contract address.
         abi: Contract ABI (list of function entries).
+        eip712: Use EIP-712 typed data signing (default ``False``).
     """
 
     def __init__(
@@ -443,6 +462,7 @@ class ShieldedContract:
         private_key: PrivateKey,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        eip712: bool = False,
     ) -> None:
         self._w3 = w3
         self._encryption = encryption
@@ -450,12 +470,16 @@ class ShieldedContract:
         self._address = address
         self._abi = abi
 
-        self.write = _ShieldedWriteNamespace(w3, encryption, private_key, address, abi)
-        self.read = _ShieldedReadNamespace(w3, encryption, private_key, address, abi)
+        self.write = _ShieldedWriteNamespace(
+            w3, encryption, private_key, address, abi, eip712=eip712
+        )
+        self.read = _ShieldedReadNamespace(
+            w3, encryption, private_key, address, abi, eip712=eip712
+        )
         self.twrite = _TransparentWriteNamespace(w3, address, abi)
         self.tread = _TransparentReadNamespace(w3, address, abi)
         self.dwrite = _ShieldedDebugWriteNamespace(
-            w3, encryption, private_key, address, abi
+            w3, encryption, private_key, address, abi, eip712=eip712
         )
 
 
@@ -482,6 +506,7 @@ class AsyncShieldedContract:
         private_key: 32-byte signing key.
         address: Contract address.
         abi: Contract ABI (list of function entries).
+        eip712: Use EIP-712 typed data signing (default ``False``).
     """
 
     def __init__(
@@ -491,6 +516,7 @@ class AsyncShieldedContract:
         private_key: PrivateKey,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        eip712: bool = False,
     ) -> None:
         self._w3 = w3
         self._encryption = encryption
@@ -499,13 +525,13 @@ class AsyncShieldedContract:
         self._abi = abi
 
         self.write = _AsyncShieldedWriteNamespace(
-            w3, encryption, private_key, address, abi
+            w3, encryption, private_key, address, abi, eip712=eip712
         )
         self.read = _AsyncShieldedReadNamespace(
-            w3, encryption, private_key, address, abi
+            w3, encryption, private_key, address, abi, eip712=eip712
         )
         self.twrite = _AsyncTransparentWriteNamespace(w3, address, abi)
         self.tread = _AsyncTransparentReadNamespace(w3, address, abi)
         self.dwrite = _AsyncShieldedDebugWriteNamespace(
-            w3, encryption, private_key, address, abi
+            w3, encryption, private_key, address, abi, eip712=eip712
         )

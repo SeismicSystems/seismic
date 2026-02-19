@@ -165,6 +165,33 @@ from seismic_web3.contract.abi import encode_shielded_calldata
 data = encode_shielded_calldata(abi, "setNumber", [42])
 ```
 
+## EIP-712 Typed Data Signing
+
+The SDK supports [EIP-712](https://eips.ethereum.org/EIPS/eip-712) typed data signing (`message_version=2`) as an alternative to raw message signing (`message_version=0`). This is how browser wallets like MetaMask sign Seismic transactions — the wallet presents the structured data for user approval via `eth_signTypedData_v4`, then the signed transaction is sent to the Seismic node which verifies the EIP-712 signature.
+
+> **Why we added this:** Unlike `seismic-viem`, this SDK always signs locally with a private key — there's no JSON-RPC account detection or routing logic. We include EIP-712 support for completeness and as another way to test this signing path against the node. The `build_seismic_typed_data()` function returns the typed data structure for inspection or integration with external signers (MetaMask, WalletConnect).
+
+```python
+from seismic_web3 import sign_seismic_tx_eip712, build_seismic_typed_data
+
+# Sign a Seismic transaction using EIP-712 typed data
+# (same RLP output format as raw signing, different ECDSA message hash)
+signed_tx = sign_seismic_tx_eip712(unsigned_tx, private_key)
+
+# Inspect the EIP-712 typed data dict (matches eth_signTypedData_v4 format)
+typed_data = build_seismic_typed_data(unsigned_tx)
+typed_data["domain"]       # {"name": "Seismic Transaction", "version": "2", ...}
+typed_data["primaryType"]  # "TxSeismic"
+typed_data["message"]      # all 13 transaction fields
+
+# Lower-level: compute individual EIP-712 components
+from seismic_web3 import domain_separator, struct_hash, eip712_signing_hash
+
+dom_sep = domain_separator(chain_id=31337)     # 32-byte domain separator
+s_hash  = struct_hash(unsigned_tx)             # 32-byte struct hash
+sig_hash = eip712_signing_hash(unsigned_tx)    # 32-byte signing hash
+```
+
 ## SRC20 Tokens
 
 The SDK ships with `SRC20_ABI`, the ABI for Seismic's [SRC20 token standard](https://docs.seismic.systems) — a privacy-preserving ERC20 where balances and transfer amounts use shielded types (`suint256`).
@@ -263,6 +290,11 @@ Everything importable from `seismic_web3`:
 | `create_async_shielded_web3` | function | Create async `AsyncWeb3` with `w3.seismic` namespace |
 | `get_encryption` | function | Derive `EncryptionState` from a TEE public key |
 | `make_seismic_testnet` | function | Factory for GCP testnet `ChainConfig` |
+| `sign_seismic_tx_eip712` | function | Sign a `TxSeismic` using EIP-712 typed data |
+| `build_seismic_typed_data` | function | Build EIP-712 typed data dict for display / external signers |
+| `eip712_signing_hash` | function | Compute EIP-712 signing hash for a `TxSeismic` |
+| `domain_separator` | function | Compute EIP-712 domain separator for a chain ID |
+| `struct_hash` | function | Compute EIP-712 struct hash for a `TxSeismic` |
 | `ShieldedContract` | class | Sync contract with `.write`/`.read`/`.twrite`/`.tread`/`.dwrite` |
 | `AsyncShieldedContract` | class | Async version of `ShieldedContract` |
 | `SeismicNamespace` | class | Sync namespace attached as `w3.seismic` |
@@ -369,6 +401,7 @@ clients/py/
 │       │   └── secp256k1.py         # secp256k1 sign precompile (0x69)
 │       └── transaction/
 │           ├── aead.py              # AAD construction
+│           ├── eip712.py            # EIP-712 typed data signing
 │           ├── metadata.py          # Transaction metadata
 │           ├── send.py              # send_shielded_transaction, signed_call
 │           └── serialize.py         # RLP serialization
@@ -378,6 +411,7 @@ clients/py/
     ├── test_client.py
     ├── test_contract.py
     ├── test_crypto.py
+    ├── test_eip712.py
     ├── test_encryption.py
     ├── test_module.py
     ├── test_rpc.py
