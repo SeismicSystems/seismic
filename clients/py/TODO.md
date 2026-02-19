@@ -22,11 +22,6 @@ All precompile addresses, gas costs, and parameter encoding are documented in
 - Domain: `{name: "Seismic Transaction", version: "2"}`
 - Reference: `seismic-viem/src/signSeismicTypedData.ts`
 
-## Debug Write (dwrite)
-
-- Returns both plaintext and encrypted transaction + hash
-- Useful for debugging encrypted calldata
-
 ## Deposit Contract Actions
 
 - Deposit 32 ETH for validator staking

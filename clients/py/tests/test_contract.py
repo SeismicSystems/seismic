@@ -39,8 +39,8 @@ def _make_encryption():
 
 
 class TestShieldedContract:
-    def test_has_four_namespaces(self):
-        """ShieldedContract should have write, read, twrite, tread."""
+    def test_has_five_namespaces(self):
+        """ShieldedContract should have write, read, twrite, tread, dwrite."""
         w3 = MagicMock()
         encryption = _make_encryption()
         pk = PrivateKey(b"\x01" * 32)
@@ -52,6 +52,7 @@ class TestShieldedContract:
         assert hasattr(contract, "read")
         assert hasattr(contract, "twrite")
         assert hasattr(contract, "tread")
+        assert hasattr(contract, "dwrite")
 
     def test_write_namespace_getattr_returns_callable(self):
         """write.setNumber should return a callable."""
@@ -75,10 +76,21 @@ class TestShieldedContract:
         fn = contract.read.setNumber
         assert callable(fn)
 
+    def test_dwrite_namespace_getattr_returns_callable(self):
+        """dwrite.setNumber should return a callable."""
+        w3 = MagicMock()
+        encryption = _make_encryption()
+        pk = PrivateKey(b"\x01" * 32)
+        addr = "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046"
+
+        contract = ShieldedContract(w3, encryption, pk, addr, COUNTER_ABI)
+        fn = contract.dwrite.setNumber
+        assert callable(fn)
+
 
 class TestAsyncShieldedContract:
-    def test_has_four_namespaces(self):
-        """AsyncShieldedContract should have write, read, twrite, tread."""
+    def test_has_five_namespaces(self):
+        """AsyncShieldedContract should have write, read, twrite, tread, dwrite."""
         w3 = MagicMock()
         encryption = _make_encryption()
         pk = PrivateKey(b"\x01" * 32)
@@ -90,6 +102,7 @@ class TestAsyncShieldedContract:
         assert hasattr(contract, "read")
         assert hasattr(contract, "twrite")
         assert hasattr(contract, "tread")
+        assert hasattr(contract, "dwrite")
 
     def test_write_namespace_getattr_returns_callable(self):
         """write.increment should return a callable (async version)."""

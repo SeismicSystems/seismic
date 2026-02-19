@@ -15,8 +15,10 @@ from typing import TYPE_CHECKING, Any
 from seismic_web3.contract.shielded import AsyncShieldedContract, ShieldedContract
 from seismic_web3.rpc import async_get_tee_public_key, get_tee_public_key
 from seismic_web3.transaction.send import (
+    async_debug_send_shielded_transaction,
     async_send_shielded_transaction,
     async_signed_call,
+    debug_send_shielded_transaction,
     send_shielded_transaction,
     signed_call,
 )
@@ -28,7 +30,7 @@ if TYPE_CHECKING:
 
     from seismic_web3._types import CompressedPublicKey, PrivateKey
     from seismic_web3.client import EncryptionState
-    from seismic_web3.transaction_types import SeismicSecurityParams
+    from seismic_web3.transaction_types import DebugWriteResult, SeismicSecurityParams
 
 
 class SeismicNamespace:
@@ -164,6 +166,44 @@ class SeismicNamespace:
             security=security,
         )
 
+    def debug_send_shielded_transaction(
+        self,
+        *,
+        to: ChecksumAddress,
+        data: HexBytes,
+        value: int = 0,
+        gas: int | None = None,
+        gas_price: int | None = None,
+        security: SeismicSecurityParams | None = None,
+    ) -> DebugWriteResult:
+        """Send a shielded transaction and return debug info (sync).
+
+        Like :meth:`send_shielded_transaction` but also returns
+        the plaintext and encrypted transaction views.
+
+        Args:
+            to: Recipient address.
+            data: Plaintext calldata (will be encrypted).
+            value: Wei to transfer (default ``0``).
+            gas: Gas limit.
+            gas_price: Gas price in wei.
+            security: Optional security parameter overrides.
+
+        Returns:
+            :class:`~seismic_web3.transaction_types.DebugWriteResult`.
+        """
+        return debug_send_shielded_transaction(
+            self._w3,
+            encryption=self.encryption,
+            private_key=self._private_key,
+            to=to,
+            data=data,
+            value=value,
+            gas=gas,
+            gas_price=gas_price,
+            security=security,
+        )
+
 
 class AsyncSeismicNamespace:
     """Async Seismic namespace -- attached as ``w3.seismic``.
@@ -295,5 +335,43 @@ class AsyncSeismicNamespace:
             data=data,
             value=value,
             gas=gas,
+            security=security,
+        )
+
+    async def debug_send_shielded_transaction(
+        self,
+        *,
+        to: ChecksumAddress,
+        data: HexBytes,
+        value: int = 0,
+        gas: int | None = None,
+        gas_price: int | None = None,
+        security: SeismicSecurityParams | None = None,
+    ) -> DebugWriteResult:
+        """Send a shielded transaction and return debug info (async).
+
+        Like :meth:`send_shielded_transaction` but also returns
+        the plaintext and encrypted transaction views.
+
+        Args:
+            to: Recipient address.
+            data: Plaintext calldata (will be encrypted).
+            value: Wei to transfer (default ``0``).
+            gas: Gas limit.
+            gas_price: Gas price in wei.
+            security: Optional security parameter overrides.
+
+        Returns:
+            :class:`~seismic_web3.transaction_types.DebugWriteResult`.
+        """
+        return await async_debug_send_shielded_transaction(
+            self._w3,
+            encryption=self.encryption,
+            private_key=self._private_key,
+            to=to,
+            data=data,
+            value=value,
+            gas=gas,
+            gas_price=gas_price,
             security=security,
         )
