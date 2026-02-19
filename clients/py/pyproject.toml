@@ -22,7 +22,11 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Typing :: Typed",
 ]
-dependencies = ["web3>=7.0,<8"]
+dependencies = [
+    "web3>=7.0,<8",
+    "coincurve>=20.0",
+    "cryptography>=43.0",
+]
 
 [dependency-groups]
 dev = [
@@ -30,6 +34,8 @@ dev = [
     "ty>=0.0.1a1",
     "pytest>=8.0",
     "pytest-asyncio>=0.25",
+    "pytest-timeout>=2.0",
+    "requests>=2.0",
 ]
 
 [tool.ruff]
@@ -51,7 +57,9 @@ select = [
     "ANN", # flake8-annotations
     "PT",  # flake8-pytest-style
 ]
-ignore = []
+ignore = [
+    "ANN401",  # allow Any in *args/**kwargs (needed for dynamic ABI args)
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = [
@@ -71,3 +79,13 @@ error-on-warning = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 strict_markers = true
+markers = [
+    "integration: requires a running seismic node",
+]
+filterwarnings = [
+    # Upstream web3.py issues — not fixable on our side:
+    # https://github.com/ethereum/web3.py/issues — web3 uses the legacy websockets API
+    "ignore::DeprecationWarning:websockets.legacy",
+    # https://github.com/ethereum/web3.py/issues — web3 passes deprecated param to aiohttp
+    "ignore::DeprecationWarning:aiohttp.connector",
+]
