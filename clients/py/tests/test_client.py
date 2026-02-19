@@ -1,5 +1,7 @@
 """Tests for seismic_web3.client — EncryptionState and get_encryption."""
 
+from unittest.mock import MagicMock, patch
+
 from hexbytes import HexBytes
 
 from seismic_web3._types import (
@@ -8,7 +10,8 @@ from seismic_web3._types import (
     EncryptionNonce,
     PrivateKey,
 )
-from seismic_web3.client import EncryptionState, get_encryption
+from seismic_web3.chains import SANVIL, ChainConfig
+from seismic_web3.client import EncryptionState, create_shielded_web3, get_encryption
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 from seismic_web3.transaction_types import (
     LegacyFields,
@@ -101,3 +104,100 @@ class TestEncryptionState:
 
         ciphertext = state.encrypt(HexBytes(b""), nonce, metadata)
         assert bytes(ciphertext) == b""
+
+
+_MOCK_TEE_PK = CompressedPublicKey(
+    "0x028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0"
+)
+_TEST_PK = PrivateKey(b"\x01" * 32)
+
+
+class TestCreateShieldedWeb3:
+    """Factory function accepts a URL string."""
+
+    @patch("seismic_web3.client.get_tee_public_key", return_value=_MOCK_TEE_PK)
+    @patch("seismic_web3.client.Web3")
+    def test_accepts_string(self, mock_web3, mock_get_tee):
+        mock_web3.return_value = MagicMock()
+        mock_web3.HTTPProvider = MagicMock()
+
+        create_shielded_web3("http://localhost:8545", private_key=_TEST_PK)
+
+        mock_web3.HTTPProvider.assert_called_once_with("http://localhost:8545")
+
+
+class TestChainConfigCreateClient:
+    """ChainConfig.create_client delegates to create_shielded_web3."""
+
+    @patch("seismic_web3.client.get_tee_public_key", return_value=_MOCK_TEE_PK)
+    @patch("seismic_web3.client.Web3")
+    def test_create_client_uses_rpc_url(self, mock_web3, mock_get_tee):
+        mock_web3.return_value = MagicMock()
+        mock_web3.HTTPProvider = MagicMock()
+
+        cfg = ChainConfig(chain_id=1, rpc_url="http://test:8545")
+        cfg.create_client(_TEST_PK)
+
+        mock_web3.HTTPProvider.assert_called_once_with("http://test:8545")
+
+    @patch("seismic_web3.client.get_tee_public_key", return_value=_MOCK_TEE_PK)
+    @patch("seismic_web3.client.Web3")
+    def test_create_client_with_predefined_chain(self, mock_web3, mock_get_tee):
+        mock_web3.return_value = MagicMock()
+        mock_web3.HTTPProvider = MagicMock()
+
+        SANVIL.create_client(_TEST_PK)
+
+        mock_web3.HTTPProvider.assert_called_once_with("http://127.0.0.1:8545")
+
+
+class TestChainConfigCreateAsyncClient:
+    """ChainConfig.create_async_client delegates to create_async_shielded_web3."""
+
+    @patch("seismic_web3.client.async_get_tee_public_key")
+    @patch("seismic_web3.client.AsyncHTTPProvider")
+    @patch("seismic_web3.client.AsyncWeb3")
+    async def test_create_async_client_uses_rpc_url(
+        self, mock_async_web3, mock_http, mock_get_tee
+    ):
+        mock_get_tee.return_value = _MOCK_TEE_PK
+        mock_async_web3.return_value = MagicMock()
+
+        cfg = ChainConfig(
+            chain_id=1, rpc_url="http://test:8545", ws_url="ws://test:8545"
+        )
+        await cfg.create_async_client(_TEST_PK)
+
+        mock_http.assert_called_once_with("http://test:8545")
+
+    @patch("seismic_web3.client.async_get_tee_public_key")
+    @patch("seismic_web3.client.WebSocketProvider")
+    @patch("seismic_web3.client.AsyncWeb3")
+    async def test_create_async_client_uses_ws_url(
+        self, mock_async_web3, mock_ws, mock_get_tee
+    ):
+        """When ws=True and ws_url is available, use it."""
+        mock_get_tee.return_value = _MOCK_TEE_PK
+        mock_async_web3.return_value = MagicMock()
+
+        cfg = ChainConfig(
+            chain_id=1, rpc_url="http://test:8545", ws_url="ws://test:8546"
+        )
+        await cfg.create_async_client(_TEST_PK, ws=True)
+
+        mock_ws.assert_called_once_with("ws://test:8546")
+
+    @patch("seismic_web3.client.async_get_tee_public_key")
+    @patch("seismic_web3.client.AsyncHTTPProvider")
+    @patch("seismic_web3.client.AsyncWeb3")
+    async def test_create_async_client_falls_back_to_rpc(
+        self, mock_async_web3, mock_http, mock_get_tee
+    ):
+        """When ws=True but ws_url is None, fall back to rpc_url."""
+        mock_get_tee.return_value = _MOCK_TEE_PK
+        mock_async_web3.return_value = MagicMock()
+
+        cfg = ChainConfig(chain_id=1, rpc_url="http://test:8545")
+        await cfg.create_async_client(_TEST_PK)
+
+        mock_http.assert_called_once_with("http://test:8545")

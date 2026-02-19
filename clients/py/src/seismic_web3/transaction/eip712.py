@@ -23,7 +23,7 @@ from eth_hash.auto import keccak
 from eth_keys import keys as eth_keys
 from hexbytes import HexBytes
 
-from seismic_web3.chains import TYPED_DATA_MESSAGE_VERSION
+from seismic_web3._constants import TYPED_DATA_MESSAGE_VERSION
 from seismic_web3.transaction.serialize import serialize_signed
 from seismic_web3.transaction_types import Signature
 

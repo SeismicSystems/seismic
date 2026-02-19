@@ -159,7 +159,7 @@ async def create_async_shielded_web3(
     *,
     private_key: PrivateKey,
     encryption_sk: PrivateKey | None = None,
-    use_websocket: bool = False,
+    ws: bool = False,
 ) -> AsyncWeb3:
     """Create an async ``Web3`` instance configured for Seismic.
 
@@ -168,14 +168,14 @@ async def create_async_shielded_web3(
         private_key: 32-byte signing key for transactions.
         encryption_sk: Optional 32-byte key for ECDH.  If ``None``,
             a random ephemeral key is generated.
-        use_websocket: If ``True``, uses ``WebSocketProvider``
+        ws: If ``True``, uses ``WebSocketProvider``
             (persistent connection, supports subscriptions).
             Otherwise uses ``AsyncHTTPProvider``.
 
     Returns:
         An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached.
     """
-    if use_websocket:
+    if ws:
         provider = WebSocketProvider(provider_url)
     else:
         provider = AsyncHTTPProvider(provider_url)
