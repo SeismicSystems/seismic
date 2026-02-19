@@ -55,6 +55,11 @@ def deposit_contract(
     return w3.seismic.contract(addr, DEPOSIT_CONTRACT_ABI)  # type: ignore[attr-defined]
 
 
+def _parse_deposit_count(raw: HexBytes) -> int:
+    """Parse the ABI-encoded get_deposit_count() tread response to an int."""
+    return int.from_bytes(bytes(raw[64:72]), "little")
+
+
 def _make_deposit(
     deposit_contract: ShieldedContract,
     w3: Web3,
@@ -96,9 +101,7 @@ class TestDepositContractReads:
         self, deposit_contract: ShieldedContract
     ) -> None:
         raw = deposit_contract.tread.get_deposit_count()
-        # Returns 8 bytes, little-endian encoded 0
-        count_bytes = bytes(raw[-8:])
-        assert count_bytes == b"\x00" * 8
+        assert _parse_deposit_count(raw) == 0
 
     def test_initial_deposit_root_is_nonempty(
         self, deposit_contract: ShieldedContract
@@ -133,10 +136,7 @@ class TestDeposit:
     ) -> None:
         _make_deposit(deposit_contract, w3, 32)
         raw = deposit_contract.tread.get_deposit_count()
-        count_bytes = bytes(raw[-8:])
-        # Little-endian 1
-        assert count_bytes[0] == 1
-        assert count_bytes[1:] == b"\x00" * 7
+        assert _parse_deposit_count(raw) == 1
 
     def test_deposit_changes_root(
         self,
@@ -161,8 +161,7 @@ class TestMinimumDeposit:
         assert len(tx_hash) == 32
 
         raw = deposit_contract.tread.get_deposit_count()
-        count_bytes = bytes(raw[-8:])
-        assert count_bytes[0] == 1
+        assert _parse_deposit_count(raw) == 1
 
 
 class TestMultipleDeposits:
@@ -177,8 +176,7 @@ class TestMultipleDeposits:
         _make_deposit(deposit_contract, w3, 32)
 
         raw = deposit_contract.tread.get_deposit_count()
-        count_bytes = bytes(raw[-8:])
-        assert count_bytes[0] == 2
+        assert _parse_deposit_count(raw) == 2
 
 
 class TestDepositLifecycle:
@@ -191,7 +189,7 @@ class TestDepositLifecycle:
     ) -> None:
         # 1. Initial count is 0
         raw = deposit_contract.tread.get_deposit_count()
-        assert bytes(raw[-8:]) == b"\x00" * 8
+        assert _parse_deposit_count(raw) == 0
 
         # 2. Initial root is some value
         initial_root = bytes(deposit_contract.tread.get_deposit_root())
@@ -202,7 +200,7 @@ class TestDepositLifecycle:
 
         # 4. Count is now 1
         raw = deposit_contract.tread.get_deposit_count()
-        assert bytes(raw[-8:])[0] == 1
+        assert _parse_deposit_count(raw) == 1
 
         # 5. Root changed
         new_root = bytes(deposit_contract.tread.get_deposit_root())
@@ -213,7 +211,7 @@ class TestDepositLifecycle:
 
         # 7. Count is now 2
         raw = deposit_contract.tread.get_deposit_count()
-        assert bytes(raw[-8:])[0] == 2
+        assert _parse_deposit_count(raw) == 2
 
         # 8. Root changed again
         final_root = bytes(deposit_contract.tread.get_deposit_root())
