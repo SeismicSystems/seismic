@@ -494,6 +494,33 @@ Everything importable from `seismic_web3`:
 - **Python 3.10+**
 - **[uv](https://docs.astral.sh/uv/)** — install with `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
+### Environment Variables for Integration Tests
+
+Integration tests start a local sanvil or seismic-reth node and need to know where the binaries are. Set **one** of the following:
+
+| Variable | Description |
+|----------|-------------|
+| `SEISMIC_WORKSPACE` | Parent directory containing `seismic-foundry/` and `seismic-reth/` repos |
+| `SFOUNDRY_ROOT` | Path to seismic-foundry repo root (overrides `SEISMIC_WORKSPACE` for sanvil) |
+| `SRETH_ROOT` | Path to seismic-reth repo root (overrides `SEISMIC_WORKSPACE` for reth) |
+
+The binaries are resolved as:
+- **sanvil**: `$SFOUNDRY_ROOT/target/debug/sanvil` or `$SEISMIC_WORKSPACE/seismic-foundry/target/debug/sanvil`
+- **seismic-reth**: `$SRETH_ROOT/target/debug/seismic-reth` or `$SEISMIC_WORKSPACE/seismic-reth/target/debug/seismic-reth`
+
+Quick setup:
+
+```bash
+# Option 1: Set workspace root (works for both)
+export SEISMIC_WORKSPACE=~/code/seismic-workspace
+
+# Option 2: Set individual roots
+export SFOUNDRY_ROOT=~/code/seismic-workspace/seismic-foundry
+export SRETH_ROOT=~/code/seismic-workspace/seismic-reth
+```
+
+See `.env.example` for a template you can copy to `.env`.
+
 ### Commands
 
 | Command | Description |
