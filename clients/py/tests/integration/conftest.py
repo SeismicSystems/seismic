@@ -114,6 +114,7 @@ def _get_reth_bin() -> str:
         "SRETH_ROOT", "seismic-reth", os.path.join("target", "debug", "seismic-reth")
     )
 
+
 _StartResult = tuple[subprocess.Popen[bytes], str | None]
 
 
