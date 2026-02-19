@@ -33,7 +33,8 @@ All repos live as siblings under the parent directory. Open `seismic/workspace/s
 seismic/                          # parent directory
 ├── CLAUDE.md                     # symlink -> seismic/workspace/CLAUDE.md
 ├── seismic/                      # monorepo (docs, scripts, workspace config)
-│   └── workspace/                # cross-repo workspace files (source of truth)
+│   ├── workspace/                # cross-repo workspace files (source of truth)
+│   └── contracts/                # Solidity contracts
 ├── seismic-reth/                 # execution client (fork of reth)
 ├── seismic-foundry/              # dev tools: sforge, sanvil, scast (fork of foundry)
 ├── seismic-revm/                 # Mercury EVM (fork of revm)
@@ -45,8 +46,7 @@ seismic/                          # parent directory
 ├── seismic-compilers/            # compiler integration for sforge (fork of foundry-compilers)
 ├── seismic-foundry-fork-db/      # fork DB with FlaggedStorage (fork of foundry-fork-db)
 ├── seismic-solidity/             # Solidity compiler with shielded types (fork of solidity)
-├── seismic-client/               # TypeScript SDK (Viem + Wagmi)
-└── seismic-contracts/            # Solidity contracts
+└── seismic-client/               # TypeScript SDK (Viem + Wagmi)
 ```
 
 ## Working Across Repos
