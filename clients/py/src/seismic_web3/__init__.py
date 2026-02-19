@@ -37,6 +37,9 @@ from seismic_web3._types import (
     PrivateKey,
 )
 
+# -- ABIs --------------------------------------------------------------------
+from seismic_web3.abis import SRC20_ABI
+
 # -- Chains ------------------------------------------------------------------
 from seismic_web3.chains import (
     SANVIL,
@@ -80,6 +83,7 @@ __all__ = [
     "SANVIL",
     "SEISMIC_TESTNET",
     "SEISMIC_TX_TYPE",
+    "SRC20_ABI",
     "AsyncSeismicNamespace",
     "AsyncShieldedContract",
     "Bytes32",

@@ -35,9 +35,9 @@ All precompile addresses, gas costs, and parameter encoding are documented in
 
 ## SRC20 Token Standard
 
-- Token standard with encrypted balances
-- Event watching with viewing keys
-- Transfer, approve, balanceOf with shielded types
+- [x] Token standard with encrypted balances — `SRC20_ABI` constant + integration tests
+- [x] Transfer, approve, balanceOf with shielded types — works via `ShieldedContract`
+- [ ] Event watching with viewing keys (requires Directory/Intelligence genesis contracts)
 
 ## Block Explorer URL Helpers
 
