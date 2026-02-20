@@ -36,7 +36,7 @@ Public API
     :func:`build_seismic_typed_data`
 """
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 # -- Types -------------------------------------------------------------------
 from seismic_web3._types import (

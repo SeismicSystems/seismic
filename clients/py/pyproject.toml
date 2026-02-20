@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seismic-web3"
-version = "0.1.1"
+version = "0.1.2"
 description = "Seismic Python SDK — web3.py extensions for the Seismic privacy-enabled EVM"
 readme = "README.md"
 requires-python = ">=3.10"
