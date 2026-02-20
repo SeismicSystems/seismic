@@ -125,7 +125,7 @@ class ChainConfig:
         """
         return create_public_client(self.rpc_url)
 
-    async def async_public_client(
+    def async_public_client(
         self,
         *,
         ws: bool = False,
@@ -142,7 +142,7 @@ class ChainConfig:
             (read-only).
         """
         url = self.ws_url if ws and self.ws_url else self.rpc_url
-        return await create_async_public_client(url, ws=ws)
+        return create_async_public_client(url, ws=ws)
 
     # -- Deprecated aliases ----------------------------------------------
 

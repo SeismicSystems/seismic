@@ -82,7 +82,7 @@ from seismic_web3 import SANVIL
 public = SANVIL.public_client()
 
 # Async
-public = await SANVIL.async_public_client()
+public = SANVIL.async_public_client()
 
 # Read-only operations
 block = await public.eth.get_block("latest")

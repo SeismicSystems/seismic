@@ -229,7 +229,7 @@ def create_public_client(rpc_url: str) -> Web3:
     return w3
 
 
-async def create_async_public_client(
+def create_async_public_client(
     provider_url: str,
     *,
     ws: bool = False,

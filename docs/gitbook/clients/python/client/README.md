@@ -64,7 +64,7 @@ from seismic_web3 import SEISMIC_TESTNET
 public = SEISMIC_TESTNET.public_client()
 
 # Async
-public = await SEISMIC_TESTNET.async_public_client()
+public = SEISMIC_TESTNET.async_public_client()
 ```
 
 The public client's `w3.seismic` namespace has limited methods: `get_tee_public_key()`, `get_deposit_root()`, `get_deposit_count()`, and `contract()` (with `.tread` only).

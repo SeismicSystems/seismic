@@ -69,7 +69,7 @@ from seismic_web3 import SEISMIC_TESTNET
 public = SEISMIC_TESTNET.public_client()
 
 # Async
-public = await SEISMIC_TESTNET.async_public_client()
+public = SEISMIC_TESTNET.async_public_client()
 ```
 
 The public client's `w3.seismic` namespace has `get_tee_public_key()`, `get_deposit_root()`, `get_deposit_count()`, and `contract()` (with `.tread` only).
@@ -105,7 +105,7 @@ w3 = await create_async_wallet_client("http://127.0.0.1:8545", private_key=pk)
 w3 = await create_async_wallet_client("ws://127.0.0.1:8545", private_key=pk, ws=True)
 
 # Async public
-public = await create_async_public_client("http://127.0.0.1:8545")
+public = create_async_public_client("http://127.0.0.1:8545")
 ```
 
 ***

@@ -108,7 +108,7 @@ print(f"Type: {type(count)}")
 from seismic_web3 import create_async_public_client
 
 # Create async public client
-w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Get deposit count
 count = await w3.seismic.get_deposit_count()

@@ -16,7 +16,7 @@ Supports both HTTP and WebSocket connections for efficient async queries and rea
 ## Signature
 
 ```python
-async def create_async_public_client(
+def create_async_public_client(
     provider_url: str,
     *,
     ws: bool = False,
@@ -44,7 +44,7 @@ async def create_async_public_client(
 from seismic_web3 import create_async_public_client
 
 # Create async public client
-w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Query TEE public key
 tee_pk = await w3.seismic.get_tee_public_key()
@@ -62,7 +62,7 @@ print(f"Deposit root: {root.to_0x_hex()}, count: {count}")
 from seismic_web3 import create_async_public_client
 
 # WebSocket provider for persistent connection
-w3 = await create_async_public_client(
+w3 = create_async_public_client(
     "wss://gcp-1.seismictest.net/ws",
     ws=True,
 )
@@ -82,10 +82,10 @@ async for block in w3.eth.subscribe("newHeads"):
 from seismic_web3 import SEISMIC_TESTNET
 
 # Recommended: use chain config with HTTP
-w3 = await SEISMIC_TESTNET.async_public_client()
+w3 = SEISMIC_TESTNET.async_public_client()
 
 # Or with WebSocket (uses ws_url from chain config)
-w3 = await SEISMIC_TESTNET.async_public_client(ws=True)
+w3 = SEISMIC_TESTNET.async_public_client(ws=True)
 ```
 
 ### Async Application
@@ -95,7 +95,7 @@ import asyncio
 from seismic_web3 import create_async_public_client
 
 async def main():
-    w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Get current block
     block = await w3.eth.get_block("latest")
@@ -119,7 +119,7 @@ asyncio.run(main())
 from seismic_web3 import create_async_public_client
 
 async def query_contract():
-    w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Create contract wrapper (read-only)
     contract = w3.seismic.contract(
@@ -139,7 +139,7 @@ from seismic_web3 import create_async_public_client
 import asyncio
 
 async def monitor_deposits():
-    w3 = await create_async_public_client("wss://gcp-1.seismictest.net/ws", ws=True)
+    w3 = create_async_public_client("wss://gcp-1.seismictest.net/ws", ws=True)
 
     last_count = await w3.seismic.get_deposit_count()
     print(f"Starting deposit count: {last_count}")
@@ -162,7 +162,7 @@ from seismic_web3 import create_async_public_client
 import asyncio
 
 async def get_chain_stats():
-    w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Run multiple queries in parallel
     block, tee_pk, deposit_root, deposit_count = await asyncio.gather(
@@ -185,7 +185,7 @@ async def get_chain_stats():
 ```python
 from seismic_web3 import create_async_public_client
 
-async with await create_async_public_client(
+async with create_async_public_client(
     "wss://gcp-1.seismictest.net/ws",
     ws=True,
 ) as w3:
@@ -250,7 +250,7 @@ No TEE public key fetching or encryption setup is performed since the client can
 
 ## Notes
 
-- The function is `async` and must be `await`-ed
+- The function is synchronous (no `await` needed) but returns an `AsyncWeb3` instance whose methods are async
 - No private key required or accepted
 - No encryption setup performed
 - No RPC calls during client creation (lightweight)

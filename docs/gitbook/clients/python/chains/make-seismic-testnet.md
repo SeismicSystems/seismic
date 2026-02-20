@@ -137,7 +137,7 @@ async def compare_instances():
 
     for i in instances:
         testnet = make_seismic_testnet(i)
-        public = await testnet.async_public_client()
+        public = testnet.async_public_client()
 
         block_number = await public.eth.block_number
         print(f"GCP-{i}: block {block_number}")
