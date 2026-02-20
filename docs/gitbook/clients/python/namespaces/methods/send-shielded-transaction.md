@@ -122,7 +122,7 @@ w3 = create_wallet_client(
 
 # Send shielded transaction
 tx_hash = w3.seismic.send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0xa9059cbb000000000000000000000000..."),
     value=0,
     gas=100_000,
@@ -150,7 +150,7 @@ w3 = await create_async_wallet_client(
 
 # Send shielded transaction
 tx_hash = await w3.seismic.send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0xa9059cbb000000000000000000000000..."),
     value=0,
 )
@@ -167,7 +167,7 @@ print(f"Status: {'success' if receipt['status'] == 1 else 'failed'}")
 ```python
 # Send 1 ETH to contract with encrypted calldata
 tx_hash = w3.seismic.send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0xd0e30db0"),  # deposit()
     value=10**18,  # 1 ETH in wei
 )
@@ -184,7 +184,7 @@ security = SeismicSecurityParams(
 )
 
 tx_hash = w3.seismic.send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x..."),
     security=security,
 )
@@ -215,7 +215,7 @@ calldata = encode_shielded_calldata(
 
 # Send transaction
 tx_hash = w3.seismic.send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=calldata,
 )
 ```
@@ -225,7 +225,7 @@ tx_hash = w3.seismic.send_shielded_transaction(
 ```python
 # Use EIP-712 typed data signing (more secure, supported by some wallets)
 tx_hash = w3.seismic.send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x..."),
     eip712=True,
 )
@@ -329,7 +329,7 @@ from web3.exceptions import TransactionNotFound, TimeExhausted
 
 try:
     tx_hash = w3.seismic.send_shielded_transaction(
-        to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+        to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         data=HexBytes("0x..."),
         gas=100_000,
     )

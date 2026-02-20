@@ -90,7 +90,7 @@ print(f"Y-parity: {'even' if tee_key[0] == 0x02 else 'odd'}")
 from seismic_web3 import create_async_public_client
 
 # Create async public client
-w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Fetch TEE public key
 tee_key = await w3.seismic.get_tee_public_key()
@@ -134,7 +134,7 @@ No parameters are required. The node returns the TEE's current public key.
 When you create a wallet client with `create_wallet_client()`, the SDK:
 1. Calls `get_tee_public_key()` automatically
 2. Generates an ephemeral client keypair
-3. Derives a shared AES-GCM key via ECDH
+3. Derives a shared [AES-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode) key via [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman)
 4. Stores the encryption state in `w3.seismic.encryption`
 
 You don't need to call this method manually unless you're implementing custom encryption logic.

@@ -45,7 +45,7 @@ from seismic_web3 import make_withdrawal_credentials
 from seismic_web3 import make_withdrawal_credentials
 
 # Generate withdrawal credentials from address
-address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 withdrawal_credentials = make_withdrawal_credentials(address)
 
 print(f"Withdrawal credentials: {withdrawal_credentials.hex()}")
@@ -58,7 +58,7 @@ print(f"Withdrawal credentials: {withdrawal_credentials.hex()}")
 from seismic_web3 import make_withdrawal_credentials
 
 # Both formats work
-address_with_prefix = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+address_with_prefix = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 address_without_prefix = "742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
 
 creds1 = make_withdrawal_credentials(address_with_prefix)
@@ -129,7 +129,7 @@ from seismic_web3 import make_withdrawal_credentials
 
 # Use different address for withdrawals (e.g., cold wallet)
 deposit_address = w3.eth.default_account  # Hot wallet for deposit
-withdrawal_address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"  # Cold wallet
+withdrawal_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"  # Cold wallet
 
 # Generate credentials for cold wallet
 withdrawal_credentials = make_withdrawal_credentials(withdrawal_address)
@@ -159,7 +159,7 @@ withdrawal_credentials = make_withdrawal_credentials(checksum_address)
 ```python
 from seismic_web3 import make_withdrawal_credentials
 
-address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 credentials = make_withdrawal_credentials(address)
 
 # Verify format
@@ -190,7 +190,7 @@ The function constructs withdrawal credentials using the ETH1 format:
 
 **Example**:
 ```python
-address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 credentials = make_withdrawal_credentials(address)
 # Result: 0x010000000000000000000000742d35cc6634c0532925a3b844bc9e7595f0beb0
@@ -244,7 +244,7 @@ credentials = make_withdrawal_credentials(address)
 # ValueError: address must be 20 bytes, got 3
 
 # Too long
-address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0FFFF"  # 22 bytes
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266FFFF"  # 22 bytes
 credentials = make_withdrawal_credentials(address)
 # ValueError: address must be 20 bytes, got 22
 
@@ -277,7 +277,7 @@ The withdrawal address **controls validator withdrawals**:
 withdrawal_address = "0x0000000000000000000000000000000000000000"  # BAD!
 
 # DO use a secure address you control
-withdrawal_address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"  # Good
+withdrawal_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"  # Good
 
 withdrawal_credentials = make_withdrawal_credentials(withdrawal_address)
 ```
@@ -293,7 +293,7 @@ Use a secure cold wallet address for withdrawals:
 deposit_wallet = w3.eth.default_account
 
 # Cold wallet for withdrawals (secure storage)
-cold_wallet = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+cold_wallet = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 # Use cold wallet for withdrawal credentials
 withdrawal_credentials = make_withdrawal_credentials(cold_wallet)
@@ -319,7 +319,7 @@ Always double-check withdrawal credentials before depositing:
 ```python
 from seismic_web3 import make_withdrawal_credentials
 
-withdrawal_address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+withdrawal_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 credentials = make_withdrawal_credentials(withdrawal_address)
 
 # Verify the address is embedded correctly
@@ -341,7 +341,7 @@ else:
 from seismic_web3 import make_withdrawal_credentials
 
 # Use validator operator's address
-validator_address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+validator_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 withdrawal_credentials = make_withdrawal_credentials(validator_address)
 ```
 

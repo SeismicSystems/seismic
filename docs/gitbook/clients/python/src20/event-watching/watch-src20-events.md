@@ -104,7 +104,7 @@ from seismic_web3.src20 import watch_src20_events
 private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
-token_address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+token_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 watcher = watch_src20_events(
     w3,

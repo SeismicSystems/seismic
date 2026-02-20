@@ -88,7 +88,7 @@ from seismic_web3 import SEISMIC_TESTNET
 public = SEISMIC_TESTNET.public_client()
 
 # Async
-public = await SEISMIC_TESTNET.async_public_client()
+public = SEISMIC_TESTNET.async_public_client()
 
 # Read-only operations
 block = await public.eth.get_block("latest")

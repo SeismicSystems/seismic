@@ -87,7 +87,7 @@ private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Use a specific viewing key (e.g., derived from seed)
-viewing_key = Bytes32(bytes.fromhex("YOUR_VIEWING_KEY_HEX"))
+viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"].removeprefix("0x")))
 
 tx_hash = register_viewing_key(
     w3,

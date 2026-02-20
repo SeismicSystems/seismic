@@ -55,8 +55,8 @@ print(f"Client pubkey: {encryption.encryption_pubkey.to_0x_hex()}")
 ### With Custom Client Key
 
 ```python
-from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 import os
+from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 
 tee_pk = CompressedPublicKey("0x02abcd...")
 
@@ -103,25 +103,6 @@ assert encryption1.encryption_private_key != encryption2.encryption_private_key
 assert encryption1.aes_key != encryption2.aes_key
 ```
 
-### Deterministic Key from Mnemonic
-
-```python
-from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
-from eth_account import Account
-
-# Derive deterministic key from mnemonic
-mnemonic = "your twelve word mnemonic phrase here ..."
-account = Account.from_mnemonic(mnemonic)
-
-# Use account key for encryption (or derive a separate BIP-44 path)
-client_sk = PrivateKey(account.key)
-
-tee_pk = CompressedPublicKey("0x02abcd...")
-encryption = get_encryption(tee_pk, client_sk)
-
-# Same mnemonic will always produce same encryption state
-```
-
 ### Verify Key Derivation
 
 ```python
@@ -152,7 +133,7 @@ The function performs three steps:
        client_sk = PrivateKey(os.urandom(32))
    ```
 
-2. **Derive AES key via ECDH + HKDF**
+2. **Derive AES key via ECDH + [HKDF](https://en.wikipedia.org/wiki/HKDF)**
    ```python
    aes_key = generate_aes_key(client_sk, network_pk)
    ```

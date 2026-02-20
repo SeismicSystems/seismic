@@ -131,10 +131,10 @@ w3 = await chain.async_wallet_client(private_key, ws=True)
 public = chain.public_client()
 
 # Async public client (HTTP)
-public = await chain.async_public_client(ws=False)
+public = chain.async_public_client(ws=False)
 
 # Async public client (WebSocket)
-public = await chain.async_public_client(ws=True)
+public = chain.async_public_client(ws=True)
 ```
 
 ## Chain IDs

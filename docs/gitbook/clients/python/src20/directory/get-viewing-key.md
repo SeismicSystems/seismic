@@ -195,7 +195,7 @@ onchain_key = get_viewing_key(
 )
 
 # Compare with locally stored key
-local_key = Bytes32(bytes.fromhex("YOUR_STORED_KEY_HEX"))
+local_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"].removeprefix("0x")))
 
 if onchain_key == local_key:
     print("Keys match!")

@@ -21,7 +21,7 @@ This namespace is automatically attached as `w3.seismic` when you create an asyn
 ```python
 from seismic_web3 import create_async_public_client
 
-public = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+public = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Access the namespace (all methods are async)
 await public.seismic.get_tee_public_key()
@@ -159,7 +159,7 @@ from seismic_web3 import create_async_public_client
 
 async def main():
     # Create async public client (no private key required)
-    public = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    public = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Get TEE public key
     tee_key = await public.seismic.get_tee_public_key()
@@ -178,7 +178,7 @@ asyncio.run(main())
 
 ```python
 async def concurrent_queries():
-    public = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    public = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Execute multiple queries concurrently
     results = await asyncio.gather(
@@ -197,11 +197,11 @@ async def concurrent_queries():
 
 ```python
 async def read_contract():
-    public = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    public = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Create contract wrapper
     contract = public.seismic.contract(
-        address="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+        address="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         abi=[
             {
                 "name": "balanceOf",
@@ -234,7 +234,7 @@ async def read_contract():
 
 ```python
 async def concurrent_contract_reads():
-    public = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    public = create_async_public_client("https://gcp-1.seismictest.net/rpc")
     contract = public.seismic.contract(address, abi)
 
     # Read multiple accounts concurrently
@@ -256,7 +256,7 @@ async def concurrent_contract_reads():
 
 ```python
 async def monitor_deposits():
-    public = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    public = create_async_public_client("https://gcp-1.seismictest.net/rpc")
     last_count = 0
 
     while True:
@@ -286,7 +286,7 @@ async def monitor_multiple_networks():
     }
 
     clients = {
-        name: await create_async_public_client(rpc)
+        name: create_async_public_client(rpc)
         for name, rpc in networks.items()
     }
 
@@ -312,7 +312,7 @@ async def monitor_multiple_networks():
 
 ```python
 async def context_manager_example():
-    async with await create_async_public_client("https://gcp-1.seismictest.net/rpc") as public:
+    async with create_async_public_client("https://gcp-1.seismictest.net/rpc") as public:
         # Use the client
         tee_key = await public.seismic.get_tee_public_key()
         deposit_count = await public.seismic.get_deposit_count()
@@ -327,7 +327,7 @@ async def context_manager_example():
 ```python
 async def get_chain_summary(rpc_url: str) -> dict:
     """Aggregate public chain data asynchronously."""
-    async with await create_async_public_client(rpc_url) as public:
+    async with create_async_public_client(rpc_url) as public:
         # Execute all queries concurrently
         tee_key, deposit_count, deposit_root, block_number, chain_id = await asyncio.gather(
             public.seismic.get_tee_public_key(),
@@ -353,7 +353,7 @@ print(summary)
 
 ```python
 async def custom_deposit_contract():
-    public = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    public = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Query custom deposit contract (non-default address)
     custom_deposit_address = "0x1234567890123456789012345678901234567890"
@@ -389,7 +389,7 @@ root = await public.seismic.get_deposit_root()
 
 ```python
 # Use context manager or explicitly close connections
-async with await create_async_public_client(rpc_url) as public:
+async with create_async_public_client(rpc_url) as public:
     # Perform operations
     pass
 # Connection automatically closed
@@ -408,7 +408,7 @@ except Exception as e:
 
 ```python
 async def batch_query_multiple_contracts():
-    public = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    public = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Create multiple contract instances
     contracts = [
@@ -437,7 +437,7 @@ async def batch_query_multiple_contracts():
 
 ```python
 # Good use case for async public client
-public = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+public = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 deposit_stats = await asyncio.gather(
     public.seismic.get_deposit_count(),
     public.seismic.get_deposit_root(),
@@ -492,7 +492,7 @@ tx_hash = await wallet.seismic.send_shielded_transaction(...)
 
 ```python
 # Reuse client connections for better performance
-async with await create_async_public_client(rpc_url) as public:
+async with create_async_public_client(rpc_url) as public:
     # Multiple operations share the same connection
     for _ in range(100):
         count = await public.seismic.get_deposit_count()

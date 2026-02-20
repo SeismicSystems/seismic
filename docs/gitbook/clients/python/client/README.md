@@ -64,7 +64,7 @@ from seismic_web3 import SEISMIC_TESTNET
 public = SEISMIC_TESTNET.public_client()
 
 # Async
-public = await SEISMIC_TESTNET.async_public_client()
+public = SEISMIC_TESTNET.async_public_client()
 ```
 
 The public client's `w3.seismic` namespace has limited methods: `get_tee_public_key()`, `get_deposit_root()`, `get_deposit_count()`, and `contract()` (with `.tread` only).
@@ -90,10 +90,11 @@ The public client's `w3.seismic` namespace has limited methods: `get_tee_public_
 The recommended approach is to use chain configuration objects:
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, SANVIL, PrivateKey
 
 # Seismic testnet
-pk = PrivateKey(...)
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 # Sanvil testnet
@@ -106,8 +107,8 @@ See [Chains Configuration](../chains/) for more details.
 
 The wallet client automatically handles encryption setup:
 
-1. Fetches the node's TEE public key
-2. Derives a shared AES-GCM key via ECDH
+1. Fetches the network's TEE public key
+2. Derives a shared [AES-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode) key via [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman)
 3. Uses this key to encrypt calldata for all shielded transactions and signed reads
 
 You don't need to manage this manually, but the encryption state is accessible at `w3.seismic.encryption` if needed.
@@ -123,21 +124,21 @@ You don't need to manage this manually, but the encryption state is accessible a
 
 ### Wallet Client (`w3.seismic`)
 
-- `send_shielded_transaction()` - Send shielded transactions
-- `debug_send_shielded_transaction()` - Debug shielded transactions
-- `signed_call()` - Execute signed reads
-- `get_tee_public_key()` - Get TEE public key
-- `deposit()` - Deposit ETH/tokens
-- `get_deposit_root()` - Query deposit merkle root
-- `get_deposit_count()` - Query deposit count
-- `contract()` - Create contract wrappers
+- [`send_shielded_transaction()`](../namespaces/methods/send-shielded-transaction.md) - Send shielded transactions
+- [`debug_send_shielded_transaction()`](../namespaces/methods/debug-send-shielded-transaction.md) - Debug shielded transactions
+- [`signed_call()`](../namespaces/methods/signed-call.md) - Execute signed reads
+- [`get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md) - Get TEE public key
+- [`deposit()`](../namespaces/methods/deposit.md) - Deposit ETH/tokens
+- [`get_deposit_root()`](../namespaces/methods/get-deposit-root.md) - Query deposit merkle root
+- [`get_deposit_count()`](../namespaces/methods/get-deposit-count.md) - Query deposit count
+- [`contract()`](../contract/) - Create contract wrappers
 
 ### Public Client (`w3.seismic`)
 
-- `get_tee_public_key()` - Get TEE public key
-- `get_deposit_root()` - Query deposit merkle root
-- `get_deposit_count()` - Query deposit count
-- `contract()` - Create contract wrappers (`.tread` only)
+- [`get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md) - Get TEE public key
+- [`get_deposit_root()`](../namespaces/methods/get-deposit-root.md) - Query deposit merkle root
+- [`get_deposit_count()`](../namespaces/methods/get-deposit-count.md) - Query deposit count
+- [`contract()`](../contract/) - Create contract wrappers (`.tread` only)
 
 ## See Also
 

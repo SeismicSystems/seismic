@@ -9,7 +9,7 @@ Create a synchronous `Web3` instance with public (read-only) Seismic access.
 
 ## Overview
 
-`create_public_client()` creates a client for read-only operations on the Seismic network. No private key is required. The `w3.seismic` namespace provides only public read operations: `get_tee_public_key()`, `get_deposit_root()`, `get_deposit_count()`, and `contract()` (with `.tread` only).
+`create_public_client()` creates a client for read-only operations on the Seismic network. No private key is required. The [`w3.seismic`](../namespaces/seismic-public-namespace.md) namespace provides only public read operations: [`get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md), [`get_deposit_root()`](../namespaces/methods/get-deposit-root.md), [`get_deposit_count()`](../namespaces/methods/get-deposit-count.md), and [`contract()`](../contract/) (with `.tread` only).
 
 This is useful for applications that only need to query chain state without submitting transactions, such as block explorers, analytics dashboards, or read-only dApps.
 
@@ -72,7 +72,7 @@ w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Create contract wrapper (read-only)
 contract = w3.seismic.contract(
-    address="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    address="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     abi=contract_abi,
 )
 
@@ -95,7 +95,7 @@ w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
 block = w3.eth.get_block("latest")
 print(f"Latest block: {block['number']}")
 
-balance = w3.eth.get_balance("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb")
+balance = w3.eth.get_balance("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 print(f"Balance: {w3.from_wei(balance, 'ether')} ETH")
 
 chain_id = w3.eth.chain_id
@@ -150,22 +150,22 @@ No TEE public key fetching or encryption setup is performed since the client can
 
 ## Client Capabilities
 
-### Standard Web3 Methods (`w3.eth`)
+### Standard Web3 Methods (e.g. `w3.eth`, `w3.net`)
 - `get_block()`, `get_transaction()`, `get_balance()`
 - `get_code()`, `call()`, `estimate_gas()`
 - All other standard read-only `web3.py` functionality
 
 ### Public Seismic Methods (`w3.seismic`)
-- `get_tee_public_key()` - Get TEE public key
-- `get_deposit_root()` - Query deposit merkle root
-- `get_deposit_count()` - Query deposit count
-- `contract()` - Create contract wrappers (`.tread` only)
+- [`get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md) - Get TEE public key
+- [`get_deposit_root()`](../namespaces/methods/get-deposit-root.md) - Query deposit merkle root
+- [`get_deposit_count()`](../namespaces/methods/get-deposit-count.md) - Query deposit count
+- [`contract()`](../contract/) - Create contract wrappers (`.tread` only)
 
 ### NOT Available
-- `send_shielded_transaction()` - Requires private key
-- `debug_send_shielded_transaction()` - Requires private key
-- `signed_call()` - Requires private key and encryption
-- `deposit()` - Requires private key
+- [`send_shielded_transaction()`](../namespaces/methods/send-shielded-transaction.md) - Requires private key
+- [`debug_send_shielded_transaction()`](../namespaces/methods/debug-send-shielded-transaction.md) - Requires private key
+- [`signed_call()`](../namespaces/methods/signed-call.md) - Requires private key and encryption
+- [`deposit()`](../namespaces/methods/deposit.md) - Requires private key
 - Contract `.swrite` and `.sread` methods - Require private key
 
 ## Public vs Wallet Client

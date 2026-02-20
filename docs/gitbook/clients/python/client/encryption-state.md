@@ -5,13 +5,13 @@ icon: key
 
 # EncryptionState
 
-Holds the AES-GCM key and encryption keypair derived from ECDH key exchange.
+Holds the [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard)-GCM key and encryption keypair derived from [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) key exchange.
 
 ## Overview
 
-`EncryptionState` encapsulates all cryptographic material needed for shielded transactions and signed reads. It's created by [`get_encryption()`](get-encryption.md) during wallet client setup and attached to the `w3.seismic.encryption` namespace.
+`EncryptionState` encapsulates all cryptographic material needed for shielded transactions and signed reads. It's created by [`get_encryption()`](get-encryption.md) during wallet client setup and attached to [`w3.seismic`](../namespaces/seismic-namespace.md)`.encryption`.
 
-The class provides `encrypt()` and `decrypt()` methods that handle AES-GCM encryption with metadata-bound Additional Authenticated Data (AAD).
+The class provides [`encrypt()`](#encrypt) and [`decrypt()`](#decrypt) methods that handle AES-GCM encryption with metadata-bound Additional Authenticated Data (AAD).
 
 ## Definition
 
@@ -38,7 +38,7 @@ class EncryptionState:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `aes_key` | [`Bytes32`](../api-reference/types/bytes32.md) | 32-byte AES-256 key derived from ECDH + HKDF |
+| `aes_key` | [`Bytes32`](../api-reference/types/bytes32.md) | 32-byte AES-256 key derived from ECDH + [HKDF](https://en.wikipedia.org/wiki/HKDF) |
 | `encryption_pubkey` | [`CompressedPublicKey`](../api-reference/types/compressed-public-key.md) | Client's 33-byte compressed secp256k1 public key |
 | `encryption_private_key` | [`PrivateKey`](../api-reference/types/private-key.md) | Client's 32-byte secp256k1 private key |
 
@@ -170,9 +170,9 @@ print(f"Client pubkey: {encryption.encryption_pubkey.to_0x_hex()}")
 ### Manual Encryption Workflow
 
 ```python
+import os
 from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 from hexbytes import HexBytes
-import os
 
 # Get TEE public key from node
 tee_pk = CompressedPublicKey("0x02abcd...")
@@ -180,6 +180,9 @@ tee_pk = CompressedPublicKey("0x02abcd...")
 # Create encryption state
 client_sk = PrivateKey(os.urandom(32))
 encryption = get_encryption(tee_pk, client_sk)
+
+# Build transaction metadata (see TxSeismicMetadata docs)
+metadata = ...  # TxSeismicMetadata for the transaction being encrypted
 
 # Encrypt some data
 plaintext = HexBytes("0x1234abcd")
@@ -204,10 +207,10 @@ assert decrypted == plaintext
 ### Custom Encryption Key
 
 ```python
-from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 import os
+from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 
-# Use a deterministic key
+# Use a deterministic key (e.g., derived from mnemonic)
 client_sk = PrivateKey.from_hex_str(os.environ["CLIENT_KEY"])
 
 # Or use a random ephemeral key
@@ -288,13 +291,13 @@ If any metadata field changes, decryption will fail even with the correct key an
 - Pure computation - no I/O operations
 - Works in both sync and async contexts
 - Created automatically by [`create_wallet_client()`](create-wallet-client.md) and [`create_async_wallet_client()`](create-async-wallet-client.md)
-- You rarely need to call `encrypt()` or `decrypt()` directly - the SDK handles this
+- You rarely need to call [`encrypt()`](#encrypt) or [`decrypt()`](#decrypt) directly - the SDK handles this
 - The internal `_crypto` field is excluded from `repr()` and comparison
 - Authentication tag is always 16 bytes (AES-GCM standard)
 
 ## Security Considerations
 
-- **Key derivation** - AES key is derived from ECDH + HKDF, ensuring forward secrecy
+- **Key derivation** - [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key is derived from [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) + [HKDF](https://en.wikipedia.org/wiki/HKDF), ensuring forward secrecy
 - **AAD binding** - Metadata binding prevents ciphertext reuse or manipulation
 - **Nonce uniqueness** - Nonces must be unique per encryption; SDK generates fresh nonces automatically
 - **Key storage** - `encryption_private_key` should be stored securely if deterministic keys are used
