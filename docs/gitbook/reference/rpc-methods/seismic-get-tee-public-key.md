@@ -46,5 +46,5 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 ## Related
 
 * [Tx Lifecycle](/broken/pages/xCs9tpFaGc4bynMxW8zk) — how this key is used in transaction encryption
-* [Encryption (seismic-viem)](../../client-libraries/seismic-viem/encryption.md) — client-side key exchange
+* [Encryption (seismic-viem)](../../../clients/seismic-viem/encryption.md) — client-side key exchange
 * [ECDH Precompile](../precompiles.md#ecdh-0x65) — on-chain ECDH

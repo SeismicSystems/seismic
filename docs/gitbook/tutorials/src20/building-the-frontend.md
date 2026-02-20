@@ -294,7 +294,7 @@ function TokenDashboard() {
 ```
 
 {% hint style="info" %}
-In a production application, you should not hardcode private keys. Use a wallet provider (such as RainbowKit, Privy, or AppKit) to manage keys securely. See the [Wallet Guides](../../client-libraries/seismic-react/wallet-guides/) for integration details.
+In a production application, you should not hardcode private keys. Use a wallet provider (such as RainbowKit, Privy, or AppKit) to manage keys securely. See the [Wallet Guides](../../../clients/seismic-react/wallet-guides/) for integration details.
 {% endhint %}
 
 ## Next steps
@@ -303,7 +303,7 @@ You now have a complete SRC20 token: a private ERC20 with shielded balances, enc
 
 From here, you can:
 
-* **Explore the client library docs** -- The [Client Libraries section](../../client-libraries/clients.md) has detailed API references for `seismic-viem` and `seismic-react`, including all available hooks, wallet client methods, and precompile utilities.
-* **Add wallet integration** -- See the [Wallet Guides](../../client-libraries/seismic-react/wallet-guides/) for step-by-step instructions on integrating RainbowKit, Privy, or AppKit with `seismic-react`.
+* **Explore the client library docs** -- The [Client Libraries section](/broken/pages/nQsSEPZ1IbCEkrtaRNSq) has detailed API references for `seismic-viem` and `seismic-react`, including all available hooks, wallet client methods, and precompile utilities.
+* **Add wallet integration** -- See the [Wallet Guides](../../../clients/seismic-react/wallet-guides/) for step-by-step instructions on integrating RainbowKit, Privy, or AppKit with `seismic-react`.
 * **Deploy to testnet** -- The [Testnet page](../../../reference/networks/testnet.md) has network configuration and faucet information for deploying your SRC20 to a live Seismic network.
 * **Extend the contract** -- Consider adding features like shielded `saddress` for the recipient (hiding who receives tokens), burn functions, or governance mechanisms.
