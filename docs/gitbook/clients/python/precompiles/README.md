@@ -34,13 +34,13 @@ All functions have async variants: `async_rng`, `async_ecdh`, `async_aes_gcm_enc
 
 ***
 
-### Reference
+## Reference
 
 | Precompile | Address | Function | Returns |
 |---|---|---|---|
-| RNG | `0x64` | `rng(w3, num_bytes=, pers=)` | `int` |
-| ECDH | `0x65` | `ecdh(w3, sk=, pk=)` | `Bytes32` |
-| AES Encrypt | `0x66` | `aes_gcm_encrypt(w3, aes_key=, nonce=, plaintext=)` | `HexBytes` |
-| AES Decrypt | `0x67` | `aes_gcm_decrypt(w3, aes_key=, nonce=, ciphertext=)` | `HexBytes` |
-| HKDF | `0x68` | `hkdf(w3, ikm)` | `Bytes32` |
-| secp256k1 Sign | `0x69` | `secp256k1_sign(w3, sk=, message=)` | `HexBytes` |
+| RNG | `0x64` | [`rng(w3, num_bytes=, pers=)`](rng.md) | `int` |
+| ECDH | `0x65` | [`ecdh(w3, sk=, pk=)`](ecdh.md) | `Bytes32` |
+| AES Encrypt | `0x66` | [`aes_gcm_encrypt(w3, aes_key=, nonce=, plaintext=)`](aes-gcm-encrypt.md) | `HexBytes` |
+| AES Decrypt | `0x67` | [`aes_gcm_decrypt(w3, aes_key=, nonce=, ciphertext=)`](aes-gcm-decrypt.md) | `HexBytes` |
+| HKDF | `0x68` | [`hkdf(w3, ikm)`](hkdf.md) | `Bytes32` |
+| secp256k1 Sign | `0x69` | [`secp256k1_sign(w3, sk=, message=)`](secp256k1-sign.md) | `HexBytes` |
