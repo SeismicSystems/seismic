@@ -83,7 +83,7 @@ from seismic_web3.src20 import check_has_key, register_viewing_key
 from eth_account import Account
 import os
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Get your address

@@ -53,7 +53,7 @@ private_key = PrivateKey("0x1234567890abcdef" + "0" * 48)
 
 # From environment variable
 import os
-private_key = PrivateKey(os.environ["PRIVATE_KEY"])
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 ```
 
 ### Generate Random Private Key
@@ -69,9 +69,10 @@ private_key = PrivateKey(os.urandom(32))
 ### Use with Client
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey, SEISMIC_TESTNET
 
-private_key = PrivateKey(os.environ["PRIVATE_KEY"])
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 w3 = create_wallet_client(
     rpc_url="https://gcp-1.seismictest.net/rpc",
@@ -83,13 +84,14 @@ w3 = create_wallet_client(
 ### Use with EIP-712 Signing
 
 ```python
+import os
 from seismic_web3 import sign_seismic_tx_eip712, PrivateKey
 
 # Build unsigned transaction
 unsigned_tx = ...  # UnsignedSeismicTx
 
 # Sign with private key
-private_key = PrivateKey(os.environ["PRIVATE_KEY"])
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 signed_tx = sign_seismic_tx_eip712(unsigned_tx, private_key)
 ```
 
@@ -102,9 +104,43 @@ signed_tx = sign_seismic_tx_eip712(unsigned_tx, private_key)
 
 ## Methods
 
-Inherits all methods from [`Bytes32`](bytes32.md):
+### from\_hex\_str()
 
-- `to_0x_hex()` - Convert to hex string (use carefully!)
+Create a `PrivateKey` from a hex string, with or without a `0x` prefix.
+
+```python
+@staticmethod
+def from_hex_str(hex_string: str) -> PrivateKey:
+```
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `hex_string` | `str` | Yes | Hex-encoded private key, with or without `"0x"` prefix |
+
+#### Returns
+
+- `PrivateKey` — A new 32-byte private key instance
+
+#### Example
+
+```python
+import os
+from seismic_web3 import PrivateKey
+
+# From environment variable (handles 0x prefix automatically)
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
+
+# From a literal hex string
+pk = PrivateKey.from_hex_str("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+```
+
+***
+
+### to\_0x\_hex()
+
+Inherited from [`Bytes32`](bytes32.md). Returns the hex string representation with `"0x"` prefix. Use carefully with private keys.
 
 ## Properties
 
@@ -121,8 +157,9 @@ Inherits all methods from [`Bytes32`](bytes32.md):
 
 ## See Also
 
+- [hex\_to\_bytes](hex-to-bytes.md) - General-purpose hex string to bytes conversion
 - [Bytes32](bytes32.md) - Parent type
 - [CompressedPublicKey](compressed-public-key.md) - Corresponding public key type
-- [sign_seismic_tx_eip712](../eip712/sign-seismic-tx-eip712.md) - Sign transactions with private key
-- [create_wallet_client](../../client/create-wallet-client.md) - Create client with private key
+- [sign\_seismic\_tx\_eip712](../eip712/sign-seismic-tx-eip712.md) - Sign transactions with private key
+- [create\_wallet\_client](../../client/create-wallet-client.md) - Create client with private key
 - [EncryptionState](../../client/encryption-state.md) - Derives keys from private key

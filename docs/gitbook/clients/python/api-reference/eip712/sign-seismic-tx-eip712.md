@@ -58,7 +58,7 @@ unsigned_tx = UnsignedSeismicTx(
 )
 
 # Sign with private key
-private_key = PrivateKey(os.environ["PRIVATE_KEY"])
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 signed_tx = sign_seismic_tx_eip712(unsigned_tx, private_key)
 
 # Broadcast
@@ -69,6 +69,7 @@ print(f"Transaction hash: {tx_hash.to_0x_hex()}")
 ### From Debug Write
 
 ```python
+import os
 from seismic_web3 import sign_seismic_tx_eip712, PrivateKey
 
 # Get unsigned transaction from debug write
@@ -76,7 +77,7 @@ result = await contract.dwrite.transfer(recipient, 1000)
 unsigned_tx = result.shielded_tx
 
 # Sign manually (normally SDK does this)
-private_key = PrivateKey(os.environ["PRIVATE_KEY"])
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 signed_tx = sign_seismic_tx_eip712(unsigned_tx, private_key)
 
 # Broadcast manually

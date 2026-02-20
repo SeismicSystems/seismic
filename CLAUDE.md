@@ -15,6 +15,10 @@ This is seismic's monorepo, targeting Seismic developers and contributors. It co
 
 - **Always keep docs and source code in sync.** When changing a function signature, behavior, or API in source code (`clients/`), update the corresponding docs (`docs/gitbook/`). When changing docs, update the corresponding source code. Never change one without the other.
 
+## Merge Conflict Resolution
+
+- **Never blindly `git checkout --ours` or `--theirs` for an entire file.** That discards all non-conflicting changes from the other side. Instead, resolve each conflict hunk individually: pick the correct version for the conflicted lines while preserving all auto-merged content from both branches.
+
 ## Code Style
 
 - **No imports inside functions.** All imports must be at the top of the file. Never use deferred/lazy imports inside function or method bodies.
