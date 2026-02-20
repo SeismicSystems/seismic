@@ -9,7 +9,7 @@ Synchronous contract wrapper providing encrypted and transparent interaction wit
 
 ## Overview
 
-`ShieldedContract` is the primary sync interface for interacting with Seismic smart contracts. It provides five namespaces for different interaction modes: encrypted writes (`.write`), encrypted reads (`.read`), transparent writes (`.twrite`), transparent reads (`.tread`), and debug writes (`.dwrite`). Each namespace dynamically exposes contract methods based on the provided ABI.
+`ShieldedContract` is the primary sync interface for interacting with Seismic smart contracts. It provides five namespaces for different interaction modes: encrypted writes ([`.write`](namespaces/write.md)), encrypted reads ([`.read`](namespaces/read.md)), transparent writes ([`.twrite`](namespaces/twrite.md)), transparent reads ([`.tread`](namespaces/tread.md)), and debug writes ([`.dwrite`](namespaces/dwrite.md)). Each namespace dynamically exposes contract methods based on the provided ABI.
 
 ## Definition
 
@@ -54,9 +54,9 @@ Sends encrypted transactions using `TxSeismic` (type `0x4a`). Calldata is encryp
 
 ### `.read` - Encrypted Read
 
-Executes encrypted signed `eth_call` with encrypted calldata. Result is encrypted.
+Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypted by the SDK.
 
-**Returns**: `HexBytes | None` (encrypted result bytes)
+**Returns**: `HexBytes` (decrypted result bytes)
 
 **Optional Parameters**:
 - `value: int` - Wei for call context (default: `0`)

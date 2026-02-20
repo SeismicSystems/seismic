@@ -51,7 +51,7 @@ print(SANVIL.name)      # "Sanvil (local)"
 import os
 from seismic_web3 import SANVIL, PrivateKey
 
-pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SANVIL.wallet_client(pk)
 
 # Now use w3.seismic methods
@@ -64,7 +64,7 @@ balance = w3.eth.get_balance("0xYourAddress")
 import os
 from seismic_web3 import SANVIL, PrivateKey
 
-pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # HTTP
 w3 = await SANVIL.async_wallet_client(pk)
@@ -148,7 +148,7 @@ from seismic_web3 import SANVIL, PrivateKey
 @pytest.fixture
 def w3():
     """Fixture for local Sanvil client."""
-    pk = PrivateKey("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+    pk = PrivateKey.from_hex_str("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
     return SANVIL.wallet_client(pk)
 
 def test_shielded_write(w3):

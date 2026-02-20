@@ -47,7 +47,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
 # Load private key
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Create wallet client
 w3 = create_wallet_client(
@@ -67,7 +67,7 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Recommended: use chain config instead of raw URL
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
@@ -82,7 +82,7 @@ w3 = SEISMIC_TESTNET.wallet_client(private_key)
 import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
-signing_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+signing_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 encryption_key = PrivateKey(os.urandom(32))  # Custom encryption keypair
 
 w3 = create_wallet_client(
@@ -98,7 +98,7 @@ w3 = create_wallet_client(
 import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # All standard web3.py operations work

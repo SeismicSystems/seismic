@@ -15,7 +15,7 @@ Instead of manually passing RPC URLs and chain IDs when creating clients, you ca
 import os
 from seismic_web3 import SEISMIC_TESTNET, SANVIL, PrivateKey
 
-pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Connect to testnet
 w3 = SEISMIC_TESTNET.wallet_client(pk)
@@ -49,7 +49,7 @@ w3 = SANVIL.wallet_client(pk)
 import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Wallet client (requires private key)
 w3 = SEISMIC_TESTNET.wallet_client(pk)

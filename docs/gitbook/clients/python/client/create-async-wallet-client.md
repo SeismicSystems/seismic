@@ -49,7 +49,7 @@ import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
 # Load private key
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Create async wallet client
 w3 = await create_async_wallet_client(
@@ -69,7 +69,7 @@ receipt = await w3.eth.wait_for_transaction_receipt(tx_hash)
 import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # WebSocket provider for persistent connection
 w3 = await create_async_wallet_client(
@@ -89,7 +89,7 @@ async for block in w3.eth.subscribe("newHeads"):
 import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Recommended: use chain config with HTTP
 w3 = await SEISMIC_TESTNET.async_wallet_client(private_key)
@@ -104,7 +104,7 @@ w3 = await SEISMIC_TESTNET.async_wallet_client(private_key, ws=True)
 import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Use context manager to ensure cleanup
 async with create_async_wallet_client(
@@ -125,7 +125,7 @@ import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+    private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
     w3 = await create_async_wallet_client(
         "https://gcp-1.seismictest.net/rpc",
@@ -151,7 +151,7 @@ import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
 async def setup_client():
-    signing_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+    signing_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
     encryption_key = PrivateKey(os.urandom(32))  # Custom encryption keypair
 
     w3 = await create_async_wallet_client(

@@ -70,10 +70,10 @@ config = ChainConfig(
 from seismic_web3 import SEISMIC_TESTNET, SANVIL
 
 # Pre-configured testnet
-testnet = SEISMIC_TESTNET
+SEISMIC_TESTNET
 
 # Pre-configured local Sanvil
-sanvil = SANVIL
+SANVIL
 ```
 
 ## Methods
@@ -100,7 +100,7 @@ def wallet_client(
 
 #### Returns
 
-- `Web3` - A synchronous `Web3` instance with `w3.seismic` namespace attached
+- `Web3` - A synchronous `Web3` instance with [`w3.seismic`](../namespaces/seismic-namespace.md) namespace attached
 
 #### Example
 
@@ -108,11 +108,11 @@ def wallet_client(
 import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 # Now use w3.seismic methods
-balance = w3.eth.get_balance("0xYourAddress")
+balance = w3.eth.get_balance("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 ```
 
 ***
@@ -141,12 +141,13 @@ async def async_wallet_client(
 
 #### Returns
 
-- `AsyncWeb3` - An asynchronous `Web3` instance with `w3.seismic` namespace attached
+- `AsyncWeb3` - An asynchronous `Web3` instance with [`w3.seismic`](../namespaces/async-seismic-namespace.md) namespace attached
 
 #### Behavior
 
 - When `ws=True` and `ws_url` is set, the WebSocket URL is used automatically
-- When `ws=False` or `ws_url` is `None`, the HTTP `rpc_url` is used
+- When `ws=False`, the HTTP `rpc_url` is used
+- Raises `ValueError` if `ws=True` but `ws_url` is `None`
 
 #### Example
 
@@ -154,7 +155,7 @@ async def async_wallet_client(
 import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # HTTP
 w3 = await SEISMIC_TESTNET.async_wallet_client(pk)
@@ -163,7 +164,7 @@ w3 = await SEISMIC_TESTNET.async_wallet_client(pk)
 w3 = await SEISMIC_TESTNET.async_wallet_client(pk, ws=True)
 
 # Use async methods
-balance = await w3.eth.get_balance("0xYourAddress")
+balance = await w3.eth.get_balance("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 ```
 
 ***
@@ -178,11 +179,11 @@ def public_client(self) -> Web3:
 
 #### Parameters
 
-None. No private key required.
+None. (public clients don't handle private keys)
 
 #### Returns
 
-- `Web3` - A synchronous `Web3` instance with `w3.seismic` namespace attached (read-only)
+- `Web3` - A synchronous `Web3` instance with [`w3.seismic`](../namespaces/seismic-public-namespace.md) namespace attached (read-only)
 
 #### Example
 
@@ -218,7 +219,7 @@ def async_public_client(
 
 #### Returns
 
-- `AsyncWeb3` - An asynchronous `Web3` instance with `w3.seismic` namespace attached (read-only)
+- `AsyncWeb3` - An asynchronous `Web3` instance with [`w3.seismic`](../namespaces/async-seismic-public-namespace.md) namespace attached (read-only)
 
 #### Example
 
@@ -233,65 +234,6 @@ public = SEISMIC_TESTNET.async_public_client(ws=True)
 
 # Read-only operations
 block = await public.eth.get_block("latest")
-```
-
-## Properties
-
-- **Immutable** - Cannot be modified after construction (frozen dataclass)
-- **Type-Safe** - All attributes are type-checked at construction
-- **Self-Contained** - Includes all information needed to connect to the network
-
-## Examples
-
-### Custom Network Configuration
-
-```python
-from seismic_web3 import ChainConfig, PrivateKey
-
-# Create custom config
-my_network = ChainConfig(
-    chain_id=5124,
-    rpc_url="https://gcp-1.seismictest.net/rpc",
-    ws_url="wss://gcp-1.seismictest.net/ws",
-    name="Seismic Testnet",
-)
-
-# Use it
-pk = PrivateKey(...)
-w3 = my_network.wallet_client(pk)
-```
-
-### Multiple Environments
-
-```python
-from seismic_web3 import ChainConfig, SEISMIC_TESTNET, SANVIL
-
-# Different environments
-environments = {
-    "testnet": SEISMIC_TESTNET,
-    "local": SANVIL,
-    "staging": ChainConfig(
-        chain_id=5124,
-        rpc_url="https://gcp-1.seismictest.net/rpc",
-        name="Staging",
-    ),
-}
-
-# Select environment
-env = "testnet"
-w3 = environments[env].wallet_client(pk)
-```
-
-### Accessing Configuration
-
-```python
-from seismic_web3 import SEISMIC_TESTNET
-
-# Read configuration properties
-print(f"Chain ID: {SEISMIC_TESTNET.chain_id}")
-print(f"RPC URL: {SEISMIC_TESTNET.rpc_url}")
-print(f"WS URL: {SEISMIC_TESTNET.ws_url}")
-print(f"Name: {SEISMIC_TESTNET.name}")
 ```
 
 ## Deprecated Methods
@@ -323,10 +265,9 @@ w3 = await config.async_wallet_client(private_key)
 ## Notes
 
 - All client creation methods return standard `web3.py` instances
-- The `w3.seismic` namespace is automatically attached to all clients
+- The [`w3.seismic`](../namespaces/seismic-namespace.md) namespace is automatically attached to all clients
 - WebSocket connections provide better performance for subscription-based workflows
 - HTTP connections are suitable for simple request-response patterns
-- Chain ID is used internally for EIP-712 transaction signing
 
 ## See Also
 

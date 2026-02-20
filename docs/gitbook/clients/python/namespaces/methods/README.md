@@ -300,6 +300,10 @@ tx_hash = w3.seismic.deposit(
 - [debug_send_shielded_transaction()](debug-send-shielded-transaction.md) — Send with debug info
 - [signed_call()](signed-call.md) — Execute signed read
 
+### Utility Functions
+
+- [encode_shielded_calldata()](encode-shielded-calldata.md) — Encode calldata for shielded contract functions
+
 ### Deposit Methods
 
 - [deposit()](deposit.md) — Submit validator deposit

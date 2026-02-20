@@ -18,6 +18,7 @@ Primitive byte types used throughout the SDK.
 | [PrivateKey](types/private-key.md) | 32-byte secp256k1 private key |
 | [CompressedPublicKey](types/compressed-public-key.md) | 33-byte compressed secp256k1 public key |
 | [EncryptionNonce](types/encryption-nonce.md) | 12-byte AES-GCM encryption nonce |
+| [hex\_to\_bytes](types/hex-to-bytes.md) | Convert a hex string to raw bytes, stripping optional `0x` |
 
 ### [Transaction Types](transaction-types/)
 Dataclasses for building and signing Seismic transactions.
