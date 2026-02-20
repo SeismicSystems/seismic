@@ -134,7 +134,7 @@ No parameters are required. The node returns the TEE's current public key.
 When you create a wallet client with `create_wallet_client()`, the SDK:
 1. Calls `get_tee_public_key()` automatically
 2. Generates an ephemeral client keypair
-3. Derives a shared AES-GCM key via ECDH
+3. Derives a shared [AES-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode) key via [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman)
 4. Stores the encryption state in `w3.seismic.encryption`
 
 You don't need to call this method manually unless you're implementing custom encryption logic.
