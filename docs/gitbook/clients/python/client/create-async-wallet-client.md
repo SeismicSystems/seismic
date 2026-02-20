@@ -165,7 +165,7 @@ async def setup_client():
 
 ## How It Works
 
-The function performs four steps:
+The function performs six steps:
 
 1. **Create provider**
    ```python
@@ -185,12 +185,17 @@ The function performs four steps:
    network_pk = await async_get_tee_public_key(w3)
    ```
 
-4. **Derive encryption state** (ECDH + HKDF)
+4. **Generate encryption keypair** (if `encryption_sk` is `None`, a random ephemeral key is created)
+   ```python
+   encryption_sk = encryption_sk or PrivateKey(os.urandom(32))
+   ```
+
+5. **Derive encryption state** (ECDH + HKDF)
    ```python
    encryption = get_encryption(network_pk, encryption_sk)
    ```
 
-5. **Attach Seismic namespace**
+6. **Attach Seismic namespace**
    ```python
    w3.seismic = AsyncSeismicNamespace(w3, encryption, private_key)
    ```

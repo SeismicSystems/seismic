@@ -109,7 +109,7 @@ chain_id = w3.eth.chain_id
 
 ## How It Works
 
-The function performs four steps:
+The function performs five steps:
 
 1. **Create Web3 instance**
    ```python
@@ -121,12 +121,17 @@ The function performs four steps:
    network_pk = get_tee_public_key(w3)
    ```
 
-3. **Derive encryption state** (ECDH + HKDF)
+3. **Generate encryption keypair** (if `encryption_sk` is `None`, a random ephemeral key is created)
+   ```python
+   encryption_sk = encryption_sk or PrivateKey(os.urandom(32))
+   ```
+
+4. **Derive encryption state** (ECDH + HKDF)
    ```python
    encryption = get_encryption(network_pk, encryption_sk)
    ```
 
-4. **Attach Seismic namespace**
+5. **Attach Seismic namespace**
    ```python
    w3.seismic = SeismicNamespace(w3, encryption, private_key)
    ```
