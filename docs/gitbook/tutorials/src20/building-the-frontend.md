@@ -11,10 +11,10 @@ This chapter connects the SRC20 contract to a React frontend using `seismic-reac
 
 By the end of this chapter you will have a React application that can:
 
-* Connect a wallet through a `ShieldedWalletProvider`
-* Display the user's shielded balance (via signed reads)
-* Transfer tokens (via shielded writes)
-* Listen for Transfer events and decrypt the encrypted amounts
+- Connect a wallet through a `ShieldedWalletProvider`
+- Display the user's shielded balance (via signed reads)
+- Transfer tokens (via shielded writes)
+- Listen for Transfer events and decrypt the encrypted amounts
 
 The patterns here mirror standard wagmi usage. If you have built a dApp with wagmi before, the `seismic-react` equivalents will feel familiar.
 
@@ -303,7 +303,7 @@ You now have a complete SRC20 token: a private ERC20 with shielded balances, enc
 
 From here, you can:
 
-* **Explore the client library docs** -- The [Client Libraries section](/broken/pages/nQsSEPZ1IbCEkrtaRNSq) has detailed API references for `seismic-viem` and `seismic-react`, including all available hooks, wallet client methods, and precompile utilities.
-* **Add wallet integration** -- See the [Wallet Guides](../../../clients/seismic-react/wallet-guides/) for step-by-step instructions on integrating RainbowKit, Privy, or AppKit with `seismic-react`.
-* **Deploy to testnet** -- The [Testnet page](../../../reference/networks/testnet.md) has network configuration and faucet information for deploying your SRC20 to a live Seismic network.
-* **Extend the contract** -- Consider adding features like shielded `saddress` for the recipient (hiding who receives tokens), burn functions, or governance mechanisms.
+- **Explore the client library docs** -- The [Client Libraries section](/broken/pages/nQsSEPZ1IbCEkrtaRNSq) has detailed API references for `seismic-viem` and `seismic-react`, including all available hooks, wallet client methods, and precompile utilities.
+- **Add wallet integration** -- See the [Wallet Guides](../../../clients/seismic-react/wallet-guides/) for step-by-step instructions on integrating RainbowKit, Privy, or AppKit with `seismic-react`.
+- **Deploy to testnet** -- The [Networks page](../../../reference/networks.md) has network configuration and faucet information for deploying your SRC20 to a live Seismic network.
+- **Extend the contract** -- Consider adding features like shielded `saddress` for the recipient (hiding who receives tokens), burn functions, or governance mechanisms.

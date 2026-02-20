@@ -11,7 +11,7 @@ If you have an existing Ethereum contract, migrating to Seismic is straightforwa
 
 This guide walks through each step, from installing the Seismic toolchain to deploying on the network.
 
-***
+---
 
 ## Step 1: Install Seismic tools
 
@@ -37,7 +37,7 @@ sfoundryup
 source ~/.zshenv  # or ~/.bashrc
 ```
 
-***
+---
 
 ## Step 2: Decide what to shield
 
@@ -45,21 +45,21 @@ Not everything needs to be private. Shielding adds complexity to client interact
 
 **Good candidates for shielding:**
 
-* User balances
-* Transaction amounts
-* Positions (in games, orderbooks, etc.)
-* Votes and ballot choices
-* Personal data (addresses, identifiers)
+- User balances
+- Transaction amounts
+- Positions (in games, orderbooks, etc.)
+- Votes and ballot choices
+- Personal data (addresses, identifiers)
 
 **Usually fine to leave public:**
 
-* Total supply / aggregate counters
-* Contract metadata (name, symbol, decimals)
-* Immutable configuration
-* Admin addresses
-* Timestamps and block-related data
+- Total supply / aggregate counters
+- Contract metadata (name, symbol, decimals)
+- Immutable configuration
+- Admin addresses
+- Timestamps and block-related data
 
-***
+---
 
 ## Step 3: Update types
 
@@ -91,7 +91,7 @@ The compiler handles the rest. Shielded types compile to `CLOAD`/`CSTORE` instea
 
 For details on each shielded type, see [Shielded Types](../../seismic-solidity/seismic-solidity/shielded-types.md).
 
-***
+---
 
 ## Step 4: Handle public getters
 
@@ -122,7 +122,7 @@ function getBalance(address account) external view returns (suint256) {
 Callers must use a **signed read** to call getter functions that check `msg.sender`. A standard `eth_call` zeros out the `from` field on Seismic, so `msg.sender` would be `address(0)`. Client libraries like `seismic-viem` handle signed reads automatically. See [Signed Reads](/broken/pages/Iy1iEnGF6LoJvAy1G6ix) for details.
 {% endhint %}
 
-***
+---
 
 ## Step 5: Update events
 
@@ -153,7 +153,7 @@ function transfer(address to, suint256 amount) external {
 
 For a complete walkthrough of the encrypted events pattern, see [Events](../../seismic-solidity/seismic-solidity/events.md).
 
-***
+---
 
 ## Step 6: Update client code
 
@@ -168,13 +168,13 @@ Replace your Ethereum client libraries with their Seismic equivalents:
 
 Key changes in client code:
 
-* Use **shielded wallet clients** instead of standard wallet clients. These handle Seismic transaction construction (type `0x4A`) and calldata encryption automatically.
-* Use **signed reads** instead of plain `eth_call` when reading shielded data that checks `msg.sender`.
-* Listen for encrypted events and decrypt them client-side using the shared secret derived from ECDH.
+- Use **shielded wallet clients** instead of standard wallet clients. These handle Seismic transaction construction (type `0x4A`) and calldata encryption automatically.
+- Use **signed reads** instead of plain `eth_call` when reading shielded data that checks `msg.sender`.
+- Listen for encrypted events and decrypt them client-side using the shared secret derived from ECDH.
 
 For library-specific guides, see [Client Libraries](/broken/pages/nQsSEPZ1IbCEkrtaRNSq).
 
-***
+---
 
 ## Step 7: Test
 
@@ -192,7 +192,7 @@ sanvil
 
 All standard Foundry testing patterns (fuzz testing, forking, cheatcodes) work with the Seismic tools.
 
-***
+---
 
 ## Step 8: Deploy
 
@@ -215,9 +215,9 @@ sforge script script/Deploy.s.sol \
     --broadcast
 ```
 
-For network details (RPC URLs, chain IDs, faucets), see [Devnet](devnet.md) and [Testnet](../../reference/networks/testnet.md).
+For network details (RPC URLs, chain IDs, faucets), see [Devnet](devnet.md) and [Networks](../../reference/networks.md).
 
-***
+---
 
 ## Common pitfalls
 
