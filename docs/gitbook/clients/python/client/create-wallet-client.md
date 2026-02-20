@@ -164,7 +164,7 @@ The returned client provides:
 ## Encryption
 
 The client automatically:
-- Fetches the node's TEE public key
+- Fetches the network's TEE public key
 - Performs ECDH key exchange using `encryption_sk` (or generates a random one)
 - Derives a shared AES-GCM key via HKDF
 - Uses this key to encrypt all shielded transaction calldata and signed reads

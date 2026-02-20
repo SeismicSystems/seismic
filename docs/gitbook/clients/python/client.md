@@ -109,6 +109,6 @@ public = await create_async_public_client("http://127.0.0.1:8545")
 
 ### Encryption
 
-The wallet client automatically handles encryption setup. On creation, it fetches the node's TEE public key and derives a shared AES-GCM key via ECDH. This key is used to encrypt calldata for every shielded transaction and signed read.
+The wallet client automatically handles encryption setup. On creation, it fetches the network's TEE public key and derives a shared AES-GCM key via ECDH. This key is used to encrypt calldata for every shielded transaction and signed read.
 
 You don't need to manage this yourself — but the encryption state is accessible at `w3.seismic.encryption` if you need it.

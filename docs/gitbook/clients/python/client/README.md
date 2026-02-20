@@ -104,7 +104,7 @@ See [Chains Configuration](../chains/) for more details.
 
 The wallet client automatically handles encryption setup:
 
-1. Fetches the node's TEE public key
+1. Fetches the network's TEE public key
 2. Derives a shared AES-GCM key via ECDH
 3. Uses this key to encrypt calldata for all shielded transactions and signed reads
 
