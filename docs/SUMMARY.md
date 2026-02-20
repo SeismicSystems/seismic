@@ -1,9 +1,6 @@
 # Table of contents
 
-* [Architecture](README.md)
-* [Claude Code Setup](claude-code-setup.md)
-* [Seismic Concepts Glossary](glossary.md)
-* [Confidential Storage Extension for the Ethereum Virtual Machine (EVM)](language-and-vm.md)
+* [Claude Code Setup](README.md)
 * [Welcome to Seismic!](gitbook/README.md)
   * [client-libraries](gitbook/client-libraries/README.md)
     * [Clients](gitbook/client-libraries/clients.md)
@@ -39,6 +36,10 @@
 * [Use Cases](gitbook/overview/use-cases.md)
 * [The Seismic Transaction](gitbook/reference/seismic-transaction.md)
 * [Precompiled Contracts](gitbook/reference/precompiles.md)
+
+## Clients
+
+* [Overview](clients/overview.md)
 
 ## Getting Started
 
@@ -88,6 +89,7 @@
 ## reference
 
 * [How Seismic Works](gitbook/overview/how-seismic-works.md)
+* [Confidential Storage Extension for the Ethereum Virtual Machine (EVM)](reference/language-and-vm.md)
 * [RPC Methods](gitbook/reference/rpc-methods/README.md)
   * [rpc-overview](gitbook/reference/rpc-methods/rpc-overview.md)
   * [eth\_call](gitbook/reference/rpc-methods/eth-call.md)
@@ -96,7 +98,6 @@
   * [seismic\_getTeePublicKey](gitbook/reference/rpc-methods/seismic-get-tee-public-key.md)
 * [EVM Instructions](gitbook/reference/opcodes.md)
 * [Migrating from Ethereum](gitbook/networks/migrating-from-ethereum.md)
-* [Architecture](gitbook/reference/architecture.md)
 * [networks](reference/networks/README.md)
   * [Deploy tools](reference/networks/deploy-tools.md)
   * [Mainnet](reference/networks/mainnet.md)
