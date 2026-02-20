@@ -147,6 +147,25 @@ def _function_selector(abi_function: dict[str, Any]) -> bytes:
     return keccak(sig.encode())[:4]
 
 
+def _find_function(abi: list[dict[str, Any]], function_name: str) -> dict[str, Any]:
+    """Find a function entry in the ABI by name.
+
+    Args:
+        abi: The full contract ABI (list of entries).
+        function_name: Name of the function to find.
+
+    Returns:
+        The matching ABI function entry dict.
+
+    Raises:
+        ValueError: If the function is not found in the ABI.
+    """
+    for entry in abi:
+        if entry.get("type") == "function" and entry.get("name") == function_name:
+            return entry
+    raise ValueError(f"Function '{function_name}' not found in ABI")
+
+
 def encode_shielded_calldata(
     abi: list[dict[str, Any]],
     function_name: str,
@@ -169,15 +188,7 @@ def encode_shielded_calldata(
     Raises:
         ValueError: If the function is not found in the ABI.
     """
-    # Find the function in the ABI
-    fn_entry = None
-    for entry in abi:
-        if entry.get("type") == "function" and entry.get("name") == function_name:
-            fn_entry = entry
-            break
-
-    if fn_entry is None:
-        raise ValueError(f"Function '{function_name}' not found in ABI")
+    fn_entry = _find_function(abi, function_name)
 
     # Selector from ORIGINAL types
     selector = _function_selector(fn_entry)
@@ -220,16 +231,7 @@ def decode_abi_output(
     Raises:
         ValueError: If the function is not found in the ABI.
     """
-    # Find the function in the ABI
-    fn_entry = None
-    for entry in abi:
-        if entry.get("type") == "function" and entry.get("name") == function_name:
-            fn_entry = entry
-            break
-
-    if fn_entry is None:
-        raise ValueError(f"Function '{function_name}' not found in ABI")
-
+    fn_entry = _find_function(abi, function_name)
     outputs = fn_entry.get("outputs", [])
 
     if not outputs:
