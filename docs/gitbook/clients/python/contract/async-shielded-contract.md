@@ -168,9 +168,9 @@ async def debug_example(contract: AsyncShieldedContract, w3: AsyncWeb3):
 async def concurrent_example(contract: AsyncShieldedContract):
     # Execute multiple reads concurrently — each is auto-decoded
     balances = await asyncio.gather(
-        contract.tread.getBalance("0xAddress1..."),
-        contract.tread.getBalance("0xAddress2..."),
-        contract.tread.getBalance("0xAddress3..."),
+        contract.tread.balanceOf("0xAddress1..."),
+        contract.tread.balanceOf("0xAddress2..."),
+        contract.tread.balanceOf("0xAddress3..."),
     )
 
     for i, balance in enumerate(balances):

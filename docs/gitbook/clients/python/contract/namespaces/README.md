@@ -86,7 +86,7 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
 ```python
 # Encrypted read that proves your identity — auto-decoded
-balance = contract.read.getBalance()  # int
+balance = contract.read.balanceOf()  # int
 ```
 
 **When to use**:
@@ -358,7 +358,7 @@ tx_hash = contract.twrite.transfer(
 
 `.read` accepts call options:
 ```python
-result = contract.read.getBalance(
+result = contract.read.balanceOf(
     value=0,           # ETH for simulation
     gas=30_000_000,    # Gas limit
     security=params,   # Security params
@@ -381,7 +381,7 @@ contract = w3.seismic.contract(address="0x...", abi=ABI)
 
 # All namespaces require await
 tx_hash = await contract.write.transfer(recipient, amount)
-result = await contract.read.getBalance()
+result = await contract.read.balanceOf()
 tx_hash = await contract.twrite.approve(spender, amount)
 result = await contract.tread.totalSupply()
 debug = await contract.dwrite.transfer(recipient, amount)
@@ -415,7 +415,7 @@ except TimeExhausted:
 
 ```python
 try:
-    balance = contract.read.getBalance()
+    balance = contract.read.balanceOf()
     print(f"Balance: {balance}")
 
 except ValueError as e:
@@ -425,13 +425,6 @@ except ValueError as e:
 ***
 
 ## Best Practices
-
-### Development Workflow
-
-1. **Start with `.dwrite`** — Verify calldata encoding
-2. **Test with small amounts** — Use `.write` with minimal value
-3. **Verify in production** — Switch to `.write` for production
-4. **Use `.tread` for public data** — No need for signed reads
 
 ### Privacy Guidelines
 

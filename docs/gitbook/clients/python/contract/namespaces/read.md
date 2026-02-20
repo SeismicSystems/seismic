@@ -49,7 +49,7 @@ Pass function arguments as positional parameters:
 
 ```python
 # No arguments
-result = contract.read.getBalance()
+result = contract.read.balanceOf()
 
 # Single argument
 result = contract.read.getTokenBalance(token_address)
@@ -84,7 +84,7 @@ w3 = create_wallet_client(...)
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
 # Results are automatically decoded
-balance = contract.read.getBalance()  # int
+balance = contract.read.balanceOf()  # int
 print(f"Balance: {balance}")
 
 is_active = contract.read.isActive()  # bool
@@ -101,7 +101,7 @@ w3 = await create_async_wallet_client(...)
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
 # Results are automatically decoded
-balance = await contract.read.getBalance()
+balance = await contract.read.balanceOf()
 print(f"Balance: {balance}")
 ```
 
@@ -134,7 +134,7 @@ from seismic_web3 import SeismicSecurityParams
 # Use longer expiry window
 security = SeismicSecurityParams(blocks_window=200)
 
-result = contract.read.getBalance(security=security)
+result = contract.read.balanceOf(security=security)
 ```
 
 ### Simulating Value Transfer
@@ -159,7 +159,7 @@ Returns the **ABI-decoded Python value**:
 
 ```python
 # Single return value — unwrapped from tuple
-balance = contract.read.getBalance()       # int
+balance = contract.read.balanceOf()       # int
 is_odd = contract.read.isOdd()             # bool
 name = contract.read.getName()             # str
 
@@ -275,7 +275,7 @@ Signed reads **require your private key** to sign the call. Never expose your pr
 
 ```python
 try:
-    balance = contract.read.getBalance()
+    balance = contract.read.balanceOf()
     print(f"Balance: {balance}")
 
 except ValueError as e:
@@ -335,7 +335,7 @@ import asyncio
 
 # Read multiple values concurrently — each is auto-decoded
 balance, name, status = await asyncio.gather(
-    contract.read.getBalance(),
+    contract.read.balanceOf(),
     contract.read.getName(),
     contract.read.getStatus(),
 )
@@ -348,7 +348,7 @@ import asyncio
 
 try:
     result = await asyncio.wait_for(
-        contract.read.getBalance(),
+        contract.read.balanceOf(),
         timeout=10.0,  # 10 seconds
     )
 except asyncio.TimeoutError:
