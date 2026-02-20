@@ -220,7 +220,7 @@ No TEE public key fetching or encryption setup is performed since the client can
 
 ## Client Capabilities
 
-### Standard AsyncWeb3 Methods (`w3.eth`)
+### Standard AsyncWeb3 Methods (e.g. `w3.eth`, `w3.net`)
 - `await get_block()`, `await get_transaction()`, `await get_balance()`
 - `await call()`, `await estimate_gas()`
 - All other standard read-only async `web3.py` functionality
