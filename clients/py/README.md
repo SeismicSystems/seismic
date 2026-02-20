@@ -19,7 +19,7 @@ The SDK provides two client types:
 import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # Wallet client — full capabilities (requires private key)
 w3 = SEISMIC_TESTNET.wallet_client(pk)

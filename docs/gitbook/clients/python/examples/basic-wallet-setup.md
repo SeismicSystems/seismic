@@ -26,7 +26,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey, SEISMIC_TESTNET
 
 # Load private key from environment
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # Method 1: Using chain config (recommended)
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
@@ -63,7 +63,7 @@ from seismic_web3 import create_async_wallet_client, PrivateKey, SEISMIC_TESTNET
 
 async def main():
     # Load private key
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
     # Method 1: Using chain config with HTTP
     w3 = await SEISMIC_TESTNET.async_wallet_client(private_key)
@@ -108,8 +108,8 @@ By default, a random ephemeral encryption key is generated. You can provide a de
 import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
-signing_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
-encryption_key = PrivateKey(bytes.fromhex(os.environ["ENCRYPTION_KEY"]))
+signing_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
+encryption_key = PrivateKey(bytes.fromhex(os.environ["ENCRYPTION_KEY"].removeprefix("0x")))
 
 w3 = create_wallet_client(
     "https://gcp-1.seismictest.net/rpc",
@@ -151,7 +151,7 @@ def create_client_with_retry(rpc_url: str, private_key: PrivateKey, max_retries:
 
 
 # Usage
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_client_with_retry("https://gcp-1.seismictest.net/rpc", private_key)
 ```
 
@@ -172,7 +172,7 @@ Balance: 100.0 ETH
 ```python
 from seismic_web3 import SANVIL, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = SANVIL.wallet_client(private_key)
 ```
 
@@ -181,8 +181,8 @@ w3 = SANVIL.wallet_client(private_key)
 ```python
 from seismic_web3 import create_wallet_client, PrivateKey
 
-pk1 = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY_1"]))
-pk2 = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY_2"]))
+pk1 = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY_1"].removeprefix("0x")))
+pk2 = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY_2"].removeprefix("0x")))
 
 # Create separate clients for each account
 w3_account1 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=pk1)
@@ -224,7 +224,7 @@ def verify_client_ready(w3):
         return False
 
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 verify_client_ready(w3)
 ```

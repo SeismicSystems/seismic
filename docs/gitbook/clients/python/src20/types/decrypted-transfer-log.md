@@ -64,7 +64,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import watch_src20_events, DecryptedTransferLog
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 def on_transfer(log: DecryptedTransferLog):
@@ -195,7 +195,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import DecryptedTransferLog
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 def on_transfer(log: DecryptedTransferLog):

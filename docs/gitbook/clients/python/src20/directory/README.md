@@ -24,7 +24,7 @@ from seismic_web3 import create_wallet_client, PrivateKey, Bytes32
 from seismic_web3.src20 import register_viewing_key
 import os
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 viewing_key = Bytes32(os.urandom(32))
@@ -46,7 +46,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import get_viewing_key
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 viewing_key = get_viewing_key(
@@ -134,7 +134,7 @@ from seismic_web3.src20 import check_has_key, register_viewing_key
 from eth_account import Account
 import os
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 address = Account.from_key(private_key).address
@@ -160,7 +160,7 @@ from seismic_web3 import create_wallet_client, PrivateKey, Bytes32
 from seismic_web3.src20 import get_viewing_key, register_viewing_key
 import os
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Get old key
@@ -195,7 +195,7 @@ import asyncio
 import os
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
     w3 = await create_async_wallet_client(
         "wss://gcp-1.seismictest.net/ws",
         private_key=private_key,

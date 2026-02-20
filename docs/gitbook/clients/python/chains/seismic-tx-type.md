@@ -43,7 +43,7 @@ The SDK handles transaction type internally. You typically don't need to referen
 import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 # The SDK automatically sets the transaction type

@@ -56,7 +56,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import get_viewing_key
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Fetch your viewing key
@@ -76,7 +76,7 @@ from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import get_viewing_key, register_viewing_key
 import os
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 try:
@@ -106,7 +106,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import get_viewing_key, watch_src20_events_with_key
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Fetch viewing key once
@@ -133,7 +133,7 @@ from seismic_web3.src20 import async_get_viewing_key
 import asyncio
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
     w3 = await create_async_wallet_client(
         "wss://gcp-1.seismictest.net/ws",
         private_key=private_key,
@@ -159,7 +159,7 @@ from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import get_viewing_key
 import json
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Fetch and cache the key
@@ -184,7 +184,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey, Bytes32
 from seismic_web3.src20 import get_viewing_key
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Fetch from chain
@@ -195,7 +195,7 @@ onchain_key = get_viewing_key(
 )
 
 # Compare with locally stored key
-local_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
+local_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"].removeprefix("0x")))
 
 if onchain_key == local_key:
     print("Keys match!")
@@ -210,7 +210,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import get_viewing_key
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Fetch viewing key

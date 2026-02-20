@@ -61,7 +61,7 @@ The returned `ChainConfig` has:
 import os
 from seismic_web3 import make_seismic_testnet, PrivateKey
 
-pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # GCP-1 (same as SEISMIC_TESTNET)
 testnet_1 = make_seismic_testnet(1)
@@ -94,7 +94,7 @@ print(testnet.name)     # "Seismic Testnet (GCP-1)"
 import os
 from seismic_web3 import make_seismic_testnet, PrivateKey
 
-pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # Test against multiple instances
 instances = [1, 2, 3]
