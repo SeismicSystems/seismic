@@ -28,7 +28,7 @@ def create_wallet_client(
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `rpc_url` | `str` | Yes | HTTP(S) URL of the Seismic node (e.g., `"https://rpc.seismic.network"`) |
+| `rpc_url` | `str` | Yes | HTTP(S) URL of the Seismic node (e.g., `"https://rpc.seismic.network"`). WebSocket URLs are not supported — see note below |
 | `private_key` | [`PrivateKey`](../api-reference/types/private-key.md) | Yes | 32-byte secp256k1 private key for signing transactions |
 | `encryption_sk` | [`PrivateKey`](../api-reference/types/private-key.md) | No | Optional 32-byte key for ECDH. If `None`, a random ephemeral key is generated |
 
@@ -173,6 +173,7 @@ Access the encryption state at `w3.seismic.encryption` if needed for advanced us
 
 ## Notes
 
+- **HTTP only** — Sync clients use `Web3` with `HTTPProvider`, which does not support WebSocket connections. This is a limitation of the underlying `web3.py` library (`WebSocketProvider` is async-only). If you need WebSocket support (persistent connections, subscriptions), use [`create_async_wallet_client()`](create-async-wallet-client.md) with `ws=True`
 - The function makes one synchronous RPC call to fetch the TEE public key
 - If `encryption_sk` is `None`, a random ephemeral key is generated
 - The encryption key is separate from the transaction signing key

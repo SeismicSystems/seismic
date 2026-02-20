@@ -28,7 +28,7 @@ async def create_async_public_client(
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `provider_url` | `str` | Yes | HTTP(S) or WS(S) URL of the Seismic node |
-| `ws` | `bool` | No | If `True`, uses `WebSocketProvider` (persistent connection, supports subscriptions). Otherwise uses `AsyncHTTPProvider`. Default: `False` |
+| `ws` | `bool` | No | If `True`, uses `WebSocketProvider` (persistent connection, supports subscriptions). Otherwise uses `AsyncHTTPProvider`. Default: `False`. WebSocket is only available on async clients — sync clients are HTTP-only |
 
 ## Returns
 
