@@ -9,25 +9,25 @@ Complete, runnable code examples demonstrating common Seismic Python SDK pattern
 
 ## Available Examples
 
-### Basic Setup
-- **Wallet Setup** - Setting up sync and async wallet clients
-- **Public Client** - Setting up read-only public clients
-- **Chain Configuration** - Using built-in chain configs
+### Getting Started
 
-### Transaction Patterns
-- **Shielded Write** - Complete shielded transaction workflow
-- **Signed Read** - Executing signed reads with encryption
-- **Debug Mode** - Using debug writes for development
+| Example | Description |
+|---------|-------------|
+| [Basic Wallet Setup](basic-wallet-setup.md) | Complete wallet client setup with both sync and async variants, environment configuration, and connection verification |
 
-### Token Operations
-- **SRC20 Workflow** - Complete SRC20 token interaction
-- **Event Watching** - Monitoring SRC20 events
-- **Viewing Keys** - Managing viewing keys with directory
+### Core Workflows
+
+| Example | Description |
+|---------|-------------|
+| [Shielded Write Complete](shielded-write-complete.md) | Full shielded write workflow from setup to confirmation, including custom security parameters and error handling |
+| [Signed Read Pattern](signed-read-pattern.md) | Complete signed read pattern with result decoding, demonstrating identity-proving reads and type conversion |
+| [SRC20 Workflow](src20-workflow.md) | Full SRC20 token workflow including metadata, balances, transfers, approvals, minting, and event watching |
 
 ### Advanced Patterns
-- **Async Patterns** - Async client best practices
-- **Error Handling** - Comprehensive error handling
-- **Batch Operations** - Efficiently batching multiple operations
+
+| Example | Description |
+|---------|-------------|
+| [Async Patterns](async-patterns.md) | Best practices for async usage including concurrent operations, error handling, connection pooling, rate limiting, and WebSocket events |
 
 ## Example Template
 
