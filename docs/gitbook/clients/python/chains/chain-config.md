@@ -59,7 +59,7 @@ config = ChainConfig(
 ```python
 config = ChainConfig(
     chain_id=1234,
-    rpc_url="https://my-node.example.com/rpc",
+    rpc_url="https://gcp-1.seismictest.net/rpc",
     name="My Custom Network",
 )
 ```
@@ -249,8 +249,8 @@ from seismic_web3 import ChainConfig, PrivateKey
 # Create custom config
 my_network = ChainConfig(
     chain_id=1234,
-    rpc_url="https://node.example.com/rpc",
-    ws_url="wss://node.example.com/ws",
+    rpc_url="https://gcp-1.seismictest.net/rpc",
+    ws_url="wss://gcp-1.seismictest.net/ws",
     name="My Seismic Network",
 )
 

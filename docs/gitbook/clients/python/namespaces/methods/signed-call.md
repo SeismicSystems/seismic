@@ -118,7 +118,7 @@ from hexbytes import HexBytes
 
 # Create wallet client
 w3 = create_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(b"...32 bytes..."),
 )
 
@@ -144,7 +144,7 @@ from hexbytes import HexBytes
 
 # Create async wallet client
 w3 = await create_async_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(b"...32 bytes..."),
 )
 

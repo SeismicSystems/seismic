@@ -74,7 +74,7 @@ from seismic_web3 import create_wallet_client, PrivateKey, SEISMIC_TESTNET
 private_key = PrivateKey(os.environ["PRIVATE_KEY"])
 
 w3 = create_wallet_client(
-    rpc_url="https://rpc.example.com",
+    rpc_url="https://gcp-1.seismictest.net/rpc",
     chain=SEISMIC_TESTNET,
     account=private_key,
 )

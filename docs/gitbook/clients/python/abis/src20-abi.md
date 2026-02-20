@@ -188,7 +188,7 @@ from seismic_web3 import create_wallet_client, SRC20_ABI
 
 # Create client
 w3 = create_wallet_client(
-    rpc_url="https://sepolia.seismic.foundation",
+    rpc_url="https://gcp-1.seismictest.net/rpc",
     private_key="0x...",
 )
 

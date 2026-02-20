@@ -99,7 +99,7 @@ from seismic_web3 import create_async_wallet_client, AsyncShieldedContract, SEIS
 
 async def main():
     w3 = await create_async_wallet_client(
-        rpc_url="https://testnet-rpc.seismic.network",
+        rpc_url="https://gcp-1.seismictest.net/rpc",
         chain=SEISMIC_TESTNET,
         account=private_key,
     )
@@ -246,7 +246,7 @@ async def eip712_example():
 async def client_pattern():
     # Most common pattern - let the client create the contract
     w3 = await create_async_wallet_client(
-        rpc_url="https://testnet-rpc.seismic.network",
+        rpc_url="https://gcp-1.seismictest.net/rpc",
         chain=SEISMIC_TESTNET,
         account=private_key,
     )

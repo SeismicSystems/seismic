@@ -73,7 +73,7 @@ from seismic_web3 import get_encryption, get_tee_public_key, PrivateKey
 from web3 import Web3
 
 # This is what create_wallet_client() does internally
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Step 1: Fetch TEE public key
 network_pk = get_tee_public_key(w3)

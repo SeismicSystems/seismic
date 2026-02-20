@@ -25,7 +25,7 @@ from seismic_web3.src20 import register_viewing_key
 import os
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 viewing_key = Bytes32(os.urandom(32))
 tx_hash = register_viewing_key(
@@ -46,7 +46,7 @@ from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import get_viewing_key
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 viewing_key = get_viewing_key(
     w3,
@@ -63,7 +63,7 @@ print(f"Your key: {viewing_key.hex()}")
 from web3 import Web3
 from seismic_web3.src20 import check_has_key
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 
 if check_has_key(w3, address):
@@ -134,7 +134,7 @@ from eth_account import Account
 import os
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 address = Account.from_key(private_key).address
 
@@ -160,7 +160,7 @@ from seismic_web3.src20 import get_viewing_key, register_viewing_key
 import os
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Get old key
 old_key = get_viewing_key(
@@ -196,7 +196,7 @@ import os
 async def main():
     private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
     w3 = await create_async_wallet_client(
-        "wss://rpc.seismic.network",
+        "wss://gcp-1.seismictest.net/ws",
         private_key=private_key,
     )
 

@@ -51,7 +51,7 @@ async def async_rng(
 from seismic_web3.precompiles import rng
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Generate 32 random bytes
 random_value = rng(w3, num_bytes=32)
@@ -64,7 +64,7 @@ print(f"Random: {random_value}")
 from seismic_web3.precompiles import rng
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Generate random bytes with personalization string
 random_value = rng(w3, num_bytes=16, pers=b"my-app-seed")
@@ -78,7 +78,7 @@ from seismic_web3.precompiles import async_rng
 from web3 import AsyncWeb3
 
 async def main():
-    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://sepolia.seismic.foundation"))
+    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
     # Generate random bytes asynchronously
     random_value = await async_rng(w3, num_bytes=32)
@@ -93,7 +93,7 @@ async def main():
 from seismic_web3.precompiles import rng
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Generate multiple random values
 randoms = [rng(w3, num_bytes=32) for _ in range(5)]
@@ -107,7 +107,7 @@ for i, val in enumerate(randoms):
 from seismic_web3.precompiles import rng
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Generate random value and convert back to bytes
 random_int = rng(w3, num_bytes=32)

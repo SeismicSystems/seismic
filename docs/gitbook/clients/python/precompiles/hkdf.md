@@ -46,7 +46,7 @@ async def async_hkdf(
 from seismic_web3.precompiles import hkdf
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Derive key from input material
 ikm = b"my-input-key-material"
@@ -60,7 +60,7 @@ print(f"Derived key: {derived_key.to_0x_hex()}")
 from seismic_web3.precompiles import hkdf
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Derive key from password (not recommended for real password hashing)
 password = b"user-password-123"
@@ -75,7 +75,7 @@ from seismic_web3.precompiles import async_hkdf
 from web3 import AsyncWeb3
 
 async def main():
-    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://sepolia.seismic.foundation"))
+    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
     ikm = b"input-key-material"
     derived_key = await async_hkdf(w3, ikm)
@@ -90,7 +90,7 @@ async def main():
 from seismic_web3.precompiles import hkdf
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Derive different keys by varying input
 base_ikm = b"shared-secret"
@@ -108,7 +108,7 @@ for ctx in contexts:
 from seismic_web3.precompiles import hkdf, aes_gcm_encrypt
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Derive AES key from input material
 ikm = b"my-master-secret"
@@ -127,7 +127,7 @@ from seismic_web3.precompiles import ecdh, hkdf
 from seismic_web3 import PrivateKey, CompressedPublicKey
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # First perform ECDH
 my_sk = PrivateKey.from_hex("0x1234...")
@@ -146,7 +146,7 @@ print(f"Derived key: {derived_key.to_0x_hex()}")
 from seismic_web3.precompiles import hkdf
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Same input always produces same output
 ikm = b"deterministic-input"
@@ -163,7 +163,7 @@ print(f"Deterministic key: {key1.to_0x_hex()}")
 from seismic_web3.precompiles import hkdf
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # HKDF accepts arbitrary-length input
 inputs = [
@@ -183,7 +183,7 @@ for ikm in inputs:
 from seismic_web3.precompiles import hkdf
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 master_secret = b"shared-master-key"
 

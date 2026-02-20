@@ -34,7 +34,7 @@ class LegacyFields:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `chain_id` | `int` | Numeric chain identifier (e.g., 1 for mainnet) |
+| `chain_id` | `int` | Numeric chain identifier (e.g., 5124 for Seismic testnet) |
 | `nonce` | `int` | Sender's transaction count |
 | `to` | `ChecksumAddress \| None` | Recipient address, or `None` for contract creation |
 | `value` | `int` | Amount of wei to transfer |
@@ -92,7 +92,7 @@ metadata = TxSeismicMetadata(
 from seismic_web3 import create_wallet_client, SEISMIC_TESTNET, PrivateKey
 
 w3 = create_wallet_client(
-    rpc_url="https://rpc.example.com",
+    rpc_url="https://gcp-1.seismictest.net/rpc",
     chain=SEISMIC_TESTNET,
     account=PrivateKey(...),
 )
@@ -109,9 +109,8 @@ nonce = w3.eth.get_transaction_count(w3.eth.default_account)
 ### chain_id
 
 The numeric chain identifier prevents cross-chain replay attacks:
-- **1** - Ethereum mainnet
-- **11155111** - Sepolia testnet
-- **Custom values** - For Seismic testnets
+- **5124** - Seismic testnet
+- **31337** - Seismic local (sanvil)
 
 ### nonce
 

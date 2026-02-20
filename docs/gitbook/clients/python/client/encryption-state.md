@@ -157,7 +157,7 @@ except InvalidTag:
 from seismic_web3 import create_wallet_client, PrivateKey
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Access encryption state
 encryption = w3.seismic.encryption

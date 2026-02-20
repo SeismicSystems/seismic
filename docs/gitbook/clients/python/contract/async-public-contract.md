@@ -53,7 +53,7 @@ from seismic_web3 import create_async_public_client, AsyncPublicContract, SEISMI
 async def main():
     # Create async client without private key
     w3 = await create_async_public_client(
-        rpc_url="https://testnet-rpc.seismic.network",
+        rpc_url="https://gcp-1.seismictest.net/rpc",
         chain=SEISMIC_TESTNET,
     )
 
@@ -189,7 +189,7 @@ async def array_example(contract: AsyncPublicContract):
 async def client_pattern():
     # Most common pattern - let the client create the contract
     w3 = await create_async_public_client(
-        rpc_url="https://testnet-rpc.seismic.network",
+        rpc_url="https://gcp-1.seismictest.net/rpc",
         chain=SEISMIC_TESTNET,
     )
 

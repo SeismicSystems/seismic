@@ -15,8 +15,8 @@ pip install seismic-web3
 
 # Set environment variables
 export PRIVATE_KEY="your_64_char_hex_private_key"
-export RPC_URL="https://rpc.seismic.network"
-export WS_URL="wss://rpc.seismic.network"
+export RPC_URL="https://gcp-1.seismictest.net/rpc"
+export WS_URL="wss://gcp-1.seismictest.net/ws"
 export CONTRACT_ADDRESS="0x..."
 ```
 
