@@ -56,7 +56,7 @@ from seismic_web3.src20 import register_viewing_key
 import os
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Generate a random viewing key
 viewing_key = Bytes32(os.urandom(32))
@@ -83,7 +83,7 @@ from seismic_web3 import create_wallet_client, PrivateKey, Bytes32
 from seismic_web3.src20 import register_viewing_key
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Use a specific viewing key (e.g., derived from seed)
 viewing_key = Bytes32(bytes.fromhex("YOUR_VIEWING_KEY_HEX"))
@@ -106,7 +106,7 @@ from seismic_web3.src20 import register_viewing_key
 import os
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Generate and save the viewing key
 viewing_key = Bytes32(os.urandom(32))
@@ -138,7 +138,7 @@ import os
 async def main():
     private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
     w3 = await create_async_wallet_client(
-        "wss://rpc.seismic.network",
+        "wss://gcp-1.seismictest.net/ws",
         private_key=private_key,
     )
 
@@ -170,7 +170,7 @@ from seismic_web3.src20 import register_viewing_key, check_has_key
 import os
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Get wallet address
 from eth_account import Account
@@ -199,7 +199,7 @@ from seismic_web3.src20 import register_viewing_key
 import hashlib
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Derive viewing key from seed phrase
 seed = "my secret seed phrase for viewing key"

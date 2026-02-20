@@ -21,7 +21,7 @@ This namespace is automatically attached as `w3.seismic` when you create a publi
 ```python
 from seismic_web3 import create_public_client
 
-public = create_public_client("https://rpc.example.com")
+public = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Access the namespace
 public.seismic.get_tee_public_key()
@@ -157,7 +157,7 @@ contract = public.seismic.contract(
 from seismic_web3 import create_public_client
 
 # Create public client (no private key required)
-public = create_public_client("https://rpc.example.com")
+public = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Get TEE public key
 tee_key = public.seismic.get_tee_public_key()
@@ -234,11 +234,11 @@ while True:
 from seismic_web3 import create_public_client, create_wallet_client, PrivateKey
 
 # Use public client for queries
-public = create_public_client("https://rpc.example.com")
+public = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Use wallet client for transactions
 wallet = create_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(b"...32 bytes..."),
 )
 
@@ -288,7 +288,7 @@ def get_chain_summary(rpc_url: str) -> dict:
         "chain_id": public.eth.chain_id,
     }
 
-summary = get_chain_summary("https://rpc.example.com")
+summary = get_chain_summary("https://gcp-1.seismictest.net/rpc")
 print(summary)
 ```
 
@@ -304,7 +304,7 @@ print(summary)
 
 ```python
 # Good use case for public client
-public = create_public_client("https://rpc.example.com")
+public = create_public_client("https://gcp-1.seismictest.net/rpc")
 deposit_stats = {
     "count": public.seismic.get_deposit_count(),
     "root": public.seismic.get_deposit_root(),
@@ -345,7 +345,7 @@ Attempting to perform these operations requires upgrading to a wallet client:
 from seismic_web3 import create_wallet_client, PrivateKey
 
 wallet = create_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(b"...32 bytes..."),
 )
 

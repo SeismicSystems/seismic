@@ -36,7 +36,7 @@ class UnsignedSeismicTx:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `chain_id` | `int` | Numeric chain identifier (e.g., 1 for mainnet) |
+| `chain_id` | `int` | Numeric chain identifier (e.g., 5124 for Seismic testnet) |
 | `nonce` | `int` | Sender's transaction count |
 | `gas_price` | `int` | Gas price in wei |
 | `gas` | `int` | Gas limit |
@@ -60,7 +60,7 @@ from seismic_web3 import (
 from hexbytes import HexBytes
 
 unsigned_tx = UnsignedSeismicTx(
-    chain_id=1,
+    chain_id=5124,
     nonce=42,
     gas_price=20_000_000_000,  # 20 gwei
     gas=100_000,
@@ -149,7 +149,7 @@ Contains [`SeismicElements`](seismic-elements.md) with:
 
 ### value
 
-Amount of native currency (ETH on mainnet, custom on testnets) to transfer, in wei:
+Amount of native currency (ETH) to transfer, in wei:
 - `1 ETH = 1_000_000_000_000_000_000 wei`
 - Can be `0` for pure function calls
 

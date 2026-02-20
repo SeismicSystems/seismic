@@ -39,7 +39,7 @@ from seismic_web3 import create_wallet_client, PrivateKey
 
 # 2. Configuration
 private_key = PrivateKey(...)
-w3 = create_wallet_client("https://rpc.example.com", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # 3. Main operation
 result = await contract.write.method(args)
@@ -59,7 +59,7 @@ pip install seismic-web3
 
 # Set environment variables
 export PRIVATE_KEY="0x..."
-export RPC_URL="https://rpc.example.com"
+export RPC_URL="https://gcp-1.seismictest.net/rpc"
 ```
 
 ## Quick Example: Basic Wallet Setup

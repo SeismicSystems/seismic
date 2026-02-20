@@ -151,7 +151,7 @@ from seismic_web3 import create_wallet_client, PrivateKey
 
 # Create wallet client
 w3 = create_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(b"...32 bytes..."),
 )
 
@@ -188,7 +188,7 @@ from seismic_web3 import create_async_wallet_client, PrivateKey
 
 # Create async wallet client
 w3 = await create_async_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(b"...32 bytes..."),
 )
 
@@ -546,4 +546,4 @@ After depositing:
 - [get_deposit_root()](get-deposit-root.md) — Read deposit Merkle root
 - [Deposit Contract ABI](../../api-reference/abis/deposit-contract.md) — Full contract interface
 - [Validator Guide](../../guides/validator-deposits.md) — Complete guide to becoming a validator
-- [Seismic CLI Documentation](https://docs.seismic.network/cli) — Validator key generation tools
+- [Seismic CLI Documentation](https://docs.seismic.systems/cli) — Validator key generation tools

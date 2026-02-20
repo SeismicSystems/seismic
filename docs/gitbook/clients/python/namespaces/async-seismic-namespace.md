@@ -24,7 +24,7 @@ This namespace is automatically attached as `w3.seismic` when you create an asyn
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
 w3 = await create_async_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(...),
 )
 
@@ -289,7 +289,7 @@ from hexbytes import HexBytes
 async def main():
     # Create async wallet client
     w3 = await create_async_wallet_client(
-        "https://rpc.example.com",
+        "https://gcp-1.seismictest.net/rpc",
         private_key=PrivateKey(b"...32 bytes..."),
     )
 
@@ -310,7 +310,7 @@ asyncio.run(main())
 ```python
 async def signed_read_example():
     w3 = await create_async_wallet_client(
-        "https://rpc.example.com",
+        "https://gcp-1.seismictest.net/rpc",
         private_key=PrivateKey(b"...32 bytes..."),
     )
 
@@ -329,7 +329,7 @@ async def signed_read_example():
 ```python
 async def contract_example():
     w3 = await create_async_wallet_client(
-        "https://rpc.example.com",
+        "https://gcp-1.seismictest.net/rpc",
         private_key=PrivateKey(b"...32 bytes..."),
     )
 
@@ -366,7 +366,7 @@ async def contract_example():
 ```python
 async def concurrent_example():
     w3 = await create_async_wallet_client(
-        "https://rpc.example.com",
+        "https://gcp-1.seismictest.net/rpc",
         private_key=PrivateKey(b"...32 bytes..."),
     )
 
@@ -388,7 +388,7 @@ async def concurrent_example():
 ```python
 async def debug_example():
     w3 = await create_async_wallet_client(
-        "https://rpc.example.com",
+        "https://gcp-1.seismictest.net/rpc",
         private_key=PrivateKey(b"...32 bytes..."),
     )
 
@@ -408,7 +408,7 @@ async def debug_example():
 ```python
 async def context_manager_example():
     async with await create_async_wallet_client(
-        "https://rpc.example.com",
+        "https://gcp-1.seismictest.net/rpc",
         private_key=PrivateKey(b"...32 bytes..."),
     ) as w3:
         # Use the client

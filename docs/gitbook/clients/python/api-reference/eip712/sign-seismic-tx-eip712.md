@@ -47,7 +47,7 @@ import os
 
 # Build unsigned transaction
 unsigned_tx = UnsignedSeismicTx(
-    chain_id=1,
+    chain_id=5124,
     nonce=42,
     gas_price=20_000_000_000,
     gas=100_000,

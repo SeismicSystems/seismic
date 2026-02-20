@@ -73,7 +73,7 @@ from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20 import watch_src20_events_with_key
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Provide viewing key directly
 viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
@@ -96,7 +96,7 @@ from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20 import watch_src20_events_with_key
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
 token_address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 
@@ -118,7 +118,7 @@ from seismic_web3 import Bytes32
 from seismic_web3.src20 import watch_src20_events_with_key
 
 # No private key needed — just a public RPC endpoint
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 viewing_key = Bytes32(bytes.fromhex("SHARED_VIEWING_KEY_HEX"))
 
 def on_transfer(log):
@@ -140,7 +140,7 @@ from seismic_web3 import Bytes32
 from seismic_web3.src20 import watch_src20_events_with_key
 import time
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
 
 with watch_src20_events_with_key(
@@ -159,7 +159,7 @@ from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20 import watch_src20_events_with_key
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
 
 def on_error(exc: Exception):
@@ -181,7 +181,7 @@ from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20 import watch_src20_events_with_key
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
 
 # Start watching from block 1000000
@@ -202,7 +202,7 @@ from seismic_web3.src20 import async_watch_src20_events_with_key
 import asyncio
 
 async def main():
-    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://rpc.seismic.network"))
+    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://gcp-1.seismictest.net/rpc"))
     viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
 
     # Async callback
@@ -233,7 +233,7 @@ from seismic_web3.src20 import async_watch_src20_events_with_key
 import asyncio
 
 async def main():
-    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://rpc.seismic.network"))
+    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://gcp-1.seismictest.net/rpc"))
     viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
 
     async with await async_watch_src20_events_with_key(
@@ -254,7 +254,7 @@ from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20 import watch_src20_events_with_key
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Watch events for multiple viewing keys
 keys = [

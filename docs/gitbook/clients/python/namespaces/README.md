@@ -55,7 +55,7 @@ Available on public clients created with `create_public_client()` or `create_asy
 ```python
 from seismic_web3 import create_wallet_client, PrivateKey
 
-w3 = create_wallet_client("https://rpc.example.com", private_key=PrivateKey(...))
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=PrivateKey(...))
 
 # Get TEE public key
 tee_key = w3.seismic.get_tee_public_key()
@@ -75,7 +75,7 @@ contract = w3.seismic.contract(contract_address, abi)
 ```python
 from seismic_web3 import create_public_client
 
-public = create_public_client("https://rpc.example.com")
+public = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Get TEE public key
 tee_key = public.seismic.get_tee_public_key()

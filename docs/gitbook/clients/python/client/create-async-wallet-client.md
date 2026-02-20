@@ -32,7 +32,7 @@ async def create_async_wallet_client(
 | `provider_url` | `str` | Yes | HTTP(S) or WS(S) URL of the Seismic node |
 | `private_key` | [`PrivateKey`](../api-reference/types/private-key.md) | Yes | 32-byte secp256k1 private key for signing transactions |
 | `encryption_sk` | [`PrivateKey`](../api-reference/types/private-key.md) | No | Optional 32-byte key for ECDH. If `None`, a random ephemeral key is generated |
-| `ws` | `bool` | No | If `True`, uses `WebSocketProvider` (persistent connection, supports subscriptions). Otherwise uses `AsyncHTTPProvider`. Default: `False` |
+| `ws` | `bool` | No | If `True`, uses `WebSocketProvider` (persistent connection, supports subscriptions). Otherwise uses `AsyncHTTPProvider`. Default: `False`. WebSocket is only available on async clients — sync clients are HTTP-only |
 
 ## Returns
 
@@ -52,7 +52,7 @@ private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
 
 # Create async wallet client
 w3 = await create_async_wallet_client(
-    "https://rpc.seismic.network",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=private_key,
 )
 
@@ -71,7 +71,7 @@ private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
 
 # WebSocket provider for persistent connection
 w3 = await create_async_wallet_client(
-    "wss://ws.seismic.network",
+    "wss://gcp-1.seismictest.net/ws",
     private_key=private_key,
     ws=True,
 )
@@ -104,7 +104,7 @@ private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
 
 # Use context manager to ensure cleanup
 async with create_async_wallet_client(
-    "wss://ws.seismic.network",
+    "wss://gcp-1.seismictest.net/ws",
     private_key=private_key,
     ws=True,
 ) as w3:
@@ -123,7 +123,7 @@ async def main():
     private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
 
     w3 = await create_async_wallet_client(
-        "https://rpc.seismic.network",
+        "https://gcp-1.seismictest.net/rpc",
         private_key=private_key,
     )
 
@@ -150,7 +150,7 @@ async def setup_client():
     encryption_key = PrivateKey(os.urandom(32))  # Custom encryption keypair
 
     w3 = await create_async_wallet_client(
-        "https://rpc.seismic.network",
+        "https://gcp-1.seismictest.net/rpc",
         private_key=signing_key,
         encryption_sk=encryption_key,
     )

@@ -24,7 +24,7 @@ This namespace is automatically attached as `w3.seismic` when you create a walle
 from seismic_web3 import create_wallet_client, PrivateKey
 
 w3 = create_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(...),
 )
 
@@ -287,7 +287,7 @@ from hexbytes import HexBytes
 
 # Create wallet client
 w3 = create_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(b"...32 bytes..."),
 )
 

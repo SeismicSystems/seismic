@@ -51,7 +51,7 @@ from seismic_web3 import create_public_client, PublicContract, SEISMIC_TESTNET
 
 # Create client without private key
 w3 = create_public_client(
-    rpc_url="https://testnet-rpc.seismic.network",
+    rpc_url="https://gcp-1.seismictest.net/rpc",
     chain=SEISMIC_TESTNET,
 )
 
@@ -146,7 +146,7 @@ for holder in holders:
 from seismic_web3 import create_public_client, SEISMIC_TESTNET
 
 w3 = create_public_client(
-    rpc_url="https://testnet-rpc.seismic.network",
+    rpc_url="https://gcp-1.seismictest.net/rpc",
     chain=SEISMIC_TESTNET,
 )
 
@@ -229,7 +229,7 @@ except Exception as e:
 from web3 import Web3
 
 # Use custom RPC provider
-w3 = Web3(Web3.HTTPProvider("https://my-custom-rpc.example.com"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 contract = PublicContract(
     w3=w3,

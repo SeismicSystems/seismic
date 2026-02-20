@@ -66,7 +66,7 @@ async def async_get_key_hash(
 from web3 import Web3
 from seismic_web3.src20 import check_has_key
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 
 if check_has_key(w3, address):
@@ -84,7 +84,7 @@ from eth_account import Account
 import os
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Get your address
 address = Account.from_key(private_key).address
@@ -111,7 +111,7 @@ else:
 from web3 import Web3
 from seismic_web3.src20 import get_key_hash
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 
 key_hash = get_key_hash(w3, address)
@@ -126,7 +126,7 @@ from seismic_web3 import Bytes32
 from seismic_web3.src20 import get_key_hash
 from seismic_web3.src20.directory import compute_key_hash
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 
 # Get hash from chain
@@ -150,7 +150,7 @@ from seismic_web3.src20 import async_check_has_key, async_get_key_hash
 import asyncio
 
 async def main():
-    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://rpc.seismic.network"))
+    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://gcp-1.seismictest.net/rpc"))
     address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 
     # Check if key exists
@@ -171,7 +171,7 @@ asyncio.run(main())
 from web3 import Web3
 from seismic_web3.src20 import check_has_key
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 addresses = [
     "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
@@ -192,7 +192,7 @@ from web3 import Web3
 from seismic_web3.src20 import check_has_key
 import time
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 
 print(f"Waiting for {address} to register a key...")
@@ -210,7 +210,7 @@ from seismic_web3 import Bytes32
 from seismic_web3.src20 import check_has_key, watch_src20_events_with_key
 from eth_account import Account
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 viewing_key = Bytes32(bytes.fromhex("YOUR_VIEWING_KEY_HEX"))
 
 # Compute expected address from key (if known)
@@ -234,7 +234,7 @@ else:
 from web3 import Web3
 from seismic_web3.src20 import get_key_hash
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 
 # Get the key hash (used as event topic)

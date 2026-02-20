@@ -49,7 +49,7 @@ from seismic_web3 import (
 metadata = TxSeismicMetadata(
     sender="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
     legacy_fields=LegacyFields(
-        chain_id=1,
+        chain_id=5124,
         nonce=42,
         to="0x1234567890123456789012345678901234567890",
         value=1_000_000_000_000_000_000,  # 1 ETH
