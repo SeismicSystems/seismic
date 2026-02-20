@@ -82,7 +82,7 @@ All parameters are **keyword-only**.
 | `data` | `HexBytes` | Required | Plaintext calldata (will be encrypted) |
 | `value` | `int` | `0` | Wei to include in the call context |
 | `gas` | `int` | `30_000_000` | Gas limit for the call |
-| `security` | `SeismicSecurityParams \| None` | `None` | Custom security parameters (block hash, nonce, expiry) |
+| `security` | [`SeismicSecurityParams`](../../api-reference/transaction-types/seismic-security-params.md) \| `None` | `None` | Custom security parameters (block hash, nonce, expiry) |
 | `eip712` | `bool` | `False` | Use EIP-712 typed data signing instead of raw signing |
 
 ***

@@ -79,14 +79,14 @@ All parameters are **keyword-only** to prevent mix-ups between the many `bytes` 
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `node_pubkey` | `bytes` | Required | 32-byte ED25519 public key |
-| `consensus_pubkey` | `bytes` | Required | 48-byte BLS12-381 public key |
-| `withdrawal_credentials` | `bytes` | Required | 32-byte withdrawal credentials |
-| `node_signature` | `bytes` | Required | 64-byte ED25519 signature |
-| `consensus_signature` | `bytes` | Required | 96-byte BLS12-381 signature |
-| `deposit_data_root` | `bytes` | Required | 32-byte deposit data root hash |
-| `value` | `int` | Required | Deposit amount in wei (e.g., 32 * 10**18) |
-| `address` | `str` | Genesis deposit contract | Deposit contract address |
+| `node_pubkey` | `bytes` | Required | 32-byte ED25519 public key identifying the validator node on the execution layer |
+| `consensus_pubkey` | `bytes` | Required | 48-byte BLS12-381 public key for block proposals and attestations on the consensus layer |
+| `withdrawal_credentials` | `bytes` | Required | 32-byte credential specifying where staked ETH is sent upon exit. Generate with [`make_withdrawal_credentials()`](../../abis/make-withdrawal-credentials.md) |
+| `node_signature` | `bytes` | Required | 64-byte ED25519 signature over the deposit data, proving ownership of the node key |
+| `consensus_signature` | `bytes` | Required | 96-byte BLS12-381 signature over the deposit data, proving ownership of the consensus key |
+| `deposit_data_root` | `bytes` | Required | 32-byte Merkle root of the deposit data for consensus-layer verification. Generate with [`compute_deposit_data_root()`](../../abis/compute-deposit-data-root.md) |
+| `value` | `int` | Required | Deposit amount in wei. Typically `32 * 10**18` (32 ETH) for a full validator |
+| `address` | `str` | [`DEPOSIT_CONTRACT_ADDRESS`](../../abis/deposit-contract.md) | Address of the deposit contract to call |
 
 ### Parameter Details
 
@@ -330,12 +330,7 @@ The transaction uses standard `eth_sendTransaction`, not `TxSeismic`.
 
 ### Genesis Contract
 
-The default deposit contract address is:
-```
-0x4242424242424242424242424242424242424242
-```
-
-This is the standard address across all Seismic networks.
+The default deposit contract address is [`DEPOSIT_CONTRACT_ADDRESS`](../../abis/deposit-contract.md), deployed at genesis on all Seismic networks.
 
 ***
 

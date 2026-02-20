@@ -58,7 +58,7 @@ This method takes no parameters.
 
 ## Returns
 
-**Type:** `CompressedPublicKey` (33-byte `bytes`)
+**Type:** [`CompressedPublicKey`](../../api-reference/types/compressed-public-key.md) (33-byte `bytes`)
 
 A 33-byte compressed secp256k1 public key in SEC format:
 - First byte: `0x02` or `0x03` (y-coordinate parity)

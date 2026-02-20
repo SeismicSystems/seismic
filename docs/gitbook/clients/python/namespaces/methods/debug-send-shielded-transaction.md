@@ -84,14 +84,14 @@ All parameters are **keyword-only** and identical to `send_shielded_transaction(
 | `value` | `int` | `0` | Wei to transfer with the transaction |
 | `gas` | `int \| None` | `None` | Gas limit (auto-estimated if `None`) |
 | `gas_price` | `int \| None` | `None` | Gas price in wei (uses network default if `None`) |
-| `security` | `SeismicSecurityParams \| None` | `None` | Custom security parameters (block hash, nonce, expiry) |
+| `security` | [`SeismicSecurityParams`](../../api-reference/transaction-types/seismic-security-params.md) \| `None` | `None` | Custom security parameters (block hash, nonce, expiry) |
 | `eip712` | `bool` | `False` | Use EIP-712 typed data signing instead of raw signing |
 
 ***
 
 ## Returns
 
-**Type:** `DebugWriteResult`
+**Type:** [`DebugWriteResult`](../../api-reference/transaction-types/debug-write-result.md)
 
 A dataclass containing three fields:
 

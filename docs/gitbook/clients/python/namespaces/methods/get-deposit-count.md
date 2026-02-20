@@ -61,12 +61,9 @@ async def get_deposit_count(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `address` | `str` | Genesis deposit contract | Deposit contract address |
+| `address` | `str` | [`DEPOSIT_CONTRACT_ADDRESS`](../../abis/deposit-contract.md) | Address of the deposit contract to query |
 
-The default address is the genesis deposit contract at:
-```
-0x4242424242424242424242424242424242424242
-```
+The default address is the genesis deposit contract ([`DEPOSIT_CONTRACT_ADDRESS`](../../abis/deposit-contract.md)).
 
 ***
 
@@ -236,7 +233,7 @@ The SDK handles the conversion automatically.
 
 ### Genesis Contract
 
-The default deposit contract address (`0x4242424242424242424242424242424242424242`) is deployed at genesis on all Seismic networks.
+The default deposit contract address ([`DEPOSIT_CONTRACT_ADDRESS`](../../abis/deposit-contract.md)) is deployed at genesis on all Seismic networks.
 
 ***
 

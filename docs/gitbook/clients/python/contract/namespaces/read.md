@@ -61,7 +61,7 @@ All call options are **optional** keyword arguments:
 |-----------|------|---------|-------------|
 | `value` | `int` | `0` | ETH value for the call (in wei) |
 | `gas` | `int` | `30_000_000` | Gas limit for the call |
-| `security` | `SeismicSecurityParams \| None` | `None` | Custom security parameters (block expiry, nonce, etc.) |
+| `security` | [`SeismicSecurityParams`](../../api-reference/transaction-types/seismic-security-params.md) \| `None` | `None` | Custom security parameters (block expiry, nonce, etc.) |
 
 **Note**: Unlike `.write`, there is no `gas_price` parameter because reads don't consume gas.
 
