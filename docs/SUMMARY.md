@@ -227,6 +227,17 @@
     - [Chapter 3: Bringing it all together](gitbook/tutorials/walnut/building-the-cli/chapter-3-bringing-it-all-together.md)
     - [Quick primer: seismic-viem](gitbook/tutorials/walnut/building-the-cli/seismic-viem-primer.md)
 
+## Claude Code
+
+- [Overview](gitbook/claude-code/README.md)
+- [CLAUDE.md Templates](gitbook/claude-code/templates/)
+  - [Seismic Solidity](gitbook/claude-code/templates/seismic-solidity.md)
+  - [Seismic Viem](gitbook/claude-code/templates/seismic-viem.md)
+  - [Seismic React](gitbook/claude-code/templates/seismic-react.md)
+  - [Seismic Alloy (Rust)](gitbook/claude-code/templates/seismic-alloy.md)
+  - [Seismic Python](gitbook/claude-code/templates/seismic-python.md)
+- [Workflow Skills](gitbook/claude-code/workflow-skills.md)
+
 ## reference
 
 - [How Seismic Works](gitbook/overview/how-seismic-works.md)
