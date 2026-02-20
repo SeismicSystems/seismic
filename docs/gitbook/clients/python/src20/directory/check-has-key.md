@@ -67,7 +67,7 @@ from web3 import Web3
 from seismic_web3.src20 import check_has_key
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 if check_has_key(w3, address):
     print(f"Address {address} has a registered viewing key")
@@ -112,7 +112,7 @@ from web3 import Web3
 from seismic_web3.src20 import get_key_hash
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 key_hash = get_key_hash(w3, address)
 print(f"Key hash: {key_hash.hex()}")
@@ -127,7 +127,7 @@ from seismic_web3.src20 import get_key_hash
 from seismic_web3.src20.directory import compute_key_hash
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 # Get hash from chain
 onchain_hash = get_key_hash(w3, address)
@@ -151,7 +151,7 @@ import asyncio
 
 async def main():
     w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://gcp-1.seismictest.net/rpc"))
-    address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+    address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
     # Check if key exists
     has_key = await async_check_has_key(w3, address)
@@ -174,7 +174,7 @@ from seismic_web3.src20 import check_has_key
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 addresses = [
-    "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B",
     "0x5FbDB2315678afecb367f032d93F642f64180aa3",
 ]
@@ -193,7 +193,7 @@ from seismic_web3.src20 import check_has_key
 import time
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 print(f"Waiting for {address} to register a key...")
 while not check_has_key(w3, address):
@@ -215,7 +215,7 @@ viewing_key = Bytes32(bytes.fromhex("YOUR_VIEWING_KEY_HEX"))
 
 # Compute expected address from key (if known)
 # For this example, we'll check a known address
-address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 if not check_has_key(w3, address):
     print("ERROR: No viewing key registered for this address")
@@ -235,7 +235,7 @@ from web3 import Web3
 from seismic_web3.src20 import get_key_hash
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 # Get the key hash (used as event topic)
 key_hash = get_key_hash(w3, address)

@@ -217,7 +217,7 @@ from seismic_web3 import (
 # Prepare deposit data
 node_pubkey = bytes.fromhex("...")  # 32-byte ED25519 pubkey
 consensus_pubkey = bytes.fromhex("...")  # 48-byte BLS12-381 pubkey
-withdrawal_address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+withdrawal_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 # Generate withdrawal credentials
 withdrawal_credentials = make_withdrawal_credentials(withdrawal_address)

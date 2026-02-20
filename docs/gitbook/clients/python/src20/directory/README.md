@@ -64,7 +64,7 @@ from web3 import Web3
 from seismic_web3.src20 import check_has_key
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 if check_has_key(w3, address):
     print("Address has a registered key")

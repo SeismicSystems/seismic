@@ -155,7 +155,7 @@ The returned dictionary has this structure:
         "nonce": 42,
         "gasPrice": 20000000000,
         "gasLimit": 100000,
-        "to": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+        "to": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "value": 1000000000000000000,
         "input": "0xabcd...",
         "encryptionPubkey": "0x02...",

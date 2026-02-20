@@ -123,7 +123,7 @@ directory = w3.eth.contract(
 
 ```python
 # Check if address has registered a viewing key
-user_address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+user_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 has_key = directory.functions.checkHasKey(user_address).call()
 
@@ -137,7 +137,7 @@ else:
 
 ```python
 # Get hash of user's viewing key
-user_address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+user_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 key_hash = directory.functions.keyHash(user_address).call()
 print(f"Key hash: {key_hash.hex()}")

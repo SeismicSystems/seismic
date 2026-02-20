@@ -72,7 +72,7 @@ w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Create contract wrapper (read-only)
 contract = w3.seismic.contract(
-    address="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    address="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     abi=contract_abi,
 )
 
@@ -95,7 +95,7 @@ w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
 block = w3.eth.get_block("latest")
 print(f"Latest block: {block['number']}")
 
-balance = w3.eth.get_balance("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb")
+balance = w3.eth.get_balance("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 print(f"Balance: {w3.from_wei(balance, 'ether')} ETH")
 
 chain_id = w3.eth.chain_id

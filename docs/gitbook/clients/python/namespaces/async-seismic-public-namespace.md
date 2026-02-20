@@ -201,7 +201,7 @@ async def read_contract():
 
     # Create contract wrapper
     contract = public.seismic.contract(
-        address="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+        address="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         abi=[
             {
                 "name": "balanceOf",

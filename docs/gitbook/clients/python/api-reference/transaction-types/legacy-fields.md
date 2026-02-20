@@ -49,7 +49,7 @@ from seismic_web3 import LegacyFields
 legacy = LegacyFields(
     chain_id=5124,
     nonce=42,
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     value=1_000_000_000_000_000_000,  # 1 ETH in wei
 )
 ```
@@ -74,7 +74,7 @@ legacy = LegacyFields(
 from seismic_web3 import TxSeismicMetadata, LegacyFields, SeismicElements
 
 metadata = TxSeismicMetadata(
-    sender="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    sender="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     legacy_fields=LegacyFields(
         chain_id=5124,
         nonce=42,

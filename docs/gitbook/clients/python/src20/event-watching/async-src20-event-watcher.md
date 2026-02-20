@@ -234,7 +234,7 @@ import asyncio
 async def main():
     w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://gcp-1.seismictest.net/rpc"))
     viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
-    token_address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+    token_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
     async with AsyncSRC20EventWatcher(
         w3,

@@ -147,7 +147,7 @@ w3 = create_wallet_client(
 
 # Send transaction with debug info
 result = w3.seismic.debug_send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0xa9059cbb000000000000000000000000..."),
     value=0,
 )
@@ -175,7 +175,7 @@ w3 = await create_async_wallet_client(
 
 # Send transaction with debug info
 result = await w3.seismic.debug_send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0xa9059cbb000000000000000000000000..."),
 )
 
@@ -189,7 +189,7 @@ print(f"Encrypted: {result.shielded_tx.data.hex()}")
 ```python
 # Verify calldata was actually encrypted
 result = w3.seismic.debug_send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x12345678abcdef"),
 )
 
@@ -211,7 +211,7 @@ from seismic_web3 import SeismicSecurityParams
 security = SeismicSecurityParams(blocks_window=200)
 
 result = w3.seismic.debug_send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x..."),
     security=security,
 )
@@ -229,7 +229,7 @@ print(f"Signed read: {result.shielded_tx.seismic.signed_read}")
 ```python
 # See actual gas used vs estimated
 result = w3.seismic.debug_send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x..."),
 )
 
@@ -246,7 +246,7 @@ print(f"Difference: {result.shielded_tx.gas - receipt['gasUsed']}")
 ```python
 # Use with contract.dwrite namespace
 contract = w3.seismic.contract(
-    address="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    address="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     abi=ABI,
 )
 

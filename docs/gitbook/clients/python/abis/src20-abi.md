@@ -228,7 +228,7 @@ print(f"Balance: {balance_value}")
 from seismic_web3 import Suint256
 
 # Transfer 100 tokens (with 18 decimals)
-recipient = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+recipient = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 amount = Suint256(100 * 10**18)
 
 tx_hash = token.write.transfer(recipient, amount)
@@ -241,7 +241,7 @@ print(f"Transfer tx: {tx_hash.hex()}")
 from seismic_web3 import Suint256
 
 # Approve spender for 1000 tokens
-spender = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+spender = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 amount = Suint256(1000 * 10**18)
 
 tx_hash = token.write.approve(spender, amount)
@@ -255,7 +255,7 @@ from seismic_web3 import Suint256
 
 # Transfer from approved account
 owner = "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"
-recipient = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+recipient = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 amount = Suint256(50 * 10**18)
 
 tx_hash = token.write.transferFrom(owner, recipient, amount)
