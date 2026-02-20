@@ -103,26 +103,6 @@ assert encryption1.encryption_private_key != encryption2.encryption_private_key
 assert encryption1.aes_key != encryption2.aes_key
 ```
 
-### Deterministic Key from Mnemonic
-
-```python
-import os
-from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
-from eth_account import Account
-
-# Derive deterministic key from mnemonic
-mnemonic = os.environ["MNEMONIC"]
-account = Account.from_mnemonic(mnemonic)
-
-# Use account key for encryption (or derive a separate BIP-44 path)
-client_sk = PrivateKey(account.key)
-
-tee_pk = CompressedPublicKey("0x02abcd...")
-encryption = get_encryption(tee_pk, client_sk)
-
-# Same mnemonic will always produce same encryption state
-```
-
 ### Verify Key Derivation
 
 ```python
