@@ -9,7 +9,7 @@ Create an asynchronous `AsyncWeb3` instance with public (read-only) Seismic acce
 
 ## Overview
 
-`create_async_public_client()` creates an async client for read-only operations on the Seismic network. No private key is required. The `w3.seismic` namespace provides only public read operations: `get_tee_public_key()`, `get_deposit_root()`, `get_deposit_count()`, and `contract()` (with `.tread` only).
+`create_async_public_client()` creates an async client for read-only operations on the Seismic network. No private key is required. The [`w3.seismic`](../namespaces/async-seismic-public-namespace.md) namespace provides only public read operations: [`get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md), [`get_deposit_root()`](../namespaces/methods/get-deposit-root.md), [`get_deposit_count()`](../namespaces/methods/get-deposit-count.md), and [`contract()`](../contract/) (with `.tread` only).
 
 Supports both HTTP and WebSocket connections for efficient async queries and real-time monitoring.
 
@@ -232,10 +232,10 @@ No TEE public key fetching or encryption setup is performed since the client can
 - [`contract()`](../contract/) - Create contract wrappers (`.tread` methods are async)
 
 ### NOT Available
-- `send_shielded_transaction()` - Requires private key
-- `debug_send_shielded_transaction()` - Requires private key
-- `signed_call()` - Requires private key and encryption
-- `deposit()` - Requires private key
+- [`send_shielded_transaction()`](../namespaces/methods/send-shielded-transaction.md) - Requires private key
+- [`debug_send_shielded_transaction()`](../namespaces/methods/debug-send-shielded-transaction.md) - Requires private key
+- [`signed_call()`](../namespaces/methods/signed-call.md) - Requires private key and encryption
+- [`deposit()`](../namespaces/methods/deposit.md) - Requires private key
 - Contract `.swrite` and `.sread` methods - Require private key
 
 ## HTTP vs WebSocket

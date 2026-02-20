@@ -9,7 +9,7 @@ Create an asynchronous `AsyncWeb3` instance with full Seismic wallet capabilitie
 
 ## Overview
 
-`create_async_wallet_client()` is the async factory function for creating a client that can perform shielded writes, signed reads, and deposits. It supports both HTTP and WebSocket connections, fetches the TEE public key asynchronously, derives encryption state via ECDH, and attaches a fully-configured `w3.seismic` namespace.
+`create_async_wallet_client()` is the async factory function for creating a client that can perform shielded writes, signed reads, and deposits. It supports both HTTP and WebSocket connections, fetches the TEE public key asynchronously, derives encryption state via [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman), and attaches a fully-configured [`w3.seismic`](../namespaces/async-seismic-namespace.md) namespace.
 
 The returned client works with all standard async `web3.py` APIs (`await w3.eth.get_block()`, etc.) plus the additional `w3.seismic` namespace for Seismic-specific operations.
 
