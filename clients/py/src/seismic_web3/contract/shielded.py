@@ -152,7 +152,7 @@ class _ShieldedReadNamespace:
         self._abi = abi
         self._eip712 = eip712
 
-    def __getattr__(self, fn_name: str) -> Callable[..., HexBytes | None]:
+    def __getattr__(self, fn_name: str) -> Callable[..., HexBytes]:
         """Return a callable that executes a signed read for ``fn_name``."""
 
         def call(
@@ -160,7 +160,7 @@ class _ShieldedReadNamespace:
             value: int = 0,
             gas: int = 30_000_000,
             security: SeismicSecurityParams | None = None,
-        ) -> HexBytes | None:
+        ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             return signed_call(
                 self._w3,
@@ -354,7 +354,7 @@ class _AsyncShieldedReadNamespace:
             value: int = 0,
             gas: int = 30_000_000,
             security: SeismicSecurityParams | None = None,
-        ) -> HexBytes | None:
+        ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             return await async_signed_call(
                 self._w3,

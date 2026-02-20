@@ -54,9 +54,9 @@ Sends encrypted transactions using `TxSeismic` (type `0x4a`). Calldata is encryp
 
 ### `.read` - Encrypted Read
 
-Executes encrypted signed `eth_call` with encrypted calldata. Result is encrypted.
+Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypted by the SDK.
 
-**Returns**: `Coroutine[HexBytes | None]` (encrypted result bytes)
+**Returns**: `Coroutine[HexBytes]` (decrypted result bytes)
 
 **Optional Parameters**:
 - `value: int` - Wei for call context (default: `0`)

@@ -31,8 +31,8 @@ Unlike standard `eth_call`, signed reads **prove your identity** to the contract
 result = contract.read.functionName(arg1, arg2, ...)
 ```
 
-- **Sync**: Returns `HexBytes | None` immediately
-- **Async**: Returns `HexBytes | None` (must `await`)
+- **Sync**: Returns `HexBytes` immediately
+- **Async**: Returns `HexBytes` (must `await`)
 
 ***
 
@@ -148,9 +148,9 @@ result = contract.read.simulateDeposit(
 
 ## Return Value
 
-Returns `HexBytes | None`:
-- `HexBytes` — Encrypted result from the contract (raw bytes)
-- `None` — If the call reverted or returned no data
+Returns `HexBytes`:
+- Decrypted result from the contract (raw bytes)
+- Empty `HexBytes` if the contract returned no data
 
 ```python
 result = contract.read.getBalance()

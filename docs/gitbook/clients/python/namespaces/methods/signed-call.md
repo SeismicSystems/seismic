@@ -47,7 +47,7 @@ def signed_call(
     gas: int = 30_000_000,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
-) -> HexBytes | None
+) -> HexBytes
 ```
 
 </td>
@@ -62,7 +62,7 @@ async def signed_call(
     gas: int = 30_000_000,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
-) -> HexBytes | None
+) -> HexBytes
 ```
 
 </td>
@@ -89,21 +89,19 @@ All parameters are **keyword-only**.
 
 ## Returns
 
-**Type:** `HexBytes | None`
+**Type:** `HexBytes`
 
-- **`HexBytes`**: The decrypted response from the contract (if non-empty)
-- **`None`**: If the contract returned empty data
+- Decrypted response from the contract (raw bytes)
+- Empty `HexBytes` if the contract returned no data
 
 ```python
 # Sync
 result = w3.seismic.signed_call(...)
-if result:
-    print(f"Response: {result.hex()}")
+print(f"Response: {result.hex()}")
 
 # Async
 result = await w3.seismic.signed_call(...)
-if result:
-    print(f"Response: {result.hex()}")
+print(f"Response: {result.hex()}")
 ```
 
 ***

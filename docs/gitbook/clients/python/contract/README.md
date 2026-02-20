@@ -23,11 +23,11 @@ The ABI works the same as in `web3.py`. If your contract uses shielded types (`s
 
 | Namespace | What it does | On-chain visibility |
 |-----------|-------------|-------------------|
-| `.write` | Encrypted transaction (`TxSeismic` type `0x4a`) | Calldata hidden |
-| `.read` | Encrypted signed `eth_call` | Calldata + result hidden |
-| `.twrite` | Standard `eth_sendTransaction` | Calldata visible |
-| `.tread` | Standard `eth_call` | Calldata visible |
-| `.dwrite` | Debug write — like `.write` but returns plaintext + encrypted views | Calldata hidden |
+| `.write` | Encrypted transaction (`TxSeismic` type `0x4a`) | Calldata encrypted |
+| `.read` | Encrypted signed `eth_call` | Calldata + result encrypted |
+| `.twrite` | Standard `eth_sendTransaction` | Calldata plaintext |
+| `.tread` | Standard `eth_call` | Calldata plaintext |
+| `.dwrite` | Debug write — like `.write` but returns plaintext + encrypted views | Calldata encrypted |
 
 ```python
 # Shielded write — encrypted calldata, returns tx hash
@@ -59,7 +59,7 @@ tx_hash = contract.write.deposit(value=10**18, gas=100_000, gas_price=10**9)
 
 ### Encoding calldata manually
 
-If you need to encode calldata outside of a contract call — for example, to pass it to the [low-level API](shielded-write.md#low-level-api) — you can use `encode_shielded_calldata`. This computes the function selector using the original shielded type names (like `suint256`) but encodes the parameters using standard types (like `uint256`):
+If you need to encode calldata outside of a contract call — for example, to pass it to the [low-level API](shielded-write.md#low-level-api) — you can use [`encode_shielded_calldata`](../namespaces/methods/encode-shielded-calldata.md). This computes the function selector using the original shielded type names (like `suint256`) but encodes the parameters using standard types (like `uint256`):
 
 ```python
 from seismic_web3.contract.abi import encode_shielded_calldata
