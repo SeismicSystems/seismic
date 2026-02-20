@@ -124,7 +124,7 @@ w3 = create_wallet_client(
 
 # Execute signed call
 result = w3.seismic.signed_call(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x70a08231000000000000000000000000..."),  # balanceOf(address)
 )
 
@@ -150,7 +150,7 @@ w3 = await create_async_wallet_client(
 
 # Execute signed call
 result = await w3.seismic.signed_call(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x70a08231000000000000000000000000..."),
 )
 
@@ -182,7 +182,7 @@ calldata = encode_shielded_calldata(
 
 # Execute signed call
 result = w3.seismic.signed_call(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=calldata,
 )
 
@@ -196,7 +196,7 @@ if result:
 ```python
 # Recommended: use contract.read for automatic ABI handling
 contract = w3.seismic.contract(
-    address="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    address="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     abi=ABI,
 )
 
@@ -216,7 +216,7 @@ from seismic_web3 import SeismicSecurityParams
 security = SeismicSecurityParams(blocks_window=200)
 
 result = w3.seismic.signed_call(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x..."),
     security=security,
 )
@@ -228,7 +228,7 @@ result = w3.seismic.signed_call(
 # Include ETH value in the call context
 # (useful for payable view functions)
 result = w3.seismic.signed_call(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x..."),
     value=10**18,  # 1 ETH
 )
@@ -239,7 +239,7 @@ result = w3.seismic.signed_call(
 ```python
 # Use custom gas limit (default is 30M)
 result = w3.seismic.signed_call(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x..."),
     gas=50_000_000,
 )
@@ -250,7 +250,7 @@ result = w3.seismic.signed_call(
 ```python
 # Use EIP-712 typed data signing
 result = w3.seismic.signed_call(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x..."),
     eip712=True,
 )
@@ -403,7 +403,7 @@ Each signed call uses a cryptographically random encryption nonce. The SDK gener
 ```python
 try:
     result = w3.seismic.signed_call(
-        to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+        to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         data=HexBytes("0x..."),
     )
 

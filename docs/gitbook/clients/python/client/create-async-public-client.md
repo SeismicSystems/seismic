@@ -9,14 +9,14 @@ Create an asynchronous `AsyncWeb3` instance with public (read-only) Seismic acce
 
 ## Overview
 
-`create_async_public_client()` creates an async client for read-only operations on the Seismic network. No private key is required. The `w3.seismic` namespace provides only public read operations: `get_tee_public_key()`, `get_deposit_root()`, `get_deposit_count()`, and `contract()` (with `.tread` only).
+`create_async_public_client()` creates an async client for read-only operations on the Seismic network. No private key is required. The [`w3.seismic`](../namespaces/async-seismic-public-namespace.md) namespace provides only public read operations: [`get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md), [`get_deposit_root()`](../namespaces/methods/get-deposit-root.md), [`get_deposit_count()`](../namespaces/methods/get-deposit-count.md), and [`contract()`](../contract/) (with `.tread` only).
 
 Supports both HTTP and WebSocket connections for efficient async queries and real-time monitoring.
 
 ## Signature
 
 ```python
-async def create_async_public_client(
+def create_async_public_client(
     provider_url: str,
     *,
     ws: bool = False,
@@ -44,7 +44,7 @@ async def create_async_public_client(
 from seismic_web3 import create_async_public_client
 
 # Create async public client
-w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Query TEE public key
 tee_pk = await w3.seismic.get_tee_public_key()
@@ -62,7 +62,7 @@ print(f"Deposit root: {root.to_0x_hex()}, count: {count}")
 from seismic_web3 import create_async_public_client
 
 # WebSocket provider for persistent connection
-w3 = await create_async_public_client(
+w3 = create_async_public_client(
     "wss://gcp-1.seismictest.net/ws",
     ws=True,
 )
@@ -82,10 +82,10 @@ async for block in w3.eth.subscribe("newHeads"):
 from seismic_web3 import SEISMIC_TESTNET
 
 # Recommended: use chain config with HTTP
-w3 = await SEISMIC_TESTNET.async_public_client()
+w3 = SEISMIC_TESTNET.async_public_client()
 
 # Or with WebSocket (uses ws_url from chain config)
-w3 = await SEISMIC_TESTNET.async_public_client(ws=True)
+w3 = SEISMIC_TESTNET.async_public_client(ws=True)
 ```
 
 ### Async Application
@@ -95,14 +95,14 @@ import asyncio
 from seismic_web3 import create_async_public_client
 
 async def main():
-    w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Get current block
     block = await w3.eth.get_block("latest")
     print(f"Latest block: {block['number']}")
 
     # Get balance
-    address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+    address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
     balance = await w3.eth.get_balance(address)
     print(f"Balance: {w3.from_wei(balance, 'ether')} ETH")
 
@@ -119,11 +119,11 @@ asyncio.run(main())
 from seismic_web3 import create_async_public_client
 
 async def query_contract():
-    w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Create contract wrapper (read-only)
     contract = w3.seismic.contract(
-        address="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+        address="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         abi=contract_abi,
     )
 
@@ -139,7 +139,7 @@ from seismic_web3 import create_async_public_client
 import asyncio
 
 async def monitor_deposits():
-    w3 = await create_async_public_client("wss://gcp-1.seismictest.net/ws", ws=True)
+    w3 = create_async_public_client("wss://gcp-1.seismictest.net/ws", ws=True)
 
     last_count = await w3.seismic.get_deposit_count()
     print(f"Starting deposit count: {last_count}")
@@ -162,7 +162,7 @@ from seismic_web3 import create_async_public_client
 import asyncio
 
 async def get_chain_stats():
-    w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Run multiple queries in parallel
     block, tee_pk, deposit_root, deposit_count = await asyncio.gather(
@@ -185,7 +185,7 @@ async def get_chain_stats():
 ```python
 from seismic_web3 import create_async_public_client
 
-async with await create_async_public_client(
+async with create_async_public_client(
     "wss://gcp-1.seismictest.net/ws",
     ws=True,
 ) as w3:
@@ -220,22 +220,22 @@ No TEE public key fetching or encryption setup is performed since the client can
 
 ## Client Capabilities
 
-### Standard AsyncWeb3 Methods (`w3.eth`)
+### Standard AsyncWeb3 Methods (e.g. `w3.eth`, `w3.net`)
 - `await get_block()`, `await get_transaction()`, `await get_balance()`
 - `await call()`, `await estimate_gas()`
 - All other standard read-only async `web3.py` functionality
 
 ### Public Seismic Methods (`w3.seismic`)
-- `await get_tee_public_key()` - Get TEE public key
-- `await get_deposit_root()` - Query deposit merkle root
-- `await get_deposit_count()` - Query deposit count
-- `contract()` - Create contract wrappers (`.tread` methods are async)
+- [`await get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md) - Get TEE public key
+- [`await get_deposit_root()`](../namespaces/methods/get-deposit-root.md) - Query deposit merkle root
+- [`await get_deposit_count()`](../namespaces/methods/get-deposit-count.md) - Query deposit count
+- [`contract()`](../contract/) - Create contract wrappers (`.tread` methods are async)
 
 ### NOT Available
-- `send_shielded_transaction()` - Requires private key
-- `debug_send_shielded_transaction()` - Requires private key
-- `signed_call()` - Requires private key and encryption
-- `deposit()` - Requires private key
+- [`send_shielded_transaction()`](../namespaces/methods/send-shielded-transaction.md) - Requires private key
+- [`debug_send_shielded_transaction()`](../namespaces/methods/debug-send-shielded-transaction.md) - Requires private key
+- [`signed_call()`](../namespaces/methods/signed-call.md) - Requires private key and encryption
+- [`deposit()`](../namespaces/methods/deposit.md) - Requires private key
 - Contract `.swrite` and `.sread` methods - Require private key
 
 ## HTTP vs WebSocket
@@ -250,7 +250,7 @@ No TEE public key fetching or encryption setup is performed since the client can
 
 ## Notes
 
-- The function is `async` and must be `await`-ed
+- The function is synchronous (no `await` needed) but returns an `AsyncWeb3` instance whose methods are async
 - No private key required or accepted
 - No encryption setup performed
 - No RPC calls during client creation (lightweight)

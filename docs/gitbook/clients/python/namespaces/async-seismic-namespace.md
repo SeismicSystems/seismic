@@ -295,7 +295,7 @@ async def main():
 
     # Send shielded transaction
     tx_hash = await w3.seismic.send_shielded_transaction(
-        to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+        to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         data=HexBytes("0x12345678..."),
         value=1000000000000000000,  # 1 ETH
     )
@@ -316,7 +316,7 @@ async def signed_read_example():
 
     # Perform signed read (encrypted eth_call)
     result = await w3.seismic.signed_call(
-        to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+        to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         data=HexBytes("0x12345678..."),
     )
 
@@ -335,7 +335,7 @@ async def contract_example():
 
     # Create contract wrapper
     contract = w3.seismic.contract(
-        address="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+        address="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         abi=[
             {
                 "name": "transfer",
@@ -394,7 +394,7 @@ async def debug_example():
 
     # Send transaction with debug info
     debug_result = await w3.seismic.debug_send_shielded_transaction(
-        to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+        to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         data=HexBytes("0x12345678..."),
     )
 
@@ -413,7 +413,7 @@ async def context_manager_example():
     ) as w3:
         # Use the client
         tx_hash = await w3.seismic.send_shielded_transaction(
-            to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+            to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
             data=HexBytes("0x12345678..."),
         )
         print(f"Transaction: {tx_hash.hex()}")

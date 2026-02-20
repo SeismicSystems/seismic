@@ -293,7 +293,7 @@ w3 = create_wallet_client(
 
 # Send shielded transaction
 tx_hash = w3.seismic.send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x12345678..."),
     value=1000000000000000000,  # 1 ETH
 )
@@ -306,7 +306,7 @@ print(f"Transaction sent: {tx_hash.hex()}")
 ```python
 # Perform signed read (encrypted eth_call)
 result = w3.seismic.signed_call(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x12345678..."),
 )
 
@@ -319,7 +319,7 @@ if result:
 ```python
 # Create contract wrapper
 contract = w3.seismic.contract(
-    address="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    address="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     abi=[
         {
             "name": "transfer",
@@ -350,7 +350,7 @@ balance = contract.read.balanceOf(
 ```python
 # Send transaction with debug info
 debug_result = w3.seismic.debug_send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=HexBytes("0x12345678..."),
 )
 

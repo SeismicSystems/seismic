@@ -11,6 +11,10 @@ This is seismic's monorepo, targeting Seismic developers and contributors. It co
 - [docs/claude-code-setup.md](docs/claude-code-setup.md) — Claude Code skills setup and symlink instructions
 
 
+## Docs ↔ Code Sync
+
+- **Always keep docs and source code in sync.** When changing a function signature, behavior, or API in source code (`clients/`), update the corresponding docs (`docs/gitbook/`). When changing docs, update the corresponding source code. Never change one without the other.
+
 ## Code Style
 
 - **No imports inside functions.** All imports must be at the top of the file. Never use deferred/lazy imports inside function or method bodies.

@@ -48,9 +48,10 @@ print(SANVIL.name)      # "Sanvil (local)"
 ### Create Wallet Client (Sync)
 
 ```python
+import os
 from seismic_web3 import SANVIL, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = SANVIL.wallet_client(pk)
 
 # Now use w3.seismic methods
@@ -60,9 +61,10 @@ balance = w3.eth.get_balance("0xYourAddress")
 ### Create Wallet Client (Async)
 
 ```python
+import os
 from seismic_web3 import SANVIL, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # HTTP
 w3 = await SANVIL.async_wallet_client(pk)
@@ -80,7 +82,7 @@ from seismic_web3 import SANVIL
 public = SANVIL.public_client()
 
 # Async
-public = await SANVIL.async_public_client()
+public = SANVIL.async_public_client()
 
 # Read-only operations
 block = await public.eth.get_block("latest")

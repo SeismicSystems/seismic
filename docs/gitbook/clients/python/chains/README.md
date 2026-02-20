@@ -12,9 +12,10 @@ The Seismic SDK provides pre-configured network settings and utilities for conne
 Instead of manually passing RPC URLs and chain IDs when creating clients, you can use pre-defined chain configurations:
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, SANVIL, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # Connect to testnet
 w3 = SEISMIC_TESTNET.wallet_client(pk)
@@ -45,9 +46,10 @@ w3 = SANVIL.wallet_client(pk)
 ### Using Pre-Defined Chains
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # Wallet client (requires private key)
 w3 = SEISMIC_TESTNET.wallet_client(pk)
@@ -129,10 +131,10 @@ w3 = await chain.async_wallet_client(private_key, ws=True)
 public = chain.public_client()
 
 # Async public client (HTTP)
-public = await chain.async_public_client(ws=False)
+public = chain.async_public_client(ws=False)
 
 # Async public client (WebSocket)
-public = await chain.async_public_client(ws=True)
+public = chain.async_public_client(ws=True)
 ```
 
 ## Chain IDs

@@ -9,7 +9,7 @@ Create an asynchronous `AsyncWeb3` instance with full Seismic wallet capabilitie
 
 ## Overview
 
-`create_async_wallet_client()` is the async factory function for creating a client that can perform shielded writes, signed reads, and deposits. It supports both HTTP and WebSocket connections, fetches the TEE public key asynchronously, derives encryption state via ECDH, and attaches a fully-configured `w3.seismic` namespace.
+`create_async_wallet_client()` is the async factory function for creating a client that can perform shielded writes, signed reads, and deposits. It supports both HTTP and WebSocket connections, fetches the TEE public key asynchronously, derives encryption state via [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman), and attaches a fully-configured [`w3.seismic`](../namespaces/async-seismic-namespace.md) namespace.
 
 The returned client works with all standard async `web3.py` APIs (`await w3.eth.get_block()`, etc.) plus the additional `w3.seismic` namespace for Seismic-specific operations.
 
@@ -18,8 +18,8 @@ The returned client works with all standard async `web3.py` APIs (`await w3.eth.
 ```python
 async def create_async_wallet_client(
     provider_url: str,
-    *,
     private_key: PrivateKey,
+    *,
     encryption_sk: PrivateKey | None = None,
     ws: bool = False,
 ) -> AsyncWeb3
@@ -45,10 +45,11 @@ async def create_async_wallet_client(
 ### Basic Usage (HTTP)
 
 ```python
+import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
 # Load private key
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # Create async wallet client
 w3 = await create_async_wallet_client(
@@ -65,9 +66,10 @@ receipt = await w3.eth.wait_for_transaction_receipt(tx_hash)
 ### WebSocket Connection
 
 ```python
+import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # WebSocket provider for persistent connection
 w3 = await create_async_wallet_client(
@@ -84,9 +86,10 @@ async for block in w3.eth.subscribe("newHeads"):
 ### Using Chain Configuration
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # Recommended: use chain config with HTTP
 w3 = await SEISMIC_TESTNET.async_wallet_client(private_key)
@@ -98,9 +101,10 @@ w3 = await SEISMIC_TESTNET.async_wallet_client(private_key, ws=True)
 ### Context Manager Pattern
 
 ```python
+import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # Use context manager to ensure cleanup
 async with create_async_wallet_client(
@@ -117,10 +121,11 @@ async with create_async_wallet_client(
 
 ```python
 import asyncio
+import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
     w3 = await create_async_wallet_client(
         "https://gcp-1.seismictest.net/rpc",
@@ -132,7 +137,7 @@ async def main():
     print(f"Latest block: {block['number']}")
 
     # Get balance
-    address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+    address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
     balance = await w3.eth.get_balance(address)
     print(f"Balance: {w3.from_wei(balance, 'ether')} ETH")
 
@@ -142,11 +147,11 @@ asyncio.run(main())
 ### With Custom Encryption Key
 
 ```python
-from seismic_web3 import create_async_wallet_client, PrivateKey
 import os
+from seismic_web3 import create_async_wallet_client, PrivateKey
 
 async def setup_client():
-    signing_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+    signing_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
     encryption_key = PrivateKey(os.urandom(32))  # Custom encryption keypair
 
     w3 = await create_async_wallet_client(
@@ -160,7 +165,7 @@ async def setup_client():
 
 ## How It Works
 
-The function performs four steps:
+The function performs six steps:
 
 1. **Create provider**
    ```python
@@ -180,12 +185,17 @@ The function performs four steps:
    network_pk = await async_get_tee_public_key(w3)
    ```
 
-4. **Derive encryption state** (ECDH + HKDF)
+4. **Generate encryption keypair** (if `encryption_sk` is `None`, a random ephemeral key is created)
+   ```python
+   encryption_sk = encryption_sk or PrivateKey(os.urandom(32))
+   ```
+
+5. **Derive encryption state** (ECDH + [HKDF](https://en.wikipedia.org/wiki/HKDF))
    ```python
    encryption = get_encryption(network_pk, encryption_sk)
    ```
 
-5. **Attach Seismic namespace**
+6. **Attach Seismic namespace**
    ```python
    w3.seismic = AsyncSeismicNamespace(w3, encryption, private_key)
    ```
@@ -194,20 +204,20 @@ The function performs four steps:
 
 The returned client provides:
 
-### Standard AsyncWeb3 Methods (`w3.eth`)
+### Standard AsyncWeb3 Methods (e.g. `w3.eth`, `w3.net`)
 - `await get_block()`, `await get_transaction()`, `await get_balance()`
 - `await send_raw_transaction()`, `await wait_for_transaction_receipt()`
 - All other standard async `web3.py` functionality
 
 ### Async Seismic Methods (`w3.seismic`)
-- `await send_shielded_transaction()` - Send shielded transactions
-- `await debug_send_shielded_transaction()` - Debug shielded transactions
-- `await signed_call()` - Execute signed reads
-- `await deposit()` - Deposit ETH/tokens
-- `await get_tee_public_key()` - Get TEE public key
-- `await get_deposit_root()` - Query deposit merkle root
-- `await get_deposit_count()` - Query deposit count
-- `contract()` - Create contract wrappers (methods are async)
+- [`await send_shielded_transaction()`](../namespaces/methods/send-shielded-transaction.md) - Send shielded transactions
+- [`await debug_send_shielded_transaction()`](../namespaces/methods/debug-send-shielded-transaction.md) - Debug shielded transactions
+- [`await signed_call()`](../namespaces/methods/signed-call.md) - Execute signed reads
+- [`await deposit()`](../namespaces/methods/deposit.md) - Deposit ETH/tokens
+- [`await get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md) - Get TEE public key
+- [`await get_deposit_root()`](../namespaces/methods/get-deposit-root.md) - Query deposit merkle root
+- [`await get_deposit_count()`](../namespaces/methods/get-deposit-count.md) - Query deposit count
+- [`contract()`](../contract/) - Create contract wrappers (methods are async)
 
 ## HTTP vs WebSocket
 
@@ -222,7 +232,7 @@ The returned client provides:
 ## Encryption
 
 The client automatically:
-- Fetches the node's TEE public key asynchronously
+- Fetches the network's TEE public key asynchronously
 - Performs ECDH key exchange using `encryption_sk` (or generates a random one)
 - Derives a shared AES-GCM key via HKDF
 - Uses this key to encrypt all shielded transaction calldata and signed reads

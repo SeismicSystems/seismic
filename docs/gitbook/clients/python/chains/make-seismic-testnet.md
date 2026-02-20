@@ -58,9 +58,10 @@ The returned `ChainConfig` has:
 ### Connect to Alternate Testnet Instances
 
 ```python
+import os
 from seismic_web3 import make_seismic_testnet, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # GCP-1 (same as SEISMIC_TESTNET)
 testnet_1 = make_seismic_testnet(1)
@@ -90,9 +91,10 @@ print(testnet.name)     # "Seismic Testnet (GCP-1)"
 ### Multi-Instance Testing
 
 ```python
+import os
 from seismic_web3 import make_seismic_testnet, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # Test against multiple instances
 instances = [1, 2, 3]
@@ -135,7 +137,7 @@ async def compare_instances():
 
     for i in instances:
         testnet = make_seismic_testnet(i)
-        public = await testnet.async_public_client()
+        public = testnet.async_public_client()
 
         block_number = await public.eth.block_number
         print(f"GCP-{i}: block {block_number}")

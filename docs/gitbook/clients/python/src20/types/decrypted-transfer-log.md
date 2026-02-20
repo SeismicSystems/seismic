@@ -60,10 +60,11 @@ class DecryptedTransferLog:
 ### Basic Callback Usage
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import watch_src20_events, DecryptedTransferLog
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 def on_transfer(log: DecryptedTransferLog):
@@ -105,7 +106,7 @@ def on_transfer(log: DecryptedTransferLog):
 ```python
 from seismic_web3.src20 import DecryptedTransferLog
 
-MY_ADDRESS = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+MY_ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 def on_transfer(log: DecryptedTransferLog):
     if log.from_address == MY_ADDRESS:
@@ -190,10 +191,11 @@ def on_transfer(log: DecryptedTransferLog):
 ### Wait for Transaction Confirmation
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import DecryptedTransferLog
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 def on_transfer(log: DecryptedTransferLog):

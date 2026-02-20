@@ -28,7 +28,7 @@ from seismic_web3 import create_wallet_client, PrivateKey, SEISMIC_TESTNET
 from hexbytes import HexBytes
 
 # Setup
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 # Contract ABI (simplified example)
@@ -85,7 +85,7 @@ def decode_uint256(raw: HexBytes) -> int:
 
 
 # Setup
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 ABI = [
@@ -144,7 +144,7 @@ from seismic_web3 import (
     SeismicSecurityParams,
 )
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 ABI = [
@@ -182,7 +182,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey, SEISMIC_TESTNET
 from hexbytes import HexBytes
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 # Pre-encoded calldata (e.g., from web3.py contract.encodeABI)
@@ -209,7 +209,7 @@ Debug mode returns additional information including plaintext and encrypted data
 import os
 from seismic_web3 import create_wallet_client, PrivateKey, SEISMIC_TESTNET
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 ABI = [
@@ -283,7 +283,7 @@ def safe_shielded_write(contract, method_name: str, *args, timeout: int = 60):
 
 
 # Usage
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 ABI = [
@@ -305,7 +305,7 @@ receipt = safe_shielded_write(contract, "setNumber", 42)
 import os
 from seismic_web3 import create_wallet_client, PrivateKey, SEISMIC_TESTNET
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 ABI = [

@@ -175,7 +175,7 @@ print(f"Deposit root: {deposit_root.hex()}")
 ```python
 # Create contract wrapper
 contract = public.seismic.contract(
-    address="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    address="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     abi=[
         {
             "name": "balanceOf",
@@ -248,7 +248,7 @@ deposit_count = public.seismic.get_deposit_count()
 
 # Transact with wallet client (requires private key)
 tx_hash = wallet.seismic.send_shielded_transaction(
-    to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0",
+    to="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     data=encoded_data,
 )
 

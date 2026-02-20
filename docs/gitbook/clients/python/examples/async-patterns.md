@@ -29,7 +29,7 @@ from seismic_web3 import create_async_wallet_client, PrivateKey
 
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
     # Create async client
     w3 = await create_async_wallet_client(
@@ -68,7 +68,7 @@ def decode_uint256(raw: HexBytes) -> int:
 
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
     w3 = await SEISMIC_TESTNET.async_wallet_client(private_key)
 
     try:
@@ -151,7 +151,7 @@ async def send_transaction_with_tracking(contract, value: int, index: int):
 
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
     w3 = await SEISMIC_TESTNET.async_wallet_client(private_key)
 
     try:
@@ -224,7 +224,7 @@ async def retry_async(
 
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
     # Create client with retry
     w3 = await retry_async(
@@ -295,7 +295,7 @@ async def seismic_client(rpc_url: str, private_key: PrivateKey) -> AsyncIterator
 
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
     # Automatic cleanup with context manager
     async with seismic_client(os.environ["RPC_URL"], private_key) as w3:
@@ -322,7 +322,7 @@ from seismic_web3 import create_async_wallet_client, PrivateKey, SRC20_ABI
 
 async def watch_events_ws(token_address: str, duration: int = 30):
     """Watch Transfer events using WebSocket connection."""
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
     # Create WebSocket client
     w3 = await create_async_wallet_client(
@@ -429,7 +429,7 @@ async def worker(pool: ClientPool, worker_id: int, num_operations: int):
 
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
     # Create connection pool
     pool = ClientPool(os.environ["RPC_URL"], private_key, pool_size=3)
@@ -480,7 +480,7 @@ async def operation_with_timeout(w3, timeout: float = 5.0):
 
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
     w3 = await SEISMIC_TESTNET.async_wallet_client(private_key)
 
     try:
@@ -562,7 +562,7 @@ async def rate_limited_operation(w3, limiter: RateLimiter, operation_id: int):
 
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
     w3 = await SEISMIC_TESTNET.async_wallet_client(private_key)
 
     try:
@@ -659,7 +659,7 @@ class SeismicAsyncClient:
 
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
     # Create client
     client = SeismicAsyncClient(os.environ["RPC_URL"], private_key)

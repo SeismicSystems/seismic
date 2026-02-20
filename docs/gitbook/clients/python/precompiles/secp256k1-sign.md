@@ -225,7 +225,7 @@ private_key = PrivateKey.from_hex("0x1234...")
 context = {
     "action": "transfer",
     "amount": 1000,
-    "recipient": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+    "recipient": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
 }
 message = json.dumps(context, sort_keys=True)
 signature = secp256k1_sign(w3, sk=private_key, message=message)

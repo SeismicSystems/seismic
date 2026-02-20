@@ -69,7 +69,7 @@ node_pubkey = bytes.fromhex(
 consensus_pubkey = bytes.fromhex(
     "1a2b3c4d5e6f..."  # 48-byte BLS12-381 pubkey
 )
-withdrawal_address = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+withdrawal_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 withdrawal_credentials = make_withdrawal_credentials(withdrawal_address)
 
 # Signatures from signing process
@@ -271,7 +271,7 @@ ETH1-style withdrawal credentials:
 from seismic_web3 import make_withdrawal_credentials
 
 withdrawal_credentials = make_withdrawal_credentials(
-    "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb0"
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 )
 ```
 

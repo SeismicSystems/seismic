@@ -105,9 +105,10 @@ def wallet_client(
 #### Example
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 # Now use w3.seismic methods
@@ -150,9 +151,10 @@ async def async_wallet_client(
 #### Example
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"].removeprefix("0x")))
 
 # HTTP
 w3 = await SEISMIC_TESTNET.async_wallet_client(pk)
@@ -201,7 +203,7 @@ tee_key = public.seismic.get_tee_public_key()
 Create an asynchronous `Web3` instance with public (read-only) access.
 
 ```python
-async def async_public_client(
+def async_public_client(
     self,
     *,
     ws: bool = False,
@@ -224,10 +226,10 @@ async def async_public_client(
 from seismic_web3 import SEISMIC_TESTNET
 
 # HTTP
-public = await SEISMIC_TESTNET.async_public_client()
+public = SEISMIC_TESTNET.async_public_client()
 
 # WebSocket
-public = await SEISMIC_TESTNET.async_public_client(ws=True)
+public = SEISMIC_TESTNET.async_public_client(ws=True)
 
 # Read-only operations
 block = await public.eth.get_block("latest")
