@@ -104,7 +104,12 @@ class ChainConfig:
         Returns:
             An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached.
         """
-        url = self.ws_url if ws and self.ws_url else self.rpc_url
+        if ws and not self.ws_url:
+            raise ValueError(
+                f"ws=True but no ws_url configured for chain {self.name!r}. "
+                "Provide a ws_url when constructing ChainConfig to use WebSocket.",
+            )
+        url = self.ws_url if ws else self.rpc_url
         return await create_async_wallet_client(
             url,
             private_key=private_key,
@@ -141,7 +146,12 @@ class ChainConfig:
             An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached
             (read-only).
         """
-        url = self.ws_url if ws and self.ws_url else self.rpc_url
+        if ws and not self.ws_url:
+            raise ValueError(
+                f"ws=True but no ws_url configured for chain {self.name!r}. "
+                "Provide a ws_url when constructing ChainConfig to use WebSocket.",
+            )
+        url = self.ws_url if ws else self.rpc_url
         return create_async_public_client(url, ws=ws)
 
     # -- Deprecated aliases ----------------------------------------------
@@ -183,21 +193,36 @@ class ChainConfig:
         )
 
 
-def make_seismic_testnet(n: int = 1) -> ChainConfig:
-    """Create a ``ChainConfig`` for GCP testnet instance *n*.
+def make_seismic_testnet(
+    n: int = 1,
+    *,
+    host: str | None = None,
+) -> ChainConfig:
+    """Create a ``ChainConfig`` for a Seismic testnet.
+
+    Provide either *n* (GCP node number) **or** *host*, not both.
 
     Args:
-        n: GCP instance number (default ``1``).
+        n: GCP node number (default ``1``).
+        host: Custom hostname. Mutually exclusive with *n*.
 
     Returns:
-        A ``ChainConfig`` pointing at ``gcp-{n}.seismictest.net``.
+        A ``ChainConfig`` for the specified testnet.
+
+    Raises:
+        ValueError: If both *n* and *host* are provided.
     """
-    host = f"gcp-{n}.seismictest.net"
+    if host is not None and n != 1:
+        raise ValueError(
+            "Provide either n or host, not both.",
+        )
+    if host is None:
+        host = f"gcp-{n}.seismictest.net"
     return ChainConfig(
         chain_id=SEISMIC_TESTNET_CHAIN_ID,
         rpc_url=f"https://{host}/rpc",
         ws_url=f"wss://{host}/ws",
-        name=f"Seismic Testnet (GCP-{n})",
+        name="Seismic Testnet",
     )
 
 

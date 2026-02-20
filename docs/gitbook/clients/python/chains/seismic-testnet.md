@@ -5,7 +5,7 @@ icon: cloud
 
 # SEISMIC_TESTNET
 
-Pre-defined [`ChainConfig`](chain-config.md) for the Seismic public testnet (GCP instance 1).
+Pre-defined [`ChainConfig`](chain-config.md) for the Seismic public testnet (GCP node 1).
 
 ## Overview
 
@@ -24,7 +24,7 @@ ChainConfig(
     chain_id=5124,
     rpc_url="https://gcp-1.seismictest.net/rpc",
     ws_url="wss://gcp-1.seismictest.net/ws",
-    name="Seismic Testnet (GCP-1)",
+    name="Seismic Testnet",
 )
 ```
 
@@ -35,7 +35,7 @@ ChainConfig(
 | `chain_id` | `5124` |
 | `rpc_url` | `"https://gcp-1.seismictest.net/rpc"` |
 | `ws_url` | `"wss://gcp-1.seismictest.net/ws"` |
-| `name` | `"Seismic Testnet (GCP-1)"` |
+| `name` | `"Seismic Testnet"` |
 
 ## Usage
 
@@ -48,7 +48,7 @@ from seismic_web3 import SEISMIC_TESTNET
 print(SEISMIC_TESTNET.rpc_url)   # "https://gcp-1.seismictest.net/rpc"
 print(SEISMIC_TESTNET.ws_url)    # "wss://gcp-1.seismictest.net/ws"
 print(SEISMIC_TESTNET.chain_id)  # 5124
-print(SEISMIC_TESTNET.name)      # "Seismic Testnet (GCP-1)"
+print(SEISMIC_TESTNET.name)      # "Seismic Testnet"
 ```
 
 ### Create Wallet Client (Sync)
@@ -61,7 +61,7 @@ pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 # Now use w3.seismic methods
-balance = w3.eth.get_balance("0xYourAddress")
+balance = w3.eth.get_balance("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 ```
 
 ### Create Wallet Client (Async)
@@ -85,14 +85,12 @@ w3 = await SEISMIC_TESTNET.async_wallet_client(pk, ws=True)
 from seismic_web3 import SEISMIC_TESTNET
 
 # Sync
-public = SEISMIC_TESTNET.public_client()
+public_sync = SEISMIC_TESTNET.public_client()
+block = public_sync.eth.get_block("latest")
 
 # Async
-public = SEISMIC_TESTNET.async_public_client()
-
-# Read-only operations
-block = await public.eth.get_block("latest")
-tee_key = await public.seismic.get_tee_public_key()
+public_async = SEISMIC_TESTNET.async_public_client()
+block = await public_async.eth.get_block("latest")
 ```
 
 ## Examples
@@ -108,7 +106,7 @@ w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 # Get contract
 contract = w3.seismic.contract(
-    address="0xYourContractAddress",
+    address="0x00000000219ab540356cBB839Cbe05303d7705Fa",
     abi=[...],
 )
 
@@ -151,7 +149,6 @@ except Exception as e:
 - This is the primary public testnet instance
 - Suitable for development and testing
 - WebSocket endpoint is available for subscriptions
-- Chain ID `5124` is used for EIP-712 transaction signing
 - For alternate testnet instances, use [`make_seismic_testnet(n)`](make-seismic-testnet.md)
 
 ## Chain ID Constant

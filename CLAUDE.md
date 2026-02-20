@@ -25,3 +25,7 @@ This is seismic's monorepo, targeting Seismic developers and contributors. It co
 
 ### Python
 - **Trailing commas.** When a function call or definition spans multiple lines, use trailing commas so each item ends up on its own line. Single-line calls like `func(x=1, y=2)` or definitions like `def func(x: int, y: str) -> int:` are fine without trailing commas.
+
+### Docs
+- **No "rule of three" bias.** Include exactly as many bullet points, list items, or examples as the content demands — no more, no fewer. Don't pad lists to three items or trim to three for aesthetic reasons.
+- **Placeholder addresses.** For EOA addresses, use the first Anvil address: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`. For contract addresses, use the deposit contract: `0x00000000219ab540356cBB839Cbe05303d7705Fa`.
