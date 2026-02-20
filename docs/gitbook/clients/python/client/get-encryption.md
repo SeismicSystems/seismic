@@ -151,7 +151,7 @@ The function performs three steps:
        client_sk = PrivateKey(os.urandom(32))
    ```
 
-2. **Derive AES key via ECDH + HKDF**
+2. **Derive AES key via ECDH + [HKDF](https://en.wikipedia.org/wiki/HKDF)**
    ```python
    aes_key = generate_aes_key(client_sk, network_pk)
    ```

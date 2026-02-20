@@ -38,7 +38,7 @@ class EncryptionState:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `aes_key` | [`Bytes32`](../api-reference/types/bytes32.md) | 32-byte AES-256 key derived from ECDH + HKDF |
+| `aes_key` | [`Bytes32`](../api-reference/types/bytes32.md) | 32-byte AES-256 key derived from ECDH + [HKDF](https://en.wikipedia.org/wiki/HKDF) |
 | `encryption_pubkey` | [`CompressedPublicKey`](../api-reference/types/compressed-public-key.md) | Client's 33-byte compressed secp256k1 public key |
 | `encryption_private_key` | [`PrivateKey`](../api-reference/types/private-key.md) | Client's 32-byte secp256k1 private key |
 

@@ -190,7 +190,7 @@ The function performs six steps:
    encryption_sk = encryption_sk or PrivateKey(os.urandom(32))
    ```
 
-5. **Derive encryption state** (ECDH + HKDF)
+5. **Derive encryption state** (ECDH + [HKDF](https://en.wikipedia.org/wiki/HKDF))
    ```python
    encryption = get_encryption(network_pk, encryption_sk)
    ```

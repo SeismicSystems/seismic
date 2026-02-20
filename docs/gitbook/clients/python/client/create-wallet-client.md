@@ -126,7 +126,7 @@ The function performs five steps:
    encryption_sk = encryption_sk or PrivateKey(os.urandom(32))
    ```
 
-4. **Derive encryption state** (ECDH + HKDF)
+4. **Derive encryption state** (ECDH + [HKDF](https://en.wikipedia.org/wiki/HKDF))
    ```python
    encryption = get_encryption(network_pk, encryption_sk)
    ```
@@ -140,7 +140,7 @@ The function performs five steps:
 
 The returned client provides:
 
-### Standard Web3 Methods (`w3.eth`)
+### Standard Web3 Methods (e.g. `w3.eth`, `w3.net`)
 - `get_block()`, `get_transaction()`, `get_balance()`
 - `send_raw_transaction()`, `wait_for_transaction_receipt()`
 - All other standard `web3.py` functionality

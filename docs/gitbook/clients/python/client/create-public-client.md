@@ -150,7 +150,7 @@ No TEE public key fetching or encryption setup is performed since the client can
 
 ## Client Capabilities
 
-### Standard Web3 Methods (`w3.eth`)
+### Standard Web3 Methods (e.g. `w3.eth`, `w3.net`)
 - `get_block()`, `get_transaction()`, `get_balance()`
 - `get_code()`, `call()`, `estimate_gas()`
 - All other standard read-only `web3.py` functionality
