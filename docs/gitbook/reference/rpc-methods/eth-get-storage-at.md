@@ -72,6 +72,6 @@ If you need to read shielded data, use a [signed read](/broken/pages/Iy1iEnGF6Lo
 
 ## Related
 
-* [Storage](../../../seismic-solidity/seismic-solidity/storage.md) — how shielded storage works in Seismic Solidity
+* [Storage](../../seismic-solidity/storage.md) — how shielded storage works in Seismic Solidity
 * [Opcodes](../opcodes.md) — `CLOAD`/`CSTORE` for shielded storage access
 * [Differences from Ethereum](../../overview/differences-from-ethereum.md#rpc-compatibility) — RPC compatibility overview

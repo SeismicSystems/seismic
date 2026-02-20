@@ -36,9 +36,9 @@ Seismic currently supports archival nodes only.
 
 <summary>How fast does storage grow?</summary>
 
-* **Current size**: TBD (network has not yet launched)
-* **Archive node**: 1TB+ storage recommended initially
-* **Growth rate**: Will depend on network activity; approximately 12 hours of sync time expected for first year of operation
+- **Current size**: TBD (network has not yet launched)
+- **Archive node**: 1TB+ storage recommended initially
+- **Growth rate**: Will depend on network activity; approximately 12 hours of sync time expected for first year of operation
 
 Detailed storage projections will be published after mainnet launch.
 
@@ -71,13 +71,13 @@ Seismic uses Azure's Confidential Computing with Intel TDX to run our nodes. We 
 
 <summary>What are the recommended specs?</summary>
 
-* CPU: 4+ vCPUs
-* Memory: 16+GB RAM
-* Storage: 1TB
-* Azure Confidential virtual machines (TDX) with secure boot & TPM enabled
-  * Example instance: EC4es v5
-* Security: Confidential VM with secure boot and vTPM (NonPersistedTPM)
-* SKU: `standard_lrs` with `ConfidentialVM_NonPersistedTPM` security type
+- CPU: 4+ vCPUs
+- Memory: 16+GB RAM
+- Storage: 1TB
+- Azure Confidential virtual machines (TDX) with secure boot & TPM enabled
+  - Example instance: EC4es v5
+- Security: Confidential VM with secure boot and vTPM (NonPersistedTPM)
+- SKU: `standard_lrs` with `ConfidentialVM_NonPersistedTPM` security type
 
 </details>
 
@@ -145,8 +145,8 @@ We only support archival nodes. Make RPC calls to them with block filters.
 
 The most resource-intensive RPC methods are:
 
-* **`eth_getLogs`** with large block ranges or many matching events
-* **Tracing calls** (e.g., `debug_traceTransaction`, `trace_*` methods) with complex geth tracers
+- **`eth_getLogs`** with large block ranges or many matching events
+- **Tracing calls** (e.g., `debug_traceTransaction`, `trace_*` methods) with complex geth tracers
 
 </details>
 

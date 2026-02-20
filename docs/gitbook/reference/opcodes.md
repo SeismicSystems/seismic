@@ -5,7 +5,7 @@ metaLinks:
     - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/appendix/opcodes
 ---
 
-# EVM Instructions
+# Opcodes
 
 Seismic introduces two new EVM instructions to handle confidential storage: `CSTORE` (`0xB1`) and `CLOAD` (`0xB0`). These work alongside the standard `SSTORE` and `SLOAD`, with access enforced through **FlaggedStorage** — a modified storage model where every slot carries an `is_private` flag.
 
