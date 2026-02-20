@@ -5,7 +5,7 @@ icon: key
 
 # EncryptionState
 
-Holds the AES-GCM key and encryption keypair derived from ECDH key exchange.
+Holds the [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard)-GCM key and encryption keypair derived from [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) key exchange.
 
 ## Overview
 
@@ -297,7 +297,7 @@ If any metadata field changes, decryption will fail even with the correct key an
 
 ## Security Considerations
 
-- **Key derivation** - AES key is derived from ECDH + HKDF, ensuring forward secrecy
+- **Key derivation** - [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) key is derived from [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman) + [HKDF](https://en.wikipedia.org/wiki/HKDF), ensuring forward secrecy
 - **AAD binding** - Metadata binding prevents ciphertext reuse or manipulation
 - **Nonce uniqueness** - Nonces must be unique per encryption; SDK generates fresh nonces automatically
 - **Key storage** - `encryption_private_key` should be stored securely if deterministic keys are used
