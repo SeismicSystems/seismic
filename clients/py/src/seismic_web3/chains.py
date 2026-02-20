@@ -104,12 +104,15 @@ class ChainConfig:
         Returns:
             An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached.
         """
-        if ws and not self.ws_url:
-            raise ValueError(
-                f"ws=True but no ws_url configured for chain {self.name!r}. "
-                "Provide a ws_url when constructing ChainConfig to use WebSocket.",
-            )
-        url = self.ws_url if ws else self.rpc_url
+        if ws:
+            if self.ws_url is None:
+                raise ValueError(
+                    f"ws=True but no ws_url configured for chain {self.name!r}. "
+                    "Provide a ws_url when constructing ChainConfig to use WebSocket.",
+                )
+            url = self.ws_url
+        else:
+            url = self.rpc_url
         return await create_async_wallet_client(
             url,
             private_key=private_key,
@@ -146,12 +149,15 @@ class ChainConfig:
             An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached
             (read-only).
         """
-        if ws and not self.ws_url:
-            raise ValueError(
-                f"ws=True but no ws_url configured for chain {self.name!r}. "
-                "Provide a ws_url when constructing ChainConfig to use WebSocket.",
-            )
-        url = self.ws_url if ws else self.rpc_url
+        if ws:
+            if self.ws_url is None:
+                raise ValueError(
+                    f"ws=True but no ws_url configured for chain {self.name!r}. "
+                    "Provide a ws_url when constructing ChainConfig to use WebSocket.",
+                )
+            url = self.ws_url
+        else:
+            url = self.rpc_url
         return create_async_public_client(url, ws=ws)
 
     # -- Deprecated aliases ----------------------------------------------
