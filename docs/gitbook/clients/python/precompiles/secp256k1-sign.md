@@ -52,7 +52,7 @@ from seismic_web3.precompiles import secp256k1_sign
 from seismic_web3 import PrivateKey
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Sign a message
 private_key = PrivateKey.from_hex("0x1234...")
@@ -70,7 +70,7 @@ from seismic_web3 import PrivateKey
 from web3 import AsyncWeb3
 
 async def main():
-    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://sepolia.seismic.foundation"))
+    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
     private_key = PrivateKey.from_hex("0x1234...")
     message = "Async signing"
@@ -87,7 +87,7 @@ from seismic_web3.precompiles import secp256k1_sign
 from seismic_web3 import PrivateKey
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 private_key = PrivateKey.from_hex("0x1234...")
 messages = ["Message 1", "Message 2", "Message 3"]
@@ -105,7 +105,7 @@ from seismic_web3 import PrivateKey
 from web3 import Web3, Account
 from eth_hash.auto import keccak
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Sign message on-chain
 private_key = PrivateKey.from_hex("0x1234...")
@@ -132,7 +132,7 @@ from seismic_web3.precompiles import secp256k1_sign
 from seismic_web3 import PrivateKey
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 private_key = PrivateKey.from_hex("0x1234...")
 signature = secp256k1_sign(w3, sk=private_key, message="Extract components")
@@ -155,7 +155,7 @@ from seismic_web3 import PrivateKey
 from web3 import Web3
 import os
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Generate random private key
 private_key = PrivateKey(os.urandom(32))
@@ -172,7 +172,7 @@ from seismic_web3.precompiles import secp256k1_sign
 from seismic_web3 import PrivateKey, Bytes32
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 private_key = PrivateKey.from_hex("0x1234...")
 
@@ -189,7 +189,7 @@ from seismic_web3.precompiles import secp256k1_sign
 from seismic_web3 import PrivateKey
 from web3 import Web3, Account
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 private_key = PrivateKey.from_hex("0x1234...")
 message = "Compare signing methods"
@@ -217,7 +217,7 @@ from seismic_web3 import PrivateKey
 from web3 import Web3
 import json
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 private_key = PrivateKey.from_hex("0x1234...")
 

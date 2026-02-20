@@ -74,7 +74,7 @@ A 33-byte compressed secp256k1 public key in SEC format:
 from seismic_web3 import create_public_client
 
 # Create public client
-w3 = create_public_client("https://rpc.example.com")
+w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Fetch TEE public key
 tee_key = w3.seismic.get_tee_public_key()
@@ -90,7 +90,7 @@ print(f"Y-parity: {'even' if tee_key[0] == 0x02 else 'odd'}")
 from seismic_web3 import create_async_public_client
 
 # Create async public client
-w3 = await create_async_public_client("https://rpc.example.com")
+w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Fetch TEE public key
 tee_key = await w3.seismic.get_tee_public_key()
@@ -106,7 +106,7 @@ from seismic_web3 import create_wallet_client, PrivateKey
 
 # Wallet clients also have access to public methods
 w3 = create_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(b"..."),
 )
 

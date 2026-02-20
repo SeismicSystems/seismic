@@ -33,7 +33,7 @@ w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 # Method 2: Using RPC URL directly
 # w3 = create_wallet_client(
-#     "https://rpc.seismic.network",
+#     "https://gcp-1.seismictest.net/rpc",
 #     private_key=private_key,
 # )
 
@@ -70,7 +70,7 @@ async def main():
 
     # Method 2: Using WebSocket (for event streaming)
     # w3 = await create_async_wallet_client(
-    #     "wss://rpc.seismic.network",
+    #     "wss://gcp-1.seismictest.net/ws",
     #     private_key=private_key,
     #     ws=True,
     # )
@@ -112,7 +112,7 @@ signing_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 encryption_key = PrivateKey(bytes.fromhex(os.environ["ENCRYPTION_KEY"]))
 
 w3 = create_wallet_client(
-    "https://rpc.seismic.network",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=signing_key,
     encryption_sk=encryption_key,
 )
@@ -152,7 +152,7 @@ def create_client_with_retry(rpc_url: str, private_key: PrivateKey, max_retries:
 
 # Usage
 private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
-w3 = create_client_with_retry("https://rpc.seismic.network", private_key)
+w3 = create_client_with_retry("https://gcp-1.seismictest.net/rpc", private_key)
 ```
 
 ## Expected Output
@@ -185,8 +185,8 @@ pk1 = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY_1"]))
 pk2 = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY_2"]))
 
 # Create separate clients for each account
-w3_account1 = create_wallet_client("https://rpc.seismic.network", private_key=pk1)
-w3_account2 = create_wallet_client("https://rpc.seismic.network", private_key=pk2)
+w3_account1 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=pk1)
+w3_account2 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=pk2)
 
 # Each client uses its own signing and encryption keys
 print(f"Account 1: {w3_account1.eth.default_account}")
@@ -225,7 +225,7 @@ def verify_client_ready(w3):
 
 
 private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 verify_client_ready(w3)
 ```
 

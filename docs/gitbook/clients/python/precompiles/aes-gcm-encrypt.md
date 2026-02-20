@@ -56,7 +56,7 @@ from seismic_web3 import Bytes32
 from web3 import Web3
 import os
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Generate AES key
 aes_key = Bytes32(os.urandom(32))
@@ -75,7 +75,7 @@ from seismic_web3.precompiles import aes_gcm_encrypt
 from seismic_web3 import Bytes32
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 aes_key = Bytes32.from_hex("0x1234...")
 
@@ -94,7 +94,7 @@ from seismic_web3 import Bytes32, EncryptionNonce
 from web3 import Web3
 import os
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 aes_key = Bytes32.from_hex("0x1234...")
 
@@ -114,7 +114,7 @@ from web3 import AsyncWeb3
 import os
 
 async def main():
-    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://sepolia.seismic.foundation"))
+    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
     aes_key = Bytes32(os.urandom(32))
     plaintext = b"Async secret"
@@ -136,7 +136,7 @@ from seismic_web3 import Bytes32
 from web3 import Web3
 import os
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 aes_key = Bytes32(os.urandom(32))
 original = b"Round trip test"
@@ -159,7 +159,7 @@ from seismic_web3 import Bytes32
 from web3 import Web3
 import os
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 aes_key = Bytes32(os.urandom(32))
 
@@ -179,7 +179,7 @@ from seismic_web3.precompiles import ecdh, aes_gcm_encrypt
 from seismic_web3 import PrivateKey, CompressedPublicKey
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Derive shared key via ECDH
 my_sk = PrivateKey.from_hex("0x1234...")

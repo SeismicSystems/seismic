@@ -21,7 +21,7 @@ def domain_separator(chain_id: int) -> bytes
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `chain_id` | `int` | Yes | Numeric chain identifier (e.g., 1 for Ethereum mainnet) |
+| `chain_id` | `int` | Yes | Numeric chain identifier (e.g., 5124 for Seismic testnet) |
 
 ## Returns
 
@@ -34,30 +34,23 @@ def domain_separator(chain_id: int) -> bytes
 ### Basic Usage
 
 ```python
-from seismic_web3 import domain_separator
+from seismic_web3 import domain_separator, SEISMIC_TESTNET
 
-# Ethereum mainnet
-mainnet_domain = domain_separator(1)
-print(f"Mainnet domain: {mainnet_domain.hex()}")
-
-# Sepolia testnet
-sepolia_domain = domain_separator(11155111)
-print(f"Sepolia domain: {sepolia_domain.hex()}")
+# Seismic testnet
+testnet_domain = domain_separator(SEISMIC_TESTNET.chain_id)
+print(f"Testnet domain: {testnet_domain.hex()}")
 ```
 
 ### Compare Across Chains
 
 ```python
-from seismic_web3 import domain_separator
+from seismic_web3 import domain_separator, SEISMIC_TESTNET, SANVIL
 
 # Different chains have different domain separators
-mainnet = domain_separator(1)
-sepolia = domain_separator(11155111)
-custom = domain_separator(12345)
+testnet = domain_separator(SEISMIC_TESTNET.chain_id)
+sanvil = domain_separator(SANVIL.chain_id)
 
-assert mainnet != sepolia
-assert mainnet != custom
-assert sepolia != custom
+assert testnet != sanvil
 ```
 
 ### Use in Custom Signing
@@ -150,7 +143,7 @@ The domain separator ensures:
 ## Performance Optimization
 
 ```python
-from seismic_web3 import domain_separator
+from seismic_web3 import domain_separator, SEISMIC_TESTNET
 
 # Cache domain separator per chain
 _domain_cache = {}
@@ -161,7 +154,7 @@ def get_cached_domain(chain_id: int) -> bytes:
     return _domain_cache[chain_id]
 
 # Use cached version
-domain = get_cached_domain(1)
+domain = get_cached_domain(SEISMIC_TESTNET.chain_id)
 ```
 
 ## Verifying Contract

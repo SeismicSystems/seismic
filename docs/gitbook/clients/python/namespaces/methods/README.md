@@ -119,7 +119,7 @@ tx_hash = w3.seismic.deposit(
 Created with `create_public_client()` or `create_async_public_client()`:
 
 ```python
-w3 = create_public_client("https://rpc.example.com")
+w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Available methods
 w3.seismic.get_tee_public_key()
@@ -138,7 +138,7 @@ Created with `create_wallet_client()` or `create_async_wallet_client()`:
 
 ```python
 w3 = create_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(b"..."),
 )
 

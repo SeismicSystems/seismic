@@ -23,7 +23,7 @@ def create_public_client(rpc_url: str) -> Web3
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `rpc_url` | `str` | Yes | HTTP(S) URL of the Seismic node (e.g., `"https://rpc.seismic.network"`) |
+| `rpc_url` | `str` | Yes | HTTP(S) URL of the Seismic node (e.g., `"https://gcp-1.seismictest.net/rpc"`). WebSocket URLs are not supported — see note below |
 
 ## Returns
 
@@ -39,7 +39,7 @@ def create_public_client(rpc_url: str) -> Web3
 from seismic_web3 import create_public_client
 
 # Create public client
-w3 = create_public_client("https://rpc.seismic.network")
+w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Query TEE public key
 tee_pk = w3.seismic.get_tee_public_key()
@@ -68,7 +68,7 @@ w3 = SEISMIC_TESTNET.public_client()
 ```python
 from seismic_web3 import create_public_client
 
-w3 = create_public_client("https://rpc.seismic.network")
+w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Create contract wrapper (read-only)
 contract = w3.seismic.contract(
@@ -89,7 +89,7 @@ result = contract.tread.balanceOf("0x1234...")
 ```python
 from seismic_web3 import create_public_client
 
-w3 = create_public_client("https://rpc.seismic.network")
+w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # All standard web3.py read operations work
 block = w3.eth.get_block("latest")
@@ -128,7 +128,7 @@ def get_chain_stats(rpc_url: str):
         "tee_public_key": tee_pk.to_0x_hex(),
     }
 
-stats = get_chain_stats("https://rpc.seismic.network")
+stats = get_chain_stats("https://gcp-1.seismictest.net/rpc")
 print(stats)
 ```
 
@@ -182,6 +182,7 @@ No TEE public key fetching or encryption setup is performed since the client can
 
 ## Notes
 
+- **HTTP only** — Sync clients use `Web3` with `HTTPProvider`, which does not support WebSocket connections. This is a limitation of the underlying `web3.py` library (`WebSocketProvider` is async-only). If you need WebSocket support (persistent connections, subscriptions), use [`create_async_public_client()`](create-async-public-client.md) with `ws=True`
 - No private key required or accepted
 - No encryption setup performed
 - No RPC calls during client creation (lightweight)

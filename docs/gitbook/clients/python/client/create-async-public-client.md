@@ -28,7 +28,7 @@ async def create_async_public_client(
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `provider_url` | `str` | Yes | HTTP(S) or WS(S) URL of the Seismic node |
-| `ws` | `bool` | No | If `True`, uses `WebSocketProvider` (persistent connection, supports subscriptions). Otherwise uses `AsyncHTTPProvider`. Default: `False` |
+| `ws` | `bool` | No | If `True`, uses `WebSocketProvider` (persistent connection, supports subscriptions). Otherwise uses `AsyncHTTPProvider`. Default: `False`. WebSocket is only available on async clients — sync clients are HTTP-only |
 
 ## Returns
 
@@ -44,7 +44,7 @@ async def create_async_public_client(
 from seismic_web3 import create_async_public_client
 
 # Create async public client
-w3 = await create_async_public_client("https://rpc.seismic.network")
+w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Query TEE public key
 tee_pk = await w3.seismic.get_tee_public_key()
@@ -63,7 +63,7 @@ from seismic_web3 import create_async_public_client
 
 # WebSocket provider for persistent connection
 w3 = await create_async_public_client(
-    "wss://ws.seismic.network",
+    "wss://gcp-1.seismictest.net/ws",
     ws=True,
 )
 
@@ -95,7 +95,7 @@ import asyncio
 from seismic_web3 import create_async_public_client
 
 async def main():
-    w3 = await create_async_public_client("https://rpc.seismic.network")
+    w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Get current block
     block = await w3.eth.get_block("latest")
@@ -119,7 +119,7 @@ asyncio.run(main())
 from seismic_web3 import create_async_public_client
 
 async def query_contract():
-    w3 = await create_async_public_client("https://rpc.seismic.network")
+    w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Create contract wrapper (read-only)
     contract = w3.seismic.contract(
@@ -139,7 +139,7 @@ from seismic_web3 import create_async_public_client
 import asyncio
 
 async def monitor_deposits():
-    w3 = await create_async_public_client("wss://ws.seismic.network", ws=True)
+    w3 = await create_async_public_client("wss://gcp-1.seismictest.net/ws", ws=True)
 
     last_count = await w3.seismic.get_deposit_count()
     print(f"Starting deposit count: {last_count}")
@@ -162,7 +162,7 @@ from seismic_web3 import create_async_public_client
 import asyncio
 
 async def get_chain_stats():
-    w3 = await create_async_public_client("https://rpc.seismic.network")
+    w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
     # Run multiple queries in parallel
     block, tee_pk, deposit_root, deposit_count = await asyncio.gather(
@@ -186,7 +186,7 @@ async def get_chain_stats():
 from seismic_web3 import create_async_public_client
 
 async with await create_async_public_client(
-    "wss://ws.seismic.network",
+    "wss://gcp-1.seismictest.net/ws",
     ws=True,
 ) as w3:
     # WebSocket connection will be properly closed

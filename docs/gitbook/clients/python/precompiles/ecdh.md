@@ -52,7 +52,7 @@ from seismic_web3.precompiles import ecdh
 from seismic_web3 import PrivateKey, CompressedPublicKey
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Alice's keys
 alice_sk = PrivateKey.from_hex("0x1234...")
@@ -73,7 +73,7 @@ from seismic_web3.precompiles import ecdh
 from seismic_web3 import PrivateKey, CompressedPublicKey
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Alice's keypair
 alice_sk = PrivateKey.from_hex("0x1234...")
@@ -99,7 +99,7 @@ from seismic_web3 import PrivateKey, CompressedPublicKey
 from web3 import AsyncWeb3
 
 async def main():
-    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://sepolia.seismic.foundation"))
+    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
     alice_sk = PrivateKey.from_hex("0x1234...")
     bob_pk = CompressedPublicKey.from_hex("0x03...")
@@ -118,7 +118,7 @@ from seismic_web3.precompiles import ecdh, aes_gcm_encrypt
 from seismic_web3 import PrivateKey, CompressedPublicKey
 from web3 import Web3
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Derive shared AES key via ECDH
 alice_sk = PrivateKey.from_hex("0x1234...")
@@ -139,7 +139,7 @@ from seismic_web3 import PrivateKey, CompressedPublicKey
 from web3 import Web3
 import os
 
-w3 = Web3(Web3.HTTPProvider("https://sepolia.seismic.foundation"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 
 # Generate new private key
 my_sk = PrivateKey(os.urandom(32))

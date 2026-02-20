@@ -25,7 +25,7 @@ from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import watch_src20_events
 
 private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
-w3 = create_wallet_client("https://rpc.seismic.network", private_key=private_key)
+w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 watcher = watch_src20_events(
     w3,
@@ -45,7 +45,7 @@ from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20 import watch_src20_events_with_key
 
-w3 = Web3(Web3.HTTPProvider("https://rpc.seismic.network"))
+w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
 
 watcher = watch_src20_events_with_key(

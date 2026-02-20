@@ -93,7 +93,7 @@ assert isinstance(count, int)
 from seismic_web3 import create_public_client
 
 # Create public client
-w3 = create_public_client("https://rpc.example.com")
+w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Get deposit count
 count = w3.seismic.get_deposit_count()
@@ -108,7 +108,7 @@ print(f"Type: {type(count)}")
 from seismic_web3 import create_async_public_client
 
 # Create async public client
-w3 = await create_async_public_client("https://rpc.example.com")
+w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
 
 # Get deposit count
 count = await w3.seismic.get_deposit_count()
@@ -123,7 +123,7 @@ from seismic_web3 import create_wallet_client, PrivateKey
 
 # Wallet clients also have access to public methods
 w3 = create_wallet_client(
-    "https://rpc.example.com",
+    "https://gcp-1.seismictest.net/rpc",
     private_key=PrivateKey(b"..."),
 )
 
