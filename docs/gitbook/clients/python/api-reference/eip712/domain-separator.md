@@ -44,16 +44,13 @@ print(f"Testnet domain: {testnet_domain.hex()}")
 ### Compare Across Chains
 
 ```python
-from seismic_web3 import domain_separator, SEISMIC_TESTNET
+from seismic_web3 import domain_separator, SEISMIC_TESTNET, SANVIL
 
 # Different chains have different domain separators
 testnet = domain_separator(SEISMIC_TESTNET.chain_id)
-sanvil = domain_separator(31337)
-other = domain_separator(99999)
+sanvil = domain_separator(SANVIL.chain_id)
 
 assert testnet != sanvil
-assert testnet != other
-assert sanvil != other
 ```
 
 ### Use in Custom Signing

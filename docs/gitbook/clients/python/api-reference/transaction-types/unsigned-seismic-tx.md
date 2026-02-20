@@ -60,7 +60,7 @@ from seismic_web3 import (
 from hexbytes import HexBytes
 
 unsigned_tx = UnsignedSeismicTx(
-    chain_id=1,
+    chain_id=5124,
     nonce=42,
     gas_price=20_000_000_000,  # 20 gwei
     gas=100_000,

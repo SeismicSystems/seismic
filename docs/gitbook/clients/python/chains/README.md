@@ -95,10 +95,10 @@ w3 = testnet_2.wallet_client(pk)
 from seismic_web3 import ChainConfig, PrivateKey
 
 custom = ChainConfig(
-    chain_id=1234,
+    chain_id=5124,
     rpc_url="https://gcp-1.seismictest.net/rpc",
     ws_url="wss://gcp-1.seismictest.net/ws",
-    name="My Network",
+    name="Seismic Testnet",
 )
 
 pk = PrivateKey(...)

@@ -58,9 +58,9 @@ config = ChainConfig(
 
 ```python
 config = ChainConfig(
-    chain_id=1234,
+    chain_id=5124,
     rpc_url="https://gcp-1.seismictest.net/rpc",
-    name="My Custom Network",
+    name="Seismic Testnet",
 )
 ```
 
@@ -248,10 +248,10 @@ from seismic_web3 import ChainConfig, PrivateKey
 
 # Create custom config
 my_network = ChainConfig(
-    chain_id=1234,
+    chain_id=5124,
     rpc_url="https://gcp-1.seismictest.net/rpc",
     ws_url="wss://gcp-1.seismictest.net/ws",
-    name="My Seismic Network",
+    name="Seismic Testnet",
 )
 
 # Use it
@@ -269,8 +269,8 @@ environments = {
     "testnet": SEISMIC_TESTNET,
     "local": SANVIL,
     "staging": ChainConfig(
-        chain_id=5125,
-        rpc_url="https://staging.seismictest.net/rpc",
+        chain_id=5124,
+        rpc_url="https://gcp-1.seismictest.net/rpc",
         name="Staging",
     ),
 }

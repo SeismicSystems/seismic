@@ -47,7 +47,7 @@ class LegacyFields:
 from seismic_web3 import LegacyFields
 
 legacy = LegacyFields(
-    chain_id=1,
+    chain_id=5124,
     nonce=42,
     to="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
     value=1_000_000_000_000_000_000,  # 1 ETH in wei
@@ -61,7 +61,7 @@ from seismic_web3 import LegacyFields
 
 # For contract deployment, set to=None
 legacy = LegacyFields(
-    chain_id=1,
+    chain_id=5124,
     nonce=0,
     to=None,  # Contract creation
     value=0,  # No ETH sent
@@ -76,7 +76,7 @@ from seismic_web3 import TxSeismicMetadata, LegacyFields, SeismicElements
 metadata = TxSeismicMetadata(
     sender="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
     legacy_fields=LegacyFields(
-        chain_id=1,
+        chain_id=5124,
         nonce=42,
         to="0x1234567890123456789012345678901234567890",
         value=1_000_000_000_000_000_000,
