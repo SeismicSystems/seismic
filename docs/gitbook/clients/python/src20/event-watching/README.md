@@ -21,10 +21,11 @@ SRC20 tokens emit Transfer and Approval events with encrypted amounts. The event
 ### Watch Your Own Events
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import watch_src20_events
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 watcher = watch_src20_events(
@@ -41,12 +42,13 @@ watcher.stop()
 ### Watch with Explicit Key
 
 ```python
+import os
 from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20 import watch_src20_events_with_key
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
+viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
 
 watcher = watch_src20_events_with_key(
     w3,

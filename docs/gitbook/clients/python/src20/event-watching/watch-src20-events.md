@@ -74,10 +74,11 @@ async def async_watch_src20_events(
 ### Basic Usage (Sync)
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import watch_src20_events
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Watch all SRC20 events for your wallet
@@ -96,10 +97,11 @@ watcher.stop()
 ### Watch Specific Token
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import watch_src20_events
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 token_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
@@ -118,11 +120,12 @@ watcher = watch_src20_events(
 ### With Context Manager
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import watch_src20_events
 import time
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 with watch_src20_events(
@@ -139,10 +142,11 @@ with watch_src20_events(
 ### Error Handling
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import watch_src20_events
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 def on_error(exc: Exception):
@@ -161,10 +165,11 @@ watcher = watch_src20_events(
 ### Historical Events
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 from seismic_web3.src20 import watch_src20_events
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Start watching from block 1000000
@@ -180,12 +185,13 @@ watcher = watch_src20_events(
 ### Async Usage
 
 ```python
+import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 from seismic_web3.src20 import async_watch_src20_events
 import asyncio
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
     w3 = await create_async_wallet_client(
         "wss://gcp-1.seismictest.net/ws",
         private_key=private_key,
@@ -214,12 +220,13 @@ asyncio.run(main())
 ### Async Context Manager
 
 ```python
+import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 from seismic_web3.src20 import async_watch_src20_events
 import asyncio
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
     w3 = await create_async_wallet_client(
         "wss://gcp-1.seismictest.net/ws",
         private_key=private_key,

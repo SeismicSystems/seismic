@@ -83,7 +83,7 @@ from seismic_web3.src20 import check_has_key, register_viewing_key
 from eth_account import Account
 import os
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Get your address
@@ -121,6 +121,7 @@ print(f"Key hash: {key_hash.hex()}")
 ### Compare Key Hash
 
 ```python
+import os
 from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20 import get_key_hash
@@ -133,7 +134,7 @@ address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 onchain_hash = get_key_hash(w3, address)
 
 # Compare with local key hash
-local_key = Bytes32(bytes.fromhex("YOUR_VIEWING_KEY_HEX"))
+local_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
 local_hash = compute_key_hash(local_key)
 
 if onchain_hash == local_hash:
@@ -205,13 +206,14 @@ print("Key registered!")
 ### Validate Before Event Watching
 
 ```python
+import os
 from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20 import check_has_key, watch_src20_events_with_key
 from eth_account import Account
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-viewing_key = Bytes32(bytes.fromhex("YOUR_VIEWING_KEY_HEX"))
+viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
 
 # Compute expected address from key (if known)
 # For this example, we'll check a known address

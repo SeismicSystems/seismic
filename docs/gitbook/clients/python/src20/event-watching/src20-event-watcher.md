@@ -95,12 +95,13 @@ The watcher starts automatically on `__enter__` and stops on `__exit__`.
 ### Manual Start/Stop
 
 ```python
+import os
 from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20.watch import SRC20EventWatcher
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
+viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
 
 watcher = SRC20EventWatcher(
     w3,
@@ -116,13 +117,14 @@ watcher.stop()
 ### Context Manager
 
 ```python
+import os
 from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20.watch import SRC20EventWatcher
 import time
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
+viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
 
 with SRC20EventWatcher(
     w3,
@@ -136,12 +138,13 @@ with SRC20EventWatcher(
 ### Check Running Status
 
 ```python
+import os
 from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20.watch import SRC20EventWatcher
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
+viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
 
 watcher = SRC20EventWatcher(
     w3,
@@ -161,12 +164,13 @@ print(f"Running: {watcher.is_running}")  # False
 ### Filter by Token Address
 
 ```python
+import os
 from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20.watch import SRC20EventWatcher
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
+viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
 token_address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 watcher = SRC20EventWatcher(
@@ -181,12 +185,13 @@ watcher.start()
 ### Custom Poll Interval
 
 ```python
+import os
 from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20.watch import SRC20EventWatcher
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
+viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
 
 # Poll every 5 seconds instead of default 2
 watcher = SRC20EventWatcher(
@@ -201,12 +206,13 @@ watcher.start()
 ### Historical Events
 
 ```python
+import os
 from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20.watch import SRC20EventWatcher
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
+viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
 
 # Start watching from block 1000000
 watcher = SRC20EventWatcher(
@@ -221,12 +227,13 @@ watcher.start()
 ### Error Handling
 
 ```python
+import os
 from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20.watch import SRC20EventWatcher
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
+viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
 
 def on_error(exc: Exception):
     print(f"Error in watcher: {exc}")
@@ -244,12 +251,13 @@ watcher.start()
 ### Both Transfer and Approval
 
 ```python
+import os
 from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20.watch import SRC20EventWatcher
 
 w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-viewing_key = Bytes32(bytes.fromhex("YOUR_32_BYTE_VIEWING_KEY_HEX"))
+viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"]))
 
 def on_transfer(log):
     print(f"Transfer from {log.from_address} to {log.to_address}: {log.decrypted_amount}")
