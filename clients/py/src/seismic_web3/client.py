@@ -3,11 +3,18 @@
 Provides :class:`EncryptionState` (ECDH-derived AES key + keypair)
 and factory functions to create sync/async ``Web3`` instances
 pre-configured for Seismic shielded transactions.
+
+Wallet factories (require private key):
+    :func:`create_wallet_client`, :func:`create_async_wallet_client`
+
+Public factories (no private key):
+    :func:`create_public_client`, :func:`create_async_public_client`
 """
 
 from __future__ import annotations
 
 import os
+import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -17,7 +24,12 @@ from seismic_web3._types import Bytes32, CompressedPublicKey, PrivateKey
 from seismic_web3.crypto.aes import AesGcmCrypto
 from seismic_web3.crypto.ecdh import generate_aes_key
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
-from seismic_web3.module import AsyncSeismicNamespace, SeismicNamespace
+from seismic_web3.module import (
+    AsyncSeismicNamespace,
+    AsyncSeismicPublicNamespace,
+    SeismicNamespace,
+    SeismicPublicNamespace,
+)
 from seismic_web3.rpc import async_get_tee_public_key, get_tee_public_key
 from seismic_web3.transaction.aead import encode_metadata_as_aad
 
@@ -121,13 +133,18 @@ def get_encryption(
     )
 
 
-def create_shielded_web3(
+# ---------------------------------------------------------------------------
+# Wallet factories (require private key)
+# ---------------------------------------------------------------------------
+
+
+def create_wallet_client(
     rpc_url: str,
     *,
     private_key: PrivateKey,
     encryption_sk: PrivateKey | None = None,
 ) -> Web3:
-    """Create a sync ``Web3`` instance configured for Seismic.
+    """Create a sync ``Web3`` instance with full Seismic wallet capabilities.
 
     Steps:
         1. Create ``Web3`` with ``HTTPProvider(rpc_url)``.
@@ -154,28 +171,28 @@ def create_shielded_web3(
     return w3
 
 
-async def create_async_shielded_web3(
+async def create_async_wallet_client(
     provider_url: str,
     *,
     private_key: PrivateKey,
     encryption_sk: PrivateKey | None = None,
-    use_websocket: bool = False,
+    ws: bool = False,
 ) -> AsyncWeb3:
-    """Create an async ``Web3`` instance configured for Seismic.
+    """Create an async ``Web3`` instance with full Seismic wallet capabilities.
 
     Args:
         provider_url: HTTP(S) or WS(S) URL of the Seismic node.
         private_key: 32-byte signing key for transactions.
         encryption_sk: Optional 32-byte key for ECDH.  If ``None``,
             a random ephemeral key is generated.
-        use_websocket: If ``True``, uses ``WebSocketProvider``
+        ws: If ``True``, uses ``WebSocketProvider``
             (persistent connection, supports subscriptions).
             Otherwise uses ``AsyncHTTPProvider``.
 
     Returns:
         An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached.
     """
-    if use_websocket:
+    if ws:
         provider = WebSocketProvider(provider_url)
     else:
         provider = AsyncHTTPProvider(provider_url)
@@ -186,3 +203,100 @@ async def create_async_shielded_web3(
 
     w3.seismic = AsyncSeismicNamespace(w3, encryption, private_key)  # type: ignore[attr-defined]
     return w3
+
+
+# ---------------------------------------------------------------------------
+# Public factories (no private key required)
+# ---------------------------------------------------------------------------
+
+
+def create_public_client(rpc_url: str) -> Web3:
+    """Create a sync ``Web3`` instance with public (read-only) Seismic access.
+
+    No private key required.  The ``w3.seismic`` namespace provides
+    only public read operations: ``get_tee_public_key()``,
+    ``get_deposit_root()``, ``get_deposit_count()``, and
+    ``contract()`` (with ``.tread`` only).
+
+    Args:
+        rpc_url: HTTP(S) URL of the Seismic node.
+
+    Returns:
+        A ``Web3`` instance with ``w3.seismic`` namespace attached.
+    """
+    w3 = Web3(Web3.HTTPProvider(rpc_url))
+    w3.seismic = SeismicPublicNamespace(w3)  # type: ignore[attr-defined]
+    return w3
+
+
+async def create_async_public_client(
+    provider_url: str,
+    *,
+    ws: bool = False,
+) -> AsyncWeb3:
+    """Create an async ``Web3`` instance with public (read-only) Seismic access.
+
+    No private key required.
+
+    Args:
+        provider_url: HTTP(S) or WS(S) URL of the Seismic node.
+        ws: If ``True``, uses ``WebSocketProvider``.
+            Otherwise uses ``AsyncHTTPProvider``.
+
+    Returns:
+        An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached.
+    """
+    if ws:
+        provider = WebSocketProvider(provider_url)
+    else:
+        provider = AsyncHTTPProvider(provider_url)
+
+    w3 = AsyncWeb3(provider)
+    w3.seismic = AsyncSeismicPublicNamespace(w3)  # type: ignore[attr-defined]
+    return w3
+
+
+# ---------------------------------------------------------------------------
+# Deprecated aliases
+# ---------------------------------------------------------------------------
+
+
+def create_shielded_web3(
+    rpc_url: str,
+    *,
+    private_key: PrivateKey,
+    encryption_sk: PrivateKey | None = None,
+) -> Web3:
+    """Deprecated: use :func:`create_wallet_client` instead."""
+    warnings.warn(
+        "create_shielded_web3 is deprecated, use create_wallet_client instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return create_wallet_client(
+        rpc_url,
+        private_key=private_key,
+        encryption_sk=encryption_sk,
+    )
+
+
+async def create_async_shielded_web3(
+    provider_url: str,
+    *,
+    private_key: PrivateKey,
+    encryption_sk: PrivateKey | None = None,
+    ws: bool = False,
+) -> AsyncWeb3:
+    """Deprecated: use :func:`create_async_wallet_client` instead."""
+    warnings.warn(
+        "create_async_shielded_web3 is deprecated, "
+        "use create_async_wallet_client instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return await create_async_wallet_client(
+        provider_url,
+        private_key=private_key,
+        encryption_sk=encryption_sk,
+        ws=ws,
+    )

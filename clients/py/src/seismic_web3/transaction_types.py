@@ -172,3 +172,50 @@ class SeismicSecurityParams:
     encryption_nonce: EncryptionNonce | None = None
     recent_block_hash: Bytes32 | None = None
     expires_at_block: int | None = None
+
+
+# ---------------------------------------------------------------------------
+# Debug write result
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class PlaintextTx:
+    """Unencrypted transaction view returned by debug writes.
+
+    Contains the same fields as the shielded transaction but with
+    **plaintext** calldata (before AES-GCM encryption).
+
+    Attributes:
+        to: Recipient address, or ``None`` for contract creation.
+        data: Plaintext calldata (before encryption).
+        nonce: Sender's transaction count.
+        gas: Gas limit.
+        gas_price: Gas price in wei.
+        value: Amount of wei to transfer.
+    """
+
+    to: ChecksumAddress | None
+    data: HexBytes
+    nonce: int
+    gas: int
+    gas_price: int
+    value: int
+
+
+@dataclass(frozen=True)
+class DebugWriteResult:
+    """Result from a debug shielded write (``dwrite``).
+
+    The transaction **is** broadcast (like ``.write``), but the caller
+    also gets both the plaintext and encrypted views for inspection.
+
+    Attributes:
+        plaintext_tx: Transaction parameters with unencrypted calldata.
+        shielded_tx: Full unsigned ``TxSeismic`` with encrypted calldata.
+        tx_hash: Transaction hash from ``eth_sendRawTransaction``.
+    """
+
+    plaintext_tx: PlaintextTx
+    shielded_tx: UnsignedSeismicTx
+    tx_hash: HexBytes

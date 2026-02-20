@@ -36,6 +36,18 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ---------------------------------------------------------------------------
+# Check binary environment for integration tests
+# ---------------------------------------------------------------------------
+
+if $run_anvil || $run_reth; then
+  if [[ -z "${SEISMIC_WORKSPACE:-}" && -z "${SFOUNDRY_ROOT:-}" && -z "${SRETH_ROOT:-}" ]]; then
+    echo "WARNING: No binary path env vars set (SEISMIC_WORKSPACE, SFOUNDRY_ROOT, SRETH_ROOT)."
+    echo "Integration tests will fail. See .env.example for setup instructions."
+    echo ""
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Static checks + unit tests
 # ---------------------------------------------------------------------------
 

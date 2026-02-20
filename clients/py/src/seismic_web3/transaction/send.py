@@ -13,7 +13,9 @@ from eth_keys import keys as eth_keys
 from hexbytes import HexBytes
 from web3.types import RPCEndpoint
 
+from seismic_web3._constants import TYPED_DATA_MESSAGE_VERSION
 from seismic_web3.crypto.nonce import random_encryption_nonce
+from seismic_web3.transaction.eip712 import sign_seismic_tx_eip712
 from seismic_web3.transaction.metadata import (
     DEFAULT_BLOCKS_WINDOW,
     MetadataParams,
@@ -21,7 +23,11 @@ from seismic_web3.transaction.metadata import (
     build_metadata,
 )
 from seismic_web3.transaction.serialize import sign_seismic_tx
-from seismic_web3.transaction_types import UnsignedSeismicTx
+from seismic_web3.transaction_types import (
+    DebugWriteResult,
+    PlaintextTx,
+    UnsignedSeismicTx,
+)
 
 if TYPE_CHECKING:
     from eth_typing import ChecksumAddress
@@ -30,7 +36,7 @@ if TYPE_CHECKING:
 
     from seismic_web3._types import PrivateKey
     from seismic_web3.client import EncryptionState
-    from seismic_web3.transaction_types import SeismicSecurityParams
+    from seismic_web3.transaction_types import SeismicSecurityParams, TxSeismicMetadata
 
 #: Default gas limit when not specified.
 _DEFAULT_GAS = 30_000_000
@@ -56,6 +62,7 @@ def _build_metadata_params(
     value: int,
     security: SeismicSecurityParams | None,
     signed_read: bool = False,
+    eip712: bool = False,
 ) -> MetadataParams:
     """Build ``MetadataParams`` from user-facing arguments.
 
@@ -90,6 +97,7 @@ def _build_metadata_params(
         blocks_window=blocks_window,
         recent_block_hash=security.recent_block_hash if security else None,
         expires_at_block=security.expires_at_block if security else None,
+        message_version=TYPED_DATA_MESSAGE_VERSION if eip712 else 0,
         signed_read=signed_read,
     )
 
@@ -140,11 +148,11 @@ async def async_send_shielded_raw(w3: AsyncWeb3, signed_tx: HexBytes) -> HexByte
 
 
 # ---------------------------------------------------------------------------
-# Shielded transaction send (full pipeline)
+# Shielded transaction preparation (build + encrypt + sign)
 # ---------------------------------------------------------------------------
 
 
-def send_shielded_transaction(
+def _prepare_shielded_transaction(
     w3: Web3,
     *,
     encryption: EncryptionState,
@@ -155,27 +163,19 @@ def send_shielded_transaction(
     gas: int | None = None,
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
-) -> HexBytes:
-    """Send a shielded transaction (sync).
+    eip712: bool = False,
+) -> tuple[HexBytes, UnsignedSeismicTx, TxSeismicMetadata]:
+    """Build, encrypt, and sign a shielded transaction (sync).
 
-    Full pipeline: build metadata -> encrypt calldata -> build tx ->
-    sign -> send raw transaction.
-
-    Args:
-        w3: Sync ``Web3`` instance.
-        encryption: Encryption state (from :func:`get_encryption`).
-        private_key: 32-byte signing key.
-        to: Recipient address.
-        data: Plaintext calldata (will be encrypted).
-        value: Wei to transfer (default ``0``).
-        gas: Gas limit.  Uses ``30_000_000`` if not specified.
-        gas_price: Gas price in wei.  Fetched from chain if not specified.
-        security: Optional security parameter overrides.
+    Returns the signed bytes, the unsigned tx, and metadata -- but
+    does **not** broadcast.
 
     Returns:
-        Transaction hash.
+        ``(signed_tx_bytes, unsigned_tx, metadata)``
     """
-    params = _build_metadata_params(private_key, encryption, to, value, security)
+    params = _build_metadata_params(
+        private_key, encryption, to, value, security, eip712=eip712
+    )
     metadata = build_metadata(w3, params)
 
     encrypted = encryption.encrypt(
@@ -196,11 +196,15 @@ def send_shielded_transaction(
         seismic=metadata.seismic_elements,
     )
 
-    signed = sign_seismic_tx(tx, private_key)
-    return send_shielded_raw(w3, signed)
+    signed = (
+        sign_seismic_tx_eip712(tx, private_key)
+        if eip712
+        else sign_seismic_tx(tx, private_key)
+    )
+    return signed, tx, metadata
 
 
-async def async_send_shielded_transaction(
+async def _async_prepare_shielded_transaction(
     w3: AsyncWeb3,
     *,
     encryption: EncryptionState,
@@ -211,27 +215,16 @@ async def async_send_shielded_transaction(
     gas: int | None = None,
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
-) -> HexBytes:
-    """Send a shielded transaction (async).
-
-    Same pipeline as :func:`send_shielded_transaction` but with
-    async chain state fetching.
-
-    Args:
-        w3: Async ``AsyncWeb3`` instance.
-        encryption: Encryption state.
-        private_key: 32-byte signing key.
-        to: Recipient address.
-        data: Plaintext calldata (will be encrypted).
-        value: Wei to transfer (default ``0``).
-        gas: Gas limit.  Uses ``30_000_000`` if not specified.
-        gas_price: Gas price in wei.  Fetched from chain if not specified.
-        security: Optional security parameter overrides.
+    eip712: bool = False,
+) -> tuple[HexBytes, UnsignedSeismicTx, TxSeismicMetadata]:
+    """Build, encrypt, and sign a shielded transaction (async).
 
     Returns:
-        Transaction hash.
+        ``(signed_tx_bytes, unsigned_tx, metadata)``
     """
-    params = _build_metadata_params(private_key, encryption, to, value, security)
+    params = _build_metadata_params(
+        private_key, encryption, to, value, security, eip712=eip712
+    )
     metadata = await async_build_metadata(w3, params)
 
     encrypted = encryption.encrypt(
@@ -252,8 +245,240 @@ async def async_send_shielded_transaction(
         seismic=metadata.seismic_elements,
     )
 
-    signed = sign_seismic_tx(tx, private_key)
+    signed = (
+        sign_seismic_tx_eip712(tx, private_key)
+        if eip712
+        else sign_seismic_tx(tx, private_key)
+    )
+    return signed, tx, metadata
+
+
+# ---------------------------------------------------------------------------
+# Shielded transaction send (full pipeline)
+# ---------------------------------------------------------------------------
+
+
+def send_shielded_transaction(
+    w3: Web3,
+    *,
+    encryption: EncryptionState,
+    private_key: PrivateKey,
+    to: ChecksumAddress,
+    data: HexBytes,
+    value: int = 0,
+    gas: int | None = None,
+    gas_price: int | None = None,
+    security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
+) -> HexBytes:
+    """Send a shielded transaction (sync).
+
+    Full pipeline: build metadata -> encrypt calldata -> build tx ->
+    sign -> send raw transaction.
+
+    Args:
+        w3: Sync ``Web3`` instance.
+        encryption: Encryption state (from :func:`get_encryption`).
+        private_key: 32-byte signing key.
+        to: Recipient address.
+        data: Plaintext calldata (will be encrypted).
+        value: Wei to transfer (default ``0``).
+        gas: Gas limit.  Uses ``30_000_000`` if not specified.
+        gas_price: Gas price in wei.  Fetched from chain if not specified.
+        security: Optional security parameter overrides.
+
+    Returns:
+        Transaction hash.
+    """
+    signed, _, _ = _prepare_shielded_transaction(
+        w3,
+        encryption=encryption,
+        private_key=private_key,
+        to=to,
+        data=data,
+        value=value,
+        gas=gas,
+        gas_price=gas_price,
+        security=security,
+        eip712=eip712,
+    )
+    return send_shielded_raw(w3, signed)
+
+
+async def async_send_shielded_transaction(
+    w3: AsyncWeb3,
+    *,
+    encryption: EncryptionState,
+    private_key: PrivateKey,
+    to: ChecksumAddress,
+    data: HexBytes,
+    value: int = 0,
+    gas: int | None = None,
+    gas_price: int | None = None,
+    security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
+) -> HexBytes:
+    """Send a shielded transaction (async).
+
+    Same pipeline as :func:`send_shielded_transaction` but with
+    async chain state fetching.
+
+    Args:
+        w3: Async ``AsyncWeb3`` instance.
+        encryption: Encryption state.
+        private_key: 32-byte signing key.
+        to: Recipient address.
+        data: Plaintext calldata (will be encrypted).
+        value: Wei to transfer (default ``0``).
+        gas: Gas limit.  Uses ``30_000_000`` if not specified.
+        gas_price: Gas price in wei.  Fetched from chain if not specified.
+        security: Optional security parameter overrides.
+
+    Returns:
+        Transaction hash.
+    """
+    signed, _, _ = await _async_prepare_shielded_transaction(
+        w3,
+        encryption=encryption,
+        private_key=private_key,
+        to=to,
+        data=data,
+        value=value,
+        gas=gas,
+        gas_price=gas_price,
+        security=security,
+        eip712=eip712,
+    )
     return await async_send_shielded_raw(w3, signed)
+
+
+# ---------------------------------------------------------------------------
+# Debug shielded transaction (send + return plaintext/shielded views)
+# ---------------------------------------------------------------------------
+
+
+def debug_send_shielded_transaction(
+    w3: Web3,
+    *,
+    encryption: EncryptionState,
+    private_key: PrivateKey,
+    to: ChecksumAddress,
+    data: HexBytes,
+    value: int = 0,
+    gas: int | None = None,
+    gas_price: int | None = None,
+    security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
+) -> DebugWriteResult:
+    """Send a shielded transaction and return debug info (sync).
+
+    Same as :func:`send_shielded_transaction` but also returns
+    the plaintext and encrypted transaction views for debugging.
+
+    Args:
+        w3: Sync ``Web3`` instance.
+        encryption: Encryption state.
+        private_key: 32-byte signing key.
+        to: Recipient address.
+        data: Plaintext calldata (will be encrypted).
+        value: Wei to transfer (default ``0``).
+        gas: Gas limit.  Uses ``30_000_000`` if not specified.
+        gas_price: Gas price in wei.  Fetched from chain if not specified.
+        security: Optional security parameter overrides.
+
+    Returns:
+        :class:`~seismic_web3.transaction_types.DebugWriteResult`
+        with plaintext tx, shielded tx, and transaction hash.
+    """
+    signed, unsigned_tx, _metadata = _prepare_shielded_transaction(
+        w3,
+        encryption=encryption,
+        private_key=private_key,
+        to=to,
+        data=data,
+        value=value,
+        gas=gas,
+        gas_price=gas_price,
+        security=security,
+        eip712=eip712,
+    )
+    tx_hash = send_shielded_raw(w3, signed)
+
+    plaintext_tx = PlaintextTx(
+        to=to,
+        data=data,
+        nonce=unsigned_tx.nonce,
+        gas=unsigned_tx.gas,
+        gas_price=unsigned_tx.gas_price,
+        value=value,
+    )
+    return DebugWriteResult(
+        plaintext_tx=plaintext_tx,
+        shielded_tx=unsigned_tx,
+        tx_hash=tx_hash,
+    )
+
+
+async def async_debug_send_shielded_transaction(
+    w3: AsyncWeb3,
+    *,
+    encryption: EncryptionState,
+    private_key: PrivateKey,
+    to: ChecksumAddress,
+    data: HexBytes,
+    value: int = 0,
+    gas: int | None = None,
+    gas_price: int | None = None,
+    security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
+) -> DebugWriteResult:
+    """Send a shielded transaction and return debug info (async).
+
+    Same as :func:`async_send_shielded_transaction` but also returns
+    the plaintext and encrypted transaction views for debugging.
+
+    Args:
+        w3: Async ``AsyncWeb3`` instance.
+        encryption: Encryption state.
+        private_key: 32-byte signing key.
+        to: Recipient address.
+        data: Plaintext calldata (will be encrypted).
+        value: Wei to transfer (default ``0``).
+        gas: Gas limit.  Uses ``30_000_000`` if not specified.
+        gas_price: Gas price in wei.  Fetched from chain if not specified.
+        security: Optional security parameter overrides.
+
+    Returns:
+        :class:`~seismic_web3.transaction_types.DebugWriteResult`
+        with plaintext tx, shielded tx, and transaction hash.
+    """
+    signed, unsigned_tx, _metadata = await _async_prepare_shielded_transaction(
+        w3,
+        encryption=encryption,
+        private_key=private_key,
+        to=to,
+        data=data,
+        value=value,
+        gas=gas,
+        gas_price=gas_price,
+        security=security,
+        eip712=eip712,
+    )
+    tx_hash = await async_send_shielded_raw(w3, signed)
+
+    plaintext_tx = PlaintextTx(
+        to=to,
+        data=data,
+        nonce=unsigned_tx.nonce,
+        gas=unsigned_tx.gas,
+        gas_price=unsigned_tx.gas_price,
+        value=value,
+    )
+    return DebugWriteResult(
+        plaintext_tx=plaintext_tx,
+        shielded_tx=unsigned_tx,
+        tx_hash=tx_hash,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -271,6 +496,7 @@ def signed_call(
     value: int = 0,
     gas: int = _DEFAULT_GAS,
     security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
 ) -> HexBytes | None:
     """Execute a signed read (sync).
 
@@ -291,7 +517,7 @@ def signed_call(
         Decrypted response bytes, or ``None`` if the response is empty.
     """
     params = _build_metadata_params(
-        private_key, encryption, to, value, security, signed_read=True
+        private_key, encryption, to, value, security, signed_read=True, eip712=eip712
     )
     metadata = build_metadata(w3, params)
 
@@ -312,7 +538,11 @@ def signed_call(
         seismic=metadata.seismic_elements,
     )
 
-    signed = sign_seismic_tx(tx, private_key)
+    signed = (
+        sign_seismic_tx_eip712(tx, private_key)
+        if eip712
+        else sign_seismic_tx(tx, private_key)
+    )
 
     # Send signed raw tx directly as first param to eth_call
     # (matches viem: params = [serializedTransaction, block])
@@ -343,6 +573,7 @@ async def async_signed_call(
     value: int = 0,
     gas: int = _DEFAULT_GAS,
     security: SeismicSecurityParams | None = None,
+    eip712: bool = False,
 ) -> HexBytes | None:
     """Execute a signed read (async).
 
@@ -363,7 +594,7 @@ async def async_signed_call(
         Decrypted response bytes, or ``None`` if the response is empty.
     """
     params = _build_metadata_params(
-        private_key, encryption, to, value, security, signed_read=True
+        private_key, encryption, to, value, security, signed_read=True, eip712=eip712
     )
     metadata = await async_build_metadata(w3, params)
 
@@ -384,7 +615,11 @@ async def async_signed_call(
         seismic=metadata.seismic_elements,
     )
 
-    signed = sign_seismic_tx(tx, private_key)
+    signed = (
+        sign_seismic_tx_eip712(tx, private_key)
+        if eip712
+        else sign_seismic_tx(tx, private_key)
+    )
 
     # Send signed raw tx directly as first param to eth_call
     # (matches viem: params = [serializedTransaction, block])
