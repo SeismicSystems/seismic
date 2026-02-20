@@ -156,10 +156,10 @@ No TEE public key fetching or encryption setup is performed since the client can
 - All other standard read-only `web3.py` functionality
 
 ### Public Seismic Methods (`w3.seismic`)
-- `get_tee_public_key()` - Get TEE public key
-- `get_deposit_root()` - Query deposit merkle root
-- `get_deposit_count()` - Query deposit count
-- `contract()` - Create contract wrappers (`.tread` only)
+- [`get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md) - Get TEE public key
+- [`get_deposit_root()`](../namespaces/methods/get-deposit-root.md) - Query deposit merkle root
+- [`get_deposit_count()`](../namespaces/methods/get-deposit-count.md) - Query deposit count
+- [`contract()`](../contract/) - Create contract wrappers (`.tread` only)
 
 ### NOT Available
 - `send_shielded_transaction()` - Requires private key

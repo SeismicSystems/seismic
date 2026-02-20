@@ -210,14 +210,14 @@ The returned client provides:
 - All other standard async `web3.py` functionality
 
 ### Async Seismic Methods (`w3.seismic`)
-- `await send_shielded_transaction()` - Send shielded transactions
-- `await debug_send_shielded_transaction()` - Debug shielded transactions
-- `await signed_call()` - Execute signed reads
-- `await deposit()` - Deposit ETH/tokens
-- `await get_tee_public_key()` - Get TEE public key
-- `await get_deposit_root()` - Query deposit merkle root
-- `await get_deposit_count()` - Query deposit count
-- `contract()` - Create contract wrappers (methods are async)
+- [`await send_shielded_transaction()`](../namespaces/methods/send-shielded-transaction.md) - Send shielded transactions
+- [`await debug_send_shielded_transaction()`](../namespaces/methods/debug-send-shielded-transaction.md) - Debug shielded transactions
+- [`await signed_call()`](../namespaces/methods/signed-call.md) - Execute signed reads
+- [`await deposit()`](../namespaces/methods/deposit.md) - Deposit ETH/tokens
+- [`await get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md) - Get TEE public key
+- [`await get_deposit_root()`](../namespaces/methods/get-deposit-root.md) - Query deposit merkle root
+- [`await get_deposit_count()`](../namespaces/methods/get-deposit-count.md) - Query deposit count
+- [`contract()`](../contract/) - Create contract wrappers (methods are async)
 
 ## HTTP vs WebSocket
 
