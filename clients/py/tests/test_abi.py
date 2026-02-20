@@ -232,9 +232,27 @@ class TestDecodeAbiOutput:
         result = decode_abi_output(DECODE_ABI, "noOutputs", raw)
         assert result == b""
 
-    def test_empty_data(self):
-        result = decode_abi_output(DECODE_ABI, "getNumber", b"")
+    def test_no_outputs_defined_empty_data(self):
+        result = decode_abi_output(DECODE_ABI, "noOutputs", b"")
         assert result == b""
+
+    def test_empty_data_uint256(self):
+        """Empty bytes for a uint256 output should decode to 0."""
+        result = decode_abi_output(DECODE_ABI, "getNumber", b"")
+        assert result == 0
+
+    def test_empty_data_bool(self):
+        """Empty bytes for a bool output should decode to False."""
+        result = decode_abi_output(DECODE_ABI, "isOdd", b"")
+        assert result is False
+
+    def test_empty_data_multiple_outputs(self):
+        """Empty bytes for multiple outputs should decode to zero values."""
+        result = decode_abi_output(DECODE_ABI, "getMultiple", b"")
+        assert isinstance(result, tuple)
+        assert result[0] == 0
+        assert result[1] is False
+        assert result[2] == "0x" + "0" * 40
 
     def test_string_output(self):
         raw = encode(["string"], ["hello world"])

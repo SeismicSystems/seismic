@@ -173,8 +173,6 @@ class _ShieldedReadNamespace:
                 security=security,
                 eip712=self._eip712,
             )
-            if not raw:
-                return HexBytes(b"")
             return decode_abi_output(self._abi, fn_name, bytes(raw))
 
         return call
@@ -228,8 +226,6 @@ class _TransparentReadNamespace:
         def call(*args: Any) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             raw = self._w3.eth.call({"to": self._address, "data": data})
-            if not raw:
-                return HexBytes(b"")
             return decode_abi_output(self._abi, fn_name, bytes(raw))
 
         return call
@@ -372,8 +368,6 @@ class _AsyncShieldedReadNamespace:
                 security=security,
                 eip712=self._eip712,
             )
-            if not raw:
-                return HexBytes(b"")
             return decode_abi_output(self._abi, fn_name, bytes(raw))
 
         return call
@@ -427,8 +421,6 @@ class _AsyncTransparentReadNamespace:
         async def call(*args: Any) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             raw = await self._w3.eth.call({"to": self._address, "data": data})
-            if not raw:
-                return HexBytes(b"")
             return decode_abi_output(self._abi, fn_name, bytes(raw))
 
         return call
