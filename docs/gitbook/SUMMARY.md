@@ -227,6 +227,17 @@
 - [Deploy Tools](networks/deploy-tools.md)
 - [Migrating from Ethereum](networks/migrating-from-ethereum.md)
 
+## Claude Code
+
+- [Overview](claude-code/README.md)
+- [CLAUDE.md Templates](claude-code/templates/)
+  - [Seismic Solidity](claude-code/templates/seismic-solidity.md)
+  - [Seismic Viem](claude-code/templates/seismic-viem.md)
+  - [Seismic React](claude-code/templates/seismic-react.md)
+  - [Seismic Alloy (Rust)](claude-code/templates/seismic-alloy.md)
+  - [Seismic Python](claude-code/templates/seismic-python.md)
+- [Workflow Skills](claude-code/workflow-skills.md)
+
 ## Reference
 
 - [The Seismic Transaction](reference/seismic-transaction.md)
