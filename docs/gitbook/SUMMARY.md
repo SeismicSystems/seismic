@@ -84,6 +84,7 @@
       * [PrivateKey](clients/python/api-reference/types/private-key.md)
       * [CompressedPublicKey](clients/python/api-reference/types/compressed-public-key.md)
       * [EncryptionNonce](clients/python/api-reference/types/encryption-nonce.md)
+      * [hex\_to\_bytes](clients/python/api-reference/types/hex-to-bytes.md)
     * [Transaction Types](clients/python/api-reference/transaction-types/)
       * [Signature](clients/python/api-reference/transaction-types/signature.md)
       * [SeismicElements](clients/python/api-reference/transaction-types/seismic-elements.md)

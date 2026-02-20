@@ -32,7 +32,7 @@ def decode_uint256(raw: HexBytes) -> int:
 
 
 # Setup
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 # Create SRC20 token instance (SDK provides SRC20_ABI)
@@ -71,7 +71,7 @@ def decode_uint256(raw: HexBytes) -> int:
 
 
 # Setup
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 token = w3.seismic.contract(os.environ["TOKEN_ADDRESS"], SRC20_ABI)
@@ -127,7 +127,7 @@ def decode_uint256(raw: HexBytes) -> int:
     return int.from_bytes(raw[-32:], "big")
 
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 token = w3.seismic.contract(os.environ["TOKEN_ADDRESS"], SRC20_ABI)
@@ -181,7 +181,7 @@ def decode_uint256(raw: HexBytes) -> int:
 
 
 # Setup (requires admin/owner private key)
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 token = w3.seismic.contract(os.environ["TOKEN_ADDRESS"], SRC20_ABI)
@@ -223,7 +223,7 @@ import time
 from seismic_web3 import create_wallet_client, PrivateKey, SEISMIC_TESTNET, SRC20_ABI
 
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 token_address = os.environ["TOKEN_ADDRESS"]
@@ -272,7 +272,7 @@ def decode_uint256(raw: HexBytes) -> int:
 
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
     w3 = await SEISMIC_TESTNET.async_wallet_client(private_key)
 
     try:
@@ -334,7 +334,7 @@ def decode_uint256(raw: HexBytes) -> int:
     return int.from_bytes(raw[-32:], "big")
 
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 token = w3.seismic.contract(os.environ["TOKEN_ADDRESS"], SRC20_ABI)
@@ -431,7 +431,7 @@ def safe_transfer(token, recipient: str, amount: int, timeout: int = 60):
 
 
 # Usage
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 token = w3.seismic.contract(os.environ["TOKEN_ADDRESS"], SRC20_ABI)

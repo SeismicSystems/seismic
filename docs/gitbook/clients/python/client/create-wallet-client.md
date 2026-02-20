@@ -43,10 +43,11 @@ def create_wallet_client(
 ### Basic Usage
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
 # Load private key
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Create wallet client
 w3 = create_wallet_client(
@@ -66,7 +67,7 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 w3 = create_wallet_client(
     "https://gcp-1.seismictest.net/rpc",
@@ -77,9 +78,10 @@ w3 = create_wallet_client(
 ### Using Chain Configuration
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Recommended: use chain config instead of raw URL
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
@@ -94,7 +96,7 @@ w3 = SEISMIC_TESTNET.wallet_client(private_key)
 from seismic_web3 import create_wallet_client, PrivateKey
 import os
 
-signing_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+signing_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 encryption_key = PrivateKey(os.urandom(32))  # Custom encryption keypair
 
 w3 = create_wallet_client(
@@ -107,9 +109,10 @@ w3 = create_wallet_client(
 ### Standard Web3 Operations
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # All standard web3.py operations work

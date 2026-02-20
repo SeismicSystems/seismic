@@ -154,9 +154,10 @@ except InvalidTag:
 ### Access from Client
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # Access encryption state
@@ -206,8 +207,8 @@ assert decrypted == plaintext
 from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 import os
 
-# Use a deterministic key (e.g., derived from mnemonic)
-client_sk = PrivateKey(bytes.fromhex("YOUR_DETERMINISTIC_KEY_HEX"))
+# Use a deterministic key
+client_sk = PrivateKey.from_hex_str(os.environ["CLIENT_KEY"])
 
 # Or use a random ephemeral key
 # client_sk = PrivateKey(os.urandom(32))

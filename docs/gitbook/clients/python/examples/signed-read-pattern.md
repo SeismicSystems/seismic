@@ -42,7 +42,7 @@ def decode_uint256(raw: HexBytes) -> int:
 
 
 # Setup
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 # Contract ABI
@@ -105,7 +105,7 @@ class ABIDecoder:
 
 
 # Setup
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 # Example contract with multiple read functions
@@ -163,7 +163,7 @@ def decode_uint256(raw: HexBytes) -> int:
     return int.from_bytes(raw[-32:], "big")
 
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 ABI = [
@@ -213,7 +213,7 @@ def decode_uint256(raw: HexBytes) -> int:
     return int.from_bytes(raw[-32:], "big")
 
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 ABI = [
@@ -250,7 +250,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey, SEISMIC_TESTNET
 from hexbytes import HexBytes
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 # Pre-encoded calldata (balanceOf())
@@ -304,7 +304,7 @@ def safe_signed_read(contract, method_name: str, *args):
 
 
 # Usage
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 ABI = [
@@ -336,7 +336,7 @@ def decode_uint256(raw: HexBytes) -> int:
 
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+    private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
     w3 = await SEISMIC_TESTNET.async_wallet_client(private_key)
 
     try:
@@ -391,7 +391,7 @@ def decode_uint256(raw: HexBytes) -> int:
     return int.from_bytes(raw[-32:], "big")
 
 
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
 
 ABI = [

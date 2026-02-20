@@ -29,9 +29,10 @@ uv add seismic-web3
 ### Wallet Client (Sync)
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(pk)
 ```
 
@@ -40,9 +41,10 @@ This gives you a standard `Web3` instance with an extra `w3.seismic` namespace. 
 ### Wallet Client (Async)
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # HTTP
 w3 = await SEISMIC_TESTNET.async_wallet_client(pk)

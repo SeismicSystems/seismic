@@ -54,9 +54,10 @@ print(SEISMIC_TESTNET.name)      # "Seismic Testnet (GCP-1)"
 ### Create Wallet Client (Sync)
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 # Now use w3.seismic methods
@@ -66,9 +67,10 @@ balance = w3.eth.get_balance("0xYourAddress")
 ### Create Wallet Client (Async)
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # HTTP
 w3 = await SEISMIC_TESTNET.async_wallet_client(pk)
@@ -98,9 +100,10 @@ tee_key = await public.seismic.get_tee_public_key()
 ### Basic Shielded Transaction
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 # Get contract
@@ -121,7 +124,7 @@ import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
 # Load private key from environment
-pk = PrivateKey(os.environ["PRIVATE_KEY"])
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Create client
 w3 = SEISMIC_TESTNET.wallet_client(pk)

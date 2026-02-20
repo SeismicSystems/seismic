@@ -69,7 +69,7 @@ from seismic_web3 import create_wallet_client, PrivateKey, SEISMIC_TESTNET
 import os
 
 # Setup
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
+private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Method 1: Using chain config (recommended)
 w3 = SEISMIC_TESTNET.wallet_client(private_key)

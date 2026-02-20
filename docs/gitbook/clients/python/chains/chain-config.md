@@ -105,9 +105,10 @@ def wallet_client(
 #### Example
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 # Now use w3.seismic methods
@@ -150,9 +151,10 @@ async def async_wallet_client(
 #### Example
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # HTTP
 w3 = await SEISMIC_TESTNET.async_wallet_client(pk)

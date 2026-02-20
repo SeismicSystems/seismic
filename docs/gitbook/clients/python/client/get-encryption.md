@@ -61,7 +61,7 @@ import os
 tee_pk = CompressedPublicKey("0x02abcd...")
 
 # Use a deterministic client key
-client_sk = PrivateKey(bytes.fromhex("YOUR_CLIENT_KEY_HEX"))
+client_sk = PrivateKey.from_hex_str(os.environ["CLIENT_KEY"])
 
 encryption = get_encryption(tee_pk, client_sk)
 ```
@@ -69,6 +69,7 @@ encryption = get_encryption(tee_pk, client_sk)
 ### In Client Factory
 
 ```python
+import os
 from seismic_web3 import get_encryption, get_tee_public_key, PrivateKey
 from web3 import Web3
 
@@ -79,7 +80,7 @@ w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 network_pk = get_tee_public_key(w3)
 
 # Step 2: Derive encryption state
-signing_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+signing_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 encryption = get_encryption(network_pk, client_sk=None)  # Random ephemeral key
 
 # Step 3: Attach to client
@@ -124,11 +125,12 @@ encryption = get_encryption(tee_pk, client_sk)
 ### Verify Key Derivation
 
 ```python
+import os
 from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 
 tee_pk = CompressedPublicKey("0x02abcd...")
-client_sk = PrivateKey(bytes.fromhex("abcd..."))
+client_sk = PrivateKey.from_hex_str(os.environ["CLIENT_KEY"])
 
 encryption = get_encryption(tee_pk, client_sk)
 
@@ -235,7 +237,7 @@ import os
 
 # Load persisted key from secure storage
 def load_encryption(tee_pk: CompressedPublicKey):
-    client_sk = PrivateKey(bytes.fromhex(os.environ["ENCRYPTION_KEY"]))
+    client_sk = PrivateKey.from_hex_str(os.environ["ENCRYPTION_KEY"])
     return get_encryption(tee_pk, client_sk)
 ```
 

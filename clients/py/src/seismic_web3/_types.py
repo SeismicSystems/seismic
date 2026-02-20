@@ -56,6 +56,26 @@ class Bytes32(_SizedHexBytes):
 class PrivateKey(Bytes32):
     """32-byte secp256k1 private key."""
 
+    @staticmethod
+    def from_hex_str(hex_string: str) -> PrivateKey:
+        """Create a ``PrivateKey`` from a hex string, with or without ``0x``.
+
+        Shorthand for ``PrivateKey(hex_to_bytes(hex_string))``.
+
+        Args:
+            hex_string: Hex-encoded private key, with or without a
+                ``"0x"`` prefix.
+
+        Returns:
+            A new ``PrivateKey`` instance.
+
+        Examples::
+
+            >>> pk = PrivateKey.from_hex_str("0xac0974bec...")
+            >>> pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
+        """
+        return PrivateKey(hex_to_bytes(hex_string))
+
 
 class CompressedPublicKey(_SizedHexBytes):
     """33-byte compressed secp256k1 public key (``0x02`` / ``0x03`` prefix)."""
@@ -102,3 +122,34 @@ HexData = HexBytes
 #: Either an ``int`` (converted to 12-byte big-endian) or a raw
 #: ``EncryptionNonce``.
 EncryptionNonceInput = int | EncryptionNonce
+
+
+# ---------------------------------------------------------------------------
+# Utility functions
+# ---------------------------------------------------------------------------
+
+
+def hex_to_bytes(hex_string: str) -> bytes:
+    """Convert a hex string to raw bytes, stripping an optional ``0x`` prefix.
+
+    Convenience wrapper around ``bytes.fromhex`` that accepts both
+    ``"0xabcd…"`` and ``"abcd…"`` formats.
+
+    Args:
+        hex_string: Hex-encoded string, with or without a ``"0x"`` prefix.
+
+    Returns:
+        Decoded raw bytes.
+
+    Raises:
+        ValueError: If *hex_string* contains non-hex characters or has
+            odd length after prefix removal.
+
+    Examples::
+
+        >>> hex_to_bytes("0xdeadbeef")
+        b'\\xde\\xad\\xbe\\xef'
+        >>> hex_to_bytes("deadbeef")
+        b'\\xde\\xad\\xbe\\xef'
+    """
+    return bytes.fromhex(hex_string.removeprefix("0x"))

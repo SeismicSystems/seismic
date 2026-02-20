@@ -5,7 +5,7 @@ Public API
 
 **Types** (``seismic_web3._types``):
     :class:`Bytes32`, :class:`PrivateKey`, :class:`CompressedPublicKey`,
-    :class:`EncryptionNonce`
+    :class:`EncryptionNonce`, :func:`hex_to_bytes`
 
 **Chains** (``seismic_web3.chains``):
     :class:`ChainConfig`, :data:`SEISMIC_TESTNET`, :data:`SANVIL`,
@@ -44,6 +44,7 @@ from seismic_web3._types import (
     CompressedPublicKey,
     EncryptionNonce,
     PrivateKey,
+    hex_to_bytes,
 )
 
 # -- ABIs --------------------------------------------------------------------
@@ -159,6 +160,7 @@ __all__ = [
     "domain_separator",
     "eip712_signing_hash",
     "get_encryption",
+    "hex_to_bytes",
     "make_seismic_testnet",
     "make_withdrawal_credentials",
     "sign_seismic_tx_eip712",
