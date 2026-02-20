@@ -3,7 +3,7 @@ description: Use Claude Code effectively with Seismic's privacy-first SDKs
 icon: terminal
 ---
 
-# Claude Code
+# Overview
 
 [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) is Anthropic's CLI tool for agentic coding with Claude. It reads your project files, runs commands, and writes code — but it only knows what's in its training data and your project context.
 
@@ -15,21 +15,21 @@ A `CLAUDE.md` file in your project root is automatically loaded by Claude Code a
 
 The templates on this site give Claude the knowledge it needs to write correct Seismic code:
 
-- Shielded types and their compiler behavior
-- SDK-specific imports, client construction, and contract interaction patterns
-- Transaction encryption, signed reads, and encrypted events
-- Network configuration (chain IDs, RPC URLs)
-- Common mistakes that waste debugging time
+* Shielded types and their compiler behavior
+* SDK-specific imports, client construction, and contract interaction patterns
+* Transaction encryption, signed reads, and encrypted events
+* Network configuration (chain IDs, RPC URLs)
+* Common mistakes that waste debugging time
 
 ## Choose your template
 
-| Template                                           | Good for                                       | Language   |
-| -------------------------------------------------- | ---------------------------------------------- | ---------- |
-| [Seismic Solidity](templates/seismic-solidity.md)  | Smart contract development with shielded types | Solidity   |
-| [Seismic Viem](templates/seismic-viem.md)          | TypeScript dapp backends and scripts           | TypeScript |
-| [Seismic React](templates/seismic-react.md)        | React frontend development                     | TypeScript |
-| [Seismic Alloy (Rust)](templates/seismic-alloy.md) | Rust dapp development                          | Rust       |
-| [Seismic Python](templates/seismic-python.md)      | Python scripts and backends                    | Python     |
+| Template                                                     | Good for                                       | Language   |
+| ------------------------------------------------------------ | ---------------------------------------------- | ---------- |
+| [Seismic Solidity](claude.md-templates/seismic-solidity.md)  | Smart contract development with shielded types | Solidity   |
+| [Seismic Viem](claude.md-templates/seismic-viem.md)          | TypeScript dapp backends and scripts           | TypeScript |
+| [Seismic React](claude.md-templates/seismic-react.md)        | React frontend development                     | TypeScript |
+| [Seismic Alloy (Rust)](claude.md-templates/seismic-alloy.md) | Rust dapp development                          | Rust       |
+| [Seismic Python](claude.md-templates/seismic-python.md)      | Python scripts and backends                    | Python     |
 
 ## Quick setup
 

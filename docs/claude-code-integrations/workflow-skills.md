@@ -7,7 +7,7 @@ icon: wand-magic-sparkles
 
 Claude Code supports [skills](https://docs.anthropic.com/en/docs/claude-code/skills) — reusable task instructions that you can invoke with slash commands. Skills are stored as markdown files in your project and provide step-by-step guidance for specific workflows.
 
-These skills are optional. The [CLAUDE.md templates](templates/) cover the core API knowledge that Claude needs. Skills add structured workflows for tasks you do repeatedly.
+These skills are optional. The [CLAUDE.md templates](../gitbook/claude-code/templates/) cover the core API knowledge that Claude needs. Skills add structured workflows for tasks you do repeatedly.
 
 ## Setup
 
@@ -17,7 +17,7 @@ To add a skill to your project:
 2. Save the skill file with the path shown below each skill
 3. Invoke it in Claude Code with `/skill-name` or describe the task and Claude will follow the steps
 
----
+***
 
 ## Deploy Shielded Contract
 
@@ -71,7 +71,7 @@ Deploy a Seismic smart contract using sforge.
 7. **Update project** — Add the deployed contract address to the project's configuration or constants file.
 ````
 
----
+***
 
 ## Debug Shielded Transaction
 
@@ -128,7 +128,7 @@ Systematic checklist for debugging a failed or unexpected shielded transaction.
 | Empty return on getter       | Getter needs `msg.sender` check + signed read |
 ```
 
----
+***
 
 ## Migrate ERC20 to SRC20
 

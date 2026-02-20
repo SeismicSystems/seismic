@@ -1,89 +1,101 @@
 ---
-icon: claude
+description: Private by Default. Familiar by Design.
+icon: hand-wave
+cover:
+  light: .gitbook/assets/light.png
+  dark: .gitbook/assets/dark.png
+coverY: 0
 ---
 
-# Claude Code Setup
+# Welcome to Seismic!
 
-This guide covers how to set up the Seismic-specific Claude Code skills on your machine so they're available in all repos.
+**Seismic is an EVM blockchain with native on-chain privacy.** Write Solidity. Use Foundry. Deploy with Viem. The only difference: your users' data stays private.
 
-## Skills
+---
 
-This repo ships the following Claude Code skills in `.claude/skills/`:
+### One letter changes everything
 
-| Skill           | Command          | Description                                                              |
-| --------------- | ---------------- | ------------------------------------------------------------------------ |
-| `ssolc-tests`   | `/ssolc-tests`   | Build and test seismic-solidity (unit tests, semantic tests, isoltest).  |
-| `audit-fix`     | `/audit-fix`     | Walk through fixing a security audit finding with a test-first approach. |
-| `audit-commits` | `/audit-commits` | Structure completed audit fix work into two clean commits (tests + fix). |
-| `py-docs`       | `/py-docs`       | Write Python SDK documentation pages in GitBook format.                  |
+The difference between a public ERC20 and a private SRC20 is one letter:
 
-## Installation
+```solidity
+// Standard ERC20 — balances visible to everyone
+mapping(address => uint256) public balanceOf;
 
-There are two ways to install the skills, depending on where you run Claude Code from. You can do one or both.
-
-### Option A: Workspace-level (recommended)
-
-This makes skills available when running Claude Code from the `seismic-workspace` root directory (the same level where `CLAUDE.md` is already symlinked). From that directory:
-
-```sh
-cd /path/to/seismic-workspace
-
-mkdir -p .claude/skills
-for skill in seismic/.claude/skills/*/; do
-  ln -sf "../seismic/.claude/skills/$(basename "$skill")" .claude/skills/"$(basename "$skill")"
-done
+function transfer(address to, uint256 amount) public {
+    balanceOf[msg.sender] -= amount;
+    balanceOf[to] += amount;
+}
 ```
 
-To symlink a single skill:
+```solidity
+// Seismic SRC20 — balances shielded by default
+mapping(address => suint256) balanceOf;    // uint256 → suint256
 
-```sh
-cd /path/to/seismic-workspace
-
-mkdir -p .claude/skills
-ln -sf "../seismic/.claude/skills/SKILL_NAME" .claude/skills/SKILL_NAME
+function transfer(address to, suint256 amount) public {  // uint256 → suint256
+    balanceOf[msg.sender] -= amount;
+    balanceOf[to] += amount;
+}
 ```
 
-### Option B: Global (`~/.claude`)
+That `s` prefix tells the Seismic compiler to encrypt the value at rest, in transit, and during execution. Observers see `0x000` instead of actual balances and amounts. Everything else — the Solidity syntax, the EVM execution model, the deployment flow — stays exactly the same.
 
-This makes skills available in every Claude Code session, regardless of working directory:
+---
 
-```sh
-cd /path/to/seismic-workspace
+### What you can build
 
-mkdir -p ~/.claude/skills
-for skill in seismic/.claude/skills/*/; do
-  ln -sf "$(pwd)/$skill" ~/.claude/skills/"$(basename "$skill")"
-done
+- **Private tokens** — ERC20s where balances and transfer amounts are hidden from observers
+- **Confidential DeFi** — AMMs and lending protocols where positions, prices, and liquidation thresholds stay private
+- **Compliant finance** — Privacy with built-in access control so regulators can verify without exposing user data
+- **Private voting** — On-chain governance where votes are secret until tallied
+
+---
+
+### 3-minute quickstart
+
+Already have Rust and the [Seismic tools installed](getting-started/installation.md)?
+
+```bash
+git clone "https://github.com/SeismicSystems/seismic-starter.git"
+cd seismic-starter/packages/contracts
+sforge test -vv
 ```
 
-To symlink a single skill:
+You just ran shielded contract tests locally. See the [full quickstart](getting-started/quickstart.md) for next steps.
 
-```sh
-cd /path/to/seismic-workspace
+---
 
-mkdir -p ~/.claude/skills
-ln -sf "$(pwd)/seismic/.claude/skills/SKILL_NAME" ~/.claude/skills/SKILL_NAME
-```
+### Find what you need
 
-### Verifying
+| I want to...                         | Go to                                                                 |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| Understand why Seismic exists        | [Why Seismic](gitbook/overview/why-seismic.md)                        |
+| See how it works under the hood      | [How Seismic Works](gitbook/overview/how-seismic-works.md)            |
+| Set up my dev environment            | [Installation](getting-started/installation.md)                       |
+| Run my first shielded contract       | [Quickstart](getting-started/quickstart.md)                           |
+| Build a complete app step by step    | [Walnut App Tutorial](/broken/pages/BN5OqFBvn79QEqM2Y5JX)             |
+| Build a private ERC20 token          | [SRC20 Tutorial](gitbook/tutorials/src20/)                            |
+| Learn about shielded types           | [Shielded Types](seismic-solidity/seismic-solidity/shielded-types.md) |
+| Integrate a frontend                 | [Client Libraries](/broken/pages/nQsSEPZ1IbCEkrtaRNSq)                |
+| Deploy to testnet or mainnet         | [Networks](reference/networks.md)                                     |
+| Understand the transaction lifecycle | [Seismic Transaction](gitbook/reference/seismic-transaction.md)       |
+| Run a node                           | [Node Operator FAQ](gitbook/reference/node-operator-faq.md)           |
 
-After symlinking, check that the links point back into this repo:
+---
 
-```sh
-# workspace-level
-ls -la .claude/skills/
+### Pre-requisite knowledge
 
-# global
-ls -la ~/.claude/skills/
-```
+Our documentation assumes some familiarity with blockchain app development. Before getting started, it'll help if you're comfortable with:
 
-When you start a new Claude Code session, the skills will appear as available slash commands.
+- [Solidity](https://www.soliditylang.org/)
+- [Foundry](https://getfoundry.sh/)
+- [Viem](https://viem.sh/)
 
-## Usage
+If you're new to blockchain app development or need a refresher, we recommend starting out with the [CryptoZombies](https://cryptozombies.io/en/course) tutorial.
 
-In any Claude Code session, type the skill name as a slash command:
+---
 
-* `/ssolc-tests` — get instructions for building and running seismic-solidity tests
-* `/audit-fix` — start a guided audit fix workflow (paste the auditor's finding after invoking)
-* `/audit-commits` — structure your uncommitted audit fix work into two commits
-* `/py-docs` — write Python SDK documentation pages following the established GitBook format
+### Work with us
+
+If you might benefit from direct support from the team, please don't hesitate to reach out to `dev@seismic.systems`. We pride ourselves in fast response time.
+
+You can also check out our [X account](https://x.com/SeismicSys) for the latest updates, or join our [Discord](https://discord.gg/XSPNseXCvW) community.
