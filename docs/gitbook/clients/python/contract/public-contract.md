@@ -63,7 +63,7 @@ contract = PublicContract(
 )
 
 # Read public contract state
-result = contract.tread.getTotalSupply()
+result = contract.tread.totalSupply()
 print(f"Total supply: {result.to_0x_hex()}")
 
 balance = contract.tread.balanceOf("0xAddress...")
@@ -113,22 +113,22 @@ print(f"Token: {sym}, Decimals: {dec}, Supply: {total}")
 
 ```python
 # Function returning multiple values
-result = contract.tread.getInfo()
+result = contract.tread.getUserInfo("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 
 # Decode tuple return
 from eth_abi import decode
 
-name, version, admin = decode(['string', 'uint256', 'address'], result)
+name, balance, active = decode(['string', 'uint256', 'bool'], result)
 print(f"Name: {name}")
-print(f"Version: {version}")
-print(f"Admin: {admin}")
+print(f"Balance: {balance}")
+print(f"Active: {active}")
 ```
 
 ### Array Results
 
 ```python
 # Read array of addresses
-result = contract.tread.getAllHolders()
+result = contract.tread.getHolders()
 
 # Decode dynamic array
 from eth_abi import decode
@@ -154,7 +154,7 @@ w3 = create_public_client(
 contract = w3.seismic.contract(address=contract_address, abi=CONTRACT_ABI)
 
 # Only .tread namespace is available
-result = contract.tread.myFunction()
+result = contract.tread.getNumber()
 ```
 
 ### Checking Contract State
@@ -179,7 +179,7 @@ def get_all_items(contract: PublicContract, batch_size: int = 100):
     from eth_abi import decode
 
     # Get total count
-    total = decode(['uint256'], contract.tread.getTotalCount())[0]
+    total = decode(['uint256'], contract.tread.getItemCount())[0]
 
     items = []
     for offset in range(0, total, batch_size):
@@ -211,7 +211,7 @@ allowance = contract.tread.allowance(owner, spender)  # Works
 
 ```python
 try:
-    result = contract.tread.getRiskyData()
+    result = contract.tread.getNumber()
 
     from eth_abi import decode
     value = decode(['uint256'], result)[0]
@@ -237,7 +237,7 @@ contract = PublicContract(
     abi=CONTRACT_ABI,
 )
 
-result = contract.tread.getData()
+result = contract.tread.getNumber()
 ```
 
 ## Notes

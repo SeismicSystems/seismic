@@ -110,10 +110,10 @@ allowance = contract.tread.allowance("0x1234...", "0x5678...")  # int
 
 ```python
 # Function returns multiple values — returned as tuple
-name, age, active = contract.tread.getUserInfo(address)
+name, balance, active = contract.tread.getUserInfo(user_address)
 
 print(f"Name: {name}")
-print(f"Age: {age}")
+print(f"Balance: {balance}")
 print(f"Active: {active}")
 ```
 
@@ -121,10 +121,10 @@ print(f"Active: {active}")
 
 ```python
 # Array return — returned as list
-holders = contract.tread.getTopHolders()  # list[str]
+holders = contract.tread.getHolders()  # list[str]
 
 # Struct-like return (multiple outputs) — returned as tuple
-max_supply, fee_rate, paused = contract.tread.getConfig()
+max_deposit, fee_rate, paused = contract.tread.getConfig()
 ```
 
 ***
@@ -143,10 +143,10 @@ total_supply = contract.tread.totalSupply()  # int
 name = contract.tread.name()                  # str
 
 # Multiple return values — tuple
-reserve0, reserve1, timestamp = contract.tread.getReserves()
+max_deposit, fee_rate, paused = contract.tread.getConfig()
 
 # Array return
-values = contract.tread.getArray()            # list
+holders = contract.tread.getHolders()         # list
 ```
 
 ***
@@ -191,7 +191,7 @@ Use `.tread` when the contract function:
 function totalSupply() external view returns (uint256);
 function balanceOf(address account) external view returns (uint256);
 function name() external view returns (string);
-function getConfig() external view returns (Config);
+function getConfig() external view returns (uint256, uint256, bool);
 ```
 
 ### When .tread Fails
@@ -257,7 +257,7 @@ decimals = contract.tread.decimals()    # int
 balance = contract.tread.balanceOf(address)  # int
 
 # Public configuration
-max_supply = contract.tread.maxSupply()      # int
+item_count = contract.tread.getItemCount()   # int
 ```
 
 ***

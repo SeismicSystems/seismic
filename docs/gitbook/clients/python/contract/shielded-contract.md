@@ -131,12 +131,12 @@ print(f"Number: {number}")
 
 ```python
 # Transparent write - calldata visible on-chain
-tx_hash = contract.twrite.setPublicData("hello", value=10**18)
+tx_hash = contract.twrite.setNumber(42)
 receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
 # Transparent read — standard eth_call, auto-decoded
-data = contract.tread.getPublicData()
-print(f"Result: {data}")
+number = contract.tread.getNumber()
+print(f"Result: {number}")
 ```
 
 ### Debug Write
@@ -158,7 +158,6 @@ receipt = w3.eth.wait_for_transaction_receipt(debug_result.tx_hash)
 ```python
 # Custom gas and value
 tx_hash = contract.write.deposit(
-    amount=1000,
     value=10**18,  # 1 ETH
     gas=200_000,
     gas_price=20 * 10**9,  # 20 gwei
@@ -168,8 +167,8 @@ tx_hash = contract.write.deposit(
 from seismic_web3.transaction_types import SeismicSecurityParams
 
 security = SeismicSecurityParams(expires_in_blocks=100)
-tx_hash = contract.write.sensitiveOperation(
-    data="secret",
+tx_hash = contract.write.withdraw(
+    amount,
     security=security,
 )
 ```
@@ -187,7 +186,7 @@ contract = ShieldedContract(
     eip712=True,  # Use EIP-712 instead of raw signing
 )
 
-tx_hash = contract.write.performAction(123)
+tx_hash = contract.write.setNumber(123)
 ```
 
 ### Instantiation via Client
@@ -206,12 +205,12 @@ w3 = create_wallet_client(
 contract = w3.seismic.contract(address=contract_address, abi=CONTRACT_ABI)
 
 # Now use any namespace
-tx_hash = contract.write.myFunction(arg1, arg2)
+tx_hash = contract.write.setNumber(42)
 ```
 
 ## Notes
 
-- **Dynamic method access**: Contract methods are accessed via `__getattr__`, so `contract.write.myFunction()` dynamically resolves to the ABI function
+- **Dynamic method access**: Contract methods are accessed via `__getattr__`, so `contract.write.setNumber()` dynamically resolves to the ABI function
 - **ABI remapping**: Shielded types (`suint256`, `sbool`, `saddress`) are remapped to standard types for encoding while preserving original names for selector computation
 - **Gas estimation**: `.write` and `.twrite` estimate gas if not provided explicitly
 - **Encryption overhead**: Encrypted operations add ~16 bytes (AES-GCM auth tag) to calldata

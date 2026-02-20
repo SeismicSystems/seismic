@@ -65,7 +65,7 @@ async def main():
     )
 
     # Read public contract state (must await)
-    result = await contract.tread.getTotalSupply()
+    result = await contract.tread.totalSupply()
     print(f"Total supply: {result.to_0x_hex()}")
 
     balance = await contract.tread.balanceOf("0xAddress...")
@@ -151,13 +151,13 @@ async def complex_types(contract: AsyncPublicContract):
     from eth_abi import decode
 
     # Function returning multiple values
-    result = await contract.tread.getInfo()
+    result = await contract.tread.getUserInfo("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 
     # Decode tuple return
-    name, version, admin = decode(['string', 'uint256', 'address'], result)
+    name, balance, active = decode(['string', 'uint256', 'bool'], result)
     print(f"Name: {name}")
-    print(f"Version: {version}")
-    print(f"Admin: {admin}")
+    print(f"Balance: {balance}")
+    print(f"Active: {active}")
 ```
 
 ### Array Results
@@ -167,7 +167,7 @@ async def array_example(contract: AsyncPublicContract):
     from eth_abi import decode
 
     # Read array of addresses
-    result = await contract.tread.getAllHolders()
+    result = await contract.tread.getHolders()
 
     # Decode dynamic array
     holders = decode(['address[]'], result)[0]
@@ -197,7 +197,7 @@ async def client_pattern():
     contract = w3.seismic.contract(address=contract_address, abi=CONTRACT_ABI)
 
     # Only .tread namespace is available (must await)
-    result = await contract.tread.myFunction()
+    result = await contract.tread.getNumber()
 ```
 
 ### Pagination with Concurrency
@@ -208,7 +208,7 @@ async def get_all_items(contract: AsyncPublicContract, batch_size: int = 100):
     from eth_abi import decode
 
     # Get total count
-    total_bytes = await contract.tread.getTotalCount()
+    total_bytes = await contract.tread.getItemCount()
     total = decode(['uint256'], total_bytes)[0]
 
     # Calculate batch offsets
@@ -260,7 +260,7 @@ asyncio.create_task(monitor_supply(contract))
 ```python
 async def error_handling(contract: AsyncPublicContract):
     try:
-        result = await contract.tread.getRiskyData()
+        result = await contract.tread.getNumber()
 
         from eth_abi import decode
         value = decode(['uint256'], result)[0]
@@ -281,7 +281,7 @@ async def with_timeout(contract: AsyncPublicContract):
     try:
         # Set 5-second timeout for read
         result = await asyncio.wait_for(
-            contract.tread.slowFunction(),
+            contract.tread.getHolders(),
             timeout=5.0
         )
         print(f"Result: {result.to_0x_hex()}")
@@ -301,7 +301,7 @@ async def context_pattern():
             abi=CONTRACT_ABI,
         )
 
-        result = await contract.tread.getData()
+        result = await contract.tread.getNumber()
         print(f"Result: {result.to_0x_hex()}")
     # Connection automatically closed
 ```
@@ -353,7 +353,7 @@ async def read_with_retry(
             print(f"Attempt {attempt + 1} failed: {e}, retrying...")
             await asyncio.sleep(1 * (attempt + 1))  # Exponential backoff
 
-result = await read_with_retry(contract, "getData", [])
+result = await read_with_retry(contract, "getNumber", [])
 ```
 
 ## Notes

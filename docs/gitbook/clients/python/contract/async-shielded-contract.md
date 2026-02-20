@@ -137,13 +137,13 @@ async def read_example(contract: AsyncShieldedContract):
 ```python
 async def transparent_example(contract: AsyncShieldedContract, w3: AsyncWeb3):
     # Transparent write - calldata visible on-chain
-    tx_hash = await contract.twrite.setPublicData("hello", value=10**18)
+    tx_hash = await contract.twrite.setNumber(42)
     receipt = await w3.eth.wait_for_transaction_receipt(tx_hash)
     print(f"Status: {receipt['status']}")
 
     # Transparent read — standard eth_call, auto-decoded
-    data = await contract.tread.getPublicData()
-    print(f"Result: {data}")
+    number = await contract.tread.getNumber()
+    print(f"Result: {number}")
 ```
 
 ### Debug Write
@@ -183,7 +183,6 @@ async def concurrent_example(contract: AsyncShieldedContract):
 async def advanced_write(contract: AsyncShieldedContract):
     # Custom gas and value
     tx_hash = await contract.write.deposit(
-        amount=1000,
         value=10**18,  # 1 ETH
         gas=200_000,
         gas_price=20 * 10**9,  # 20 gwei
@@ -193,8 +192,8 @@ async def advanced_write(contract: AsyncShieldedContract):
     from seismic_web3.transaction_types import SeismicSecurityParams
 
     security = SeismicSecurityParams(expires_in_blocks=100)
-    tx_hash = await contract.write.sensitiveOperation(
-        data="secret",
+    tx_hash = await contract.write.withdraw(
+        amount,
         security=security,
     )
 ```
@@ -235,7 +234,7 @@ async def eip712_example():
         eip712=True,  # Use EIP-712 instead of raw signing
     )
 
-    tx_hash = await contract.write.performAction(123)
+    tx_hash = await contract.write.setNumber(123)
 ```
 
 ### Instantiation via Async Client
@@ -253,7 +252,7 @@ async def client_pattern():
     contract = w3.seismic.contract(address=contract_address, abi=CONTRACT_ABI)
 
     # Now use any namespace (must await)
-    tx_hash = await contract.write.myFunction(arg1, arg2)
+    tx_hash = await contract.write.setNumber(42)
 ```
 
 ### Error Handling
@@ -261,7 +260,7 @@ async def client_pattern():
 ```python
 async def error_handling(contract: AsyncShieldedContract):
     try:
-        tx_hash = await contract.write.riskyOperation(123)
+        tx_hash = await contract.write.withdraw(123)
         receipt = await w3.eth.wait_for_transaction_receipt(tx_hash)
 
         if receipt['status'] != 1:
@@ -279,7 +278,7 @@ async def context_pattern():
     async with create_async_wallet_client(...) as w3:
         contract = AsyncShieldedContract(...)
 
-        tx_hash = await contract.write.doSomething()
+        tx_hash = await contract.write.setNumber(42)
         receipt = await w3.eth.wait_for_transaction_receipt(tx_hash)
     # Connection automatically closed
 ```

@@ -52,10 +52,10 @@ Pass function arguments as positional parameters:
 result = contract.read.balanceOf()
 
 # Single argument
-result = contract.read.getTokenBalance(token_address)
+result = contract.read.balanceOf(owner_address)
 
 # Multiple arguments
-result = contract.read.getAllowance(owner, spender)
+result = contract.read.getUserInfo(user_address)
 ```
 
 ### Call Options (Keyword Arguments)
@@ -119,9 +119,9 @@ allowance = contract.read.allowance(owner_address, spender_address)
 
 ```python
 # Increase gas for complex reads
-result = contract.read.complexCalculation(
-    arg1,
-    arg2,
+result = contract.read.getItems(
+    offset,
+    limit,
     gas=50_000_000,
 )
 ```
@@ -141,8 +141,7 @@ result = contract.read.balanceOf(security=security)
 
 ```python
 # Simulate sending 1 ETH with the read
-result = contract.read.simulateDeposit(
-    amount,
+result = contract.read.deposit(
     value=10**18,  # 1 ETH in wei
 )
 ```
@@ -160,14 +159,14 @@ Returns the **ABI-decoded Python value**:
 ```python
 # Single return value — unwrapped from tuple
 balance = contract.read.balanceOf()       # int
-is_odd = contract.read.isOdd()             # bool
-name = contract.read.getName()             # str
+is_odd = contract.read.isOdd()            # bool
+name = contract.read.getName()            # str
 
 # Multiple return values — tuple
-name, age, active = contract.read.getUserInfo(address)
+name, balance, active = contract.read.getUserInfo(user_address)
 
 # Array return
-values = contract.read.getArray()          # list
+holders = contract.read.getHolders()      # list
 ```
 
 ***
@@ -334,10 +333,10 @@ See [Signed Read Guide](../../guides/signed-reads.md#low-level-api) for details.
 import asyncio
 
 # Read multiple values concurrently — each is auto-decoded
-balance, name, status = await asyncio.gather(
+balance, name, active = await asyncio.gather(
     contract.read.balanceOf(),
     contract.read.getName(),
-    contract.read.getStatus(),
+    contract.read.isActive(),
 )
 ```
 
