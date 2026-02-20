@@ -190,8 +190,8 @@ tx_hash = contract.twrite.transfer(recipient, amount)
 ### Check Your Balance (Access-Controlled)
 
 ```python
-# Function uses msg.sender internally — auto-decoded
-balance = contract.read.getMyBalance()  # int
+# SRC20 balanceOf uses msg.sender — auto-decoded
+balance = contract.read.balanceOf()  # int
 ```
 
 ### Check Any Balance (Public)
@@ -454,14 +454,14 @@ except ValueError as e:
 
 **Problem**:
 ```python
-# BAD: Returns 0x0's balance (usually 0)
-balance = contract.tread.getMyBalance()  # 0
+# BAD: SRC20 balanceOf uses msg.sender — returns 0x0's balance
+balance = contract.tread.balanceOf()  # 0
 ```
 
 **Solution**:
 ```python
 # GOOD: Proves your identity
-balance = contract.read.getMyBalance()  # Your actual balance
+balance = contract.read.balanceOf()  # Your actual balance
 ```
 
 ### Using .write for Public Data

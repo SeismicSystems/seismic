@@ -157,9 +157,11 @@ Standard `eth_call` does **not** prove your identity. The contract sees `msg.sen
 
 ### Problem Example
 
+SRC20's `balanceOf()` takes no arguments and returns the caller's balance:
+
 ```solidity
-// This contract function depends on msg.sender
-function getMyBalance() external view returns (uint256) {
+// SRC20 balanceOf — uses msg.sender internally
+function balanceOf() external view returns (suint256) {
     return balances[msg.sender];
 }
 ```
@@ -167,13 +169,13 @@ function getMyBalance() external view returns (uint256) {
 With **transparent read** (`.tread`):
 ```python
 # msg.sender is 0x0 — returns 0x0's balance (int)
-balance = contract.tread.getMyBalance()  # Almost always 0
+balance = contract.tread.balanceOf()  # Almost always 0
 ```
 
 With **signed read** (`.read`):
 ```python
 # msg.sender is your address — returns your balance (int)
-balance = contract.read.getMyBalance()  # Your actual balance
+balance = contract.read.balanceOf()  # Your actual balance
 ```
 
 ### When .tread Works
@@ -201,10 +203,9 @@ Use `.read` when the contract function:
 
 **Examples**:
 ```solidity
-// These require .read (signed read)
-function getMyBalance() external view returns (uint256);
-function isAuthorized() external view returns (bool);
-function getMyVotes() external view returns (uint256);
+// These require .read (signed read) — they use msg.sender internally
+function balanceOf() external view returns (suint256);   // SRC20
+function allowance() external view returns (suint256);    // SRC20
 ```
 
 ***
@@ -273,14 +274,11 @@ max_supply = contract.tread.maxSupply()      # int
 ### Examples (Use `.read` for these)
 
 ```python
-# Requires msg.sender — use .read
-my_balance = contract.read.getMyBalance()
+# SRC20 balanceOf uses msg.sender — use .read
+my_balance = contract.read.balanceOf()
 
-# Requires authentication — use .read
-is_authorized = contract.read.isAuthorized()
-
-# Private data — use .read
-private_data = contract.read.getPrivateData()
+# SRC20 allowance uses msg.sender — use .read
+my_allowance = contract.read.allowance(spender_address)
 ```
 
 ***
@@ -331,14 +329,14 @@ except Exception as e:
 
 **Mistake**: Using `.tread` for caller-specific functions
 ```python
-# BAD: Returns 0x0's balance (usually 0)
-balance = contract.tread.getMyBalance()
+# BAD: SRC20 balanceOf uses msg.sender — returns 0x0's balance
+balance = contract.tread.balanceOf()
 ```
 
 **Fix**: Use `.read` to prove your identity
 ```python
 # GOOD: Returns your actual balance
-balance = contract.read.getMyBalance()
+balance = contract.read.balanceOf()
 ```
 
 ***

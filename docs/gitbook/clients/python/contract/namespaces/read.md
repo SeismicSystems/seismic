@@ -176,25 +176,25 @@ values = contract.read.getArray()          # list
 
 ### Identity Matters
 
-Many contracts use `msg.sender` to determine access or return personalized data:
+Many contracts use `msg.sender` to determine access or return personalized data. For example, SRC20's `balanceOf()` takes no arguments and returns the caller's balance:
 
 ```solidity
-// This contract function requires msg.sender
-function getMyBalance() external view returns (uint256) {
-    return balances[msg.sender];  // Uses caller's address
+// SRC20 balanceOf — uses msg.sender internally
+function balanceOf() external view returns (suint256) {
+    return balances[msg.sender];
 }
 ```
 
 With **signed read** (`.read`):
 ```python
 # Proves your identity — msg.sender is your address
-balance = contract.read.getMyBalance()  # Returns your balance (int)
+balance = contract.read.balanceOf()  # Returns your balance (int)
 ```
 
 With **transparent read** (`.tread`):
 ```python
 # Does NOT prove identity — msg.sender is 0x0
-balance = contract.tread.getMyBalance()  # Returns 0x0's balance (usually 0)
+balance = contract.tread.balanceOf()  # Returns 0x0's balance (usually 0)
 ```
 
 ### Common Use Cases
@@ -204,12 +204,6 @@ balance = contract.tread.getMyBalance()  # Returns 0x0's balance (usually 0)
 - Returns data specific to the caller
 - Has access control (owner-only, role-based, etc.)
 - Uses `msg.sender` in any way
-
-**Examples**:
-- `balanceOf(address)` — If it uses `msg.sender` internally
-- `getMyVotes()` — Returns caller's voting power
-- `isAuthorized()` — Checks if caller has permission
-- `getPrivateData()` — Access-controlled reads
 
 ***
 
