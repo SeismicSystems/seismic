@@ -170,9 +170,9 @@ print(f"Client pubkey: {encryption.encryption_pubkey.to_0x_hex()}")
 ### Manual Encryption Workflow
 
 ```python
+import os
 from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 from hexbytes import HexBytes
-import os
 
 # Get TEE public key from node
 tee_pk = CompressedPublicKey("0x02abcd...")
@@ -180,6 +180,9 @@ tee_pk = CompressedPublicKey("0x02abcd...")
 # Create encryption state
 client_sk = PrivateKey(os.urandom(32))
 encryption = get_encryption(tee_pk, client_sk)
+
+# Build transaction metadata (see TxSeismicMetadata docs)
+metadata = ...  # TxSeismicMetadata for the transaction being encrypted
 
 # Encrypt some data
 plaintext = HexBytes("0x1234abcd")
