@@ -9,9 +9,9 @@ Holds the AES-GCM key and encryption keypair derived from ECDH key exchange.
 
 ## Overview
 
-`EncryptionState` encapsulates all cryptographic material needed for shielded transactions and signed reads. It's created by [`get_encryption()`](get-encryption.md) during wallet client setup and attached to the `w3.seismic.encryption` namespace.
+`EncryptionState` encapsulates all cryptographic material needed for shielded transactions and signed reads. It's created by [`get_encryption()`](get-encryption.md) during wallet client setup and attached to [`w3.seismic`](../namespaces/seismic-namespace.md)`.encryption`.
 
-The class provides `encrypt()` and `decrypt()` methods that handle AES-GCM encryption with metadata-bound Additional Authenticated Data (AAD).
+The class provides [`encrypt()`](#encrypt) and [`decrypt()`](#decrypt) methods that handle AES-GCM encryption with metadata-bound Additional Authenticated Data (AAD).
 
 ## Definition
 
@@ -288,7 +288,7 @@ If any metadata field changes, decryption will fail even with the correct key an
 - Pure computation - no I/O operations
 - Works in both sync and async contexts
 - Created automatically by [`create_wallet_client()`](create-wallet-client.md) and [`create_async_wallet_client()`](create-async-wallet-client.md)
-- You rarely need to call `encrypt()` or `decrypt()` directly - the SDK handles this
+- You rarely need to call [`encrypt()`](#encrypt) or [`decrypt()`](#decrypt) directly - the SDK handles this
 - The internal `_crypto` field is excluded from `repr()` and comparison
 - Authentication tag is always 16 bytes (AES-GCM standard)
 
