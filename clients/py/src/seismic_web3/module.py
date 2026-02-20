@@ -331,7 +331,7 @@ class SeismicNamespace(SeismicPublicNamespace):
         gas: int = 30_000_000,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
-    ) -> HexBytes | None:
+    ) -> HexBytes:
         """Execute a signed read (sync).
 
         Delegates to
@@ -346,7 +346,7 @@ class SeismicNamespace(SeismicPublicNamespace):
             security: Optional security parameter overrides.
 
         Returns:
-            Decrypted response bytes, or ``None`` if empty.
+            Decrypted response bytes (empty ``HexBytes`` if empty).
         """
         return signed_call(
             self._w3,
@@ -572,7 +572,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
         gas: int = 30_000_000,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
-    ) -> HexBytes | None:
+    ) -> HexBytes:
         """Execute a signed read (async).
 
         Delegates to
@@ -587,7 +587,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
             security: Optional security parameter overrides.
 
         Returns:
-            Decrypted response bytes, or ``None`` if empty.
+            Decrypted response bytes (empty ``HexBytes`` if empty).
         """
         return await async_signed_call(
             self._w3,

@@ -242,7 +242,7 @@ decimals = decode(['uint8'], contract.tread.decimals())[0]
 
 - **Encryption**: Yes (AES-GCM)
 - **Call type**: Signed `eth_call`
-- **Returns**: `HexBytes | None` (encrypted result)
+- **Returns**: `HexBytes` (decrypted result)
 - **Proves identity**: Yes (`msg.sender` is your address)
 - **Gas cost**: None (doesn't broadcast)
 
