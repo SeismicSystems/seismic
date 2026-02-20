@@ -9,7 +9,7 @@ Create a synchronous `Web3` instance with full Seismic wallet capabilities.
 
 ## Overview
 
-`create_wallet_client()` is the primary factory function for creating a sync client that can perform shielded writes, signed reads, and deposits. It fetches the TEE public key, derives encryption state via ECDH, and attaches a fully-configured `w3.seismic` namespace to a standard `Web3` instance.
+`create_wallet_client()` is the primary factory function for creating a sync client that can perform shielded writes, signed reads, and deposits. It fetches the TEE public key, derives encryption state via [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman), and attaches a fully-configured [`w3.seismic`](../namespaces/seismic-namespace.md) namespace to a standard `Web3` instance.
 
 The returned client works with all standard `web3.py` APIs (`w3.eth.get_block()`, `w3.eth.send_raw_transaction()`, etc.) plus the additional `w3.seismic` namespace for Seismic-specific operations.
 
@@ -18,8 +18,8 @@ The returned client works with all standard `web3.py` APIs (`w3.eth.get_block()`
 ```python
 def create_wallet_client(
     rpc_url: str,
-    *,
     private_key: PrivateKey,
+    *,
     encryption_sk: PrivateKey | None = None,
 ) -> Web3
 ```
@@ -43,10 +43,11 @@ def create_wallet_client(
 ### Basic Usage
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
 # Load private key
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 
 # Create wallet client
 w3 = create_wallet_client(
@@ -60,26 +61,13 @@ tx_hash = contract.swrite.transfer(recipient, 1000)
 receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 ```
 
-### With Environment Variable
-
-```python
-import os
-from seismic_web3 import create_wallet_client, PrivateKey
-
-private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
-
-w3 = create_wallet_client(
-    "https://gcp-1.seismictest.net/rpc",
-    private_key=private_key,
-)
-```
-
 ### Using Chain Configuration
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 
 # Recommended: use chain config instead of raw URL
 w3 = SEISMIC_TESTNET.wallet_client(private_key)
@@ -91,10 +79,10 @@ w3 = SEISMIC_TESTNET.wallet_client(private_key)
 ### With Custom Encryption Key
 
 ```python
-from seismic_web3 import create_wallet_client, PrivateKey
 import os
+from seismic_web3 import create_wallet_client, PrivateKey
 
-signing_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+signing_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 encryption_key = PrivateKey(os.urandom(32))  # Custom encryption keypair
 
 w3 = create_wallet_client(
@@ -107,9 +95,10 @@ w3 = create_wallet_client(
 ### Standard Web3 Operations
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
 
 # All standard web3.py operations work

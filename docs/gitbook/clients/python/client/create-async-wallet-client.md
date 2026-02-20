@@ -18,8 +18,8 @@ The returned client works with all standard async `web3.py` APIs (`await w3.eth.
 ```python
 async def create_async_wallet_client(
     provider_url: str,
-    *,
     private_key: PrivateKey,
+    *,
     encryption_sk: PrivateKey | None = None,
     ws: bool = False,
 ) -> AsyncWeb3
@@ -45,10 +45,11 @@ async def create_async_wallet_client(
 ### Basic Usage (HTTP)
 
 ```python
+import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
 # Load private key
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 
 # Create async wallet client
 w3 = await create_async_wallet_client(
@@ -65,9 +66,10 @@ receipt = await w3.eth.wait_for_transaction_receipt(tx_hash)
 ### WebSocket Connection
 
 ```python
+import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 
 # WebSocket provider for persistent connection
 w3 = await create_async_wallet_client(
@@ -84,9 +86,10 @@ async for block in w3.eth.subscribe("newHeads"):
 ### Using Chain Configuration
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 
 # Recommended: use chain config with HTTP
 w3 = await SEISMIC_TESTNET.async_wallet_client(private_key)
@@ -98,9 +101,10 @@ w3 = await SEISMIC_TESTNET.async_wallet_client(private_key, ws=True)
 ### Context Manager Pattern
 
 ```python
+import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
-private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 
 # Use context manager to ensure cleanup
 async with create_async_wallet_client(
@@ -117,10 +121,11 @@ async with create_async_wallet_client(
 
 ```python
 import asyncio
+import os
 from seismic_web3 import create_async_wallet_client, PrivateKey
 
 async def main():
-    private_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+    private_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 
     w3 = await create_async_wallet_client(
         "https://gcp-1.seismictest.net/rpc",
@@ -142,11 +147,11 @@ asyncio.run(main())
 ### With Custom Encryption Key
 
 ```python
-from seismic_web3 import create_async_wallet_client, PrivateKey
 import os
+from seismic_web3 import create_async_wallet_client, PrivateKey
 
 async def setup_client():
-    signing_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+    signing_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
     encryption_key = PrivateKey(os.urandom(32))  # Custom encryption keypair
 
     w3 = await create_async_wallet_client(

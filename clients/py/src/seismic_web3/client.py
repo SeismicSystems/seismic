@@ -140,8 +140,8 @@ def get_encryption(
 
 def create_wallet_client(
     rpc_url: str,
-    *,
     private_key: PrivateKey,
+    *,
     encryption_sk: PrivateKey | None = None,
 ) -> Web3:
     """Create a sync ``Web3`` instance with full Seismic wallet capabilities.
@@ -173,8 +173,8 @@ def create_wallet_client(
 
 async def create_async_wallet_client(
     provider_url: str,
-    *,
     private_key: PrivateKey,
+    *,
     encryption_sk: PrivateKey | None = None,
     ws: bool = False,
 ) -> AsyncWeb3:

@@ -69,6 +69,7 @@ encryption = get_encryption(tee_pk, client_sk)
 ### In Client Factory
 
 ```python
+import os
 from seismic_web3 import get_encryption, get_tee_public_key, PrivateKey
 from web3 import Web3
 
@@ -79,7 +80,7 @@ w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
 network_pk = get_tee_public_key(w3)
 
 # Step 2: Derive encryption state
-signing_key = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+signing_key = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 encryption = get_encryption(network_pk, client_sk=None)  # Random ephemeral key
 
 # Step 3: Attach to client

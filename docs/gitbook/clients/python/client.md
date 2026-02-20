@@ -29,9 +29,10 @@ The SDK provides two client types:
 ### Wallet client (sync)
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 
 w3 = SEISMIC_TESTNET.wallet_client(pk)
 ```
@@ -43,9 +44,10 @@ This gives you a standard `Web3` instance with an extra `w3.seismic` namespace b
 ### Wallet client (async)
 
 ```python
+import os
 from seismic_web3 import SEISMIC_TESTNET, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 
 # HTTP
 w3 = await SEISMIC_TESTNET.async_wallet_client(pk)
@@ -79,9 +81,10 @@ The public client's `w3.seismic` namespace has `get_tee_public_key()`, `get_depo
 You can also pass a raw URL to the factory functions directly:
 
 ```python
+import os
 from seismic_web3 import create_wallet_client, create_public_client, PrivateKey
 
-pk = PrivateKey(bytes.fromhex("YOUR_PRIVATE_KEY_HEX"))
+pk = PrivateKey(bytes.fromhex(os.environ["PRIVATE_KEY"]))
 
 # Wallet (sync)
 w3 = create_wallet_client("http://127.0.0.1:8545", private_key=pk)
