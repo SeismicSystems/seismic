@@ -33,14 +33,15 @@ The ABI works the same as in `web3.py`. If your contract uses shielded types (`s
 # Shielded write — encrypted calldata, returns tx hash
 tx_hash = contract.write.setNumber(42)
 
-# Shielded read — encrypted signed call, returns raw bytes
-result = contract.read.getNumber()
+# Shielded read — encrypted signed call, auto-decoded
+number = contract.read.getNumber()       # int
+is_odd = contract.read.isOdd()           # bool
 
 # Transparent write — standard send_transaction
 tx_hash = contract.twrite.setNumber(42)
 
-# Transparent read — standard eth_call
-result = contract.tread.getNumber()
+# Transparent read — standard eth_call, auto-decoded
+number = contract.tread.getNumber()      # int
 
 # Debug write — returns plaintext + encrypted views + tx hash
 debug = contract.dwrite.setNumber(42)

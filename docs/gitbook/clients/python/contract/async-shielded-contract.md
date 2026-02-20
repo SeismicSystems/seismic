@@ -54,9 +54,9 @@ Sends encrypted transactions using `TxSeismic` (type `0x4a`). Calldata is encryp
 
 ### `.read` - Encrypted Read
 
-Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypted by the SDK.
+Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypted and ABI-decoded by the SDK. Single-output functions return the value directly (e.g. `int`, `bool`); multi-output functions return a `tuple`.
 
-**Returns**: `Coroutine[HexBytes]` (decrypted result bytes)
+**Returns**: `Coroutine[Any]` (ABI-decoded Python value)
 
 **Optional Parameters**:
 - `value: int` - Wei for call context (default: `0`)
@@ -75,9 +75,9 @@ Sends standard async `eth_sendTransaction` with unencrypted calldata.
 
 ### `.tread` - Transparent Read
 
-Executes standard async `eth_call` with unencrypted calldata.
+Executes standard async `eth_call` with unencrypted calldata. Result is ABI-decoded by the SDK. Single-output functions return the value directly; multi-output functions return a `tuple`.
 
-**Returns**: `Coroutine[HexBytes]` (raw result bytes)
+**Returns**: `Coroutine[Any]` (ABI-decoded Python value)
 
 **Optional Parameters**: None (pass positional arguments only)
 
@@ -127,11 +127,9 @@ asyncio.run(main())
 
 ```python
 async def read_example(contract: AsyncShieldedContract):
-    # Encrypted read - must await
-    result = await contract.read.getNumber()
-
-    if result:
-        print(f"Raw result: {result.to_0x_hex()}")
+    # Encrypted read — auto-decoded, must await
+    number = await contract.read.getNumber()  # int
+    print(f"Number: {number}")
 ```
 
 ### Transparent Operations
@@ -143,9 +141,9 @@ async def transparent_example(contract: AsyncShieldedContract, w3: AsyncWeb3):
     receipt = await w3.eth.wait_for_transaction_receipt(tx_hash)
     print(f"Status: {receipt['status']}")
 
-    # Transparent read - standard eth_call
-    result = await contract.tread.getPublicData()
-    print(f"Result: {result.to_0x_hex()}")
+    # Transparent read — standard eth_call, auto-decoded
+    data = await contract.tread.getPublicData()
+    print(f"Result: {data}")
 ```
 
 ### Debug Write
@@ -168,15 +166,15 @@ async def debug_example(contract: AsyncShieldedContract, w3: AsyncWeb3):
 
 ```python
 async def concurrent_example(contract: AsyncShieldedContract):
-    # Execute multiple reads concurrently
-    results = await asyncio.gather(
+    # Execute multiple reads concurrently — each is auto-decoded
+    balances = await asyncio.gather(
         contract.tread.getBalance("0xAddress1..."),
         contract.tread.getBalance("0xAddress2..."),
         contract.tread.getBalance("0xAddress3..."),
     )
 
-    for i, result in enumerate(results):
-        print(f"Balance {i}: {result.to_0x_hex()}")
+    for i, balance in enumerate(balances):
+        print(f"Balance {i}: {balance}")
 ```
 
 ### With Transaction Parameters

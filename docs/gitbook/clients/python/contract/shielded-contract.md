@@ -54,9 +54,9 @@ Sends encrypted transactions using `TxSeismic` (type `0x4a`). Calldata is encryp
 
 ### `.read` - Encrypted Read
 
-Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypted by the SDK.
+Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypted and ABI-decoded by the SDK. Single-output functions return the value directly (e.g. `int`, `bool`); multi-output functions return a `tuple`.
 
-**Returns**: `HexBytes` (decrypted result bytes)
+**Returns**: `Any` (ABI-decoded Python value)
 
 **Optional Parameters**:
 - `value: int` - Wei for call context (default: `0`)
@@ -75,9 +75,9 @@ Sends standard `eth_sendTransaction` with unencrypted calldata.
 
 ### `.tread` - Transparent Read
 
-Executes standard `eth_call` with unencrypted calldata.
+Executes standard `eth_call` with unencrypted calldata. Result is ABI-decoded by the SDK. Single-output functions return the value directly; multi-output functions return a `tuple`.
 
-**Returns**: `HexBytes` (raw result bytes)
+**Returns**: `Any` (ABI-decoded Python value)
 
 **Optional Parameters**: None (pass positional arguments only)
 
@@ -122,12 +122,9 @@ print(f"Status: {receipt['status']}")
 ### Encrypted Read
 
 ```python
-# Encrypted read - calldata and result hidden
-result = contract.read.getNumber()
-
-if result:
-    # Decrypt result if needed
-    print(f"Raw result: {result.to_0x_hex()}")
+# Encrypted read — calldata and result hidden, auto-decoded
+number = contract.read.getNumber()  # int
+print(f"Number: {number}")
 ```
 
 ### Transparent Operations
@@ -137,9 +134,9 @@ if result:
 tx_hash = contract.twrite.setPublicData("hello", value=10**18)
 receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
-# Transparent read - standard eth_call
-result = contract.tread.getPublicData()
-print(f"Result: {result.to_0x_hex()}")
+# Transparent read — standard eth_call, auto-decoded
+data = contract.tread.getPublicData()
+print(f"Result: {data}")
 ```
 
 ### Debug Write

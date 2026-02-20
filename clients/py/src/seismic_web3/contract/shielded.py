@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from hexbytes import HexBytes
 
-from seismic_web3.contract.abi import encode_shielded_calldata
+from seismic_web3.contract.abi import decode_abi_output, encode_shielded_calldata
 from seismic_web3.transaction.send import (
     async_debug_send_shielded_transaction,
     async_send_shielded_transaction,
@@ -152,7 +152,7 @@ class _ShieldedReadNamespace:
         self._abi = abi
         self._eip712 = eip712
 
-    def __getattr__(self, fn_name: str) -> Callable[..., HexBytes]:
+    def __getattr__(self, fn_name: str) -> Callable[..., Any]:
         """Return a callable that executes a signed read for ``fn_name``."""
 
         def call(
@@ -160,9 +160,9 @@ class _ShieldedReadNamespace:
             value: int = 0,
             gas: int = 30_000_000,
             security: SeismicSecurityParams | None = None,
-        ) -> HexBytes:
+        ) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
-            return signed_call(
+            raw = signed_call(
                 self._w3,
                 encryption=self._encryption,
                 private_key=self._private_key,
@@ -173,6 +173,9 @@ class _ShieldedReadNamespace:
                 security=security,
                 eip712=self._eip712,
             )
+            if not raw:
+                return HexBytes(b"")
+            return decode_abi_output(self._abi, fn_name, bytes(raw))
 
         return call
 
@@ -219,13 +222,15 @@ class _TransparentReadNamespace:
         self._address = address
         self._abi = abi
 
-    def __getattr__(self, fn_name: str) -> Callable[..., HexBytes]:
+    def __getattr__(self, fn_name: str) -> Callable[..., Any]:
         """Return a callable that performs a standard eth_call for ``fn_name``."""
 
-        def call(*args: Any) -> HexBytes:
+        def call(*args: Any) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
-            result = self._w3.eth.call({"to": self._address, "data": data})
-            return HexBytes(result)
+            raw = self._w3.eth.call({"to": self._address, "data": data})
+            if not raw:
+                return HexBytes(b"")
+            return decode_abi_output(self._abi, fn_name, bytes(raw))
 
         return call
 
@@ -354,9 +359,9 @@ class _AsyncShieldedReadNamespace:
             value: int = 0,
             gas: int = 30_000_000,
             security: SeismicSecurityParams | None = None,
-        ) -> HexBytes:
+        ) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
-            return await async_signed_call(
+            raw = await async_signed_call(
                 self._w3,
                 encryption=self._encryption,
                 private_key=self._private_key,
@@ -367,6 +372,9 @@ class _AsyncShieldedReadNamespace:
                 security=security,
                 eip712=self._eip712,
             )
+            if not raw:
+                return HexBytes(b"")
+            return decode_abi_output(self._abi, fn_name, bytes(raw))
 
         return call
 
@@ -416,10 +424,12 @@ class _AsyncTransparentReadNamespace:
     def __getattr__(self, fn_name: str) -> Callable[..., Any]:
         """Return an async callable that performs a standard eth_call."""
 
-        async def call(*args: Any) -> HexBytes:
+        async def call(*args: Any) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
-            result = await self._w3.eth.call({"to": self._address, "data": data})
-            return HexBytes(result)
+            raw = await self._w3.eth.call({"to": self._address, "data": data})
+            if not raw:
+                return HexBytes(b"")
+            return decode_abi_output(self._abi, fn_name, bytes(raw))
 
         return call
 

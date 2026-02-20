@@ -18,7 +18,7 @@ import re
 from copy import deepcopy
 from typing import Any
 
-from eth_abi import encode
+from eth_abi import decode, encode
 from eth_hash.auto import keccak
 from hexbytes import HexBytes
 
@@ -189,3 +189,57 @@ def encode_shielded_calldata(
     encoded_params = encode(param_types, args) if param_types else b""
 
     return HexBytes(selector + encoded_params)
+
+
+def decode_abi_output(
+    abi: list[dict[str, Any]],
+    function_name: str,
+    data: bytes,
+) -> Any:
+    """Decode raw ABI-encoded output bytes for a contract function.
+
+    Looks up the function in the ABI, reads its ``outputs``, and decodes
+    the raw bytes using ``eth_abi.decode``.
+
+    - **Single output**: returns the value directly (e.g. ``int``, ``bool``,
+      ``str``).
+    - **Multiple outputs**: returns a ``tuple`` of decoded values.
+    - **No outputs defined or empty data**: returns empty ``HexBytes``.
+
+    Args:
+        abi: The full contract ABI (list of function entries).
+        function_name: Name of the function whose output to decode.
+        data: Raw ABI-encoded output bytes.
+
+    Returns:
+        Decoded Python value(s), or empty ``HexBytes`` when there is
+        nothing to decode.
+
+    Raises:
+        ValueError: If the function is not found in the ABI.
+    """
+    # Find the function in the ABI
+    fn_entry = None
+    for entry in abi:
+        if entry.get("type") == "function" and entry.get("name") == function_name:
+            fn_entry = entry
+            break
+
+    if fn_entry is None:
+        raise ValueError(f"Function '{function_name}' not found in ABI")
+
+    outputs = fn_entry.get("outputs", [])
+
+    if not outputs or not data:
+        return HexBytes(b"")
+
+    # Build type strings from output params (no shielded remapping needed
+    # because shielded types only affect inputs/storage, not return values)
+    output_types = [_abi_type_string(p) for p in outputs]
+
+    decoded = decode(output_types, data)
+
+    if len(output_types) == 1:
+        return decoded[0]
+
+    return decoded

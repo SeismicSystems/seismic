@@ -85,12 +85,8 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 ### Signed Read (.read)
 
 ```python
-# Encrypted read that proves your identity
-result = contract.read.getBalance()
-
-# Decode result
-from eth_abi import decode
-balance = decode(['uint256'], result)[0]
+# Encrypted read that proves your identity — auto-decoded
+balance = contract.read.getBalance()  # int
 ```
 
 **When to use**:
@@ -118,12 +114,8 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 ### Transparent Read (.tread)
 
 ```python
-# Public read
-result = contract.tread.totalSupply()
-
-# Decode result
-from eth_abi import decode
-total_supply = decode(['uint256'], result)[0]
+# Public read — auto-decoded
+total_supply = contract.tread.totalSupply()  # int
 ```
 
 **When to use**:
@@ -198,26 +190,24 @@ tx_hash = contract.twrite.transfer(recipient, amount)
 ### Check Your Balance (Access-Controlled)
 
 ```python
-# Function uses msg.sender internally
-result = contract.read.getMyBalance()
-balance = decode(['uint256'], result)[0]
+# Function uses msg.sender internally — auto-decoded
+balance = contract.read.getMyBalance()  # int
 ```
 
 ### Check Any Balance (Public)
 
 ```python
-# Function takes address argument
-result = contract.tread.balanceOf(address)
-balance = decode(['uint256'], result)[0]
+# Function takes address argument — auto-decoded
+balance = contract.tread.balanceOf(address)  # int
 ```
 
 ### Token Metadata (Public)
 
 ```python
-# Public getters
-name = decode(['string'], contract.tread.name())[0]
-symbol = decode(['string'], contract.tread.symbol())[0]
-decimals = decode(['uint8'], contract.tread.decimals())[0]
+# Public getters — auto-decoded
+name = contract.tread.name()            # str
+symbol = contract.tread.symbol()        # str
+decimals = contract.tread.decimals()    # int
 ```
 
 ***
@@ -242,7 +232,7 @@ decimals = decode(['uint8'], contract.tread.decimals())[0]
 
 - **Encryption**: Yes (AES-GCM)
 - **Call type**: Signed `eth_call`
-- **Returns**: `HexBytes` (decrypted result)
+- **Returns**: `Any` (ABI-decoded Python value)
 - **Proves identity**: Yes (`msg.sender` is your address)
 - **Gas cost**: None (doesn't broadcast)
 
@@ -266,7 +256,7 @@ decimals = decode(['uint8'], contract.tread.decimals())[0]
 
 - **Encryption**: No
 - **Call type**: Standard `eth_call`
-- **Returns**: `HexBytes` (result)
+- **Returns**: `Any` (ABI-decoded Python value)
 - **Proves identity**: No (`msg.sender` is `0x0`)
 - **Gas cost**: None (doesn't broadcast)
 
@@ -425,14 +415,8 @@ except TimeExhausted:
 
 ```python
 try:
-    result = contract.read.getBalance()
-
-    if result is None:
-        print("Call returned no data")
-    else:
-        from eth_abi import decode
-        balance = decode(['uint256'], result)[0]
-        print(f"Balance: {balance}")
+    balance = contract.read.getBalance()
+    print(f"Balance: {balance}")
 
 except ValueError as e:
     print(f"Call failed: {e}")
@@ -471,13 +455,13 @@ except ValueError as e:
 **Problem**:
 ```python
 # BAD: Returns 0x0's balance (usually 0)
-balance = contract.tread.getMyBalance()
+balance = contract.tread.getMyBalance()  # 0
 ```
 
 **Solution**:
 ```python
 # GOOD: Proves your identity
-balance = contract.read.getMyBalance()
+balance = contract.read.getMyBalance()  # Your actual balance
 ```
 
 ### Using .write for Public Data

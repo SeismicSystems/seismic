@@ -31,8 +31,13 @@ Unlike standard `eth_call`, signed reads **prove your identity** to the contract
 result = contract.read.functionName(arg1, arg2, ...)
 ```
 
-- **Sync**: Returns `HexBytes` immediately
-- **Async**: Returns `HexBytes` (must `await`)
+- **Sync**: Returns decoded Python value immediately
+- **Async**: Returns decoded Python value (must `await`)
+
+Return values are **automatically ABI-decoded**:
+- **Single output** (e.g. `returns (uint256)`): returns the value directly (`int`, `bool`, `str`, etc.)
+- **Multiple outputs** (e.g. `returns (uint256, bool)`): returns a `tuple`
+- **No outputs or empty result**: returns empty `HexBytes`
 
 ***
 
@@ -78,14 +83,12 @@ from seismic_web3 import create_wallet_client
 w3 = create_wallet_client(...)
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
-# Basic read
-result = contract.read.getBalance()
-print(f"Balance (raw): {result.to_0x_hex()}")
-
-# Decode result if needed
-from eth_abi import decode
-balance = decode(['uint256'], result)[0]
+# Results are automatically decoded
+balance = contract.read.getBalance()  # int
 print(f"Balance: {balance}")
+
+is_active = contract.read.isActive()  # bool
+name = contract.read.getName()        # str
 ```
 
 ### Async Usage
@@ -97,15 +100,15 @@ from seismic_web3 import create_async_wallet_client
 w3 = await create_async_wallet_client(...)
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
-# Basic read
-result = await contract.read.getBalance()
-print(f"Balance (raw): {result.to_0x_hex()}")
+# Results are automatically decoded
+balance = await contract.read.getBalance()
+print(f"Balance: {balance}")
 ```
 
 ### Reading with Arguments
 
 ```python
-# Single argument
+# Single argument — returns decoded value directly
 owner_balance = contract.read.balanceOf(owner_address)
 
 # Multiple arguments
@@ -148,37 +151,23 @@ result = contract.read.simulateDeposit(
 
 ## Return Value
 
-Returns `HexBytes`:
-- Decrypted result from the contract (raw bytes)
-- Empty `HexBytes` if the contract returned no data
+Returns the **ABI-decoded Python value**:
+
+- **Single output** (e.g. `returns (uint256)`): the value directly — `int`, `bool`, `str`, `bytes`, etc.
+- **Multiple outputs** (e.g. `returns (uint256, bool, address)`): a `tuple` of decoded values
+- **No outputs or empty result**: empty `HexBytes`
 
 ```python
-result = contract.read.getBalance()
+# Single return value — unwrapped from tuple
+balance = contract.read.getBalance()       # int
+is_odd = contract.read.isOdd()             # bool
+name = contract.read.getName()             # str
 
-if result is None:
-    print("Call failed or returned no data")
-else:
-    print(f"Result: {result.to_0x_hex()}")
-```
+# Multiple return values — tuple
+name, age, active = contract.read.getUserInfo(address)
 
-### Decoding Results
-
-Results are **raw ABI-encoded bytes**. Use `eth_abi` to decode:
-
-```python
-from eth_abi import decode
-
-# Single return value
-result = contract.read.getBalance()
-balance = decode(['uint256'], result)[0]
-
-# Multiple return values
-result = contract.read.getUserInfo(address)
-name, age, active = decode(['string', 'uint256', 'bool'], result)
-
-# Complex types
-result = contract.read.getArray()
-values = decode(['uint256[]'], result)[0]
+# Array return
+values = contract.read.getArray()          # list
 ```
 
 ***
@@ -199,7 +188,7 @@ function getMyBalance() external view returns (uint256) {
 With **signed read** (`.read`):
 ```python
 # Proves your identity — msg.sender is your address
-balance = contract.read.getMyBalance()
+balance = contract.read.getMyBalance()  # Returns your balance (int)
 ```
 
 With **transparent read** (`.tread`):
@@ -292,15 +281,8 @@ Signed reads **require your private key** to sign the call. Never expose your pr
 
 ```python
 try:
-    result = contract.read.getBalance()
-
-    if result is None:
-        print("Call returned no data or reverted")
-    else:
-        # Decode and use result
-        from eth_abi import decode
-        balance = decode(['uint256'], result)[0]
-        print(f"Balance: {balance}")
+    balance = contract.read.getBalance()
+    print(f"Balance: {balance}")
 
 except ValueError as e:
     print(f"Call failed: {e}")
@@ -326,9 +308,8 @@ except ValueError as e:
 ### Production Checklist
 
 - Verify contract function actually uses `msg.sender`
-- Handle `None` return values gracefully
 - Use appropriate gas limits for complex reads
-- Decode results correctly using matching ABI types
+- Results are auto-decoded — no manual `eth_abi.decode` needed
 - Consider caching read results if called frequently
 
 ***
@@ -358,14 +339,12 @@ See [Signed Read Guide](../../guides/signed-reads.md#low-level-api) for details.
 ```python
 import asyncio
 
-# Read multiple values concurrently
-results = await asyncio.gather(
+# Read multiple values concurrently — each is auto-decoded
+balance, name, status = await asyncio.gather(
     contract.read.getBalance(),
     contract.read.getName(),
     contract.read.getStatus(),
 )
-
-balance, name, status = results
 ```
 
 ### Read with Timeout
