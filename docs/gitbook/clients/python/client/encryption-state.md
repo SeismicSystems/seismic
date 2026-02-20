@@ -207,11 +207,11 @@ assert decrypted == plaintext
 ### Custom Encryption Key
 
 ```python
-from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 import os
+from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 
 # Use a deterministic key (e.g., derived from mnemonic)
-client_sk = PrivateKey(bytes.fromhex("YOUR_DETERMINISTIC_KEY_HEX"))
+client_sk = PrivateKey(bytes.fromhex(os.environ["CLIENT_KEY"]))
 
 # Or use a random ephemeral key
 # client_sk = PrivateKey(os.urandom(32))

@@ -55,13 +55,13 @@ print(f"Client pubkey: {encryption.encryption_pubkey.to_0x_hex()}")
 ### With Custom Client Key
 
 ```python
-from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 import os
+from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 
 tee_pk = CompressedPublicKey("0x02abcd...")
 
 # Use a deterministic client key
-client_sk = PrivateKey(bytes.fromhex("YOUR_CLIENT_KEY_HEX"))
+client_sk = PrivateKey(bytes.fromhex(os.environ["CLIENT_KEY"]))
 
 encryption = get_encryption(tee_pk, client_sk)
 ```
@@ -106,11 +106,12 @@ assert encryption1.aes_key != encryption2.aes_key
 ### Deterministic Key from Mnemonic
 
 ```python
+import os
 from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 from eth_account import Account
 
 # Derive deterministic key from mnemonic
-mnemonic = "your twelve word mnemonic phrase here ..."
+mnemonic = os.environ["MNEMONIC"]
 account = Account.from_mnemonic(mnemonic)
 
 # Use account key for encryption (or derive a separate BIP-44 path)
@@ -125,11 +126,12 @@ encryption = get_encryption(tee_pk, client_sk)
 ### Verify Key Derivation
 
 ```python
+import os
 from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 
 tee_pk = CompressedPublicKey("0x02abcd...")
-client_sk = PrivateKey(bytes.fromhex("abcd..."))
+client_sk = PrivateKey(bytes.fromhex(os.environ["CLIENT_KEY"]))
 
 encryption = get_encryption(tee_pk, client_sk)
 
