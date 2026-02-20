@@ -10,3 +10,7 @@ Deferred features not included in the initial SDK implementation.
 ## Faucet Interaction
 
 - Request testnet ETH from the Seismic faucet
+
+## Stricter ABIs Type
+
+- Add a stricter type for ABIs instead of `list[dict[str, Any]]`
