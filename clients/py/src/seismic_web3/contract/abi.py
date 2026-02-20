@@ -215,7 +215,7 @@ def decode_abi_output(
     - **Single output**: returns the value directly (e.g. ``int``, ``bool``,
       ``str``).
     - **Multiple outputs**: returns a ``tuple`` of decoded values.
-    - **No outputs defined**: returns empty ``HexBytes``.
+    - **No outputs defined**: returns ``None``.
     - **Empty data with outputs defined**: zero-pads and decodes (e.g.
       ``uint256`` → ``0``, ``bool`` → ``False``).
 
@@ -225,8 +225,8 @@ def decode_abi_output(
         data: Raw ABI-encoded output bytes.
 
     Returns:
-        Decoded Python value(s), or empty ``HexBytes`` when the ABI
-        defines no outputs.
+        Decoded Python value(s), or ``None`` when the ABI defines no
+        outputs.
 
     Raises:
         ValueError: If the function is not found in the ABI.
@@ -235,7 +235,7 @@ def decode_abi_output(
     outputs = fn_entry.get("outputs", [])
 
     if not outputs:
-        return HexBytes(b"")
+        return None
 
     # Build type strings from output params (no shielded remapping needed
     # because shielded types only affect inputs/storage, not return values)

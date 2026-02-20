@@ -230,11 +230,11 @@ class TestDecodeAbiOutput:
     def test_no_outputs_defined(self):
         raw = encode(["uint256"], [1])
         result = decode_abi_output(DECODE_ABI, "noOutputs", raw)
-        assert result == b""
+        assert result is None
 
     def test_no_outputs_defined_empty_data(self):
         result = decode_abi_output(DECODE_ABI, "noOutputs", b"")
-        assert result == b""
+        assert result is None
 
     def test_empty_data_uint256(self):
         """Empty bytes for a uint256 output should decode to 0."""
