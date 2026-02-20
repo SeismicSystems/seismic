@@ -44,6 +44,10 @@ Key network properties:
 
 ### The Seismic transaction (type 0x4A)
 
+The diagram below shows the block structure, state tries, and the Seismic transaction format (`TxSeismic`). Note how each storage slot in the Account Storage trie carries a boolean flag -- `(u256, true)` for private slots and `(u256, false)` for public slots.
+
+<figure><img src="../.gitbook/assets/tries.png" alt="Block structure, state tries, and TxSeismic transaction format"><figcaption></figcaption></figure>
+
 Standard Ethereum transactions send calldata in plaintext. The Seismic transaction type encrypts calldata before it leaves the user's machine.
 
 The encryption flow:
@@ -57,6 +61,10 @@ The encryption flow:
 At no point is the plaintext calldata visible outside the TEE -- not in the mempool, not in block data, not in transaction traces.
 
 ## Shielded storage (FlaggedStorage)
+
+The diagram below shows how the RPC layer, EVM, and storage interact. Notice that `eth_getStorageAt` is blocked for shielded slots, and cross-contract reads of private storage return zero.
+
+<figure><img src="../.gitbook/assets/rpc-evm-storage.png" alt="RPC, EVM, and storage interaction diagram showing how shielded slots are protected"><figcaption></figcaption></figure>
 
 Seismic extends the EVM storage model with **FlaggedStorage**. Each storage slot is a tuple:
 
@@ -112,6 +120,10 @@ Seismic adds six precompiled contracts to the EVM, giving smart contracts access
 These precompiles enable contracts to perform on-chain encryption, key derivation, and random number generation without relying on external oracles or off-chain computation.
 
 ## System architecture
+
+The diagram below shows the full Seismic node architecture inside the TEE boundary. Encrypted transactions flow from the client through the RPC layer, into the transaction pool, through consensus, and into the block executor where calldata is decrypted and executed. Shielded results are written to storage.
+
+<figure><img src="../.gitbook/assets/seismic-node.png" alt="Seismic node architecture showing components inside the TEE boundary"><figcaption></figcaption></figure>
 
 The system is composed of three components that work together to provide confidential smart contract execution:
 
