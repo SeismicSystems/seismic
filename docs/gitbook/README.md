@@ -75,7 +75,7 @@ You just ran shielded contract tests locally. See the [full quickstart](../getti
 | Build a complete app step by step    | [Walnut App Tutorial](/broken/pages/BN5OqFBvn79QEqM2Y5JX)                |
 | Build a private ERC20 token          | [SRC20 Tutorial](tutorials/src20/)                                       |
 | Learn about shielded types           | [Shielded Types](../seismic-solidity/seismic-solidity/shielded-types.md) |
-| Integrate a frontend                 | [Client Libraries](client-libraries/overview.md)                         |
+| Integrate a frontend                 | [Client Libraries](client-libraries/clients.md)                          |
 | Deploy to testnet or mainnet         | [Networks](../reference/networks/testnet.md)                             |
 | Understand the transaction lifecycle | [Seismic Transaction](reference/seismic-transaction.md)                  |
 | Run a node                           | [Node Operator FAQ](reference/node-operator-faq.md)                      |

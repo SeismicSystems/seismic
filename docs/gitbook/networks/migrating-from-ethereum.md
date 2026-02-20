@@ -172,7 +172,7 @@ Key changes in client code:
 * Use **signed reads** instead of plain `eth_call` when reading shielded data that checks `msg.sender`.
 * Listen for encrypted events and decrypt them client-side using the shared secret derived from ECDH.
 
-For library-specific guides, see [Client Libraries](../client-libraries/overview.md).
+For library-specific guides, see [Client Libraries](../client-libraries/clients.md).
 
 ***
 

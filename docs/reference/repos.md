@@ -1,10 +1,14 @@
-# Repos
+---
+icon: code
+---
+
+# Codebases
 
 This document describes how the Seismic repos are organized.
 
 ## Stack Overview
 
-![](.gitbook/assets/repos.png)
+![](../.gitbook/assets/repos.png)
 
 ## Repositories
 
