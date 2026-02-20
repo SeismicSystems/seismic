@@ -106,6 +106,8 @@ This ensures that every node in the network is running the same software and tha
 
 Standard Ethereum transactions send calldata in plaintext. The Seismic transaction type encrypts calldata before it leaves the user's machine.
 
+<figure><img src="../.gitbook/assets/image.png" alt=""><figcaption><p>Seismic transaction encryption and decryption flow</p></figcaption></figure>
+
 Key network properties:
 
 - **Transaction types:** All standard Ethereum types (Legacy, EIP-1559, EIP-2930, EIP-4844, EIP-7702) plus the Seismic transaction type `0x4A`
@@ -130,6 +132,8 @@ Seismic extends the EVM storage model with **FlaggedStorage**. Each storage slot
 (value, is_private)
 ```
 
+<figure><img src="../.gitbook/assets/figures.png" alt=""><figcaption><p>Shielded types in storage: values and keys are hidden from observers</p></figcaption></figure>
+
 When a contract uses `CSTORE` to write a value, the `is_private` flag is set to `true`. This flag has two effects:
 
 - **`eth_getStorageAt` calls fail** for private slots. External observers cannot read shielded data through the standard RPC.
@@ -140,6 +144,8 @@ The compiler manages this automatically. When you declare a variable as `suint25
 ## End-to-End Walkthrough
 
 Here is what happens when a user calls `transfer()` on an SRC20 contract with shielded balances:
+
+<figure><img src="../.gitbook/assets/figures (2).png" alt=""><figcaption><p>Lifecycle of a Seismic transaction: Submit → Execute → Store</p></figcaption></figure>
 
 ```solidity
 mapping(address => suint256) balanceOf;
