@@ -80,7 +80,16 @@
     - [Privy](client-libraries/seismic-react/wallet-guides/privy.md)
     - [AppKit](client-libraries/seismic-react/wallet-guides/appkit.md)
 - [Seismic Alloy (Rust)](client-libraries/seismic-alloy.md)
-- [Seismic Python](client-libraries/seismic-python.md)
+- [Seismic Python](client-libraries/seismic-python/)
+  - [Installation](client-libraries/seismic-python/installation.md)
+  - [Wallet Client](client-libraries/seismic-python/wallet-client.md)
+  - [Public Client](client-libraries/seismic-python/public-client.md)
+  - [Chains](client-libraries/seismic-python/chains.md)
+  - [Contract Instance](client-libraries/seismic-python/contract-instance.md)
+  - [Shielded Writes](client-libraries/seismic-python/shielded-writes.md)
+  - [Signed Reads](client-libraries/seismic-python/signed-reads.md)
+  - [Precompiles](client-libraries/seismic-python/precompiles.md)
+  - [SRC20](client-libraries/seismic-python/src20.md)
 
 ## Networks & Deployment
 
