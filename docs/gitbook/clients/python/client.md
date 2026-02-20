@@ -5,6 +5,20 @@ icon: plug
 
 # Client
 
+### Install
+
+```bash
+pip install seismic-web3
+```
+
+Or with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv add seismic-web3
+```
+
+***
+
 The SDK provides two client types:
 
 - **Wallet client** — full capabilities (shielded writes, signed reads, deposits). Requires a private key.
