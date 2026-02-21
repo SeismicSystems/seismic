@@ -18,7 +18,7 @@ import re
 from copy import deepcopy
 from typing import Any
 
-from eth_abi import encode
+from eth_abi import decode, encode
 from eth_hash.auto import keccak
 from hexbytes import HexBytes
 
@@ -147,6 +147,25 @@ def _function_selector(abi_function: dict[str, Any]) -> bytes:
     return keccak(sig.encode())[:4]
 
 
+def _find_function(abi: list[dict[str, Any]], function_name: str) -> dict[str, Any]:
+    """Find a function entry in the ABI by name.
+
+    Args:
+        abi: The full contract ABI (list of entries).
+        function_name: Name of the function to find.
+
+    Returns:
+        The matching ABI function entry dict.
+
+    Raises:
+        ValueError: If the function is not found in the ABI.
+    """
+    for entry in abi:
+        if entry.get("type") == "function" and entry.get("name") == function_name:
+            return entry
+    raise ValueError(f"Function '{function_name}' not found in ABI")
+
+
 def encode_shielded_calldata(
     abi: list[dict[str, Any]],
     function_name: str,
@@ -169,15 +188,7 @@ def encode_shielded_calldata(
     Raises:
         ValueError: If the function is not found in the ABI.
     """
-    # Find the function in the ABI
-    fn_entry = None
-    for entry in abi:
-        if entry.get("type") == "function" and entry.get("name") == function_name:
-            fn_entry = entry
-            break
-
-    if fn_entry is None:
-        raise ValueError(f"Function '{function_name}' not found in ABI")
+    fn_entry = _find_function(abi, function_name)
 
     # Selector from ORIGINAL types
     selector = _function_selector(fn_entry)
@@ -189,3 +200,55 @@ def encode_shielded_calldata(
     encoded_params = encode(param_types, args) if param_types else b""
 
     return HexBytes(selector + encoded_params)
+
+
+def decode_abi_output(
+    abi: list[dict[str, Any]],
+    function_name: str,
+    data: bytes,
+) -> Any:
+    """Decode raw ABI-encoded output bytes for a contract function.
+
+    Looks up the function in the ABI, reads its ``outputs``, and decodes
+    the raw bytes using ``eth_abi.decode``.
+
+    - **Single output**: returns the value directly (e.g. ``int``, ``bool``,
+      ``str``).
+    - **Multiple outputs**: returns a ``tuple`` of decoded values.
+    - **No outputs defined**: returns ``None``.
+    - **Empty data with outputs defined**: zero-pads and decodes (e.g.
+      ``uint256`` → ``0``, ``bool`` → ``False``).
+
+    Args:
+        abi: The full contract ABI (list of function entries).
+        function_name: Name of the function whose output to decode.
+        data: Raw ABI-encoded output bytes.
+
+    Returns:
+        Decoded Python value(s), or ``None`` when the ABI defines no
+        outputs.
+
+    Raises:
+        ValueError: If the function is not found in the ABI.
+    """
+    fn_entry = _find_function(abi, function_name)
+    outputs = fn_entry.get("outputs", [])
+
+    if not outputs:
+        return None
+
+    # Build type strings from output params (no shielded remapping needed
+    # because shielded types only affect inputs/storage, not return values)
+    output_types = [_abi_type_string(p) for p in outputs]
+
+    # Empty data with outputs defined: zero-pad so eth_abi decodes to
+    # default values (0 for uint, False for bool, etc.)
+    if not data:
+        data = b"\x00" * 32 * len(output_types)
+
+    decoded = decode(output_types, data)
+
+    if len(output_types) == 1:
+        return decoded[0]
+
+    return decoded

@@ -54,9 +54,9 @@ Sends encrypted transactions using `TxSeismic` (type `0x4a`). Calldata is encryp
 
 ### `.read` - Encrypted Read
 
-Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypted by the SDK.
+Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypted and ABI-decoded by the SDK. Single-output functions return the value directly (e.g. `int`, `bool`); multi-output functions return a `tuple`.
 
-**Returns**: `Coroutine[HexBytes]` (decrypted result bytes)
+**Returns**: `Coroutine[Any]` (ABI-decoded Python value)
 
 **Optional Parameters**:
 - `value: int` - Wei for call context (default: `0`)
@@ -75,9 +75,9 @@ Sends standard async `eth_sendTransaction` with unencrypted calldata.
 
 ### `.tread` - Transparent Read
 
-Executes standard async `eth_call` with unencrypted calldata.
+Executes standard async `eth_call` with unencrypted calldata. Result is ABI-decoded by the SDK. Single-output functions return the value directly; multi-output functions return a `tuple`.
 
-**Returns**: `Coroutine[HexBytes]` (raw result bytes)
+**Returns**: `Coroutine[Any]` (ABI-decoded Python value)
 
 **Optional Parameters**: None (pass positional arguments only)
 
@@ -127,11 +127,9 @@ asyncio.run(main())
 
 ```python
 async def read_example(contract: AsyncShieldedContract):
-    # Encrypted read - must await
-    result = await contract.read.getNumber()
-
-    if result:
-        print(f"Raw result: {result.to_0x_hex()}")
+    # Encrypted read — auto-decoded, must await
+    number = await contract.read.getNumber()  # int
+    print(f"Number: {number}")
 ```
 
 ### Transparent Operations
@@ -139,13 +137,13 @@ async def read_example(contract: AsyncShieldedContract):
 ```python
 async def transparent_example(contract: AsyncShieldedContract, w3: AsyncWeb3):
     # Transparent write - calldata visible on-chain
-    tx_hash = await contract.twrite.setPublicData("hello", value=10**18)
+    tx_hash = await contract.twrite.setNumber(42)
     receipt = await w3.eth.wait_for_transaction_receipt(tx_hash)
     print(f"Status: {receipt['status']}")
 
-    # Transparent read - standard eth_call
-    result = await contract.tread.getPublicData()
-    print(f"Result: {result.to_0x_hex()}")
+    # Transparent read — standard eth_call, auto-decoded
+    number = await contract.tread.getNumber()
+    print(f"Result: {number}")
 ```
 
 ### Debug Write
@@ -168,15 +166,15 @@ async def debug_example(contract: AsyncShieldedContract, w3: AsyncWeb3):
 
 ```python
 async def concurrent_example(contract: AsyncShieldedContract):
-    # Execute multiple reads concurrently
-    results = await asyncio.gather(
-        contract.tread.getBalance("0xAddress1..."),
-        contract.tread.getBalance("0xAddress2..."),
-        contract.tread.getBalance("0xAddress3..."),
+    # Execute multiple reads concurrently — each is auto-decoded
+    balances = await asyncio.gather(
+        contract.tread.balanceOf("0xAddress1..."),
+        contract.tread.balanceOf("0xAddress2..."),
+        contract.tread.balanceOf("0xAddress3..."),
     )
 
-    for i, result in enumerate(results):
-        print(f"Balance {i}: {result.to_0x_hex()}")
+    for i, balance in enumerate(balances):
+        print(f"Balance {i}: {balance}")
 ```
 
 ### With Transaction Parameters
@@ -185,7 +183,6 @@ async def concurrent_example(contract: AsyncShieldedContract):
 async def advanced_write(contract: AsyncShieldedContract):
     # Custom gas and value
     tx_hash = await contract.write.deposit(
-        amount=1000,
         value=10**18,  # 1 ETH
         gas=200_000,
         gas_price=20 * 10**9,  # 20 gwei
@@ -195,8 +192,8 @@ async def advanced_write(contract: AsyncShieldedContract):
     from seismic_web3.transaction_types import SeismicSecurityParams
 
     security = SeismicSecurityParams(expires_in_blocks=100)
-    tx_hash = await contract.write.sensitiveOperation(
-        data="secret",
+    tx_hash = await contract.write.withdraw(
+        amount,
         security=security,
     )
 ```
@@ -237,7 +234,7 @@ async def eip712_example():
         eip712=True,  # Use EIP-712 instead of raw signing
     )
 
-    tx_hash = await contract.write.performAction(123)
+    tx_hash = await contract.write.setNumber(123)
 ```
 
 ### Instantiation via Async Client
@@ -255,7 +252,7 @@ async def client_pattern():
     contract = w3.seismic.contract(address=contract_address, abi=CONTRACT_ABI)
 
     # Now use any namespace (must await)
-    tx_hash = await contract.write.myFunction(arg1, arg2)
+    tx_hash = await contract.write.setNumber(42)
 ```
 
 ### Error Handling
@@ -263,7 +260,7 @@ async def client_pattern():
 ```python
 async def error_handling(contract: AsyncShieldedContract):
     try:
-        tx_hash = await contract.write.riskyOperation(123)
+        tx_hash = await contract.write.withdraw(123)
         receipt = await w3.eth.wait_for_transaction_receipt(tx_hash)
 
         if receipt['status'] != 1:
@@ -281,7 +278,7 @@ async def context_pattern():
     async with create_async_wallet_client(...) as w3:
         contract = AsyncShieldedContract(...)
 
-        tx_hash = await contract.write.doSomething()
+        tx_hash = await contract.write.setNumber(42)
         receipt = await w3.eth.wait_for_transaction_receipt(tx_hash)
     # Connection automatically closed
 ```

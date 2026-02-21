@@ -189,7 +189,7 @@ print(f"Expires at block: {shielded.seismic.expires_at_block}")
 ### Analyze Gas Estimation
 
 ```python
-result = contract.dwrite.complexMethod(args)
+result = contract.dwrite.batchTransfer(recipients, amounts)
 
 # Estimated gas
 estimated = result.plaintext_tx.gas
@@ -224,7 +224,7 @@ tx_hash = contract.write.transfer(recipient, amount)
 
 ```python
 # Verify calldata is correctly encoded
-result = contract.dwrite.complexMethod(arg1, arg2, arg3)
+result = contract.dwrite.batchTransfer(recipients, amounts)
 
 # Inspect function selector
 selector = result.plaintext_tx.data[:4]
@@ -232,14 +232,14 @@ print(f"Function selector: {selector.to_0x_hex()}")
 
 # Verify it matches expected selector
 from web3 import Web3
-expected_selector = Web3.keccak(text="complexMethod(uint256,address,bool)")[:4]
+expected_selector = Web3.keccak(text="batchTransfer(address[],suint256[])")[:4]
 assert selector == expected_selector
 ```
 
 ### Debugging Encryption
 
 ```python
-result = contract.dwrite.problematicMethod(args)
+result = contract.dwrite.withdraw(amount)
 
 # Compare plaintext vs encrypted
 print("Plaintext calldata:")
@@ -256,7 +256,7 @@ print(f"Encrypted: {len(result.shielded_tx.data)} bytes")
 ### Auditing Transaction Details
 
 ```python
-result = contract.dwrite.highValueTransfer(recipient, large_amount)
+result = contract.dwrite.transfer(recipient, large_amount)
 
 # Audit all parameters
 plaintext = result.plaintext_tx

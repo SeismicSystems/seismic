@@ -148,10 +148,7 @@ from seismic_web3 import SeismicSecurityParams
 
 security = SeismicSecurityParams(blocks_window=150)
 
-tx_hash = contract.write.complexOperation(
-    arg1,
-    arg2,
-    arg3,
+tx_hash = contract.write.deposit(
     value=10**17,           # 0.1 ETH
     gas=200_000,
     gas_price=25 * 10**9,   # 25 gwei

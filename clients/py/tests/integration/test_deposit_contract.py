@@ -55,9 +55,9 @@ def deposit_contract(
     return w3.seismic.contract(addr, DEPOSIT_CONTRACT_ABI)  # type: ignore[attr-defined]
 
 
-def _parse_deposit_count(raw: HexBytes) -> int:
-    """Parse the ABI-encoded get_deposit_count() tread response to an int."""
-    return int.from_bytes(bytes(raw[64:72]), "little")
+def _parse_deposit_count(raw: bytes) -> int:
+    """Parse the decoded get_deposit_count() bytes to an int (little-endian)."""
+    return int.from_bytes(raw[:8], "little")
 
 
 def _make_deposit(
@@ -106,16 +106,14 @@ class TestDepositContractReads:
     def test_initial_deposit_root_is_nonempty(
         self, deposit_contract: ShieldedContract
     ) -> None:
-        raw = deposit_contract.tread.get_deposit_root()
-        assert raw is not None
-        assert len(raw) >= 32
+        root = deposit_contract.tread.get_deposit_root()
+        assert root is not None
+        assert len(root) == 32
 
     def test_supports_interface(self, deposit_contract: ShieldedContract) -> None:
         # ERC165 interface ID
         erc165_id = bytes.fromhex("01ffc9a7")
-        raw = deposit_contract.tread.supportsInterface(erc165_id)
-        # Last byte should be 1 (true)
-        assert int.from_bytes(raw[-32:], "big") == 1
+        assert deposit_contract.tread.supportsInterface(erc165_id) is True
 
 
 class TestDeposit:
@@ -143,9 +141,9 @@ class TestDeposit:
         deposit_contract: ShieldedContract,
         w3: Web3,
     ) -> None:
-        root_before = bytes(deposit_contract.tread.get_deposit_root())
+        root_before = deposit_contract.tread.get_deposit_root()
         _make_deposit(deposit_contract, w3, 32)
-        root_after = bytes(deposit_contract.tread.get_deposit_root())
+        root_after = deposit_contract.tread.get_deposit_root()
         assert root_before != root_after
 
 
@@ -192,8 +190,8 @@ class TestDepositLifecycle:
         assert _parse_deposit_count(raw) == 0
 
         # 2. Initial root is some value
-        initial_root = bytes(deposit_contract.tread.get_deposit_root())
-        assert len(initial_root) >= 32
+        initial_root = deposit_contract.tread.get_deposit_root()
+        assert len(initial_root) == 32
 
         # 3. Make a deposit
         _make_deposit(deposit_contract, w3, 32)
@@ -203,7 +201,7 @@ class TestDepositLifecycle:
         assert _parse_deposit_count(raw) == 1
 
         # 5. Root changed
-        new_root = bytes(deposit_contract.tread.get_deposit_root())
+        new_root = deposit_contract.tread.get_deposit_root()
         assert new_root != initial_root
 
         # 6. Second deposit
@@ -214,7 +212,7 @@ class TestDepositLifecycle:
         assert _parse_deposit_count(raw) == 2
 
         # 8. Root changed again
-        final_root = bytes(deposit_contract.tread.get_deposit_root())
+        final_root = deposit_contract.tread.get_deposit_root()
         assert final_root != new_root
 
 

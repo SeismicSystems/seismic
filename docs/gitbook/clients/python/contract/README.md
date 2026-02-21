@@ -17,6 +17,43 @@ The ABI works the same as in `web3.py`. If your contract uses shielded types (`s
 
 ***
 
+### Example Contract
+
+All code snippets in the Python SDK docs reference the interface below. Only the interface is shown — no deployment needed.
+
+```solidity
+interface IExampleVault {
+    // ── Public reads (no msg.sender dependency → .tread) ─────
+    function getNumber()       external view returns (uint256);
+    function isOdd()           external view returns (bool);
+    function isActive()        external view returns (bool);
+    function getName()         external view returns (string memory);
+    function getConfig()       external view returns (uint256 maxDeposit, uint256 feeRate, bool paused);
+    function getHolders()      external view returns (address[] memory);
+    function getItemCount()    external view returns (uint256);
+    function getItems(uint256 offset, uint256 limit)
+        external view returns (uint256[] memory);
+    function getUserInfo(address user)
+        external view returns (string memory name, uint256 balance, bool active);
+
+    // ── Shielded reads (use msg.sender → require .read) ──────
+    function getSecretBalance()  external view returns (suint256);
+
+    // ── Writes ───────────────────────────────────────────────
+    function setNumber(uint256 value)  external;
+    function deposit()                 external payable;
+    function withdraw(suint256 amount) external;
+    function batchTransfer(
+        address[] calldata recipients,
+        suint256[] calldata amounts
+    ) external;
+}
+```
+
+Token examples use the real [SRC20](https://github.com/SeismicSystems/src-20) / ERC20 specs (`balanceOf`, `transfer`, `approve`, `allowance`, `totalSupply`, etc.).
+
+***
+
 ### Namespaces
 
 `ShieldedContract` gives you five namespaces:
@@ -33,14 +70,15 @@ The ABI works the same as in `web3.py`. If your contract uses shielded types (`s
 # Shielded write — encrypted calldata, returns tx hash
 tx_hash = contract.write.setNumber(42)
 
-# Shielded read — encrypted signed call, returns raw bytes
-result = contract.read.getNumber()
+# Shielded read — encrypted signed call, auto-decoded
+number = contract.read.getNumber()       # int
+is_odd = contract.read.isOdd()           # bool
 
 # Transparent write — standard send_transaction
 tx_hash = contract.twrite.setNumber(42)
 
-# Transparent read — standard eth_call
-result = contract.tread.getNumber()
+# Transparent read — standard eth_call, auto-decoded
+number = contract.tread.getNumber()      # int
 
 # Debug write — returns plaintext + encrypted views + tx hash
 debug = contract.dwrite.setNumber(42)
