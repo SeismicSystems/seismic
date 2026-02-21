@@ -38,7 +38,7 @@ class PublicContract:
 
 Executes standard `eth_call` with unencrypted calldata. This is the only namespace available on `PublicContract`.
 
-**Returns**: `HexBytes` (raw result bytes)
+**Returns**: `Any` (ABI-decoded Python value)
 
 **Optional Parameters**: None (pass positional arguments only)
 
@@ -47,48 +47,40 @@ Executes standard `eth_call` with unencrypted calldata. This is the only namespa
 ### Basic Read Operations
 
 ```python
-from seismic_web3 import create_public_client, PublicContract, SEISMIC_TESTNET
+from seismic_web3 import create_public_client, PublicContract
 
 # Create client without private key
 w3 = create_public_client(
     rpc_url="https://gcp-1.seismictest.net/rpc",
-    chain=SEISMIC_TESTNET,
 )
 
 # Create read-only contract instance
 contract = PublicContract(
-    w3=w3.eth,
+    w3=w3,
     address="0x1234567890123456789012345678901234567890",
     abi=CONTRACT_ABI,
 )
 
-# Read public contract state
-result = contract.tread.totalSupply()
-print(f"Total supply: {result.to_0x_hex()}")
+# Read public contract state (auto-decoded)
+total_supply = contract.tread.totalSupply()  # int
+print(f"Total supply: {total_supply}")
 
-balance = contract.tread.balanceOf("0xAddress...")
-print(f"Balance: {balance.to_0x_hex()}")
+balance = contract.tread.balanceOf("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")  # int
+print(f"Balance: {balance}")
 ```
 
-### Decoding Results
+### Single and Multiple Returns
 
 ```python
-from eth_abi import decode
+# Single return values are returned directly
+number = contract.tread.getNumber()      # int
+name = contract.tread.getName()          # str
+is_active = contract.tread.isActive()    # bool
 
-# Read and decode uint256
-result = contract.tread.getNumber()
-decoded = decode(['uint256'], result)[0]
-print(f"Number: {decoded}")
-
-# Read and decode address
-owner = contract.tread.owner()
-decoded_address = decode(['address'], owner)[0]
-print(f"Owner: {decoded_address}")
-
-# Read and decode string
-name = contract.tread.name()
-decoded_name = decode(['string'], name)[0]
-print(f"Name: {decoded_name}")
+# Multiple outputs are returned as a tuple
+user_name, user_balance, active = contract.tread.getUserInfo(
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+)
 ```
 
 ### Multiple Reads
@@ -99,41 +91,14 @@ total_supply = contract.tread.totalSupply()
 decimals = contract.tread.decimals()
 symbol = contract.tread.symbol()
 
-# Decode results
-from eth_abi import decode
-
-total = decode(['uint256'], total_supply)[0]
-dec = decode(['uint8'], decimals)[0]
-sym = decode(['string'], symbol)[0]
-
-print(f"Token: {sym}, Decimals: {dec}, Supply: {total}")
-```
-
-### Complex Return Types
-
-```python
-# Function returning multiple values
-result = contract.tread.getUserInfo("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-
-# Decode tuple return
-from eth_abi import decode
-
-name, balance, active = decode(['string', 'uint256', 'bool'], result)
-print(f"Name: {name}")
-print(f"Balance: {balance}")
-print(f"Active: {active}")
+print(f"Token: {symbol}, Decimals: {decimals}, Supply: {total_supply}")
 ```
 
 ### Array Results
 
 ```python
-# Read array of addresses
-result = contract.tread.getHolders()
-
-# Decode dynamic array
-from eth_abi import decode
-
-holders = decode(['address[]'], result)[0]
+# Read array of addresses (auto-decoded to list)
+holders = contract.tread.getHolders()
 print(f"Found {len(holders)} holders")
 for holder in holders:
     print(f"  - {holder}")
@@ -143,31 +108,27 @@ for holder in holders:
 
 ```python
 # Most common pattern - let the client create the contract
-from seismic_web3 import create_public_client, SEISMIC_TESTNET
+from seismic_web3 import create_public_client
 
 w3 = create_public_client(
     rpc_url="https://gcp-1.seismictest.net/rpc",
-    chain=SEISMIC_TESTNET,
 )
 
 # Client's contract() method creates PublicContract
 contract = w3.seismic.contract(address=contract_address, abi=CONTRACT_ABI)
 
 # Only .tread namespace is available
-result = contract.tread.getNumber()
+result = contract.tread.getNumber()  # int
 ```
 
 ### Checking Contract State
 
 ```python
 # Check if address has role
-has_role = contract.tread.hasRole(
+is_admin = contract.tread.hasRole(
     b'\x00' * 32,  # DEFAULT_ADMIN_ROLE
-    "0xAddress..."
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
 )
-
-from eth_abi import decode
-is_admin = decode(['bool'], has_role)[0]
 print(f"Is admin: {is_admin}")
 ```
 
@@ -176,16 +137,13 @@ print(f"Is admin: {is_admin}")
 ```python
 def get_all_items(contract: PublicContract, batch_size: int = 100):
     """Read paginated data from contract."""
-    from eth_abi import decode
-
     # Get total count
-    total = decode(['uint256'], contract.tread.getItemCount())[0]
+    total = contract.tread.getItemCount()
 
     items = []
     for offset in range(0, total, batch_size):
         # Read batch
-        result = contract.tread.getItems(offset, batch_size)
-        batch = decode(['uint256[]'], result)[0]
+        batch = contract.tread.getItems(offset, batch_size)
         items.extend(batch)
 
     return items
@@ -211,10 +169,7 @@ allowance = contract.tread.allowance(owner, spender)  # Works
 
 ```python
 try:
-    result = contract.tread.getNumber()
-
-    from eth_abi import decode
-    value = decode(['uint256'], result)[0]
+    value = contract.tread.getNumber()
     print(f"Value: {value}")
 
 except ValueError as e:

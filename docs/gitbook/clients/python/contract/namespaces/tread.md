@@ -16,7 +16,7 @@ When you call `contract.tread.functionName(...)`, the SDK:
 1. Encodes your function call using the contract ABI
 2. Constructs a standard `eth_call` request
 3. Executes the call against the node's state
-4. Returns the raw result
+4. ABI-decodes the result and returns Python values
 
 **No encryption** is applied — calldata and results are visible to anyone observing the request.
 
@@ -34,7 +34,7 @@ result = contract.tread.functionName(arg1, arg2, ...)
 Return values are **automatically ABI-decoded**:
 - **Single output** (e.g. `returns (uint256)`): returns the value directly (`int`, `bool`, `str`, etc.)
 - **Multiple outputs** (e.g. `returns (uint256, bool)`): returns a `tuple`
-- **No outputs or empty result**: returns empty `HexBytes`
+- **No outputs defined in ABI**: returns `None`
 
 ***
 
@@ -88,7 +88,7 @@ print(f"Total supply: {total_supply}")
 from seismic_web3 import create_async_public_client
 
 # Create async client and contract
-w3 = create_async_public_client(...)
+w3 = await create_async_public_client(...)
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
 # Results are automatically decoded
@@ -135,7 +135,7 @@ Returns the **ABI-decoded Python value**:
 
 - **Single output** (e.g. `returns (uint256)`): the value directly — `int`, `bool`, `str`, `bytes`, etc.
 - **Multiple outputs** (e.g. `returns (uint112, uint112, uint32)`): a `tuple` of decoded values
-- **No outputs or empty result**: empty `HexBytes`
+- **No outputs defined in ABI**: `None`
 
 ```python
 # Single return value — unwrapped from tuple

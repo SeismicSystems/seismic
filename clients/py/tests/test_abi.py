@@ -1,9 +1,8 @@
 """Tests for seismic_web3.contract.abi — ABI remapping for shielded types."""
 
 import pytest
-from eth_hash.auto import keccak
-
 from eth_abi import encode
+from eth_hash.auto import keccak
 
 from seismic_web3.contract.abi import (
     decode_abi_output,

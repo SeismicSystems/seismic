@@ -30,3 +30,21 @@ Replaces made-up / vague function names across all Python SDK contract docs with
 - Final review pass: read each file end-to-end to verify all examples are coherent with the IExampleVault interface
 - `hasRole(bytes32, address)` in public-contract.md — currently kept as-is (it's a real OpenZeppelin function, arguably fine)
 - `register(username)` / `vote(proposalId, bool)` patterns in twrite.md were simplified; could restore with inline Solidity if more context is wanted
+
+## Codex audit update (this branch)
+
+- Confirmed in SDK source (`clients/py/src/seismic_web3/contract/shielded.py`) that both `.read` and `.tread` now call `decode_abi_output(...)` and return ABI-decoded Python values.
+- Fixed stale docs that still described raw bytes/manual decoding:
+  - `contract/public-contract.md`
+  - `contract/async-public-contract.md`
+- Updated namespace docs to match runtime semantics for no-output functions (`None`, not empty bytes):
+  - `contract/namespaces/read.md`
+  - `contract/namespaces/tread.md`
+- Corrected stale client usage in edited examples:
+  - `create_public_client(...)` no longer shows `chain=...`
+  - async public examples now `await create_async_public_client(...)`
+  - direct `PublicContract`/`AsyncPublicContract` examples now pass `w3` (not `w3.eth`)
+
+## Remaining drift spotted (not patched in this pass)
+
+- `contract/shielded-contract.md` and `contract/async-shielded-contract.md` still contain old constructor/factory examples (`chain=...`, `account=...`, and `w3=w3.eth`) that do not match current client signatures.

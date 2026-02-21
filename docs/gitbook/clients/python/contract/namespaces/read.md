@@ -37,7 +37,7 @@ result = contract.read.functionName(arg1, arg2, ...)
 Return values are **automatically ABI-decoded**:
 - **Single output** (e.g. `returns (uint256)`): returns the value directly (`int`, `bool`, `str`, etc.)
 - **Multiple outputs** (e.g. `returns (uint256, bool)`): returns a `tuple`
-- **No outputs or empty result**: returns empty `HexBytes`
+- **No outputs defined in ABI**: returns `None`
 
 ***
 
@@ -154,7 +154,7 @@ Returns the **ABI-decoded Python value**:
 
 - **Single output** (e.g. `returns (uint256)`): the value directly — `int`, `bool`, `str`, `bytes`, etc.
 - **Multiple outputs** (e.g. `returns (uint256, bool, address)`): a `tuple` of decoded values
-- **No outputs or empty result**: empty `HexBytes`
+- **No outputs defined in ABI**: `None`
 
 ```python
 # Single return value — unwrapped from tuple

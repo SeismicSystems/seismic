@@ -38,7 +38,7 @@ class AsyncPublicContract:
 
 Executes standard async `eth_call` with unencrypted calldata. This is the only namespace available on `AsyncPublicContract`.
 
-**Returns**: `Coroutine[HexBytes]` (raw result bytes)
+**Returns**: `Coroutine[Any]` (ABI-decoded Python value)
 
 **Optional Parameters**: None (pass positional arguments only)
 
@@ -48,28 +48,27 @@ Executes standard async `eth_call` with unencrypted calldata. This is the only n
 
 ```python
 import asyncio
-from seismic_web3 import create_async_public_client, AsyncPublicContract, SEISMIC_TESTNET
+from seismic_web3 import create_async_public_client, AsyncPublicContract
 
 async def main():
     # Create async client without private key
-    w3 = create_async_public_client(
-        rpc_url="https://gcp-1.seismictest.net/rpc",
-        chain=SEISMIC_TESTNET,
+    w3 = await create_async_public_client(
+        provider_url="https://gcp-1.seismictest.net/rpc",
     )
 
     # Create read-only contract instance
     contract = AsyncPublicContract(
-        w3=w3.eth,
+        w3=w3,
         address="0x1234567890123456789012345678901234567890",
         abi=CONTRACT_ABI,
     )
 
-    # Read public contract state (must await)
-    result = await contract.tread.totalSupply()
-    print(f"Total supply: {result.to_0x_hex()}")
+    # Read public contract state (must await, auto-decoded)
+    total_supply = await contract.tread.totalSupply()  # int
+    print(f"Total supply: {total_supply}")
 
-    balance = await contract.tread.balanceOf("0xAddress...")
-    print(f"Balance: {balance.to_0x_hex()}")
+    balance = await contract.tread.balanceOf("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")  # int
+    print(f"Balance: {balance}")
 
 asyncio.run(main())
 ```
@@ -78,23 +77,18 @@ asyncio.run(main())
 
 ```python
 async def concurrent_reads(contract: AsyncPublicContract):
-    # Execute multiple reads concurrently
-    results = await asyncio.gather(
+    # Execute multiple reads concurrently (all auto-decoded)
+    total_supply, decimals, symbol, name = await asyncio.gather(
         contract.tread.totalSupply(),
         contract.tread.decimals(),
         contract.tread.symbol(),
         contract.tread.name(),
     )
 
-    total_supply, decimals, symbol, name = results
-
-    # Decode all results
-    from eth_abi import decode
-
-    print(f"Name: {decode(['string'], name)[0]}")
-    print(f"Symbol: {decode(['string'], symbol)[0]}")
-    print(f"Decimals: {decode(['uint8'], decimals)[0]}")
-    print(f"Supply: {decode(['uint256'], total_supply)[0]}")
+    print(f"Name: {name}")
+    print(f"Symbol: {symbol}")
+    print(f"Decimals: {decimals}")
+    print(f"Supply: {total_supply}")
 ```
 
 ### Batch Balance Queries
@@ -103,14 +97,9 @@ async def concurrent_reads(contract: AsyncPublicContract):
 async def get_balances(contract: AsyncPublicContract, addresses: list[str]):
     """Get balances for multiple addresses concurrently."""
     # Query all balances in parallel
-    balance_results = await asyncio.gather(
+    balances = await asyncio.gather(
         *[contract.tread.balanceOf(addr) for addr in addresses]
     )
-
-    # Decode results
-    from eth_abi import decode
-
-    balances = [decode(['uint256'], result)[0] for result in balance_results]
 
     # Return address -> balance mapping
     return dict(zip(addresses, balances))
@@ -122,55 +111,27 @@ for addr, balance in balances.items():
     print(f"{addr}: {balance}")
 ```
 
-### Decoding Results
+### Single and Multiple Returns
 
 ```python
-async def decode_example(contract: AsyncPublicContract):
-    from eth_abi import decode
+async def return_types(contract: AsyncPublicContract):
+    # Single output values are returned directly
+    number = await contract.tread.getNumber()    # int
+    name = await contract.tread.getName()        # str
+    active = await contract.tread.isActive()     # bool
 
-    # Read and decode uint256
-    result = await contract.tread.getNumber()
-    decoded = decode(['uint256'], result)[0]
-    print(f"Number: {decoded}")
-
-    # Read and decode address
-    owner = await contract.tread.owner()
-    decoded_address = decode(['address'], owner)[0]
-    print(f"Owner: {decoded_address}")
-
-    # Read and decode string
-    name = await contract.tread.name()
-    decoded_name = decode(['string'], name)[0]
-    print(f"Name: {decoded_name}")
-```
-
-### Complex Return Types
-
-```python
-async def complex_types(contract: AsyncPublicContract):
-    from eth_abi import decode
-
-    # Function returning multiple values
-    result = await contract.tread.getUserInfo("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-
-    # Decode tuple return
-    name, balance, active = decode(['string', 'uint256', 'bool'], result)
-    print(f"Name: {name}")
-    print(f"Balance: {balance}")
-    print(f"Active: {active}")
+    # Multiple outputs return a tuple
+    user_name, balance, is_active = await contract.tread.getUserInfo(
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    )
 ```
 
 ### Array Results
 
 ```python
 async def array_example(contract: AsyncPublicContract):
-    from eth_abi import decode
-
-    # Read array of addresses
-    result = await contract.tread.getHolders()
-
-    # Decode dynamic array
-    holders = decode(['address[]'], result)[0]
+    # Read array of addresses (auto-decoded to list)
+    holders = await contract.tread.getHolders()
     print(f"Found {len(holders)} holders")
 
     # Query additional data for each holder concurrently
@@ -178,8 +139,7 @@ async def array_example(contract: AsyncPublicContract):
         *[contract.tread.balanceOf(holder) for holder in holders]
     )
 
-    for holder, balance_bytes in zip(holders, balances):
-        balance = decode(['uint256'], balance_bytes)[0]
+    for holder, balance in zip(holders, balances):
         print(f"  {holder}: {balance}")
 ```
 
@@ -188,9 +148,8 @@ async def array_example(contract: AsyncPublicContract):
 ```python
 async def client_pattern():
     # Most common pattern - let the client create the contract
-    w3 = create_async_public_client(
-        rpc_url="https://gcp-1.seismictest.net/rpc",
-        chain=SEISMIC_TESTNET,
+    w3 = await create_async_public_client(
+        provider_url="https://gcp-1.seismictest.net/rpc",
     )
 
     # Client's contract() method creates AsyncPublicContract
@@ -205,11 +164,8 @@ async def client_pattern():
 ```python
 async def get_all_items(contract: AsyncPublicContract, batch_size: int = 100):
     """Read paginated data with concurrent batch requests."""
-    from eth_abi import decode
-
     # Get total count
-    total_bytes = await contract.tread.getItemCount()
-    total = decode(['uint256'], total_bytes)[0]
+    total = await contract.tread.getItemCount()
 
     # Calculate batch offsets
     offsets = range(0, total, batch_size)
@@ -221,8 +177,7 @@ async def get_all_items(contract: AsyncPublicContract, batch_size: int = 100):
 
     # Flatten results
     items = []
-    for result in batch_results:
-        batch = decode(['uint256[]'], result)[0]
+    for batch in batch_results:
         items.extend(batch)
 
     return items
@@ -236,13 +191,10 @@ print(f"Retrieved {len(items)} items")
 ```python
 async def monitor_supply(contract: AsyncPublicContract, interval: int = 10):
     """Monitor total supply every N seconds."""
-    from eth_abi import decode
-
     previous = None
 
     while True:
-        result = await contract.tread.totalSupply()
-        current = decode(['uint256'], result)[0]
+        current = await contract.tread.totalSupply()
 
         if previous is not None and current != previous:
             change = current - previous
@@ -260,10 +212,7 @@ asyncio.create_task(monitor_supply(contract))
 ```python
 async def error_handling(contract: AsyncPublicContract):
     try:
-        result = await contract.tread.getNumber()
-
-        from eth_abi import decode
-        value = decode(['uint256'], result)[0]
+        value = await contract.tread.getNumber()
         print(f"Value: {value}")
 
     except ValueError as e:
@@ -280,11 +229,11 @@ async def error_handling(contract: AsyncPublicContract):
 async def with_timeout(contract: AsyncPublicContract):
     try:
         # Set 5-second timeout for read
-        result = await asyncio.wait_for(
+        holders = await asyncio.wait_for(
             contract.tread.getHolders(),
-            timeout=5.0
+            timeout=5.0,
         )
-        print(f"Result: {result.to_0x_hex()}")
+        print(f"Holders: {holders}")
 
     except asyncio.TimeoutError:
         print("Operation timed out after 5 seconds")
@@ -294,16 +243,18 @@ async def with_timeout(contract: AsyncPublicContract):
 
 ```python
 async def context_pattern():
-    async with create_async_public_client(...) as w3:
+    w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    try:
         contract = AsyncPublicContract(
-            w3=w3.eth,
+            w3=w3,
             address=contract_address,
             abi=CONTRACT_ABI,
         )
 
         result = await contract.tread.getNumber()
-        print(f"Result: {result.to_0x_hex()}")
-    # Connection automatically closed
+        print(f"Result: {result}")
+    finally:
+        await w3.provider.disconnect()
 ```
 
 ### Multi-Contract Queries

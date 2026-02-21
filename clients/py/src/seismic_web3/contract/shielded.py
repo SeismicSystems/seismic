@@ -13,8 +13,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from hexbytes import HexBytes
-
 from seismic_web3.contract.abi import decode_abi_output, encode_shielded_calldata
 from seismic_web3.transaction.send import (
     async_debug_send_shielded_transaction,
@@ -29,6 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from eth_typing import ChecksumAddress
+    from hexbytes import HexBytes
     from web3 import AsyncWeb3, Web3
 
     from seismic_web3._types import PrivateKey
