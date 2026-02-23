@@ -41,5 +41,16 @@
 			"path": "../../seismic-client"
 		},
 	],
-	"settings": {}
+	"settings": {
+		// We ignore all contract submodules because we basically never make changes to them.
+		// The paths seem to be relative to the seismic root (first repo in the workspace).
+		"git.ignoredRepositories": [
+			"contracts/lib/forge-std",
+			"contracts/lib/openzeppelin-contracts",
+			"contracts/lib/solady",
+			"../seismic-solidity/deps/nlohmann-json",
+			"../seismic-solidity/deps/range-v3",
+			"../seismic-solidity/deps/fmtlib",
+		]
+	}
 }
