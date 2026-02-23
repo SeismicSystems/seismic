@@ -48,7 +48,7 @@ Sends encrypted transactions using `TxSeismic` (type `0x4a`). Calldata is encryp
 
 **Optional Parameters**:
 - `value: int` - Wei to send (default: `0`)
-- `gas: int | None` - Gas limit (default: estimated)
+- `gas: int | None` - Gas limit (default: `30_000_000` when omitted)
 - `gas_price: int | None` - Gas price in wei (default: network suggested)
 - `security: SeismicSecurityParams | None` - Security parameters for expiry
 
@@ -94,16 +94,15 @@ Like `.write` but returns debug information including plaintext and encrypted vi
 ### Basic Encrypted Write
 
 ```python
-from seismic_web3 import create_wallet_client, ShieldedContract, SEISMIC_TESTNET
+from seismic_web3 import create_wallet_client, ShieldedContract
 
 w3 = create_wallet_client(
     rpc_url="https://gcp-1.seismictest.net/rpc",
-    chain=SEISMIC_TESTNET,
-    account=private_key,
+    private_key=private_key,
 )
 
 contract = ShieldedContract(
-    w3=w3.eth,
+    w3=w3,
     encryption=w3.seismic.encryption,
     private_key=private_key,
     address="0x1234567890123456789012345678901234567890",
@@ -166,7 +165,7 @@ tx_hash = contract.write.deposit(
 # With security parameters
 from seismic_web3.transaction_types import SeismicSecurityParams
 
-security = SeismicSecurityParams(expires_in_blocks=100)
+security = SeismicSecurityParams(blocks_window=100)
 tx_hash = contract.write.withdraw(
     amount,
     security=security,
@@ -178,7 +177,7 @@ tx_hash = contract.write.withdraw(
 ```python
 # Enable EIP-712 for typed data signing
 contract = ShieldedContract(
-    w3=w3.eth,
+    w3=w3,
     encryption=w3.seismic.encryption,
     private_key=private_key,
     address=contract_address,
@@ -197,8 +196,7 @@ from seismic_web3 import create_wallet_client
 
 w3 = create_wallet_client(
     rpc_url="https://gcp-1.seismictest.net/rpc",
-    chain=SEISMIC_TESTNET,
-    account=private_key,
+    private_key=private_key,
 )
 
 # Client's contract() method creates ShieldedContract
@@ -212,7 +210,7 @@ tx_hash = contract.write.setNumber(42)
 
 - **Dynamic method access**: Contract methods are accessed via `__getattr__`, so `contract.write.setNumber()` dynamically resolves to the ABI function
 - **ABI remapping**: Shielded types (`suint256`, `sbool`, `saddress`) are remapped to standard types for encoding while preserving original names for selector computation
-- **Gas estimation**: `.write` and `.twrite` estimate gas if not provided explicitly
+- **Gas defaults**: `.write` uses `30_000_000` when `gas` is omitted; `.twrite` follows normal `web3.py`/provider transaction behavior
 - **Encryption overhead**: Encrypted operations add ~16 bytes (AES-GCM auth tag) to calldata
 - **EIP-712 vs raw**: EIP-712 signing provides better wallet integration; raw signing is faster for automation
 - **Use `.write` in production**: `.dwrite` is for debugging only

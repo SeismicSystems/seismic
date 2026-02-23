@@ -152,15 +152,13 @@ all_items = get_all_items(contract)
 print(f"Retrieved {len(all_items)} items")
 ```
 
-### View Functions Only
+### Call Semantics
 
 ```python
-# PublicContract only works with view/pure functions
-# These would fail (require transaction):
-# contract.tread.transfer(...)  # Not a view function
-# contract.tread.approve(...)   # Not a view function
+# .tread uses eth_call semantics
+# It is best for reads; non-view calls are simulated and do not persist state
 
-# Only read operations work:
+# Typical usage:
 balance = contract.tread.balanceOf("0xAddress...")  # Works
 allowance = contract.tread.allowance(owner, spender)  # Works
 ```
@@ -200,7 +198,7 @@ result = contract.tread.getNumber()
 - **Read-only**: No write operations available (no `.write`, `.twrite`, or `.dwrite` namespaces)
 - **No encryption required**: Does not use `EncryptionState` or private keys
 - **No authentication**: Standard unsigned `eth_call` operations
-- **View functions only**: Can only call `view` or `pure` functions
+- **`eth_call` semantics**: Best suited for `view`/`pure`; non-view calls are simulated and do not persist state
 - **Gas not consumed**: `eth_call` is free (doesn't create transactions)
 - **No state changes**: Cannot modify blockchain state
 - **Public data only**: Cannot access shielded/encrypted contract state

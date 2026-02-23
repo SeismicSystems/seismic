@@ -97,7 +97,7 @@ tx_hash = contract.write.deposit(value=10**18, gas=100_000, gas_price=10**9)
 
 ### Encoding calldata manually
 
-If you need to encode calldata outside of a contract call — for example, to pass it to the [low-level API](shielded-write.md#low-level-api) — you can use [`encode_shielded_calldata`](../namespaces/methods/encode-shielded-calldata.md). This computes the function selector using the original shielded type names (like `suint256`) but encodes the parameters using standard types (like `uint256`):
+If you need to encode calldata outside of a contract call — for example, to pass it to the [low-level API](../guides/shielded-write.md#low-level-api) — you can use [`encode_shielded_calldata`](../namespaces/methods/encode-shielded-calldata.md). This computes the function selector using the original shielded type names (like `suint256`) but encodes the parameters using standard types (like `uint256`):
 
 ```python
 from seismic_web3.contract.abi import encode_shielded_calldata

@@ -52,7 +52,7 @@ from seismic_web3 import create_async_public_client, AsyncPublicContract
 
 async def main():
     # Create async client without private key
-    w3 = await create_async_public_client(
+    w3 = create_async_public_client(
         provider_url="https://gcp-1.seismictest.net/rpc",
     )
 
@@ -148,7 +148,7 @@ async def array_example(contract: AsyncPublicContract):
 ```python
 async def client_pattern():
     # Most common pattern - let the client create the contract
-    w3 = await create_async_public_client(
+    w3 = create_async_public_client(
         provider_url="https://gcp-1.seismictest.net/rpc",
     )
 
@@ -243,7 +243,7 @@ async def with_timeout(contract: AsyncPublicContract):
 
 ```python
 async def context_pattern():
-    w3 = await create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
     try:
         contract = AsyncPublicContract(
             w3=w3,
@@ -314,7 +314,7 @@ result = await read_with_retry(contract, "getNumber", [])
 - **Read-only**: No write operations available
 - **No encryption required**: Does not use `EncryptionState` or private keys
 - **No authentication**: Standard unsigned async `eth_call` operations
-- **View functions only**: Can only call `view` or `pure` functions
+- **`eth_call` semantics**: Best suited for `view`/`pure`; non-view calls are simulated and do not persist state
 - **Gas not consumed**: `eth_call` is free (doesn't create transactions)
 - **Connection pooling**: AsyncWeb3 efficiently manages connection reuse
 - **Error handling**: Use try/except around await calls for RPC errors

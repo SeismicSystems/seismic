@@ -42,9 +42,9 @@ Replaces made-up / vague function names across all Python SDK contract docs with
   - `contract/namespaces/tread.md`
 - Corrected stale client usage in edited examples:
   - `create_public_client(...)` no longer shows `chain=...`
-  - async public examples now `await create_async_public_client(...)`
+  - async public examples now call `create_async_public_client(...)` (no `await` on the factory)
   - direct `PublicContract`/`AsyncPublicContract` examples now pass `w3` (not `w3.eth`)
 
-## Remaining drift spotted (not patched in this pass)
+## Remaining drift spotted
 
-- `contract/shielded-contract.md` and `contract/async-shielded-contract.md` still contain old constructor/factory examples (`chain=...`, `account=...`, and `w3=w3.eth`) that do not match current client signatures.
+- None in this branch scope after the latest contract docs fixes.

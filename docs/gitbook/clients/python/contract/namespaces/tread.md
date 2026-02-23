@@ -88,7 +88,7 @@ print(f"Total supply: {total_supply}")
 from seismic_web3 import create_async_public_client
 
 # Create async client and contract
-w3 = await create_async_public_client(...)
+w3 = create_async_public_client(...)
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
 # Results are automatically decoded

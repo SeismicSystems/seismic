@@ -61,7 +61,7 @@ All transaction options are **optional** keyword arguments:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `value` | `int` | `0` | ETH value to send (in wei) |
-| `gas` | `int \| None` | `None` | Gas limit (auto-estimated if `None`) |
+| `gas` | `int \| None` | `None` | Gas limit (`30_000_000` if `None`) |
 | `gas_price` | `int \| None` | `None` | Gas price in wei (uses network default if `None`) |
 | `security` | [`SeismicSecurityParams`](../../api-reference/transaction-types/seismic-security-params.md) \| `None` | `None` | Custom security parameters (block expiry, nonce, etc.) |
 
