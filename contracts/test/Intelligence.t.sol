@@ -52,8 +52,8 @@ contract IntelligenceTest is Test {
         assertEq(extractCT(encryptedData[1]), directCiphertext[1]);
 
         bytes32[] memory directHashes = new bytes32[](2);
-        directHashes[0] = keccak256(abi.encodePacked(aliceKey));
-        directHashes[1] = keccak256(abi.encodePacked(bobKey));
+        directHashes[0] = keccak256(abi.encodePacked(uint256(aliceKey)));
+        directHashes[1] = keccak256(abi.encodePacked(uint256(bobKey)));
         assertEq(hashes[0], directHashes[0]);
         assertEq(hashes[1], directHashes[1]);
     }
@@ -73,7 +73,7 @@ contract IntelligenceTest is Test {
 
         assertEq(intelligence.numProviders(), 3);
         assertEq(extractCT(encryptedData[2]), directCiphertext);
-        assertEq(hashes[2], keccak256(abi.encodePacked(charlieKey)));
+        assertEq(hashes[2], keccak256(abi.encodePacked(uint256(charlieKey))));
 
         vm.prank(intelligence.owner());
         vm.expectRevert("DUPLICATE_PROVIDER");
@@ -93,7 +93,7 @@ contract IntelligenceTest is Test {
         assertEq(extractCT(encryptedData[0]), directCiphertext);
 
         bytes32 h = directory.keyHash(bob);
-        assertEq(h, keccak256(abi.encodePacked(bobKey)));
+        assertEq(h, keccak256(abi.encodePacked(uint256(bobKey))));
     }
 
     function test_RevertIfRemoveUnkownProvider() public {
