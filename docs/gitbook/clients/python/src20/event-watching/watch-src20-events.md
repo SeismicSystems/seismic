@@ -5,7 +5,7 @@ icon: broadcast
 
 # watch_src20_events
 
-Create a watcher that first fetches the caller viewing key from Directory, then starts polling decrypted SRC20 events.
+Create a watcher that fetches caller viewing key from Directory, then starts polling.
 
 ## Signatures
 
@@ -23,22 +23,19 @@ def watch_src20_events(
     from_block: int | str = "latest",
 ) -> SRC20EventWatcher
 
-async def async_watch_src20_events(
-    w3: AsyncWeb3,
-    *,
-    encryption: EncryptionState,
-    private_key: PrivateKey,
-    token_address: ChecksumAddress | None = None,
-    on_transfer: AsyncTransferCallback | TransferCallback | None = None,
-    on_approval: AsyncApprovalCallback | ApprovalCallback | None = None,
-    on_error: AsyncErrorCallback | ErrorCallback | None = None,
-    poll_interval: float = 2.0,
-    from_block: int | str = "latest",
-) -> AsyncSRC20EventWatcher
+async def async_watch_src20_events(...same args...) -> AsyncSRC20EventWatcher
 ```
 
-## Behavior
+## Example
 
-- Fetches viewing key via `get_viewing_key` / `async_get_viewing_key`.
-- Starts watcher before returning it.
-- If key is missing, raises `ValueError` from key fetch helper.
+```python
+watcher = watch_src20_events(
+    w3,
+    encryption=w3.seismic.encryption,
+    private_key=pk,
+    token_address="0xTokenAddress",
+    on_transfer=lambda log: print("transfer", log.decrypted_amount),
+)
+```
+
+If no viewing key is registered, key fetch raises `ValueError`.

@@ -5,15 +5,22 @@ icon: file-code
 
 # Types
 
-SRC20 watchers emit these dataclasses:
+Watchers emit these dataclasses:
 
 - [DecryptedTransferLog](decrypted-transfer-log.md)
 - [DecryptedApprovalLog](decrypted-approval-log.md)
 
 Both include:
 
-- original indexed addresses
 - `encrypt_key_hash`
-- raw `encrypted_amount`
-- decrypted integer amount
-- transaction hash and block number
+- `encrypted_amount`
+- `decrypted_amount`
+- `transaction_hash`
+- `block_number`
+
+## Example callback
+
+```python
+def on_transfer(log):
+    print(log.from_address, log.to_address, log.decrypted_amount)
+```

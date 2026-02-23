@@ -10,35 +10,44 @@ Background-thread polling watcher for decrypted SRC20 events.
 ## Constructor
 
 ```python
-class SRC20EventWatcher:
-    def __init__(
-        self,
-        w3: Web3,
-        aes_key: Bytes32,
-        *,
-        token_address: ChecksumAddress | None = None,
-        on_transfer: TransferCallback | None = None,
-        on_approval: ApprovalCallback | None = None,
-        on_error: ErrorCallback | None = None,
-        poll_interval: float = 2.0,
-        from_block: int | str = "latest",
-    ) -> None
+SRC20EventWatcher(
+    w3: Web3,
+    aes_key: Bytes32,
+    *,
+    token_address: ChecksumAddress | None = None,
+    on_transfer: TransferCallback | None = None,
+    on_approval: ApprovalCallback | None = None,
+    on_error: ErrorCallback | None = None,
+    poll_interval: float = 2.0,
+    from_block: int | str = "latest",
+)
 ```
 
-## Lifecycle
+## Lifecycle API
 
 ```python
-def start(self) -> None
-def stop(self) -> None
-@property
-def is_running(self) -> bool
-
-def __enter__(self) -> SRC20EventWatcher
-def __exit__(self, *exc: object) -> None
+watcher.start()
+watcher.stop()
+watcher.is_running
 ```
 
-## Notes
+Also supports context manager usage:
 
-- Polls with `eth_getLogs`.
-- Filters by Transfer/Approval topic and viewing-key hash topic.
-- Decryption or callback errors go to `on_error` when provided.
+```python
+with watcher:
+    ...
+```
+
+## Example
+
+```python
+watcher = SRC20EventWatcher(
+    w3,
+    viewing_key,
+    token_address="0xTokenAddress",
+    on_transfer=lambda log: print(log.decrypted_amount),
+)
+watcher.start()
+# ...
+watcher.stop()
+```

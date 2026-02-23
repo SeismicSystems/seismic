@@ -29,7 +29,18 @@ def compute_key_hash(aes_key: Bytes32) -> bytes
 
 ## Behavior
 
-- Uses a shielded write to call `setKey(suint256)`.
-- Encodes `key` as big-endian integer for calldata.
+- Sends shielded write to `setKey(suint256)`.
 - Returns transaction hash.
-- `compute_key_hash` returns `keccak256(aes_key)` for topic filtering.
+- `compute_key_hash` is local `keccak256(aes_key)` helper.
+
+## Example
+
+```python
+import os
+from seismic_web3 import Bytes32
+from seismic_web3.src20 import register_viewing_key
+
+key = Bytes32(os.urandom(32))
+tx_hash = register_viewing_key(w3, w3.seismic.encryption, pk, key)
+w3.eth.wait_for_transaction_receipt(tx_hash)
+```

@@ -20,3 +20,10 @@ class DecryptedTransferLog:
     transaction_hash: HexBytes
     block_number: int
 ```
+
+## Example
+
+```python
+def on_transfer(log: DecryptedTransferLog) -> None:
+    print(log.from_address, "->", log.to_address, log.decrypted_amount)
+```

@@ -5,7 +5,7 @@ icon: search
 
 # check_has_key and get_key_hash
 
-Public read helpers for Directory key registration status.
+Public read helpers for key registration state.
 
 ## Signatures
 
@@ -17,8 +17,17 @@ def get_key_hash(w3: Web3, address: ChecksumAddress) -> bytes
 async def async_get_key_hash(w3: AsyncWeb3, address: ChecksumAddress) -> bytes
 ```
 
-## Behavior
+## Example
 
-- Both helpers use plain `eth_call` (no private key/encryption needed).
-- `check_has_key` returns a decoded boolean.
-- `get_key_hash` returns the on-chain `bytes32` key hash for that address.
+```python
+from seismic_web3.src20 import check_has_key, get_key_hash
+
+address = "0xYourAddress"
+print(check_has_key(w3, address))
+print(get_key_hash(w3, address).hex())
+```
+
+## Notes
+
+- Uses plain `eth_call` (no private key required).
+- `get_key_hash` returns on-chain `bytes32` key hash.

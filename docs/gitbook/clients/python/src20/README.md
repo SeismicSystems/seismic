@@ -5,21 +5,32 @@ icon: coins
 
 # SRC20
 
-The Python SDK provides SRC20 helpers for:
+SRC20 helpers in the Python SDK focus on viewing keys and event decryption.
 
-- Directory key management (`register_viewing_key`, `get_viewing_key`, key queries)
-- Event watching with decryption (`watch_src20_events*`)
-- Typed decoded logs (`DecryptedTransferLog`, `DecryptedApprovalLog`)
+## What this section covers
+
+- Directory key management
+- Event watchers (sync + async)
+- Typed decrypted log objects
+
+## Quick start
+
+```python
+import os
+from eth_abi import decode
+from seismic_web3 import PrivateKey, SEISMIC_TESTNET, SRC20_ABI
+
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
+w3 = SEISMIC_TESTNET.wallet_client(pk)
+token = w3.seismic.contract("0xTokenAddress", SRC20_ABI)
+
+raw = token.read.balanceOf()
+balance = decode(["uint256"], bytes(raw))[0]
+print(balance)
+```
 
 ## Sections
 
 - [Directory](directory/README.md)
 - [Event Watching](event-watching/README.md)
 - [Types](types/README.md)
-
-## Source Of Truth
-
-- `clients/py/src/seismic_web3/src20/directory.py`
-- `clients/py/src/seismic_web3/src20/watch.py`
-- `clients/py/src/seismic_web3/src20/types.py`
-- `clients/py/src/seismic_web3/src20/crypto.py`

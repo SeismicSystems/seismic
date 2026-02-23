@@ -25,6 +25,13 @@ async def async_get_viewing_key(
 
 ## Behavior
 
-- Performs a signed read to `getKey` so `msg.sender` is authenticated.
-- Raises `ValueError` if the key is missing/empty/zero.
-- Returns the last 32 bytes of the signed-read result as `Bytes32`.
+- Uses signed read (`getKey`) so `msg.sender` is authenticated.
+- Returns `Bytes32`.
+- Raises `ValueError` if no key is registered.
+
+## Example
+
+```python
+viewing_key = get_viewing_key(w3, w3.seismic.encryption, pk)
+print(viewing_key.hex())
+```

@@ -20,3 +20,10 @@ class DecryptedApprovalLog:
     transaction_hash: HexBytes
     block_number: int
 ```
+
+## Example
+
+```python
+def on_approval(log: DecryptedApprovalLog) -> None:
+    print(log.owner, "approved", log.spender, log.decrypted_amount)
+```
