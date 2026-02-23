@@ -5,7 +5,7 @@ icon: file-code
 
 # UnsignedSeismicTx
 
-`UnsignedSeismicTx` contains every transaction field before signing.
+Full transaction fields before signing.
 
 ## Definition
 
@@ -22,10 +22,14 @@ class UnsignedSeismicTx:
     seismic: SeismicElements
 ```
 
-## Important Detail
+## Important
 
-`data` is encrypted calldata in normal shielded flows (ciphertext, not plaintext).
+`data` is encrypted calldata in standard shielded flows.
 
-## Usage
+## Example
 
-Used as input to signing/serialization helpers (raw and EIP-712 paths).
+```python
+from seismic_web3 import sign_seismic_tx_eip712
+
+# signed = sign_seismic_tx_eip712(unsigned_tx, private_key)
+```

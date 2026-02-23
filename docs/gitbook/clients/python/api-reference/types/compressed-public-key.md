@@ -5,7 +5,7 @@ icon: key
 
 # CompressedPublicKey
 
-`CompressedPublicKey` represents a compressed secp256k1 public key.
+Represents a compressed secp256k1 public key.
 
 ```python
 class CompressedPublicKey(_SizedHexBytes):
@@ -14,13 +14,14 @@ class CompressedPublicKey(_SizedHexBytes):
 
 ## Validation
 
-Construction validates:
+- Length must be 33 bytes
+- First byte must be `0x02` or `0x03`
 
-- Length is exactly 33 bytes
-- First byte is `0x02` or `0x03`
+## Example
 
-If validation fails, a `ValueError` is raised.
+```python
+from seismic_web3 import CompressedPublicKey
 
-## Usage
-
-This type is used for TEE public keys and encryption public keys in Seismic metadata.
+pk = CompressedPublicKey("0x02" + "11" * 32)
+print(pk.hex())
+```

@@ -5,9 +5,7 @@ icon: file-code
 
 # Signature
 
-`Signature` stores ECDSA signature components.
-
-## Definition
+`Signature` stores ECDSA components.
 
 ```python
 @dataclass(frozen=True)
@@ -17,12 +15,10 @@ class Signature:
     s: int
 ```
 
-## Fields
+## Example
 
-- `v`: recovery id (y-parity)
-- `r`: first signature integer
-- `s`: second signature integer
+```python
+from seismic_web3 import Signature
 
-## Usage
-
-Used by transaction serializers when building signed `TxSeismic` payloads.
+sig = Signature(v=1, r=123, s=456)
+```

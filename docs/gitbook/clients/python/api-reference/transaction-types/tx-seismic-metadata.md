@@ -5,7 +5,7 @@ icon: file-code
 
 # TxSeismicMetadata
 
-`TxSeismicMetadata` binds sender + legacy fields + Seismic fields into one structure.
+Binds sender + legacy fields + seismic fields for AAD.
 
 ## Definition
 
@@ -17,6 +17,6 @@ class TxSeismicMetadata:
     seismic_elements: SeismicElements
 ```
 
-## Why It Exists
+## Use
 
-This metadata is encoded as AAD for AES-GCM encryption/decryption, so ciphertext is authenticated against full transaction context.
+This structure is passed to encryption/decryption routines to bind ciphertext to transaction context.

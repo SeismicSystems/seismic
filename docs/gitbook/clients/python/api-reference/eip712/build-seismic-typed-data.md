@@ -5,7 +5,7 @@ icon: shield
 
 # build_seismic_typed_data
 
-Build a JSON-serializable EIP-712 typed-data payload from an `UnsignedSeismicTx`.
+Build a JSON-serializable EIP-712 typed-data payload.
 
 ## Signature
 
@@ -15,17 +15,17 @@ def build_seismic_typed_data(tx: UnsignedSeismicTx) -> dict[str, Any]
 
 ## Returns
 
-Dictionary with keys:
+Dictionary with `types`, `primaryType`, `domain`, and `message`.
 
-- `types`
-- `primaryType` (`"TxSeismic"`)
-- `domain`
-- `message`
+## Behavior notes
 
-The format matches `eth_signTypedData_v4` expectations.
+- `message.to` becomes zero address when `tx.to is None`
+- `input`, `encryptionPubkey`, and `recentBlockHash` are `0x` hex strings
+- `encryptionNonce` is emitted as integer
 
-## Behavior Details
+## Example
 
-- `message.to` is set to zero address when `tx.to is None`.
-- `input`, `encryptionPubkey`, and `recentBlockHash` are emitted as `0x` hex strings.
-- `encryptionNonce` is emitted as an integer (`uint96` value).
+```python
+typed_data = build_seismic_typed_data(unsigned_tx)
+print(typed_data["primaryType"])
+```

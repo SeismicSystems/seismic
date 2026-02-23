@@ -5,7 +5,7 @@ icon: file-code
 
 # LegacyFields
 
-`LegacyFields` stores standard EVM fields that are embedded in transaction metadata.
+Standard EVM fields embedded in metadata/AAD.
 
 ## Definition
 
@@ -18,7 +18,10 @@ class LegacyFields:
     value: int
 ```
 
-## Notes
+## Example
 
-- `to` is `None` for contract creation.
-- These fields are used when building metadata/AAD for encryption.
+```python
+from seismic_web3.transaction_types import LegacyFields
+
+legacy = LegacyFields(chain_id=5124, nonce=1, to="0x0000000000000000000000000000000000000000", value=0)
+```

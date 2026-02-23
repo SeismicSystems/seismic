@@ -5,7 +5,7 @@ icon: file-code
 
 # DebugWriteResult
 
-`DebugWriteResult` packages the debug artifacts returned by debug shielded transaction methods.
+Debug artifacts returned by debug shielded transaction methods.
 
 ## Definition
 
@@ -17,9 +17,9 @@ class DebugWriteResult:
     tx_hash: HexBytes
 ```
 
-## Semantics
+## Example
 
-- The transaction is broadcast.
-- `plaintext_tx` shows unencrypted calldata.
-- `shielded_tx` shows encrypted `TxSeismic` fields.
-- `tx_hash` is the hash returned by `eth_sendRawTransaction`.
+```python
+result = contract.dwrite.transfer("0xRecipient", 100)
+print(result.tx_hash.hex())
+```

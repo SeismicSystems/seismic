@@ -5,18 +5,20 @@ icon: code
 
 # API Reference
 
-This section documents the low-level types and helpers exported by `seismic_web3`.
+Low-level types and helpers exported by `seismic_web3`.
 
 ## Sections
 
-- [Types](types/bytes32.md): `Bytes32`, `PrivateKey`, `CompressedPublicKey`, `EncryptionNonce`, `hex_to_bytes`
-- [Transaction Types](transaction-types/signature.md): dataclasses used for `TxSeismic`
-- [EIP-712](eip712/sign-seismic-tx-eip712.md): typed-data hashing/signing helpers
+- [Types](types/bytes32.md)
+- [Transaction Types](transaction-types/signature.md)
+- [EIP-712](eip712/sign-seismic-tx-eip712.md)
 
-## Source Of Truth
+## Quick example
 
-All signatures and behavior in this section are based on:
+```python
+from seismic_web3 import PrivateKey, SEISMIC_TESTNET, SRC20_ABI
 
-- `clients/py/src/seismic_web3/_types.py`
-- `clients/py/src/seismic_web3/transaction_types.py`
-- `clients/py/src/seismic_web3/transaction/eip712.py`
+pk = PrivateKey.from_hex_str("0x...")
+w3 = SEISMIC_TESTNET.wallet_client(pk)
+token = w3.seismic.contract("0xTokenAddress", SRC20_ABI)
+```

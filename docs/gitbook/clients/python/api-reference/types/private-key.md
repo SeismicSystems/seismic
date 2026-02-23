@@ -16,8 +16,8 @@ class PrivateKey(Bytes32):
 
 ## Construction
 
-- `PrivateKey(...)`: accepts `bytes`, hex `str`, or `int` and enforces 32 bytes.
-- `PrivateKey.from_hex_str(...)`: helper that parses a hex string (with or without lowercase `0x`) and returns `PrivateKey`.
+- `PrivateKey(...)` validates 32 bytes
+- `PrivateKey.from_hex_str(...)` parses a hex string (with/without lowercase `0x`)
 
 ## Example
 
@@ -27,8 +27,3 @@ from seismic_web3 import PrivateKey
 
 pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 ```
-
-## Notes
-
-- This type is also a `HexBytes` subtype.
-- Never log private keys in production code.

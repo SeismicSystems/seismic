@@ -5,7 +5,7 @@ icon: file-code
 
 # PlaintextTx
 
-`PlaintextTx` is the unencrypted transaction view returned by debug shielded write methods.
+Unencrypted transaction view returned by debug shielded writes.
 
 ## Definition
 
@@ -20,6 +20,9 @@ class PlaintextTx:
     value: int
 ```
 
-## Usage
+## Example
 
-You get this from `DebugWriteResult.plaintext_tx` when using debug write APIs.
+```python
+result = contract.dwrite.transfer("0xRecipient", 100)
+print(result.plaintext_tx.data.hex())
+```

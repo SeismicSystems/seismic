@@ -5,7 +5,7 @@ icon: slider
 
 # SeismicSecurityParams
 
-Optional overrides for metadata/security fields when sending shielded transactions or signed calls.
+Optional overrides for freshness/nonce/expiry fields.
 
 ## Definition
 
@@ -18,11 +18,9 @@ class SeismicSecurityParams:
     expires_at_block: int | None = None
 ```
 
-## Default Behavior
+## Defaults when `None`
 
-When a field is `None`, SDK defaults are used:
-
-- `blocks_window`: defaults to 100 blocks
-- `encryption_nonce`: random nonce
-- `recent_block_hash`: fetched from latest block
-- `expires_at_block`: computed from latest block and window
+- `blocks_window`: 100
+- `encryption_nonce`: random
+- `recent_block_hash`: latest block hash
+- `expires_at_block`: computed from latest block + window

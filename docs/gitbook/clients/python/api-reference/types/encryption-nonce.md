@@ -5,7 +5,7 @@ icon: lock
 
 # EncryptionNonce
 
-`EncryptionNonce` is the fixed-size nonce type used for AES-GCM encryption.
+Fixed-size nonce type used in AES-GCM encryption.
 
 ```python
 class EncryptionNonce(_SizedHexBytes):
@@ -14,11 +14,13 @@ class EncryptionNonce(_SizedHexBytes):
 
 ## Validation
 
-Construction enforces an exact length of 12 bytes.
+- Must be exactly 12 bytes
+- Raises `ValueError` on invalid length
 
-- Valid length: 12 bytes (96 bits)
-- Error: raises `ValueError` for invalid length
+## Example
 
-## Usage
+```python
+from seismic_web3 import EncryptionNonce
 
-Used in `SeismicElements.encryption_nonce` and encryption/decryption helpers.
+nonce = EncryptionNonce("0x" + "00" * 12)
+```

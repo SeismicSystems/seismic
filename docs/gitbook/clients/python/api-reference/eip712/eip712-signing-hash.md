@@ -5,7 +5,7 @@ icon: shield
 
 # eip712_signing_hash
 
-Compute the digest that is actually signed in EIP-712 mode.
+Compute the digest signed in EIP-712 mode.
 
 ## Signature
 
@@ -17,6 +17,9 @@ def eip712_signing_hash(tx: UnsignedSeismicTx) -> bytes
 
 `keccak256("\\x19\\x01" || domain_separator(tx.chain_id) || struct_hash(tx))`
 
-## Returns
+## Example
 
-32-byte signing digest.
+```python
+digest = eip712_signing_hash(unsigned_tx)
+print(len(digest))
+```

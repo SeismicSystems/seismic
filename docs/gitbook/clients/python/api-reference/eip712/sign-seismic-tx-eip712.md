@@ -19,11 +19,12 @@ def sign_seismic_tx_eip712(tx: UnsignedSeismicTx, private_key: PrivateKey) -> He
 2. Sign with `eth_keys.PrivateKey.sign_msg_hash()`
 3. Serialize with `serialize_signed(tx, sig)`
 
-## Returns
-
-Signed transaction bytes ready for `eth_sendRawTransaction`.
-
 ## Important
 
-- The function does not enforce `tx.seismic.message_version == 2`.
-- Callers should set `message_version=2` when using EIP-712 verification path.
+The function does not enforce `tx.seismic.message_version == 2`; callers should set it appropriately for EIP-712 verification path.
+
+## Example
+
+```python
+signed = sign_seismic_tx_eip712(unsigned_tx, private_key)
+```
