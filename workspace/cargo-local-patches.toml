@@ -1,0 +1,58 @@
+# Cargo config that resolves patched dependencies from local checkouts.
+# Symlinked to seismic-workspace/.cargo/config.toml by `mise run cargo-local-patches-on`.
+# Paths resolve relative to the parent of .cargo/, i.e. seismic-workspace/.
+#
+# Comment out any repo group you don't need to override locally.
+
+[patch.crates-io]
+
+# seismic-revm
+revm = { path = "./seismic-revm/crates/revm" }
+revm-bytecode = { path = "./seismic-revm/crates/bytecode" }
+revm-context = { path = "./seismic-revm/crates/context" }
+revm-context-interface = { path = "./seismic-revm/crates/context/interface" }
+revm-database = { path = "./seismic-revm/crates/database" }
+revm-database-interface = { path = "./seismic-revm/crates/database/interface" }
+revm-handler = { path = "./seismic-revm/crates/handler" }
+revm-inspector = { path = "./seismic-revm/crates/inspector" }
+revm-interpreter = { path = "./seismic-revm/crates/interpreter" }
+revm-precompile = { path = "./seismic-revm/crates/precompile" }
+revm-primitives = { path = "./seismic-revm/crates/primitives" }
+revm-state = { path = "./seismic-revm/crates/state" }
+op-revm = { path = "./seismic-revm/crates/op-revm" }
+seismic-revm = { path = "./seismic-revm/crates/seismic" }
+
+# seismic-compilers
+foundry-compilers = { path = "./seismic-compilers/crates/compilers" }
+foundry-compilers-core = { path = "./seismic-compilers/crates/core" }
+foundry-compilers-artifacts = { path = "./seismic-compilers/crates/artifacts/artifacts" }
+foundry-compilers-artifacts-solc = { path = "./seismic-compilers/crates/artifacts/solc" }
+foundry-compilers-artifacts-vyper = { path = "./seismic-compilers/crates/artifacts/vyper" }
+
+# seismic-alloy-core
+alloy-dyn-abi = { path = "./seismic-alloy-core/crates/dyn-abi" }
+alloy-json-abi = { path = "./seismic-alloy-core/crates/json-abi" }
+alloy-primitives = { path = "./seismic-alloy-core/crates/primitives" }
+alloy-sol-macro = { path = "./seismic-alloy-core/crates/sol-macro" }
+alloy-sol-macro-expander = { path = "./seismic-alloy-core/crates/sol-macro-expander" }
+alloy-sol-macro-input = { path = "./seismic-alloy-core/crates/sol-macro-input" }
+alloy-sol-types = { path = "./seismic-alloy-core/crates/sol-types" }
+alloy-sol-type-parser = { path = "./seismic-alloy-core/crates/sol-type-parser" }
+
+# seismic-trie
+alloy-trie = { path = "./seismic-trie" }
+
+# seismic-alloy
+seismic-alloy-consensus = { path = "./seismic-alloy/crates/consensus" }
+seismic-alloy-network = { path = "./seismic-alloy/crates/network" }
+seismic-prelude = { path = "./seismic-alloy/crates/prelude" }
+seismic-alloy-provider = { path = "./seismic-alloy/crates/provider" }
+seismic-alloy-rpc-types = { path = "./seismic-alloy/crates/rpc-types" }
+
+# seismic-evm
+alloy-evm = { path = "./seismic-evm/crates/evm" }
+alloy-op-evm = { path = "./seismic-evm/crates/op-evm" }
+alloy-seismic-evm = { path = "./seismic-evm/crates/seismic-evm" }
+
+# seismic-foundry-fork-db
+foundry-fork-db = { path = "./seismic-foundry-fork-db" }
