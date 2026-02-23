@@ -250,7 +250,7 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
     function _createTokenTransferCall(address recipient, uint256 amount) internal view returns (bytes memory calls) {
         // Create the transfer function call data
         bytes memory transferData =
-            abi.encodeWithSelector(SRC20.transfer.selector, saddress(recipient), suint256(amount));
+            abi.encodeWithSelector(SRC20.transfer.selector, recipient, amount);
 
         // Format it for MultiSend
         return abi.encodePacked(
