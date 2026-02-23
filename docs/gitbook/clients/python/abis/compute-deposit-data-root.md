@@ -31,7 +31,26 @@ def compute_deposit_data_root(
 
 Raises `ValueError` on length mismatch.
 
-## Notes
+## Example
 
-- `amount_gwei` is encoded little-endian `uint64` in the hash construction.
-- Output is a 32-byte SHA-256 root that must match the contract verification logic.
+```python
+from seismic_web3 import (
+    compute_deposit_data_root,
+    make_withdrawal_credentials,
+)
+
+withdrawal_credentials = make_withdrawal_credentials(
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+)
+
+root = compute_deposit_data_root(
+    node_pubkey=bytes.fromhex("00" * 32),
+    consensus_pubkey=bytes.fromhex("00" * 48),
+    withdrawal_credentials=withdrawal_credentials,
+    node_signature=bytes.fromhex("00" * 64),
+    consensus_signature=bytes.fromhex("00" * 96),
+    amount_gwei=32_000_000_000,
+)
+
+print(root.hex())
+```

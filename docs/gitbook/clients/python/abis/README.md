@@ -5,18 +5,28 @@ icon: file-code
 
 # ABIs
 
-The SDK ships ABI constants and deposit helper utilities under `seismic_web3.abis`.
+The SDK exports protocol ABI/constants under `seismic_web3.abis` plus deposit helper utilities.
 
-## Pages
+## Built-in constants
 
-- [Deposit Contract](deposit-contract.md)
-- [Directory](directory.md)
-- [SRC20 ABI](src20-abi.md)
-- [make_withdrawal_credentials](make-withdrawal-credentials.md)
-- [compute_deposit_data_root](compute-deposit-data-root.md)
+- `SRC20_ABI`
+- `DEPOSIT_CONTRACT_ABI`
+- `DEPOSIT_CONTRACT_ADDRESS`
+- `DIRECTORY_ABI`
+- `DIRECTORY_ADDRESS`
 
-## Source Of Truth
+## Helper functions
 
-- `clients/py/src/seismic_web3/abis/deposit_contract.py`
-- `clients/py/src/seismic_web3/abis/directory.py`
-- `clients/py/src/seismic_web3/abis/src20.py`
+- `make_withdrawal_credentials(address: str) -> bytes`
+- `compute_deposit_data_root(...) -> bytes`
+
+## Quick usage
+
+```python
+from seismic_web3 import SEISMIC_TESTNET, PrivateKey, SRC20_ABI
+
+w3 = SEISMIC_TESTNET.wallet_client(PrivateKey.from_hex_str("0x..."))
+token = w3.seismic.contract("0xYourTokenAddress", SRC20_ABI)
+```
+
+See individual pages for signatures and required byte lengths.

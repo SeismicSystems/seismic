@@ -12,13 +12,23 @@ DIRECTORY_ADDRESS: str = "0x1000000000000000000000000000000000000004"
 DIRECTORY_ABI: list[dict[str, Any]]
 ```
 
-## ABI contents
+## ABI entries
 
-`DIRECTORY_ABI` includes:
+- `checkHasKey(address) -> bool`
+- `keyHash(address) -> bytes32`
+- `getKey() -> uint256`
+- `setKey(suint256)`
 
-- `checkHasKey(address) -> bool` (`view`)
-- `keyHash(address) -> bytes32` (`view`)
-- `getKey() -> uint256` (`view`)
-- `setKey(suint256)` (`nonpayable`)
+## Helper usage example
 
-This ABI is used by SRC20 viewing-key helper functions.
+```python
+from seismic_web3.src20 import check_has_key, get_key_hash
+
+has_key = check_has_key(w3, "0xAddress")
+key_hash = get_key_hash(w3, "0xAddress")
+```
+
+`getKey` and `setKey` are typically used via:
+
+- `get_viewing_key(...)`
+- `register_viewing_key(...)`
