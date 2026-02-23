@@ -5,11 +5,13 @@ icon: lock
 
 # aes_gcm_encrypt
 
-Encrypt data on-chain using Mercury EVM's AES-GCM encryption precompile.
+Encrypt bytes with the AES-GCM precompile at `0x66`.
 
 ## Overview
 
-`aes_gcm_encrypt()` and `async_aes_gcm_encrypt()` call the AES-GCM encryption precompile at address `0x66` to encrypt plaintext using AES-256-GCM. The ciphertext includes a 16-byte authentication tag.
+`aes_gcm_encrypt()` and `async_aes_gcm_encrypt()` accept a 32-byte key, a 12-byte nonce (or nonce integer), and plaintext bytes.
+
+The returned ciphertext includes the 16-byte authentication tag.
 
 ## Signature
 
@@ -34,204 +36,96 @@ async def async_aes_gcm_encrypt(
 ## Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `w3` | `Web3` or `AsyncWeb3` | Yes | Web3 instance connected to a Seismic node |
-| `aes_key` | [`Bytes32`](../api-reference/types/bytes32.md) | Yes | 32-byte AES-256 encryption key |
-| `nonce` | `int` or [`EncryptionNonce`](../api-reference/types/encryption-nonce.md) | Yes | 12-byte nonce (can be integer or EncryptionNonce) |
+|---|---|---|---|
+| `w3` | `Web3` / `AsyncWeb3` | Yes | Connected Seismic client |
+| `aes_key` | [`Bytes32`](../api-reference/types/bytes32.md) | Yes | 32-byte AES key |
+| `nonce` | `int` or [`EncryptionNonce`](../api-reference/types/encryption-nonce.md) | Yes | 12-byte nonce (or int converted to 12-byte big-endian) |
 | `plaintext` | `bytes` | Yes | Data to encrypt |
 
 ## Returns
 
 | Type | Description |
-|------|-------------|
-| `HexBytes` | Ciphertext bytes (includes 16-byte authentication tag appended) |
+|---|---|
+| `HexBytes` | Ciphertext with authentication tag appended |
 
 ## Examples
 
 ### Basic Usage
 
 ```python
-from seismic_web3.precompiles import aes_gcm_encrypt
-from seismic_web3 import Bytes32
-from web3 import Web3
 import os
+from seismic_web3 import Bytes32, create_public_client
+from seismic_web3 import precompiles as sp
 
-w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
+w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
 
-# Generate AES key
-aes_key = Bytes32(os.urandom(32))
+key = Bytes32(os.urandom(32))
+plaintext = b"secret message"
 
-# Encrypt plaintext
-plaintext = b"Secret message"
-ciphertext = aes_gcm_encrypt(w3, aes_key=aes_key, nonce=1, plaintext=plaintext)
-print(f"Ciphertext: {ciphertext.hex()}")
-print(f"Length: {len(ciphertext)} bytes (plaintext + 16-byte tag)")
+ciphertext = sp.aes_gcm_encrypt(w3, aes_key=key, nonce=1, plaintext=plaintext)
+print(ciphertext.hex())
 ```
 
-### With Integer Nonce
+### With `EncryptionNonce`
 
 ```python
-from seismic_web3.precompiles import aes_gcm_encrypt
-from seismic_web3 import Bytes32
-from web3 import Web3
-
-w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-
-aes_key = Bytes32.from_hex("0x1234...")
-
-# Use integer nonce (converted to 12 bytes)
-for i in range(5):
-    plaintext = f"Message {i}".encode()
-    ciphertext = aes_gcm_encrypt(w3, aes_key=aes_key, nonce=i, plaintext=plaintext)
-    print(f"Ciphertext {i}: {ciphertext.hex()}")
-```
-
-### With EncryptionNonce
-
-```python
-from seismic_web3.precompiles import aes_gcm_encrypt
-from seismic_web3 import Bytes32, EncryptionNonce
-from web3 import Web3
 import os
+from seismic_web3 import EncryptionNonce
+from seismic_web3 import precompiles as sp
 
-w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-
-aes_key = Bytes32.from_hex("0x1234...")
-
-# Use EncryptionNonce (12 bytes)
 nonce = EncryptionNonce(os.urandom(12))
-plaintext = b"Secret data"
-ciphertext = aes_gcm_encrypt(w3, aes_key=aes_key, nonce=nonce, plaintext=plaintext)
-print(f"Ciphertext: {ciphertext.hex()}")
+ciphertext = sp.aes_gcm_encrypt(w3, aes_key=key, nonce=nonce, plaintext=b"hello")
 ```
 
 ### Async Usage
 
 ```python
-from seismic_web3.precompiles import async_aes_gcm_encrypt
-from seismic_web3 import Bytes32
-from web3 import AsyncWeb3
 import os
+from seismic_web3 import create_async_public_client
+from seismic_web3 import Bytes32
+from seismic_web3 import precompiles as sp
 
 async def main():
-    w3 = AsyncWeb3(AsyncWeb3.AsyncHTTPProvider("https://gcp-1.seismictest.net/rpc"))
-
-    aes_key = Bytes32(os.urandom(32))
-    plaintext = b"Async secret"
-
-    # Encrypt asynchronously
-    ciphertext = await async_aes_gcm_encrypt(
-        w3, aes_key=aes_key, nonce=1, plaintext=plaintext
-    )
-    print(f"Ciphertext: {ciphertext.hex()}")
-
-# Run with asyncio.run(main())
+    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    key = Bytes32(os.urandom(32))
+    ct = await sp.async_aes_gcm_encrypt(w3, aes_key=key, nonce=1, plaintext=b"async")
+    print(ct.hex())
 ```
 
-### Encrypt-Decrypt Round Trip
+### Encrypt/Decrypt Round Trip
 
 ```python
-from seismic_web3.precompiles import aes_gcm_encrypt, aes_gcm_decrypt
-from seismic_web3 import Bytes32
-from web3 import Web3
-import os
+from seismic_web3 import precompiles as sp
 
-w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-
-aes_key = Bytes32(os.urandom(32))
-original = b"Round trip test"
-
-# Encrypt
-ciphertext = aes_gcm_encrypt(w3, aes_key=aes_key, nonce=42, plaintext=original)
-
-# Decrypt
-decrypted = aes_gcm_decrypt(w3, aes_key=aes_key, nonce=42, ciphertext=ciphertext)
-
-assert decrypted == original
-print(f"Success! Original: {original}")
+ct = sp.aes_gcm_encrypt(w3, aes_key=key, nonce=42, plaintext=b"round trip")
+pt = sp.aes_gcm_decrypt(w3, aes_key=key, nonce=42, ciphertext=bytes(ct))
+assert bytes(pt) == b"round trip"
 ```
-
-### Encrypt Multiple Messages
-
-```python
-from seismic_web3.precompiles import aes_gcm_encrypt
-from seismic_web3 import Bytes32
-from web3 import Web3
-import os
-
-w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-
-aes_key = Bytes32(os.urandom(32))
-
-messages = [b"Message 1", b"Message 2", b"Message 3"]
-ciphertexts = []
-
-for i, msg in enumerate(messages):
-    ct = aes_gcm_encrypt(w3, aes_key=aes_key, nonce=i, plaintext=msg)
-    ciphertexts.append(ct)
-    print(f"Encrypted message {i}: {len(ct)} bytes")
-```
-
-### With ECDH-Derived Key
-
-```python
-from seismic_web3.precompiles import ecdh, aes_gcm_encrypt
-from seismic_web3 import PrivateKey, CompressedPublicKey
-from web3 import Web3
-
-w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-
-# Derive shared key via ECDH
-my_sk = PrivateKey.from_hex("0x1234...")
-peer_pk = CompressedPublicKey.from_hex("0x03...")
-aes_key = ecdh(w3, sk=my_sk, pk=peer_pk)
-
-# Encrypt with derived key
-plaintext = b"Encrypted for peer"
-ciphertext = aes_gcm_encrypt(w3, aes_key=aes_key, nonce=1, plaintext=plaintext)
-print(f"Ciphertext: {ciphertext.hex()}")
-```
-
-## How It Works
-
-1. **Encode parameters** - Concatenates 32-byte key + 12-byte nonce + plaintext
-2. **Call precompile** - Issues an `eth_call` to address `0x66` with estimated gas
-3. **Encrypt data** - Precompile performs AES-256-GCM encryption
-4. **Return ciphertext** - Returns encrypted data with 16-byte authentication tag appended
 
 ## Gas Cost
 
-Gas cost is calculated as:
+The SDK uses:
+
 ```python
-base_gas = 1000
-per_block = 30  # per 16-byte block
-num_blocks = (len(plaintext) + 15) // 16
-total_gas = base_gas + (num_blocks * per_block)
+from math import ceil
+
+total_gas = 1000 + ceil(len(plaintext) / 16) * 30
 ```
 
-For example:
-- 16 bytes plaintext: 1030 gas
-- 64 bytes plaintext: 1120 gas
-- 256 bytes plaintext: 1480 gas
+Examples:
+- `len(plaintext)=0`: `1000`
+- `len(plaintext)=16`: `1030`
+- `len(plaintext)=17`: `1060`
 
 ## Notes
 
-- Uses AES-256-GCM authenticated encryption
-- Nonce must be unique for each encryption with the same key
-- Ciphertext length = plaintext length + 16 bytes (authentication tag)
-- The authentication tag ensures ciphertext integrity
-- Reusing a nonce with the same key breaks security
-
-## Warnings
-
-- **Nonce reuse** - NEVER reuse the same nonce with the same key (breaks confidentiality)
-- **Key security** - Keep AES keys secure and never expose them
-- **Authentication tag** - The 16-byte tag is appended to ciphertext and must be included during decryption
-- **Counter management** - When using integer nonces, ensure they're sequential and never repeat
+- Never reuse a nonce with the same key.
+- `int` nonces are encoded to 12-byte big-endian values.
+- Returned bytes are `ciphertext || tag`.
 
 ## See Also
 
-- [aes-gcm-decrypt](aes-gcm-decrypt.md) - Decrypt AES-GCM ciphertext
-- [ecdh](ecdh.md) - Derive shared encryption keys
-- [Bytes32](../api-reference/types/bytes32.md) - 32-byte AES key type
-- [EncryptionNonce](../api-reference/types/encryption-nonce.md) - 12-byte nonce type
+- [aes-gcm-decrypt](aes-gcm-decrypt.md)
+- [ecdh](ecdh.md)
+- [Bytes32](../api-reference/types/bytes32.md)
+- [EncryptionNonce](../api-reference/types/encryption-nonce.md)
