@@ -1,0 +1,40 @@
+[tasks.sforge-local]
+description = "Run locally-built sforge"
+depends = ["sforge-build"]
+raw = true                               # raw stdout makes parsing the sforge/ssolc colored output easier
+# sforge uses /usr/local/bin/ssolc by default, which foundryup installs from the seismic branch.
+# Thus we need to point sforge to a different ssolc binary.
+env.FOUNDRY_SOLC = "{{env.HOME}}/.local/share/mise/installs/ssolc/tmp-audit-fixes/ssolc"
+run = "../../seismic-foundry/target/debug/sforge {{arg(name='args', var=true)}}"
+
+[tasks.sforge-local-patch]
+description = "Run locally-built (with cargo patches) sforge"
+depends = ["sforge-build-patch"]
+raw = true                                                    # raw stdout makes parsing the sforge/ssolc colored output easier
+# sforge uses /usr/local/bin/ssolc by default, which foundryup installs from the seismic branch.
+# Thus we need to point sforge to a different ssolc binary.
+env.FOUNDRY_SOLC = "{{env.HOME}}/.local/share/mise/installs/ssolc/tmp-audit-fixes/ssolc"
+run = "../../seismic-foundry/target/debug/sforge {{arg(name='args', var=true)}}"
+
+[tasks.sforge]
+description = "Run mise-installed sforge"
+raw = true
+env.FOUNDRY_SOLC = "{{env.HOME}}/.local/share/mise/installs/ssolc/tmp-audit-fixes/ssolc"
+run = "sforge {{arg(name='args', var=true)}}"
+
+########## Helper tasks meant to stay hidden ##########
+
+[tasks.sforge-build]
+hide = true
+description = "Build sforge from local seismic-foundry"
+dir = "{{config_root}}/../../seismic-foundry"
+run = "cargo build -p forge"
+
+# Builds sforge from local repo, but also patches downstream dependencies.
+# Useful for example when also making changes to seismic-compilers, to test everything together.
+[tasks.sforge-build-patch]
+hide = true
+description = "Build sforge from local seismic-foundry with local patches"
+# cargo-local-patches-on/off are in the monorepo's root's mise.toml
+depends = ["cargo-local-patches-on", "sforge-build"]
+depends_post = ["cargo-local-patches-off"]
