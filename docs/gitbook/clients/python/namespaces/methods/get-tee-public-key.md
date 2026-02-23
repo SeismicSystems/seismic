@@ -17,6 +17,14 @@ w3.seismic.get_tee_public_key() -> CompressedPublicKey
 await w3.seismic.get_tee_public_key() -> CompressedPublicKey
 ```
 
+## Example
+
+```python
+tee_key = w3.seismic.get_tee_public_key()
+print(tee_key.hex())
+```
+
 ## Behavior
 
-This delegates to the `seismic_getTeePublicKey` RPC method and validates the returned key as `CompressedPublicKey` (33 bytes, `0x02`/`0x03` prefix).
+- Calls custom RPC method `seismic_getTeePublicKey`.
+- Validates return value as `CompressedPublicKey` (33 bytes, prefix `0x02` or `0x03`).

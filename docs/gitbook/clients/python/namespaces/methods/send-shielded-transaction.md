@@ -28,11 +28,16 @@ await w3.seismic.send_shielded_transaction(...same args...) -> HexBytes
 
 ## Behavior
 
-- `data` is plaintext calldata; SDK encrypts it before signing.
-- Default gas is `30_000_000` when `gas` is not provided.
-- `gas_price` is fetched from chain when omitted.
-- `eip712=True` switches signing hash path to EIP-712.
+- `data` is plaintext calldata; SDK encrypts it.
+- Default gas is `30_000_000` when `gas` is omitted.
+- If `gas_price` is omitted, SDK fetches current chain gas price.
+- `eip712=True` uses typed-data signing hash path.
 
-## Returns
+## Example
 
-Transaction hash (`HexBytes`).
+```python
+from seismic_web3.contract.abi import encode_shielded_calldata
+
+data = encode_shielded_calldata(SRC20_ABI, "transfer", ["0xRecipient", 100])
+tx_hash = w3.seismic.send_shielded_transaction(to="0xTokenAddress", data=data)
+```

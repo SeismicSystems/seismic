@@ -5,22 +5,13 @@ icon: bug
 
 # debug_send_shielded_transaction
 
-Same send pipeline as `send_shielded_transaction`, but also returns plaintext/encrypted transaction views.
+Same send pipeline as `send_shielded_transaction`, plus plaintext/encrypted transaction views.
 
 ## Signatures
 
 ```python
 # sync
-w3.seismic.debug_send_shielded_transaction(
-    *,
-    to: ChecksumAddress,
-    data: HexBytes,
-    value: int = 0,
-    gas: int | None = None,
-    gas_price: int | None = None,
-    security: SeismicSecurityParams | None = None,
-    eip712: bool = False,
-) -> DebugWriteResult
+w3.seismic.debug_send_shielded_transaction(...same args as send_shielded_transaction...) -> DebugWriteResult
 
 # async
 await w3.seismic.debug_send_shielded_transaction(...same args...) -> DebugWriteResult
@@ -35,3 +26,12 @@ await w3.seismic.debug_send_shielded_transaction(...same args...) -> DebugWriteR
 - `tx_hash`
 
 The transaction is still broadcast.
+
+## Example
+
+```python
+result = w3.seismic.debug_send_shielded_transaction(to="0xTarget", data=calldata)
+print(result.tx_hash.hex())
+print(result.plaintext_tx.data.hex())
+print(result.shielded_tx.data.hex())
+```

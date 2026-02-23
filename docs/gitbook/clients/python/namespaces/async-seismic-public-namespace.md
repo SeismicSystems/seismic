@@ -17,7 +17,19 @@ class AsyncSeismicPublicNamespace:
     async def get_deposit_count(self, *, address: str = DEPOSIT_CONTRACT_ADDRESS) -> int: ...
 ```
 
+## Example
+
+```python
+from seismic_web3 import SEISMIC_TESTNET
+
+public = await SEISMIC_TESTNET.async_public_client()
+
+tee_key = await public.seismic.get_tee_public_key()
+root = await public.seismic.get_deposit_root()
+count = await public.seismic.get_deposit_count()
+```
+
 ## Notes
 
 - No private key is required.
-- `contract()` returns `AsyncPublicContract` with transparent read namespace (`.tread`) only.
+- `contract()` returns `AsyncPublicContract` with `.tread` only.

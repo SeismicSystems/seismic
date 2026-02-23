@@ -25,6 +25,13 @@ await w3.seismic.get_deposit_count(*, address: str = DEPOSIT_CONTRACT_ADDRESS) -
 
 Deposit count as Python `int`.
 
+## Example
+
+```python
+count = w3.seismic.get_deposit_count()
+print(count)
+```
+
 ## Implementation detail
 
-The contract returns bytes; SDK decodes bytes `[64:72]` as little-endian `uint64`.
+SDK decodes bytes `[64:72]` as little-endian `uint64`.

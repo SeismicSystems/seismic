@@ -24,3 +24,10 @@ await w3.seismic.get_deposit_root(*, address: str = DEPOSIT_CONTRACT_ADDRESS) ->
 ## Returns
 
 32-byte root as `bytes`.
+
+## Example
+
+```python
+root = w3.seismic.get_deposit_root()
+print(root.hex())
+```

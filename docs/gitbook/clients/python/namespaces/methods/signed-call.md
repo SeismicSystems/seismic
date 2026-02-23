@@ -5,7 +5,7 @@ icon: search
 
 # signed_call
 
-Execute a signed read using encrypted calldata.
+Execute a signed read with encrypted calldata.
 
 ## Signatures
 
@@ -27,7 +27,16 @@ await w3.seismic.signed_call(...same args...) -> HexBytes
 
 ## Behavior
 
-- `data` is plaintext calldata; SDK encrypts it.
-- SDK signs a synthetic transaction and sends it to `eth_call` as raw tx bytes.
-- If the RPC result is empty (`"0x"`), returns `HexBytes(b"")`.
-- Otherwise decrypts and returns response bytes.
+- Encrypts request calldata.
+- Signs an unsigned Seismic transaction payload.
+- Calls `eth_call` with raw signed bytes.
+- Decrypts result before returning.
+- Empty RPC result (`"0x"`) returns `HexBytes(b"")`.
+
+## Example
+
+```python
+raw = w3.seismic.signed_call(to="0xTarget", data=calldata)
+if raw:
+    print(raw.hex())
+```

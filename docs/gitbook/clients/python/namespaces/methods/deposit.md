@@ -38,7 +38,21 @@ await w3.seismic.deposit(...same args...) -> HexBytes
 
 `ValueError` is raised on length mismatch.
 
+## Example
+
+```python
+tx_hash = w3.seismic.deposit(
+    node_pubkey=node_pubkey,
+    consensus_pubkey=consensus_pubkey,
+    withdrawal_credentials=withdrawal_credentials,
+    node_signature=node_signature,
+    consensus_signature=consensus_signature,
+    deposit_data_root=deposit_data_root,
+    value=32 * 10**18,
+)
+```
+
 ## Notes
 
-- This is a transparent transaction (`eth_sendTransaction`), not shielded.
-- `value` is the deposit amount in wei.
+- Uses transparent `eth_sendTransaction` semantics.
+- `value` is deposit amount in wei.

@@ -11,7 +11,7 @@ icon: list
 - [get_deposit_root](get-deposit-root.md)
 - [get_deposit_count](get-deposit-count.md)
 
-Available on both public and wallet namespaces.
+These are available on both public and wallet clients.
 
 ## Wallet methods
 
@@ -20,10 +20,10 @@ Available on both public and wallet namespaces.
 - [signed_call](signed-call.md)
 - [deposit](deposit.md)
 
-Available only on wallet namespaces.
+These are available only on wallet clients.
 
-## Utility helper
+## Utility
 
 - [encode_shielded_calldata](encode-shielded-calldata.md)
 
-This helper is used internally by namespace/contract methods and can be used directly when needed.
+Used internally by contract/namespace methods, and available directly when needed.

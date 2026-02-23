@@ -17,8 +17,20 @@ class SeismicPublicNamespace:
     def get_deposit_count(self, *, address: str = DEPOSIT_CONTRACT_ADDRESS) -> int: ...
 ```
 
+## Example
+
+```python
+from seismic_web3 import SEISMIC_TESTNET
+
+public = SEISMIC_TESTNET.public_client()
+
+tee_key = public.seismic.get_tee_public_key()
+root = public.seismic.get_deposit_root()
+count = public.seismic.get_deposit_count()
+```
+
 ## Notes
 
 - No private key is required.
-- `get_deposit_count()` decodes an 8-byte little-endian count from contract return data.
-- `contract()` returns `PublicContract` with transparent read namespace (`.tread`) only.
+- `contract()` returns `PublicContract` with `.tread` only.
+- `get_deposit_count()` decodes an 8-byte little-endian value from contract return data.
