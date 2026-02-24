@@ -32,7 +32,7 @@ from eth_keys import keys as eth_keys
 from seismic_web3 import Signature, PrivateKey
 
 sk = eth_keys.PrivateKey(bytes(PrivateKey(...)))
-sig_obj = sk.sign_msg_hash(msg_hash)
+sig_obj = sk.sign_msg_hash(b"\xab" * 32)
 
 sig = Signature(v=sig_obj.v, r=sig_obj.r, s=sig_obj.s)
 ```

@@ -43,8 +43,8 @@ legacy = LegacyFields(
 ## Notes
 
 - Called "legacy" because these fields are unchanged from standard Ethereum transactions — present in every tx type since pre-EIP-2718
-- Does not include `gas`, `gasPrice`, or `data` — those are in [`UnsignedSeismicTx`](unsigned-seismic-tx.md)
-- Part of the AAD for AES-GCM encryption, ensuring ciphertext is bound to transaction context
+- Does not include `gas`, `gasPrice`, or `data`. These are the standard EVM fields that go into the AAD — `gas`/`gasPrice` are excluded because they aren't part of the authenticated context, and `data` is the plaintext being encrypted (so it can't also be AAD input)
+- The AAD also includes [`SeismicElements`](seismic-elements.md) (encryption params, block hash, expiry). The node validates these fields before the transaction enters the mempool
 
 ## See Also
 
