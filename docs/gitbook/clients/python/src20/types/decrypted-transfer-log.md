@@ -1,29 +1,8 @@
 ---
-description: Decoded SRC20 Transfer event
+description: Internal SRC20 helper
 icon: file-code
 ---
 
-# DecryptedTransferLog
+# Internal Helper
 
-Dataclass emitted for decrypted SRC20 `Transfer` logs.
-
-## Definition
-
-```python
-@dataclass(frozen=True)
-class DecryptedTransferLog:
-    from_address: ChecksumAddress
-    to_address: ChecksumAddress
-    encrypt_key_hash: bytes
-    encrypted_amount: bytes
-    decrypted_amount: int
-    transaction_hash: HexBytes
-    block_number: int
-```
-
-## Example
-
-```python
-def on_transfer(log: DecryptedTransferLog) -> None:
-    print(log.from_address, "->", log.to_address, log.decrypted_amount)
-```
+This internal helper API is intentionally not documented in this public reference.
