@@ -50,7 +50,7 @@ Sends encrypted transactions using `TxSeismic` (type `0x4a`). Calldata is encryp
 - `value: int` - Wei to send (default: `0`)
 - `gas: int | None` - Gas limit (default: `30_000_000` when omitted)
 - `gas_price: int | None` - Gas price in wei (default: network suggested)
-- `security: SeismicSecurityParams | None` - Security parameters for expiry
+- `security: [`SeismicSecurityParams`](../api-reference/transaction-types/seismic-security-params.md) | None` - Security parameters for expiry
 
 ### `.read` - Encrypted Read
 
@@ -61,7 +61,7 @@ Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypte
 **Optional Parameters**:
 - `value: int` - Wei for call context (default: `0`)
 - `gas: int` - Gas limit (default: `30_000_000`)
-- `security: SeismicSecurityParams | None` - Security parameters for expiry
+- `security: [`SeismicSecurityParams`](../api-reference/transaction-types/seismic-security-params.md) | None` - Security parameters for expiry
 
 ### `.twrite` - Transparent Write
 
