@@ -78,4 +78,4 @@ watcher.stop()
 
 - [watch_src20_events](../event-watching/watch-src20-events.md) — Watch with automatic key fetch from Directory
 - [SRC20EventWatcher](../event-watching/src20-event-watcher.md) — Underlying sync watcher class
-- [get_viewing_key](directory/get-viewing-key.md) — Fetch a key to pass here
+- [get_viewing_key](get-viewing-key.md) — Fetch a key to pass here

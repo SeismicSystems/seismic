@@ -43,4 +43,4 @@ Both event types share these fields:
 ## See Also
 
 - [Event Watching](../event-watching/) — Watch and decrypt SRC20 events
-- [Directory](../intelligence-providers/directory/) — Manage viewing keys
+- [Intelligence Providers](../intelligence-providers/) — Manage viewing keys
