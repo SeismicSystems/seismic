@@ -1,0 +1,36 @@
+[tools]
+# Downloads the latest nightly release: https://github.com/SeismicSystems/seismic-foundry/releases/tag/nightly
+# We run a cron job that releases a new nightly version every day, so this will always be up to date.
+# Just make sure to `mise install` in the morning to get the latest version.
+# The release tarball contains sforge, sanvil, scast, and schisel — all added to PATH.
+# TODO(samlaf): the release.yml ci is broken and doesn't move the nightly tag, so for now we manually update the commit.
+sfoundry = "nightly-08913bcc240efcb17dcee38e60adfa482b4bcd44"
+
+# Downloads this release: https://github.com/SeismicSystems/seismic-solidity/releases/tag/tmp-audit-fixes
+# This is likely not needed in most cases as compilation should be done via sforge which manages its own ssolc.
+# However, this can be useful if we want to test with a different version of ssolc than the one that sforge manages.
+ssolc = { version = "tmp-audit-fixes", bin = "ssolc" }
+
+[tool_alias]
+sfoundry = "github:SeismicSystems/seismic-foundry"
+ssolc = "github:SeismicSystems/seismic-solidity"
+
+[tasks."git::print-branches"]
+description = "Print the current git branch for each seismic repository"
+dir = "{{config_root}}/.."
+run = "for dir in */; do [ -d \"$dir/.git\" ] && printf '%-35s %s\\n' \"$dir\" \"$(git -C \"$dir\" branch --show-current)\"; done"
+
+[tasks."cargo::local-patches::status"]
+description = "Check if local cargo patches symlink is active"
+dir = "{{config_root}}/.."
+run = "if [ -L .cargo/config.toml ]; then echo 'ON: .cargo/config.toml ->' $(readlink .cargo/config.toml); elif [ -f .cargo/config.toml ]; then echo 'OFF (regular file exists)'; else echo 'OFF'; fi"
+
+[tasks."cargo::local-patches::on"]
+description = "Symlink local cargo patches so builds resolve deps from local checkouts"
+dir = "{{config_root}}/.."
+run = "rm -f .cargo/config.toml && ln -s ../seismic/workspace/cargo-local-patches.toml .cargo/config.toml && echo 'Local patches ON: .cargo/config.toml -> seismic/workspace/cargo-local-patches.toml'"
+
+[tasks."cargo::local-patches::off"]
+description = "Remove local cargo patches symlink"
+dir = "{{config_root}}/.."
+run = "rm -f .cargo/config.toml && echo 'Local patches OFF: .cargo/config.toml removed'"

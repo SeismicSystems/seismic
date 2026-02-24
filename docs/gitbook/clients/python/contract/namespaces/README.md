@@ -19,7 +19,7 @@ contract = w3.seismic.contract(address="0x...", abi=ABI)
 
 You get access to five namespaces:
 
-| Namespace | Operation | Encryption | Identity (`msg.sender`) | Broadcasts | Use Case |
+| Namespace | Operation | Encryption | `msg.sender` | Broadcasts | Use Case |
 |-----------|-----------|-----------|----------------------|-----------|----------|
 | [`.write`](write.md) | Write | Yes | Your address | Yes | Privacy-sensitive writes |
 | [`.read`](read.md) | Read | Yes | Your address | No | Access-controlled reads |
@@ -85,12 +85,8 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 ### Signed Read (.read)
 
 ```python
-# Encrypted read that proves your identity
-result = contract.read.getBalance()
-
-# Decode result
-from eth_abi import decode
-balance = decode(['uint256'], result)[0]
+# Encrypted read that proves your identity — auto-decoded
+balance = contract.read.balanceOf()  # int
 ```
 
 **When to use**:
@@ -118,19 +114,14 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 ### Transparent Read (.tread)
 
 ```python
-# Public read
-result = contract.tread.totalSupply()
-
-# Decode result
-from eth_abi import decode
-total_supply = decode(['uint256'], result)[0]
+# Public read — auto-decoded
+total_supply = contract.tread.totalSupply()  # int
 ```
 
 **When to use**:
 - Function is public (doesn't check `msg.sender`)
 - No authentication needed
 - Data is public
-- Fast queries for analytics/dashboards
 
 ### Debug Write (.dwrite)
 
@@ -155,329 +146,20 @@ receipt = w3.eth.wait_for_transaction_receipt(result.tx_hash)
 
 ***
 
-## Decision Tree
-
-### Choosing the Right Namespace
-
-```
-Is it a write operation (modifies state)?
-├─ Yes: Write namespace
-│  ├─ Is privacy required?
-│  │  ├─ Yes: Use .write
-│  │  └─ No: Use .twrite
-│  └─ Are you debugging?
-│     └─ Yes: Use .dwrite (development only)
-│
-└─ No: Read namespace
-   ├─ Does function check msg.sender?
-   │  ├─ Yes: Use .read (signed read)
-   │  └─ No: Use .tread (standard call)
-   └─ Is privacy required?
-      ├─ Yes: Use .read
-      └─ No: Use .tread
-```
-
-***
-
-## Common Examples
-
-### Token Transfer (Private)
-
-```python
-# Private transfer — amount and recipient hidden
-tx_hash = contract.write.transfer(recipient, amount)
-```
-
-### Token Transfer (Public)
-
-```python
-# Public transfer — standard ERC20
-tx_hash = contract.twrite.transfer(recipient, amount)
-```
-
-### Check Your Balance (Access-Controlled)
-
-```python
-# Function uses msg.sender internally
-result = contract.read.getMyBalance()
-balance = decode(['uint256'], result)[0]
-```
-
-### Check Any Balance (Public)
-
-```python
-# Function takes address argument
-result = contract.tread.balanceOf(address)
-balance = decode(['uint256'], result)[0]
-```
-
-### Token Metadata (Public)
-
-```python
-# Public getters
-name = decode(['string'], contract.tread.name())[0]
-symbol = decode(['string'], contract.tread.symbol())[0]
-decimals = decode(['uint8'], contract.tread.decimals())[0]
-```
-
-***
-
-## Namespace Details
-
-### .write
-
-**Encrypted contract writes with privacy.**
-
-- **Encryption**: Yes (AES-GCM)
-- **Transaction type**: `TxSeismic` (type `0x4a`)
-- **Returns**: `HexBytes` (transaction hash)
-- **Proves identity**: Yes
-- **Gas cost**: Standard + encryption overhead
-
-[See full documentation →](write.md)
-
-### .read
-
-**Encrypted contract reads with authentication.**
-
-- **Encryption**: Yes (AES-GCM)
-- **Call type**: Signed `eth_call`
-- **Returns**: `HexBytes` (decrypted result)
-- **Proves identity**: Yes (`msg.sender` is your address)
-- **Gas cost**: None (doesn't broadcast)
-
-[See full documentation →](read.md)
-
-### .twrite
-
-**Transparent contract writes (standard Ethereum).**
-
-- **Encryption**: No
-- **Transaction type**: Standard `eth_sendTransaction`
-- **Returns**: `HexBytes` (transaction hash)
-- **Proves identity**: Yes
-- **Gas cost**: Standard (no overhead)
-
-[See full documentation →](twrite.md)
-
-### .tread
-
-**Transparent contract reads (standard Ethereum).**
-
-- **Encryption**: No
-- **Call type**: Standard `eth_call`
-- **Returns**: `HexBytes` (result)
-- **Proves identity**: No (`msg.sender` is `0x0`)
-- **Gas cost**: None (doesn't broadcast)
-
-[See full documentation →](tread.md)
-
-### .dwrite
-
-**Debug writes with inspection (development only).**
-
-- **Encryption**: Yes (AES-GCM)
-- **Transaction type**: `TxSeismic` (type `0x4a`)
-- **Returns**: `DebugWriteResult` (plaintext + encrypted + hash)
-- **Proves identity**: Yes
-- **Gas cost**: Standard + encryption overhead
-
-[See full documentation →](dwrite.md)
-
-***
-
-## Privacy Considerations
-
-### What Gets Encrypted (Shielded Namespaces)
-
-**Encrypted** (`.write`, `.read`, `.dwrite`):
-- Function selector (4 bytes)
-- All function arguments
-- Return values (for `.read`)
-
-**Not encrypted**:
-- `from` address (sender)
-- `to` address (contract)
-- `value` (ETH sent)
-- Gas parameters
-- Transaction metadata
-
-### What's Visible (Transparent Namespaces)
-
-**Completely visible** (`.twrite`, `.tread`):
-- Everything: function selector, arguments, results
-- Standard Ethereum transparency
-- Anyone can decode calldata
-
-***
-
-## Security Parameters
-
-Encrypted namespaces (`.write`, `.read`, `.dwrite`) accept optional security parameters:
-
-```python
-from seismic_web3 import SeismicSecurityParams
-
-security = SeismicSecurityParams(
-    blocks_window=200,          # Expiry window (default: 100 blocks)
-    encryption_nonce=None,      # Random nonce (default: random)
-    recent_block_hash=None,     # Recent block (default: latest)
-    expires_at_block=None,      # Explicit expiry (default: computed)
-)
-
-tx_hash = contract.write.transfer(
-    recipient,
-    amount,
-    security=security,
-)
-```
-
-See [SeismicSecurityParams](../../api-reference/transaction-types/seismic-security-params.md) for details.
-
-***
-
-## Transaction Options
-
-### Write Namespaces
-
-All write namespaces (`.write`, `.twrite`, `.dwrite`) accept transaction options:
-
-```python
-tx_hash = contract.write.transfer(
-    recipient,
-    amount,
-    value=10**18,           # ETH to send (wei)
-    gas=100_000,            # Gas limit
-    gas_price=20 * 10**9,   # Gas price (wei)
-    security=params,        # Security params (.write/.dwrite only)
-)
-```
-
-`.twrite` also accepts any standard `eth_sendTransaction` parameter:
-```python
-tx_hash = contract.twrite.transfer(
-    recipient,
-    amount,
-    maxFeePerGas=50 * 10**9,         # EIP-1559
-    maxPriorityFeePerGas=2 * 10**9,  # EIP-1559
-    nonce=42,                         # Explicit nonce
-)
-```
-
-### Read Namespaces
-
-`.read` accepts call options:
-```python
-result = contract.read.getBalance(
-    value=0,           # ETH for simulation
-    gas=30_000_000,    # Gas limit
-    security=params,   # Security params
-)
-```
-
-`.tread` accepts no options (uses defaults).
-
-***
-
-## Async Support
-
-All namespaces work identically with async clients:
-
-```python
-from seismic_web3 import create_async_wallet_client
-
-w3 = await create_async_wallet_client(...)
-contract = w3.seismic.contract(address="0x...", abi=ABI)
-
-# All namespaces require await
-tx_hash = await contract.write.transfer(recipient, amount)
-result = await contract.read.getBalance()
-tx_hash = await contract.twrite.approve(spender, amount)
-result = await contract.tread.totalSupply()
-debug = await contract.dwrite.transfer(recipient, amount)
-```
-
-***
-
-## Error Handling
-
-### Write Operations
-
-```python
-from web3.exceptions import TimeExhausted
-
-try:
-    tx_hash = contract.write.transfer(recipient, amount)
-    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
-
-    if receipt['status'] == 0:
-        print("Transaction reverted")
-    else:
-        print("Transaction succeeded")
-
-except ValueError as e:
-    print(f"Transaction failed: {e}")
-except TimeExhausted:
-    print("Transaction not mined within timeout")
-```
-
-### Read Operations
-
-```python
-try:
-    result = contract.read.getBalance()
-
-    if result is None:
-        print("Call returned no data")
-    else:
-        from eth_abi import decode
-        balance = decode(['uint256'], result)[0]
-        print(f"Balance: {balance}")
-
-except ValueError as e:
-    print(f"Call failed: {e}")
-```
-
-***
-
-## Best Practices
-
-### Development Workflow
-
-1. **Start with `.dwrite`** — Verify calldata encoding
-2. **Test with small amounts** — Use `.write` with minimal value
-3. **Verify in production** — Switch to `.write` for production
-4. **Use `.tread` for public data** — No need for signed reads
-
-### Privacy Guidelines
-
-- **Sensitive data** → Use `.write` or `.read`
-- **Public data** → Use `.twrite` or `.tread`
-- **Access control** → Use `.read` (proves identity)
-- **No access control** → Use `.tread` (faster)
-
-### Cost Optimization
-
-- **Privacy required** → Accept encryption overhead (`.write`, `.read`)
-- **No privacy needed** → Use transparent namespaces (`.twrite`, `.tread`)
-- **Frequent reads** → Use `.tread` (free, fast, cacheable)
-
-***
-
 ## Common Pitfalls
 
 ### Using .tread for Access-Controlled Functions
 
 **Problem**:
 ```python
-# BAD: Returns 0x0's balance (usually 0)
-balance = contract.tread.getMyBalance()
+# BAD: SRC20 balanceOf uses msg.sender — returns 0x0's balance
+balance = contract.tread.balanceOf()  # 0
 ```
 
 **Solution**:
 ```python
 # GOOD: Proves your identity
-balance = contract.read.getMyBalance()
+balance = contract.read.balanceOf()  # Your actual balance
 ```
 
 ### Using .write for Public Data
@@ -492,21 +174,6 @@ tx_hash = contract.write.approve(spender, amount)
 ```python
 # More efficient: Use transparent write
 tx_hash = contract.twrite.approve(spender, amount)
-```
-
-### Using .dwrite in Production
-
-**Development only**:
-```python
-# BAD: .dwrite in production (unnecessary overhead)
-result = contract.dwrite.transfer(recipient, amount)
-tx_hash = result.tx_hash
-```
-
-**Production**:
-```python
-# GOOD: Use .write in production
-tx_hash = contract.write.transfer(recipient, amount)
 ```
 
 ***
