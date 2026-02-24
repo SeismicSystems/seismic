@@ -1,0 +1,31 @@
+name: Contracts
+
+on:
+  push:
+    branches: [main]
+    paths: ["contracts/**"]
+  pull_request:
+    paths: ["contracts/**"]
+
+defaults:
+  run:
+    working-directory: contracts
+
+jobs:
+  contracts-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: jdx/mise-action@v2
+      - run: mise run test
+
+  contracts-fmt-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: jdx/mise-action@v2
+      - run: mise run fmt-check
