@@ -2,17 +2,17 @@
 pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
-import {TransparentCounter} from "../src/TransparentCounter.sol";
+import {SeismicCounter} from "../src/examples/SeismicCounter.sol";
 
-contract TransparentCounterScript is Script {
-    TransparentCounter public counter;
+contract SeismicCounterScript is Script {
+    SeismicCounter public counter;
 
     function setUp() public {}
 
     function run() public {
         vm.startBroadcast();
 
-        counter = new TransparentCounter();
+        counter = new SeismicCounter();
 
         vm.stopBroadcast();
     }
