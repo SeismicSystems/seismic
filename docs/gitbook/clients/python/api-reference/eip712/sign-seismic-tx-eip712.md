@@ -1,6 +1,6 @@
 ---
 description: Sign and serialize TxSeismic using EIP-712 hashing
-icon: shield
+icon: pen-to-square
 ---
 
 # sign_seismic_tx_eip712

@@ -1,6 +1,6 @@
 ---
 description: Compute TxSeismic EIP-712 struct hash
-icon: shield
+icon: hashtag
 ---
 
 # struct_hash

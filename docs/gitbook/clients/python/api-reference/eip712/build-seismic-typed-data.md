@@ -1,6 +1,6 @@
 ---
 description: Build eth_signTypedData_v4 payload for TxSeismic
-icon: shield
+icon: code
 ---
 
 # build_seismic_typed_data

@@ -1,6 +1,6 @@
 ---
 description: Compute final EIP-712 signing digest for TxSeismic
-icon: shield
+icon: fingerprint
 ---
 
 # eip712_signing_hash
