@@ -1,6 +1,6 @@
 ---
 description: Check if an address has a registered viewing key
-icon: search
+icon: circle-check
 ---
 
 # check_has_key / get_key_hash

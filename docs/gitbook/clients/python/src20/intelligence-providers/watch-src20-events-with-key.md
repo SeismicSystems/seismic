@@ -1,6 +1,6 @@
 ---
 description: Watch SRC20 events with an explicit viewing key
-icon: broadcast
+icon: satellite-dish
 ---
 
 # watch_src20_events_with_key

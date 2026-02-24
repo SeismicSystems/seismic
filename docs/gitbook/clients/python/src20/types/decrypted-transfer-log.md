@@ -1,6 +1,5 @@
 ---
 description: Decoded SRC20 Transfer event with decrypted amount
-icon: arrow-right
 ---
 
 # DecryptedTransferLog
