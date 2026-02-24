@@ -11,6 +11,9 @@ sfoundry = "nightly-08913bcc240efcb17dcee38e60adfa482b4bcd44"
 # However, this can be useful if we want to test with a different version of ssolc than the one that sforge manages.
 ssolc = { version = "tmp-audit-fixes", bin = "ssolc" }
 
+# Used by clients/ts/
+bun = "1.3.9"
+
 [tool_alias]
 sfoundry = "github:SeismicSystems/seismic-foundry"
 ssolc = "github:SeismicSystems/seismic-solidity"

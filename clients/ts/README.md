@@ -9,34 +9,6 @@ Seismic's typescript client. This repository contains:
 
 View the docs [here](https://client.seismic.systems)
 
-## Install
-
-### nvm
-
-Install [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
-
-Using [brew](https://formulae.brew.sh/formula/nvm):
-`brew install nvm`
-
-Make sure to follow the instructions to source `nvm` in your shell profile
-
-### npm
-
-Install `npm` with node `23.3.0` using `nvm`:
-
-```sh
-nvm install 23.3.0
-nvm use 23.3.0
-```
-
-### bun
-
-Install the latest [bun](https://bun.sh/docs/installation). Using curl:
-
-```sh
-curl -fsSL https://bun.sh/install | bash
-```
-
 ## Running tests
 
 ### Create a `.env` file
