@@ -1,5 +1,5 @@
 ---
-description: Directory contract constants (internal)
+description: Directory ABI function signatures
 icon: file-code
 ---
 
@@ -12,6 +12,11 @@ DIRECTORY_ADDRESS: str = "0x1000000000000000000000000000000000000004"
 DIRECTORY_ABI: list[dict[str, Any]]
 ```
 
-`DIRECTORY_ABI` is exported for completeness.
+## Functions
 
-Directory interactions are internal to the SDK's SRC20 helper flows and are intentionally not documented in this public reference.
+| Function | ABI Signature | Returns |
+| --- | --- | --- |
+| `checkHasKey` | `checkHasKey(_addr: address)` | `bool` |
+| `keyHash` | `keyHash(to: address)` | `bytes32` |
+| `getKey` | `getKey()` | `uint256` |
+| `setKey` | `setKey(_key: suint256)` | `None` |

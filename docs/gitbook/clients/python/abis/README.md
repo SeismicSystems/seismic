@@ -12,8 +12,8 @@ The SDK exports protocol ABI/constants under `seismic_web3.abis` plus deposit he
 - `SRC20_ABI`
 - `DEPOSIT_CONTRACT_ABI`
 - `DEPOSIT_CONTRACT_ADDRESS`
-- `DIRECTORY_ABI` (internal)
-- `DIRECTORY_ADDRESS` (internal)
+- `DIRECTORY_ABI`
+- `DIRECTORY_ADDRESS`
 
 ## Helper functions
 
