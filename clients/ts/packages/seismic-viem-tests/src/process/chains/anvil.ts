@@ -1,10 +1,8 @@
 import type { ChildProcess } from 'node:child_process'
-import { existsSync } from 'node:fs'
 
 import {
   killProcess,
   runProcess,
-  waitForProcessExit,
 } from '@sviem-tests/process/manage.ts'
 import {
   NodeProcess,
@@ -14,20 +12,6 @@ import {
 } from '@sviem-tests/process/node.ts'
 
 const DEFAULT_PORT = 8545
-
-export const buildAnvil = async (sfoundryDir: string) => {
-  if (!sfoundryDir || !existsSync(sfoundryDir)) {
-    return
-  }
-
-  const buildProcess = await runProcess('cargo', {
-    args: ['build', '--bin', 'sanvil'],
-    cwd: sfoundryDir,
-    stdio: 'inherit',
-    waitMs: 0,
-  })
-  await waitForProcessExit(buildProcess)
-}
 
 const spawnAnvil = async (
   options: NodeProcessOptions = {}
@@ -46,20 +30,10 @@ const spawnAnvil = async (
     ...parseVerbosity(verbosity),
   ]
 
-  const sfoundryDir = process.env.SFOUNDRY_ROOT
-  if (!sfoundryDir) {
-    return runProcess('sanvil', {
-      args,
-      waitMs,
-      stdio: 'ignore',
-    })
-  }
-
-  await buildAnvil(sfoundryDir)
-  return runProcess('cargo', {
-    args: ['run', '--bin', 'sanvil', '--', ...args],
-    cwd: sfoundryDir,
+  return runProcess('sanvil', {
+    args,
     waitMs,
+    stdio: 'ignore',
   })
 }
 
