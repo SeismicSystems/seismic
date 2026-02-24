@@ -43,3 +43,8 @@ w3 = SEISMIC_TESTNET.wallet_client(pk)
 tee_key = w3.seismic.get_tee_public_key()
 print(tee_key.hex())
 ```
+
+## See Also
+
+- [Namespace Methods](methods/) — Detailed method reference
+- [Contract Namespaces](../contract/namespaces/) — Contract method reference

@@ -11,7 +11,7 @@ icon: list
 - [get_deposit_root](get-deposit-root.md)
 - [get_deposit_count](get-deposit-count.md)
 
-These are available on both public and wallet clients.
+Available on both public and wallet clients.
 
 ## Wallet methods
 
@@ -20,10 +20,12 @@ These are available on both public and wallet clients.
 - [signed_call](signed-call.md)
 - [deposit](deposit.md)
 
-These are available only on wallet clients.
+Available only on wallet clients.
 
 ## Utility
 
 - [encode_shielded_calldata](encode-shielded-calldata.md)
 
 Used internally by contract/namespace methods, and available directly when needed.
+
+All methods have both sync and async variants. Async variants use `await`.

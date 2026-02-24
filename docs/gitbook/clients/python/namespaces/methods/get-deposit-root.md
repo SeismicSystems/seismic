@@ -1,6 +1,6 @@
 ---
 description: Read deposit Merkle root from deposit contract
-icon: hash
+icon: tree
 ---
 
 # get_deposit_root
@@ -31,3 +31,8 @@ await w3.seismic.get_deposit_root(*, address: str = DEPOSIT_CONTRACT_ADDRESS) ->
 root = w3.seismic.get_deposit_root()
 print(root.hex())
 ```
+
+## See Also
+
+- [get_deposit_count](get-deposit-count.md) — Read the total deposit count
+- [deposit](deposit.md) — Submit a validator deposit

@@ -17,6 +17,15 @@ class AsyncSeismicPublicNamespace:
     async def get_deposit_count(self, *, address: str = DEPOSIT_CONTRACT_ADDRESS) -> int: ...
 ```
 
+## Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| [`get_tee_public_key`](methods/get-tee-public-key.md) | `CompressedPublicKey` | Fetch the TEE's compressed secp256k1 public key |
+| [`get_deposit_root`](methods/get-deposit-root.md) | `bytes` | Read the deposit Merkle root (32 bytes) |
+| [`get_deposit_count`](methods/get-deposit-count.md) | `int` | Read the total validator deposit count |
+| `contract` | `AsyncPublicContract` | Create an async read-only contract wrapper (`.tread` only) |
+
 ## Example
 
 ```python
@@ -31,5 +40,11 @@ count = await public.seismic.get_deposit_count()
 
 ## Notes
 
-- No private key is required.
-- `contract()` returns `AsyncPublicContract` with `.tread` only.
+- No private key is required
+- `contract()` returns `AsyncPublicContract` with `.tread` only
+
+## See Also
+
+- [SeismicPublicNamespace](seismic-public-namespace.md) — Sync equivalent
+- [AsyncSeismicNamespace](async-seismic-namespace.md) — Wallet namespace (extends this with write operations)
+- [AsyncPublicContract](../contract/public-contract.md) — Contract wrapper returned by `contract()`

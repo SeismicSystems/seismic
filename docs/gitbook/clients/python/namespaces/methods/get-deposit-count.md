@@ -1,6 +1,6 @@
 ---
 description: Read deposit count from deposit contract
-icon: hash
+icon: hashtag
 ---
 
 # get_deposit_count
@@ -35,3 +35,8 @@ print(count)
 ## Implementation detail
 
 SDK decodes bytes `[64:72]` as little-endian `uint64`.
+
+## See Also
+
+- [get_deposit_root](get-deposit-root.md) — Read the deposit Merkle root
+- [deposit](deposit.md) — Submit a validator deposit

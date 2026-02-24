@@ -1,6 +1,6 @@
 ---
 description: Async wallet Seismic namespace
-icon: lock
+icon: wallet
 ---
 
 # AsyncSeismicNamespace
@@ -20,6 +20,19 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
     async def deposit(..., address: str = DEPOSIT_CONTRACT_ADDRESS) -> HexBytes: ...
 ```
 
+## Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| [`send_shielded_transaction`](methods/send-shielded-transaction.md) | `HexBytes` | Encrypt, sign, and broadcast a shielded transaction |
+| [`signed_call`](methods/signed-call.md) | `HexBytes` | Execute a signed read with encrypted calldata |
+| [`debug_send_shielded_transaction`](methods/debug-send-shielded-transaction.md) | `DebugWriteResult` | Send shielded transaction and return debug artifacts |
+| [`deposit`](methods/deposit.md) | `HexBytes` | Submit a validator deposit (transparent) |
+| [`contract`](../contract/shielded-contract.md) | `AsyncShieldedContract` | Create an async shielded contract wrapper |
+| `get_tee_public_key` | `CompressedPublicKey` | Inherited from [`AsyncSeismicPublicNamespace`](async-seismic-public-namespace.md) |
+| `get_deposit_root` | `bytes` | Inherited from [`AsyncSeismicPublicNamespace`](async-seismic-public-namespace.md) |
+| `get_deposit_count` | `int` | Inherited from [`AsyncSeismicPublicNamespace`](async-seismic-public-namespace.md) |
+
 ## Example
 
 ```python
@@ -36,6 +49,13 @@ raw = await token.read.balanceOf()
 
 ## Notes
 
-- Includes every async public namespace method.
-- `signed_call()` always returns `HexBytes`; empty responses are `HexBytes(b"")`.
-- `deposit()` validates byte lengths and raises `ValueError` on mismatch.
+- Includes every async public namespace method
+- `signed_call()` always returns `HexBytes`; empty responses are `HexBytes(b"")`
+- `deposit()` validates byte lengths and raises `ValueError` on mismatch
+- Attached as `w3.seismic` by `await CHAIN.async_wallet_client(pk)`
+
+## See Also
+
+- [SeismicNamespace](seismic-namespace.md) — Sync equivalent
+- [AsyncSeismicPublicNamespace](async-seismic-public-namespace.md) — Read-only base class
+- [AsyncShieldedContract](../contract/shielded-contract.md) — Contract wrapper returned by `contract()`
