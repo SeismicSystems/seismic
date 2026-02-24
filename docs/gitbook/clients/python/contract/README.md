@@ -17,43 +17,6 @@ The ABI works the same as in `web3.py`. If your contract uses shielded types (`s
 
 ***
 
-### Example Contract
-
-All code snippets in the Python SDK docs reference the interface below. Only the interface is shown — no deployment needed.
-
-```solidity
-interface IExampleVault {
-    // ── Public reads (no msg.sender dependency → .tread) ─────
-    function getNumber()       external view returns (uint256);
-    function isOdd()           external view returns (bool);
-    function isActive()        external view returns (bool);
-    function getName()         external view returns (string memory);
-    function getConfig()       external view returns (uint256 maxDeposit, uint256 feeRate, bool paused);
-    function getHolders()      external view returns (address[] memory);
-    function getItemCount()    external view returns (uint256);
-    function getItems(uint256 offset, uint256 limit)
-        external view returns (uint256[] memory);
-    function getUserInfo(address user)
-        external view returns (string memory name, uint256 balance, bool active);
-
-    // ── Shielded reads (use msg.sender → require .read) ──────
-    function getSecretBalance()  external view returns (suint256);
-
-    // ── Writes ───────────────────────────────────────────────
-    function setNumber(uint256 value)  external;
-    function deposit()                 external payable;
-    function withdraw(suint256 amount) external;
-    function batchTransfer(
-        address[] calldata recipients,
-        suint256[] calldata amounts
-    ) external;
-}
-```
-
-Token examples use the real [SRC20](https://github.com/SeismicSystems/src-20) / ERC20 specs (`balanceOf`, `transfer`, `approve`, `allowance`, `totalSupply`, etc.).
-
-***
-
 ### Namespaces
 
 `ShieldedContract` gives you five namespaces:
@@ -92,6 +55,43 @@ Write namespaces accept optional keyword arguments for transaction parameters:
 ```python
 tx_hash = contract.write.deposit(value=10**18, gas=100_000, gas_price=10**9)
 ```
+
+***
+
+### Example Contract
+
+All code snippets in the Python SDK docs reference the interface below.
+
+```solidity
+interface IExampleVault {
+    // ── Public reads (no msg.sender dependency → .tread) ─────
+    function getNumber()       external view returns (uint256);
+    function isOdd()           external view returns (bool);
+    function isActive()        external view returns (bool);
+    function getName()         external view returns (string memory);
+    function getConfig()       external view returns (uint256 maxDeposit, uint256 feeRate, bool paused);
+    function getHolders()      external view returns (address[] memory);
+    function getItemCount()    external view returns (uint256);
+    function getItems(uint256 offset, uint256 limit)
+        external view returns (uint256[] memory);
+    function getUserInfo(address user)
+        external view returns (string memory name, uint256 balance, bool active);
+
+    // ── Shielded reads (use msg.sender → require .read) ──────
+    function getSecretBalance()  external view returns (suint256);
+
+    // ── Writes ───────────────────────────────────────────────
+    function setNumber(uint256 value)  external;
+    function deposit()                 external payable;
+    function withdraw(suint256 amount) external;
+    function batchTransfer(
+        address[] calldata recipients,
+        suint256[] calldata amounts
+    ) external;
+}
+```
+
+Token examples use the real [SRC20](https://github.com/SeismicSystems/src20) / ERC20 specs (`balanceOf`, `transfer`, `approve`, `allowance`, `totalSupply`, etc.).
 
 ***
 
