@@ -51,7 +51,7 @@ bun run viem:test:anvil  # CHAIN=anvil — needs sanvil (from sfoundryup)
 bun run viem:test:reth   # CHAIN=reth  — needs seismic-reth binary
 ```
 
-**Anvil tests** require `SFOUNDRY_ROOT` env var pointing to a [seismic-foundry](https://github.com/SeismicSystems/seismic-foundry) checkout (with Rust/Cargo installed), OR the `sanvil` binary in PATH. If `SFOUNDRY_ROOT` is set, the test harness builds sanvil from source via `cargo build --bin sanvil`.
+**Anvil tests** require `sanvil` on PATH (install via `mise` or `sfoundryup`).
 
 **Reth tests** require `SRETH_ROOT` pointing to a [seismic-reth](https://github.com/SeismicSystems/seismic-reth) checkout.
 
@@ -115,7 +115,7 @@ GitHub Actions (`.github/workflows/ci.yml`):
 
 - **lint**: ESLint + Prettier on ubuntu-24.04 (Bun 1.2.5)
 - **typecheck**: tsc on ubuntu-24.04
-- **test-anvil**: Self-hosted runner, builds sanvil from `SFOUNDRY_ROOT`, runs anvil tests
+- **test-anvil**: Self-hosted runner, runs anvil tests (sanvil from PATH)
 - **test-devnet**: Self-hosted runner (after test-anvil), builds seismic-reth from `SRETH_ROOT`, runs reth tests
 
 ## Key Concepts
@@ -130,9 +130,7 @@ GitHub Actions (`.github/workflows/ci.yml`):
 
 | Problem                                                     | Fix                                                                                                                                                                                                     |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SFOUNDRY_ROOT env variable must be set to build sanvil`    | Set `SFOUNDRY_ROOT` to your seismic-foundry repo path, or install `sanvil` via `sfoundryup` and modify the test to skip the build step                                                                  |
 | `SRETH_ROOT env variable must be set to build reth`         | Set `SRETH_ROOT` to your seismic-reth repo path (with Rust/Cargo installed)                                                                                                                             |
-| `ENOENT: posix_spawn 'cargo'` when running tests            | `SFOUNDRY_ROOT` is set but Cargo/Rust is not installed. Either install Rust (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh`) or unset `SFOUNDRY_ROOT` if `sanvil` is already in PATH |
 | `react:typecheck` fails with missing types                  | Run `bun run viem:build` first — react typecheck depends on built viem types                                                                                                                            |
 | `Browserslist: browsers data is X months old` on docs build | Harmless warning. Fix with `npx update-browserslist-db@latest` if desired                                                                                                                               |
 | `hideExternalIcon` React prop warning during docs build     | Harmless VoCs warning — safe to ignore                                                                                                                                                                  |
