@@ -46,11 +46,13 @@ Sends encrypted transactions using `TxSeismic` (type `0x4a`). Calldata is encryp
 
 **Returns**: `Coroutine[HexBytes]` (transaction hash)
 
+**Positional Arguments**: `*args` - ABI function arguments (e.g. `await contract.write.transfer(to, amount)`)
+
 **Optional Parameters**:
 - `value: int` - Wei to send (default: `0`)
 - `gas: int | None` - Gas limit (default: `30_000_000` when omitted)
 - `gas_price: int | None` - Gas price in wei (default: network suggested)
-- `security: SeismicSecurityParams | None` - Security parameters for expiry
+- `security: [`SeismicSecurityParams`](../api-reference/transaction-types/seismic-security-params.md) | None` - Security parameters for expiry
 
 ### `.read` - Encrypted Read
 
@@ -58,16 +60,20 @@ Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypte
 
 **Returns**: `Coroutine[Any]` (ABI-decoded Python value)
 
+**Positional Arguments**: `*args` - ABI function arguments (e.g. `await contract.read.balanceOf(owner)`)
+
 **Optional Parameters**:
 - `value: int` - Wei for call context (default: `0`)
 - `gas: int` - Gas limit (default: `30_000_000`)
-- `security: SeismicSecurityParams | None` - Security parameters for expiry
+- `security: [`SeismicSecurityParams`](../api-reference/transaction-types/seismic-security-params.md) | None` - Security parameters for expiry
 
 ### `.twrite` - Transparent Write
 
 Sends standard async `eth_sendTransaction` with unencrypted calldata.
 
 **Returns**: `Coroutine[HexBytes]` (transaction hash)
+
+**Positional Arguments**: `*args` - ABI function arguments
 
 **Optional Parameters**:
 - `value: int` - Wei to send (default: `0`)
@@ -79,13 +85,15 @@ Executes standard async `eth_call` with unencrypted calldata. Result is ABI-deco
 
 **Returns**: `Coroutine[Any]` (ABI-decoded Python value)
 
-**Optional Parameters**: None (pass positional arguments only)
+**Positional Arguments**: `*args` - ABI function arguments
 
 ### `.dwrite` - Debug Write
 
 Like `.write` but returns debug information including plaintext and encrypted views. **Transaction is actually broadcast**.
 
 **Returns**: `Coroutine[DebugWriteResult]` ([`DebugWriteResult`](../api-reference/transaction-types/debug-write-result.md))
+
+**Positional Arguments**: `*args` - ABI function arguments
 
 **Optional Parameters**: Same as `.write`
 

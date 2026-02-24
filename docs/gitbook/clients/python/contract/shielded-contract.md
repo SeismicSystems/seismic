@@ -46,11 +46,13 @@ Sends encrypted transactions using `TxSeismic` (type `0x4a`). Calldata is encryp
 
 **Returns**: `HexBytes` (transaction hash)
 
+**Positional Arguments**: `*args` - ABI function arguments (e.g. `contract.write.transfer(to, amount)`)
+
 **Optional Parameters**:
 - `value: int` - Wei to send (default: `0`)
 - `gas: int | None` - Gas limit (default: `30_000_000` when omitted)
 - `gas_price: int | None` - Gas price in wei (default: network suggested)
-- `security: SeismicSecurityParams | None` - Security parameters for expiry
+- `security: [`SeismicSecurityParams`](../api-reference/transaction-types/seismic-security-params.md) | None` - Security parameters for expiry
 
 ### `.read` - Encrypted Read
 
@@ -58,16 +60,20 @@ Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypte
 
 **Returns**: `Any` (ABI-decoded Python value)
 
+**Positional Arguments**: `*args` - ABI function arguments (e.g. `contract.read.balanceOf(owner)`)
+
 **Optional Parameters**:
 - `value: int` - Wei for call context (default: `0`)
 - `gas: int` - Gas limit (default: `30_000_000`)
-- `security: SeismicSecurityParams | None` - Security parameters for expiry
+- `security: [`SeismicSecurityParams`](../api-reference/transaction-types/seismic-security-params.md) | None` - Security parameters for expiry
 
 ### `.twrite` - Transparent Write
 
 Sends standard `eth_sendTransaction` with unencrypted calldata.
 
 **Returns**: `HexBytes` (transaction hash)
+
+**Positional Arguments**: `*args` - ABI function arguments
 
 **Optional Parameters**:
 - `value: int` - Wei to send (default: `0`)
@@ -79,13 +85,15 @@ Executes standard `eth_call` with unencrypted calldata. Result is ABI-decoded by
 
 **Returns**: `Any` (ABI-decoded Python value)
 
-**Optional Parameters**: None (pass positional arguments only)
+**Positional Arguments**: `*args` - ABI function arguments
 
 ### `.dwrite` - Debug Write
 
 Like `.write` but returns debug information including plaintext and encrypted views. **Transaction is actually broadcast**.
 
 **Returns**: [`DebugWriteResult`](../api-reference/transaction-types/debug-write-result.md)
+
+**Positional Arguments**: `*args` - ABI function arguments
 
 **Optional Parameters**: Same as `.write`
 
@@ -212,7 +220,7 @@ tx_hash = contract.write.setNumber(42)
 - **ABI remapping**: Shielded types (`suint256`, `sbool`, `saddress`) are remapped to standard types for encoding while preserving original names for selector computation
 - **Gas defaults**: `.write` uses `30_000_000` when `gas` is omitted; `.twrite` follows normal `web3.py`/provider transaction behavior
 - **Encryption overhead**: Encrypted operations add ~16 bytes (AES-GCM auth tag) to calldata
-- **EIP-712 vs raw**: EIP-712 signing provides better wallet integration; raw signing is faster for automation
+- **EIP-712 vs raw**: EIP-712 signing enables integration with browser extension wallets like Metamask; raw signing is faster for automation and likely what you want to use in this Python SDK
 - **Use `.write` in production**: `.dwrite` is for debugging only
 
 ## See Also
