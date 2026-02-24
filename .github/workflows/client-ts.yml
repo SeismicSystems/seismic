@@ -1,0 +1,74 @@
+name: Typescript Client
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["clients/ts/**"]
+  pull_request:
+    paths: ["clients/ts/**"]
+
+defaults:
+  run:
+    working-directory: clients/ts
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v2
+      - run: mise run lint::check
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v2
+      - run: mise run typecheck
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v2
+      - run: mise run build
+
+  test-anvil:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v2
+      - run: mise run test::anvil
+
+  # TODO(samlaf): fix this to work in CI
+  # test-reth:
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     SRETH_ROOT: /home/azureuser/seismic/seismic-reth
+  #     RETH_DATA_DIR: /home/azureuser/.seismic-reth/data
+  #     RETH_STATIC_FILES: /home/azureuser/.seismic-reth/static_files
+  #   steps:
+  #     - name: Check out repo
+  #       uses: actions/checkout@v3
+  #     - name: Clear reth files
+  #       run: rm -rf "$RETH_DATA_DIR" && rm -rf "$RETH_STATIC_FILES"
+  #     - name: Build reth
+  #       # cargo sweep will remove files in target/ that are older than 1 day
+  #       run: |
+  #         cd "$SRETH_ROOT"
+  #         git checkout seismic
+  #         git pull
+  #         cargo build --bin seismic-reth
+  #         cargo sweep --time 1
+  #         cd "$GITHUB_WORKSPACE"
+  #     - name: Create .env
+  #       # So bun doesn't log a warning about no .env file
+  #       run: touch .env
+  #     - name: Install dependencies
+  #       run: bun install
+  #     - name: build seismic-viem
+  #       run: bun viem:build
+  #     - name: Test reth
+  #       run: bun viem:test:reth
+  #     - name: Remove reth files
+  #       run: rm -rf "$RETH_DATA_DIR" && rm -rf "$RETH_STATIC_FILES"
