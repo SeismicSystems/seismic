@@ -1,8 +1,11 @@
 ---
-description: Internal SRC20 helper
+description: get_viewing_key function signatures
 icon: key
 ---
 
-# Internal Helper
+# get_viewing_key
 
-This internal helper API is intentionally not documented in this public reference.
+| Function | Signature | Returns |
+| --- | --- | --- |
+| `get_viewing_key` | `get_viewing_key(w3: Web3, encryption: EncryptionState, private_key: PrivateKey)` | `Bytes32` |
+| `async_get_viewing_key` | `async_get_viewing_key(w3: AsyncWeb3, encryption: EncryptionState, private_key: PrivateKey)` | `Bytes32` |

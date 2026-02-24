@@ -1,8 +1,12 @@
 ---
-description: Internal SRC20 helper
+description: register_viewing_key and compute_key_hash signatures
 icon: key
 ---
 
-# Internal Helper
+# register_viewing_key
 
-This internal helper API is intentionally not documented in this public reference.
+| Function | Signature | Returns |
+| --- | --- | --- |
+| `register_viewing_key` | `register_viewing_key(w3: Web3, encryption: EncryptionState, private_key: PrivateKey, key: Bytes32)` | `HexBytes` |
+| `async_register_viewing_key` | `async_register_viewing_key(w3: AsyncWeb3, encryption: EncryptionState, private_key: PrivateKey, key: Bytes32)` | `HexBytes` |
+| `compute_key_hash` | `compute_key_hash(aes_key: Bytes32)` | `bytes` |
