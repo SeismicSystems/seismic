@@ -1,6 +1,5 @@
 ---
 description: Decoded SRC20 Approval event with decrypted amount
-icon: check-circle
 ---
 
 # DecryptedApprovalLog
