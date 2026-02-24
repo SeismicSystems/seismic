@@ -80,7 +80,7 @@ library CryptoUtils {
         view
         returns (bytes memory ciphertext)
     {
-        bytes memory input = abi.encodePacked(key, nonce, plaintext);
+        bytes memory input = abi.encodePacked(uint256(key), nonce, plaintext);
         (bool success, bytes memory output) = AES_ENCRYPT_PRECOMPILE.staticcall(input);
         if (!success) revert AESPrecompileCallFailed();
         if (output.length == 0) revert EncryptionReturnedNoOutput();
@@ -98,7 +98,7 @@ library CryptoUtils {
         returns (bytes memory plaintext)
     {
         if (ciphertext.length == 0) revert CiphertextCannotBeEmpty();
-        bytes memory input = abi.encodePacked(key, nonce, ciphertext);
+        bytes memory input = abi.encodePacked(uint256(key), nonce, ciphertext);
         (bool success, bytes memory output) = AES_DECRYPT_PRECOMPILE.staticcall(input);
         if (!success) revert AESPrecompileCallFailed();
         return output;

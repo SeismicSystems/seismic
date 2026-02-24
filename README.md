@@ -54,6 +54,12 @@ For VS Code multi-repo navigation, open `seismic/workspace/seismic.code-workspac
 code seismic/workspace/seismic.code-workspace
 ```
 
+### Dev Env
+
+We use mise to manage our dev environment, including dependency version management and running common tasks. It is not mandatory to use mise, but we recommend it for ease of use and consistency. Start by [installing mise](https://mise.jdx.dev/getting-started.html), and then run `mise install`. This will install the latest version of the Seismic Dev Environment, which includes all the tools you need to build and test Seismic (sforge, sanvil, scast, ssolc, etc.). It will also set up your PATH so that you can run these tools from anywhere inside the repo. Make sure to take a look at comments inside the various `mise.toml` files across the repos, and run `mise run` from anywhere to see the tasks available in that subdir.
+
+![](assets/mise-demo.gif)
+
 ### Docs
 
 If working with any specific fork/repo, make sure to read that repo's README and CLAUDE.md for specific context. This repo's docs are meant to provide the big picture and cross-cutting concepts that apply across all repos:

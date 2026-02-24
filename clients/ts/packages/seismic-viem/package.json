@@ -1,0 +1,60 @@
+{
+  "name": "seismic-viem",
+  "version": "1.1.1",
+  "description": "Typescript interface for Seismic",
+  "type": "module",
+  "main": "./dist/_cjs/index.js",
+  "module": "./dist/_esm/index.js",
+  "types": "./dist/_types/index.d.ts",
+  "typings": "./dist/_types/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/_cjs/index.js",
+      "import": "./dist/_esm/index.js",
+      "types": "./dist/_types/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/_cjs/*.js",
+    "dist/_esm/*.js",
+    "dist/_types/**/*.d.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit --project tsconfig.types.json",
+    "build": "bun build:cjs && bun build:esm && bun build:types",
+    "build:cjs": "BUN_ENV=production bun build src/index.ts --outdir dist/_cjs --target browser --format cjs --external viem ",
+    "build:esm": "BUN_ENV=production bun build src/index.ts --outdir dist/_esm --target browser --format esm --external viem ",
+    "build:types": "tsc --project tsconfig.types.json && tsc-alias --project tsconfig.types.json",
+    "postbuild": "rimraf ./dist/tsconfig.types.tsbuildinfo"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.7.0",
+    "@noble/curves": "^1.8.0",
+    "@noble/ciphers": "^1.2.0"
+  },
+  "peerDependencies": {
+    "viem": "2.x"
+  },
+  "devDependencies": {},
+  "license": "MIT",
+  "author": "Seismic Systems",
+  "homepage": "https://seismic.systems",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SeismicSystems/seismic-client.git"
+  },
+  "keywords": [
+    "seismic",
+    "crypto",
+    "shielding",
+    "eth",
+    "ethereum",
+    "dapps",
+    "wallet",
+    "web3",
+    "typescript"
+  ]
+}

@@ -7,6 +7,21 @@ remappings = [
     "solady/=lib/solady/src/",
     "seismic-std-lib/=src/seismic-std-lib/"
 ]
-# --via-ir currently doesn't support shielded types.
+# --via-ir doesn't support shielded types on the seismic branch.
 # Track progress in https://github.com/SeismicSystems/seismic-solidity/issues/195
 via_ir = false
+
+# via-ir support was added in https://github.com/SeismicSystems/seismic-solidity/pull/204
+# sforge uses /usr/local/bin/ssolc by default, which foundryup installs from the seismic branch.
+# Thus we need to point sforge to a different ssolc binary.
+# foundry.toml's solc key somehow doesn't expand relative paths (~ or $HOME), so we instead inject
+# the solc via FOUNDRY_SOLC env var in mise.toml tasks. So make sure to run via `mise run sforge`
+# instead of just `sforge` directly.
+[profile.via-ir]
+via_ir = true
+# This (temporary) additional flag is required to make sure ssolc users 
+# are aware that the via-ir pipeline is experimental.
+unsafe_via_ir = true
+
+[profile.ssolc-local]
+solc = "../../seismic-solidity/build/solc/solc"

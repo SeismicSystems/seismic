@@ -64,7 +64,7 @@ All transaction options are **optional** keyword arguments (same as `.write`):
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `value` | `int` | `0` | ETH value to send (in wei) |
-| `gas` | `int \| None` | `None` | Gas limit (auto-estimated if `None`) |
+| `gas` | `int \| None` | `None` | Gas limit (`30_000_000` if `None`) |
 | `gas_price` | `int \| None` | `None` | Gas price in wei (uses network default if `None`) |
 | `security` | [`SeismicSecurityParams`](../../api-reference/transaction-types/seismic-security-params.md) \| `None` | `None` | Custom security parameters (block expiry, nonce, etc.) |
 
@@ -186,22 +186,21 @@ print(f"Gas price: {shielded.gas_price}")
 print(f"Expires at block: {shielded.seismic.expires_at_block}")
 ```
 
-### Analyze Gas Estimation
+### Analyze Gas Limit vs Usage
 
 ```python
-result = contract.dwrite.complexMethod(args)
+result = contract.dwrite.batchTransfer(recipients, amounts)
 
-# Estimated gas
-estimated = result.plaintext_tx.gas
-print(f"Estimated gas: {estimated}")
+# Gas limit used for this transaction
+gas_limit = result.plaintext_tx.gas
+print(f"Gas limit: {gas_limit}")
 
 # Wait for receipt
 receipt = w3.eth.wait_for_transaction_receipt(result.tx_hash)
-actual = receipt['gasUsed']
+gas_used = receipt['gasUsed']
 
-print(f"Actual gas used: {actual}")
-print(f"Difference: {actual - estimated}")
-print(f"Estimation accuracy: {(estimated / actual) * 100:.2f}%")
+print(f"Gas used: {gas_used}")
+print(f"Unused gas: {gas_limit - gas_used}")
 ```
 
 ### Compare with Production .write
@@ -224,7 +223,7 @@ tx_hash = contract.write.transfer(recipient, amount)
 
 ```python
 # Verify calldata is correctly encoded
-result = contract.dwrite.complexMethod(arg1, arg2, arg3)
+result = contract.dwrite.batchTransfer(recipients, amounts)
 
 # Inspect function selector
 selector = result.plaintext_tx.data[:4]
@@ -232,14 +231,14 @@ print(f"Function selector: {selector.to_0x_hex()}")
 
 # Verify it matches expected selector
 from web3 import Web3
-expected_selector = Web3.keccak(text="complexMethod(uint256,address,bool)")[:4]
+expected_selector = Web3.keccak(text="batchTransfer(address[],suint256[])")[:4]
 assert selector == expected_selector
 ```
 
 ### Debugging Encryption
 
 ```python
-result = contract.dwrite.problematicMethod(args)
+result = contract.dwrite.withdraw(amount)
 
 # Compare plaintext vs encrypted
 print("Plaintext calldata:")
@@ -256,7 +255,7 @@ print(f"Encrypted: {len(result.shielded_tx.data)} bytes")
 ### Auditing Transaction Details
 
 ```python
-result = contract.dwrite.highValueTransfer(recipient, large_amount)
+result = contract.dwrite.transfer(recipient, large_amount)
 
 # Audit all parameters
 plaintext = result.plaintext_tx
