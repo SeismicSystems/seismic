@@ -56,12 +56,11 @@ result = contract.tread.getNumber()
 | **[Chains](chains/)** | Chain configuration (SEISMIC_TESTNET, SANVIL) |
 | **[Contract](contract/)** | Interact with shielded and public contracts |
 
-### Guides & Examples
+### Guides
 
 | Section | Description |
 |---------|-------------|
-| **[Guides](guides/)** | Step-by-step tutorials for common workflows |
-| **[Examples](examples/)** | Complete runnable code examples |
+| **[Guides](guides/)** | Step-by-step tutorials and runnable examples |
 
 ### API Reference
 
@@ -134,4 +133,3 @@ Web3 (standard web3.py)
 1. **[Install and setup a client](client/)** - Get connected to Seismic
 2. **[Send your first shielded transaction](guides/shielded-write.md)** - Step-by-step guide
 3. **[Explore the API reference](api-reference/)** - Deep dive into all types and functions
-4. **[Check out examples](examples/)** - See complete runnable code

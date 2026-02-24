@@ -136,12 +136,8 @@
   * [Guides](clients/python/guides/README.md)
     * [Shielded Write](clients/python/guides/shielded-write.md)
     * [Signed Reads](clients/python/guides/signed-reads.md)
-  * [Examples](clients/python/examples/README.md)
-    * [Basic Wallet Setup](clients/python/examples/basic-wallet-setup.md)
-    * [Shielded Write Complete](clients/python/examples/shielded-write-complete.md)
-    * [Signed Read Pattern](clients/python/examples/signed-read-pattern.md)
-    * [SRC20 Workflow](clients/python/examples/src20-workflow.md)
-    * [Async Patterns](clients/python/examples/async-patterns.md)
+    * [SRC20 Workflow](clients/python/guides/src20-workflow.md)
+    * [Async Patterns](clients/python/guides/async-patterns.md)
 * [Rust — seismic-alloy](clients/seismic-alloy.md)
 
 ## Appendix
