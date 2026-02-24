@@ -1,11 +1,13 @@
 ---
-description: ECDSA signature dataclass used for serialized TxSeismic
-icon: file-code
+description: ECDSA signature components
+icon: signature
 ---
 
 # Signature
 
-`Signature` stores ECDSA components.
+ECDSA signature components for signed Seismic transactions.
+
+## Definition
 
 ```python
 @dataclass(frozen=True)
@@ -15,10 +17,33 @@ class Signature:
     s: int
 ```
 
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `v` | `int` | Recovery identifier (0 or 1, y-parity) |
+| `r` | `int` | First 32-byte integer of the signature |
+| `s` | `int` | Second 32-byte integer of the signature |
+
 ## Example
 
 ```python
-from seismic_web3 import Signature
+from eth_keys import keys as eth_keys
+from seismic_web3 import Signature, PrivateKey
 
-sig = Signature(v=1, r=123, s=456)
+sk = eth_keys.PrivateKey(bytes(PrivateKey(...)))
+sig_obj = sk.sign_msg_hash(msg_hash)
+
+sig = Signature(v=sig_obj.v, r=sig_obj.r, s=sig_obj.s)
 ```
+
+## Notes
+
+- `v` is 0 or 1 (EIP-155 y-parity), not the legacy 27/28 values
+- Typically created internally by signing functions — most users won't construct this directly
+
+## See Also
+
+- [sign\_seismic\_tx\_eip712](../eip712/sign-seismic-tx-eip712.md) — creates and applies signature
+- [UnsignedSeismicTx](unsigned-seismic-tx.md) — transaction before signing
+- [PrivateKey](../types/private-key.md) — used to generate signatures
