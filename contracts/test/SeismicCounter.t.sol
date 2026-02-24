@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {SeismicCounter} from "../src/SeismicCounter.sol";
+import {SeismicCounter} from "../src/examples/SeismicCounter.sol";
 
 contract SeismicCounterTest is Test {
     SeismicCounter public counter;

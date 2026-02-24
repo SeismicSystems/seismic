@@ -55,15 +55,6 @@ bun run viem:test:reth   # CHAIN=reth  — needs seismic-reth binary
 
 **Reth tests** require `SRETH_ROOT` pointing to a [seismic-reth](https://github.com/SeismicSystems/seismic-reth) checkout.
 
-### Solidity tests (Foundry)
-
-```bash
-git submodule update --init --recursive   # first time only
-sforge test --root contracts
-```
-
-Requires `sforge` (installed via [sfoundryup](https://github.com/SeismicSystems/seismic-foundry)). Runs 16 tests across 3 test suites (SeismicCounter, TransparentCounter, ShieldedDelegationAccount).
-
 ### Docs
 
 ```bash
@@ -99,10 +90,6 @@ packages/
   seismic-spammer/       Transaction load testing tool (internal)
 tests/
   seismic-viem/          Integration test runner (bun test)
-contracts/               Solidity contracts (Foundry)
-  src/                   SeismicCounter, TransparentCounter, SRC20, DepositContract
-  test/                  Foundry tests (.t.sol)
-  lib/                   Git submodules (forge-std, openzeppelin, solady)
 docs/                    Documentation site (VoCs + Tailwind)
 ```
 
@@ -146,8 +133,6 @@ GitHub Actions (`.github/workflows/ci.yml`):
 | `SFOUNDRY_ROOT env variable must be set to build sanvil`    | Set `SFOUNDRY_ROOT` to your seismic-foundry repo path, or install `sanvil` via `sfoundryup` and modify the test to skip the build step                                                                  |
 | `SRETH_ROOT env variable must be set to build reth`         | Set `SRETH_ROOT` to your seismic-reth repo path (with Rust/Cargo installed)                                                                                                                             |
 | `ENOENT: posix_spawn 'cargo'` when running tests            | `SFOUNDRY_ROOT` is set but Cargo/Rust is not installed. Either install Rust (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh`) or unset `SFOUNDRY_ROOT` if `sanvil` is already in PATH |
-| `forge` / `sforge` not found for Solidity tests             | Install via `sfoundryup`: `curl -L https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/sfoundryup/install \| bash && sfoundryup`                                                   |
-| `git submodule` dirs empty (contracts/lib/)                 | Run `git submodule update --init --recursive`                                                                                                                                                           |
 | `react:typecheck` fails with missing types                  | Run `bun run viem:build` first — react typecheck depends on built viem types                                                                                                                            |
 | `Browserslist: browsers data is X months old` on docs build | Harmless warning. Fix with `npx update-browserslist-db@latest` if desired                                                                                                                               |
 | `hideExternalIcon` React prop warning during docs build     | Harmless VoCs warning — safe to ignore                                                                                                                                                                  |

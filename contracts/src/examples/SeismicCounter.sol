@@ -13,7 +13,7 @@ contract SeismicCounter {
     }
 
     function isOdd() public view returns (bool) {
-        return number % suint256(2) == suint256(1);
+        return bool(number % suint256(2) == suint256(1));
     }
 
     // exposed for testing purposes
