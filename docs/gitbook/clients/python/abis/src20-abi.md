@@ -58,7 +58,7 @@ from seismic_web3 import PrivateKey, SEISMIC_TESTNET, SRC20_ABI
 pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 w3 = SEISMIC_TESTNET.wallet_client(pk)
 
-token = w3.seismic.contract("0x00000000219ab540356cBB839Cbe05303d7705Fa", SRC20_ABI)
+token = w3.seismic.contract("0xYourTokenAddress", SRC20_ABI)
 
 # Transparent metadata (no auth needed)
 name = decode(["string"], bytes(token.tread.name()))[0]

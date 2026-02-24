@@ -29,5 +29,5 @@ This is seismic's monorepo, targeting Seismic developers and contributors. It co
 
 ### Docs
 - **No "rule of three" bias.** Include exactly as many bullet points, list items, or examples as the content demands — no more, no fewer. Don't pad lists to three items or trim to three for aesthetic reasons.
-- **Placeholder addresses.** For EOA addresses, use the first Anvil address: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`. For contract addresses, use the deposit contract: `0x00000000219ab540356cBB839Cbe05303d7705Fa`.
+- **Placeholder addresses.** For EOA addresses, use the first Anvil address: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`. For generic contract addresses where the reader will substitute their own, use a descriptive string like `"0xYourTokenAddress"`. Only use the deposit contract address `0x00000000219ab540356cBB839Cbe05303d7705Fa` when actually referring to the deposit contract.
 - **No made-up function names in examples.** Use real function names from the actual contracts/specs in the codebase (e.g. SRC20 `balanceOf()`, ERC20 `transfer()`). If an example needs a function that doesn't exist in a real spec, show the Solidity interface so users can follow along. Never invent plausible-sounding names like `getMyBalance()` — readers can't tell if it's real or fake.
