@@ -30,9 +30,9 @@ async def async_register_viewing_key(
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `w3` | `Web3` / `AsyncWeb3` | Web3 instance with Seismic support |
-| `encryption` | [`EncryptionState`](../../../client/encryption-state.md) | Encryption state from wallet client |
-| `private_key` | [`PrivateKey`](../../../api-reference/types/private-key.md) | Signing key for the transaction |
-| `key` | [`Bytes32`](../../../api-reference/types/bytes32.md) | Viewing key to register |
+| `encryption` | [`EncryptionState`](../../client/encryption-state.md) | Encryption state from wallet client |
+| `private_key` | [`PrivateKey`](../../api-reference/types/private-key.md) | Signing key for the transaction |
+| `key` | [`Bytes32`](../../api-reference/types/bytes32.md) | Viewing key to register |
 
 ## Returns
 

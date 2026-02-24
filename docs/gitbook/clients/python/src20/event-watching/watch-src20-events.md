@@ -79,4 +79,4 @@ with watch_src20_events(
 
 - [watch_src20_events_with_key](../intelligence-providers/watch-src20-events-with-key.md) — Watch with explicit key (no wallet needed)
 - [SRC20EventWatcher](src20-event-watcher.md) — Underlying sync watcher class
-- [register_viewing_key](../intelligence-providers/directory/register-viewing-key.md) — Register a key first
+- [register_viewing_key](../intelligence-providers/register-viewing-key.md) — Register a key first
