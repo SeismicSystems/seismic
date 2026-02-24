@@ -11,10 +11,6 @@ remappings = [
 # Track progress in https://github.com/SeismicSystems/seismic-solidity/issues/195
 via_ir = false
 
-# Run as `FOUNDRY_PROFILE=via-ir mise run sforge b -v`
-#  or as `FOUNDRY_PROFILE=via-ir mise run sforge-local b -v`
-# if you are testing local changes to sforge or downstream dependencies (e.g. seismic-compilers).
-# 
 # via-ir support was added in https://github.com/SeismicSystems/seismic-solidity/pull/204
 # sforge uses /usr/local/bin/ssolc by default, which foundryup installs from the seismic branch.
 # Thus we need to point sforge to a different ssolc binary.
