@@ -46,6 +46,8 @@ Sends encrypted transactions using `TxSeismic` (type `0x4a`). Calldata is encryp
 
 **Returns**: `HexBytes` (transaction hash)
 
+**Positional Arguments**: `*args` - ABI function arguments (e.g. `contract.write.transfer(to, amount)`)
+
 **Optional Parameters**:
 - `value: int` - Wei to send (default: `0`)
 - `gas: int | None` - Gas limit (default: `30_000_000` when omitted)
@@ -58,6 +60,8 @@ Executes encrypted signed `eth_call` with encrypted calldata. Result is decrypte
 
 **Returns**: `Any` (ABI-decoded Python value)
 
+**Positional Arguments**: `*args` - ABI function arguments (e.g. `contract.read.balanceOf(owner)`)
+
 **Optional Parameters**:
 - `value: int` - Wei for call context (default: `0`)
 - `gas: int` - Gas limit (default: `30_000_000`)
@@ -69,6 +73,8 @@ Sends standard `eth_sendTransaction` with unencrypted calldata.
 
 **Returns**: `HexBytes` (transaction hash)
 
+**Positional Arguments**: `*args` - ABI function arguments
+
 **Optional Parameters**:
 - `value: int` - Wei to send (default: `0`)
 - `**tx_params: Any` - Additional transaction parameters (gas, gasPrice, etc.)
@@ -79,13 +85,15 @@ Executes standard `eth_call` with unencrypted calldata. Result is ABI-decoded by
 
 **Returns**: `Any` (ABI-decoded Python value)
 
-**Optional Parameters**: None (pass positional arguments only)
+**Positional Arguments**: `*args` - ABI function arguments
 
 ### `.dwrite` - Debug Write
 
 Like `.write` but returns debug information including plaintext and encrypted views. **Transaction is actually broadcast**.
 
 **Returns**: [`DebugWriteResult`](../api-reference/transaction-types/debug-write-result.md)
+
+**Positional Arguments**: `*args` - ABI function arguments
 
 **Optional Parameters**: Same as `.write`
 
