@@ -1,118 +1,45 @@
 ---
-description: Built-in contract ABIs and helpers
+description: Built-in ABI constants and deposit helper functions
 icon: file-code
 ---
 
 # ABIs
 
-The Seismic Python SDK includes built-in ABIs for core protocol contracts and helper functions for common operations.
+The SDK exports protocol ABIs, genesis contract addresses, and deposit helper utilities.
 
-## Built-in ABIs
+## Constants
 
-| Constant | Description |
-|----------|-------------|
-| `SRC20_ABI` | Standard SRC20 token contract ABI |
-| `DEPOSIT_CONTRACT_ABI` | Deposit contract ABI for ETH/token deposits |
-| `DEPOSIT_CONTRACT_ADDRESS` | Canonical deposit contract address |
-| `DIRECTORY_ABI` | Viewing key directory contract ABI |
-| `DIRECTORY_ADDRESS` | Canonical directory contract address |
+| Constant | Type | Description |
+| --- | --- | --- |
+| [`SRC20_ABI`](src20-abi.md) | `list[dict]` | SRC20 token interface (7 functions, 2 events) |
+| [`DEPOSIT_CONTRACT_ABI`](deposit-contract.md) | `list[dict]` | Validator deposit contract (4 functions, 1 event) |
+| [`DEPOSIT_CONTRACT_ADDRESS`](deposit-contract.md) | `str` | `0x00000000219ab540356cBB839Cbe05303d7705Fa` |
+| [`DIRECTORY_ABI`](directory.md) | `list[dict]` | Viewing key directory (4 functions) |
+| [`DIRECTORY_ADDRESS`](directory.md) | `str` | `0x1000000000000000000000000000000000000004` |
 
 ## Helper Functions
 
-| Function | Description |
-|----------|-------------|
-| `compute_deposit_data_root()` | Compute merkle root for deposit data |
-| `make_withdrawal_credentials()` | Generate withdrawal credentials for deposits |
+| Function | Returns | Description |
+| --- | --- | --- |
+| [`compute_deposit_data_root`](compute-deposit-data-root.md) | `bytes` | SHA-256 SSZ hash tree root for deposit data |
+| [`make_withdrawal_credentials`](make-withdrawal-credentials.md) | `bytes` | 32-byte ETH1 withdrawal credentials from address |
 
-## Quick Examples
-
-### Using SRC20_ABI
+## Example
 
 ```python
-from seismic_web3 import SRC20_ABI, create_wallet_client
+import os
+from eth_abi import decode
+from seismic_web3 import PrivateKey, SEISMIC_TESTNET, SRC20_ABI
 
-w3 = create_wallet_client(...)
-token = w3.seismic.contract("0x...", SRC20_ABI)
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
+w3 = SEISMIC_TESTNET.wallet_client(pk)
 
-# Use shielded methods
-await token.write.transfer(recipient, amount)
-```
-
-### Using Deposit Contract
-
-```python
-from seismic_web3 import (
-    DEPOSIT_CONTRACT_ABI,
-    DEPOSIT_CONTRACT_ADDRESS,
-    create_wallet_client,
-)
-
-w3 = create_wallet_client(...)
-deposit_contract = w3.eth.contract(
-    address=DEPOSIT_CONTRACT_ADDRESS,
-    abi=DEPOSIT_CONTRACT_ABI,
-)
-
-# Query deposit count
-count = deposit_contract.functions.get_deposit_count().call()
-```
-
-### Using Directory Contract
-
-```python
-from seismic_web3 import (
-    DIRECTORY_ABI,
-    DIRECTORY_ADDRESS,
-    create_wallet_client,
-)
-
-w3 = create_wallet_client(...)
-directory = w3.eth.contract(
-    address=DIRECTORY_ADDRESS,
-    abi=DIRECTORY_ABI,
-)
-
-# Check if viewing key registered
-has_key = directory.functions.hasKey(user_address, token_address).call()
-```
-
-### Compute Deposit Data Root
-
-```python
-from seismic_web3 import compute_deposit_data_root
-
-# Prepare deposit data
-deposit_data = {
-    'pubkey': pubkey_bytes,
-    'withdrawal_credentials': withdrawal_creds,
-    'amount': amount_gwei,
-    'signature': signature_bytes,
-}
-
-# Compute root for verification
-root = compute_deposit_data_root(deposit_data)
-```
-
-### Make Withdrawal Credentials
-
-```python
-from seismic_web3 import make_withdrawal_credentials
-
-# Generate BLS withdrawal credentials
-withdrawal_creds = make_withdrawal_credentials(withdrawal_address)
-
-# Use in deposit
-w3.seismic.deposit(
-    pubkey=validator_pubkey,
-    withdrawal_credentials=withdrawal_creds,
-    signature=signature,
-    deposit_data_root=root,
-    value=32_000_000_000,  # 32 ETH in gwei
-)
+token = w3.seismic.contract("0x00000000219ab540356cBB839Cbe05303d7705Fa", SRC20_ABI)
+balance = decode(["uint256"], bytes(token.read.balanceOf()))[0]
 ```
 
 ## See Also
 
-- [SRC20 Documentation](../src20/) - SRC20 token standard
-- [Client Documentation](../client/) - Client creation
-- [Contract Documentation](../contract/) - Contract interaction patterns
+- [SRC20](../src20/) — SRC20 token usage guide
+- [Contract](../contract/) — Contract interaction patterns
+- [Namespaces](../namespaces/) — `w3.seismic` methods including `deposit`, `get_deposit_count`, `get_deposit_root`

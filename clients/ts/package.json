@@ -1,0 +1,59 @@
+{
+  "name": "seismic-client",
+  "private": true,
+  "workspaces": [
+    "packages/**",
+    "tests/**",
+    "docs"
+  ],
+  "type": "module",
+  "scripts": {
+    "clean": "rimraf packages/*/dist -g; rimraf tests/*/dist -g",
+    "check": "bun run typecheck && bun run lint",
+    "typecheck": "bun run viem:typecheck && bun run react:typecheck",
+    "lint": "bun run lint:eslint && bun run lint:prettier",
+    "lint:check": "bun run lint:eslint:check && bun run lint:prettier:check",
+    "lint:eslint": "eslint ./packages --fix; eslint ./tests --fix",
+    "lint:eslint:check": "eslint ./packages && eslint ./tests",
+    "lint:prettier": "prettier ./packages --write; prettier ./tests --write",
+    "lint:prettier:check": "prettier ./packages -c && prettier ./tests -c",
+    "docs:dev": "bun run --cwd docs dev",
+    "docs:build": "bun run --cwd docs build",
+    "docs:preview": "bun run --cwd docs preview",
+    "docs:twoslash": "bun run --cwd docs twoslash",
+    "all:build": "bun run viem:build; bun run react:build; bun run tests:build",
+    "viem:typecheck": "bun run --cwd packages/seismic-viem typecheck",
+    "viem:build": "bun run --cwd packages/seismic-viem build",
+    "viem:publish": "npm publish -w packages/seismic-viem",
+    "viem:test:anvil": "bun run --cwd tests/seismic-viem test:anvil",
+    "viem:test:reth": "bun run --cwd tests/seismic-viem test:reth",
+    "react:typecheck": "bun run viem:build && bun run --cwd packages/seismic-react typecheck",
+    "react:build": "bun run --cwd packages/seismic-react build",
+    "react:publish": "npm publish -w packages/seismic-react",
+    "tests:build": "bun run --cwd packages/seismic-viem-tests build",
+    "tests:publish": "npm publish -w packages/seismic-viem-tests"
+  },
+  "peerDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^5.2.1",
+    "@types/bun": "^1.1.14",
+    "@typescript-eslint/eslint-plugin": "^8.19.0",
+    "@typescript-eslint/parser": "^8.19.0",
+    "bun-types": "^1.1.42",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-mdx": "^3.1.5",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-mdx": "^3.1.5",
+    "eslint-plugin-no-relative-import-paths": "^1.5.5",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1",
+    "tsc-alias": "^1.8.10"
+  },
+  "dependencies": {
+    "caniuse-lite": "^1.0.30001751"
+  }
+}

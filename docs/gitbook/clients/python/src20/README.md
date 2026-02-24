@@ -1,70 +1,45 @@
 ---
-description: Privacy-preserving ERC20 tokens with shielded balances
+description: SRC20 token usage with shielded reads/writes
 icon: coins
 ---
 
-# SRC20 Tokens
+# SRC20
 
 SRC20 is Seismic's privacy-preserving ERC20. Balances and transfer amounts use shielded types (`suint256`), so they're hidden from external observers. The SDK ships with `SRC20_ABI` built in.
 
-```python
-from seismic_web3 import create_wallet_client, SRC20_ABI, PrivateKey
-
-w3 = create_wallet_client("http://127.0.0.1:8545", private_key=PrivateKey(...))
-
-token = w3.seismic.contract(address="0x...", abi=SRC20_ABI)
-```
-
-***
-
-### Metadata
-
-Token metadata isn't shielded, so you can use plain transparent reads:
+## Example
 
 ```python
-name = token.tread.name()         # b"TestToken"
-symbol = token.tread.symbol()     # b"TEST"
-decimals = token.tread.decimals() # b'\x12' (18)
-```
+import os
+from eth_abi import decode
+from seismic_web3 import PrivateKey, SEISMIC_TESTNET, SRC20_ABI
 
-***
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
+w3 = SEISMIC_TESTNET.wallet_client(pk)
 
-### Balances
+token = w3.seismic.contract("0x00000000219ab540356cBB839Cbe05303d7705Fa", SRC20_ABI)
 
-```python
-raw = token.read.balanceOf()
-balance = int.from_bytes(raw, "big")
-```
+# Transparent metadata reads
+name = decode(["string"], bytes(token.tread.name()))[0]
+symbol = decode(["string"], bytes(token.tread.symbol()))[0]
+decimals = decode(["uint8"], bytes(token.tread.decimals()))[0]
 
-{% hint style="warning" %}
-`balanceOf()` takes **no arguments**. The contract uses `msg.sender` internally, so you must use `.read` (a [signed read](signed-reads.md)) — not `.tread`. A plain `eth_call` zeros out the `from` field, which means the contract sees the zero address as the sender and returns its balance — which is almost certainly zero.
-{% endhint %}
+# Shielded balance read (signed read — uses msg.sender)
+balance = decode(["uint256"], bytes(token.read.balanceOf()))[0]
 
-***
-
-### Approvals
-
-Approve a spender to transfer tokens on your behalf, then have them call `transferFrom`:
-
-```python
-# Approve
-tx_hash = token.write.approve("0xSpender...", 500)
+# Shielded transfer
+tx_hash = token.write.transfer("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", 100)
 w3.eth.wait_for_transaction_receipt(tx_hash)
-
-# Check allowance — transparent read, no signed read needed
-raw = token.tread.allowance("0xOwner...", "0xSpender...")
-allowance = int.from_bytes(raw, "big")
 ```
 
-***
+## Notes
 
-### Transfers
+- `balanceOf()` in `SRC20_ABI` takes **no address argument** — the contract uses `msg.sender` internally, so you must use `.read` (a signed read), not `.tread`
+- Use `.read` for shielded reads and `.write` for shielded writes
+- Use `.tread` for transparent metadata reads (`name`, `symbol`, `decimals`, `allowance`)
 
-```python
-# Direct transfer
-tx_hash = token.write.transfer("0xRecipient...", 100)
-receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+## See Also
 
-# Transfer on behalf of owner (called by the approved spender)
-tx_hash = token.write.transferFrom("0xOwner...", "0xRecipient...", 100)
-```
+- [Event Watching](event-watching/) — Watch and decrypt SRC20 Transfer/Approval events
+- [Types](types/) — Decrypted event data structures
+- [Intelligence Providers](intelligence-providers/) — Viewing key management

@@ -20,11 +20,11 @@ contract Directory is IDirectory {
     }
 
     function checkHasKey(address _addr) public view returns (bool) {
-        return keys[_addr] != suint256(0);
+        return bool(keys[_addr] != suint256(0));
     }
 
     function keyHash(address to) public view returns (bytes32) {
-        return keccak256(abi.encodePacked(keys[to]));
+        return keccak256(abi.encodePacked(uint256(keys[to])));
     }
 
     function encrypt(address to, bytes memory _plaintext) public returns (bytes memory) {
