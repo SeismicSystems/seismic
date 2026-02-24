@@ -1,4 +1,4 @@
-name: CI
+name: Typescript Client
 
 on:
   push:
