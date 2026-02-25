@@ -68,7 +68,7 @@ cargo run --bin seismic-reth -- node \
   ${usage_quiet:+--quiet}
 """
 
-[tasks."reth::start-local-patch"]
+[tasks."sreth::start-local-patch"]
 description = "Build and start seismic-reth with local cargo patches"
 depends = ["cargo::local-patches::on"]
 depends_post = ["cargo::local-patches::off"]
@@ -77,21 +77,21 @@ usage = '''
 flag "--port <port>" help="HTTP and WS port" default="8545"
 flag "-q --quiet" help="Silence all log output"
 '''
-run = "mise run reth::start-local --port ${usage_port} ${usage_quiet:+--quiet}"
+run = "mise run sreth::start-local --port ${usage_port} ${usage_quiet:+--quiet}"
 
-# Start reth in the background using pitchfork (see command in forkpitch.toml).
+# Start sreth in the background using pitchfork (see command in forkpitch.toml).
 # This is useful for running tests that need a running node.
-[tasks."reth::start-bg"]
+[tasks."sreth::start-bg"]
 description = "Start seismic-reth in background via pitchfork (blocks until ready)"
-run = "pitchfork start reth"
-
-[tasks."reth::stop-bg"]
-description = "Stop background seismic-reth started by reth::start-bg"
-run = "pitchfork stop reth"
+run = "pitchfork start sreth"
+  
+[tasks."sreth::stop-bg"]
+description = "Stop background seismic-reth started by sreth::start-bg"
+run = "pitchfork stop sreth"
 
 # sanvil tasks
 
-[tasks."anvil::start"]
+[tasks."sanvil::start"]
 description = "Start sanvil (Seismic Anvil) in dev mode"
 raw = true
 usage = '''
@@ -100,7 +100,7 @@ flag "-q --quiet" help="Silence all log output"
 '''
 run = "sanvil --port ${usage_port} ${usage_quiet:+--silent}"
 
-[tasks."anvil::start-local"]
+[tasks."sanvil::start-local"]
 description = "Build and start sanvil from local seismic-foundry"
 dir = "{{config_root}}/../seismic-foundry"
 raw = true
@@ -110,7 +110,7 @@ flag "-q --quiet" help="Silence all log output"
 '''
 run = "cargo run -p anvil -- --port ${usage_port} ${usage_quiet:+--silent}"
 
-[tasks."anvil::start-local-patch"]
+[tasks."sanvil::start-local-patch"]
 description = "Build and start sanvil with local cargo patches"
 depends = ["cargo::local-patches::on"]
 depends_post = ["cargo::local-patches::off"]
@@ -119,12 +119,12 @@ usage = '''
 flag "--port <port>" help="HTTP and WS port" default="8545"
 flag "-q --quiet" help="Silence all log output"
 '''
-run = "mise run anvil::start-local --port ${usage_port} ${usage_quiet:+--quiet}"
+run = "mise run sanvil::start-local --port ${usage_port} ${usage_quiet:+--quiet}"
 
-[tasks."anvil::start-bg"]
+[tasks."sanvil::start-bg"]
 description = "Start sanvil in background via pitchfork (blocks until ready)"
 run = "pitchfork start sanvil"
 
-[tasks."anvil::stop-bg"]
-description = "Stop background sanvil started by anvil::start-bg"
+[tasks."sanvil::stop-bg"]
+description = "Stop background sanvil started by sanvil::start-bg"
 run = "pitchfork stop sanvil"
