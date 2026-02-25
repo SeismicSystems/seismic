@@ -1,3 +1,6 @@
+# Pitchfork is a minimal process manager that we use for managing test dependencies.
+# It's installed and used by mise.toml tasks.
+
 [daemons.sanvil]
 run = "sanvil --port 8545"
 ready_port = 8545
