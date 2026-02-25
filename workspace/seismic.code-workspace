@@ -26,6 +26,9 @@
 			"path": "../../seismic-trie"
 		},
 		{
+			"path": "../../enclave"
+		},
+		{
 			"path": "../../seismic-foundry"
 		},
 		{

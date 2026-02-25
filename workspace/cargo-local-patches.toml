@@ -56,3 +56,8 @@ alloy-seismic-evm = { path = "./seismic-evm/crates/seismic-evm" }
 
 # seismic-foundry-fork-db
 foundry-fork-db = { path = "./seismic-foundry-fork-db" }
+
+# enclave
+seismic-enclave = { path = "./enclave/crates/enclave" }
+seismic-enclave-server = { path = "./enclave/crates/enclave-server" }
+enclave-contract = { path = "./enclave/crates/enclave-contract" }
