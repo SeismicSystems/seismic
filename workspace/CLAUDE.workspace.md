@@ -47,7 +47,8 @@ seismic/                          # parent directory
 ├── seismic-foundry/              # dev tools: sforge, sanvil, scast (fork of foundry)
 ├── seismic-foundry-fork-db/      # fork DB with FlaggedStorage (fork of foundry-fork-db)
 ├── seismic-compilers/            # compiler integration for sforge (fork of foundry-compilers)
-└── seismic-solidity/             # Solidity compiler with shielded types (fork of solidity)
+├── enclave/                      # TEE enclave server and contracts
+├── seismic-solidity/             # Solidity compiler with shielded types (fork of solidity)
 ```
 
 ## Working Across Repos
