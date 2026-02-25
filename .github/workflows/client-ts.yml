@@ -33,7 +33,7 @@ jobs:
       - uses: jdx/mise-action@v2
       - run: mise run build
 
-  test-anvil:
+  test-sanvil:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

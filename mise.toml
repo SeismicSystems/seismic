@@ -14,14 +14,24 @@ ssolc = { version = "tmp-audit-fixes", bin = "ssolc" }
 # Used by clients/ts/
 bun = "1.3.9"
 
+# Process manager used to manage background daemons for testing (e.g. sanvil, sreth)
+pitchfork = "latest"
+
 [tool_alias]
 sfoundry = "github:SeismicSystems/seismic-foundry"
 ssolc = "github:SeismicSystems/seismic-solidity"
+
+###################################### TASKS ####################################
 
 [tasks."git::print-branches"]
 description = "Print the current git branch for each seismic repository"
 dir = "{{config_root}}/.."
 run = "for dir in */; do [ -d \"$dir/.git\" ] && printf '%-35s %s\\n' \"$dir\" \"$(git -C \"$dir\" branch --show-current)\"; done"
+
+# cargo patches tasks - these are useful for testing changes to multiple repos at once.
+# When turned on, workspace/cargo-local-patches.toml is symlinked to ../.cargo/config.toml, 
+# which causes all cargo builds in any sibling repo to resolve dependencies from the local checkouts instead of github.
+# You can then run tests against these local changes before pushing to the various repositories and opening PRs.
 
 [tasks."cargo::local-patches::status"]
 description = "Check if local cargo patches symlink is active"
@@ -37,3 +47,84 @@ run = "rm -f .cargo/config.toml && ln -s ../seismic/workspace/cargo-local-patche
 description = "Remove local cargo patches symlink"
 dir = "{{config_root}}/.."
 run = "rm -f .cargo/config.toml && echo 'Local patches OFF: .cargo/config.toml removed'"
+
+# sreth tasks
+
+[tasks."sreth::start-local"]
+description = "Build and start seismic-reth in dev mode"
+dir = "{{config_root}}/../seismic-reth"
+raw = true
+usage = '''
+flag "--port <port>" help="HTTP and WS port" default="8545"
+flag "-q --quiet" help="Silence all log output"
+'''
+run = """
+cargo run --bin seismic-reth -- node \
+  --dev \
+  --dev.block-time 2s \
+  --http --http.port ${usage_port} \
+  --ws --ws.port ${usage_port} \
+  --enclave.mock-server \
+  ${usage_quiet:+--quiet}
+"""
+
+[tasks."sreth::start-local-patch"]
+description = "Build and start seismic-reth with local cargo patches"
+depends = ["cargo::local-patches::on"]
+depends_post = ["cargo::local-patches::off"]
+raw = true
+usage = '''
+flag "--port <port>" help="HTTP and WS port" default="8545"
+flag "-q --quiet" help="Silence all log output"
+'''
+run = "mise run sreth::start-local --port ${usage_port} ${usage_quiet:+--quiet}"
+
+# Start sreth in the background using pitchfork (see command in forkpitch.toml).
+# This is useful for running tests that need a running node.
+[tasks."sreth::start-bg"]
+description = "Start seismic-reth in background via pitchfork (blocks until ready)"
+run = "pitchfork start sreth"
+  
+[tasks."sreth::stop-bg"]
+description = "Stop background seismic-reth started by sreth::start-bg"
+run = "pitchfork stop sreth"
+
+# sanvil tasks
+
+[tasks."sanvil::start"]
+description = "Start sanvil (Seismic Anvil) in dev mode"
+raw = true
+usage = '''
+flag "--port <port>" help="HTTP and WS port" default="8545"
+flag "-q --quiet" help="Silence all log output"
+'''
+run = "sanvil --port ${usage_port} ${usage_quiet:+--silent}"
+
+[tasks."sanvil::start-local"]
+description = "Build and start sanvil from local seismic-foundry"
+dir = "{{config_root}}/../seismic-foundry"
+raw = true
+usage = '''
+flag "--port <port>" help="HTTP and WS port" default="8545"
+flag "-q --quiet" help="Silence all log output"
+'''
+run = "cargo run -p anvil -- --port ${usage_port} ${usage_quiet:+--silent}"
+
+[tasks."sanvil::start-local-patch"]
+description = "Build and start sanvil with local cargo patches"
+depends = ["cargo::local-patches::on"]
+depends_post = ["cargo::local-patches::off"]
+raw = true
+usage = '''
+flag "--port <port>" help="HTTP and WS port" default="8545"
+flag "-q --quiet" help="Silence all log output"
+'''
+run = "mise run sanvil::start-local --port ${usage_port} ${usage_quiet:+--quiet}"
+
+[tasks."sanvil::start-bg"]
+description = "Start sanvil in background via pitchfork (blocks until ready)"
+run = "pitchfork start sanvil"
+
+[tasks."sanvil::stop-bg"]
+description = "Stop background sanvil started by sanvil::start-bg"
+run = "pitchfork stop sanvil"
