@@ -4,6 +4,12 @@ Bun monorepo containing TypeScript client libraries for the [Seismic blockchain]
 
 ## Build
 
+### Mise
+
+If you use mise, all you need is `mise install` which will install all the dependencies. cd'ing into this directory will automatically build the packages as well. You can also run `mise run build` to explicitly trigger a build.
+
+### No Mise
+
 Requires **Bun >=1.2.5**.
 
 ```bash
@@ -42,18 +48,36 @@ Note: `react:typecheck` rebuilds seismic-viem first (it depends on the built typ
 
 ## Tests
 
-### Integration tests (require external tooling)
+### Integration tests (require a running node)
 
-Tests live in `tests/seismic-viem/` and require a running Seismic node. Two modes:
+Tests live in `tests/seismic-viem/` and connect to an already-running node. The test runner auto-detects the chain from `eth_chainId`.
+
+**Quick start** (mise starts the node for you):
 
 ```bash
-bun run viem:test:anvil  # CHAIN=anvil — needs sanvil (from sfoundryup)
-bun run viem:test:reth   # CHAIN=reth  — needs seismic-reth binary
+mise run test::anvil   # starts sanvil, runs tests, stops sanvil
+mise run test::reth    # builds & starts reth, runs tests, stops reth
 ```
+
+**Manual** (start a node yourself, then run tests):
+
+```bash
+# Terminal 1: start a node
+sanvil                    # or: mise run anvil::start (from seismic/ root)
+
+# Terminal 2: run tests
+bun run viem:test         # connects to http://127.0.0.1:8545 by default
+```
+
+**Environment variables**:
+- `RPC_URL` — HTTP RPC URL (default: `http://127.0.0.1:8545`)
+- `WS_URL` — WebSocket URL (default: derived from `RPC_URL` by replacing `http` with `ws`)
 
 **Anvil tests** require `sanvil` on PATH (install via `mise` or `sfoundryup`).
 
-**Reth tests** require `SRETH_ROOT` pointing to a [seismic-reth](https://github.com/SeismicSystems/seismic-reth) checkout.
+**Reth tests** require `SRETH_ROOT` pointing to a [seismic-reth](https://github.com/SeismicSystems/seismic-reth) checkout (or defaulting to `../../seismic-reth`).
+
+> **Note**: The `seismic-viem-tests` package still exports process management functions (`setupNode`, `buildNode`, etc.) for backward compatibility with seismic-reth and seismic-foundry. These are deprecated and will be removed in a future version.
 
 ### Docs
 
