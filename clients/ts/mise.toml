@@ -1,0 +1,61 @@
+[hooks]
+enter = "bun install"
+
+########## TASKS ##########
+
+[tasks.ci]
+description = "Run all CI checks (lint, typecheck, build, test)"
+run = [
+    { tasks = [
+        "lint::check",
+        "typecheck",
+        # we run the build separately even though test::* tasks also build, just for clarity and visibility.
+        "build",
+        "test::anvil",
+    ] },
+    # TODO(samlaf): anvil and reth both use port 8545, so they step on each other's toes.
+    # We should make them use different ports (or even better use os assigned ports) 
+    # so we can run them in parallel and speed up CI.
+    { task = "test::reth" },
+]
+
+[tasks.clean]
+description = "Remove all dist/ directories"
+run = "bun run clean"
+
+[tasks."lint"]
+description = "Run ESLint + Prettier with auto-fix"
+depends = ["install"]
+run = "bun run lint"
+
+[tasks."lint::check"]
+description = "Run ESLint + Prettier check (no auto-fix)"
+depends = ["install"]
+run = "bun run lint:check"
+
+[tasks.typecheck]
+description = "Type-check all packages"
+depends = ["install"]
+run = "bun run typecheck"
+
+[tasks.build]
+description = "Build all packages (viem, react, tests)"
+depends = ["install"]
+run = "bun run all:build"
+
+[tasks."test::anvil"]
+description = "Run integration tests against sanvil"
+depends = ["build"]
+run = "bun run viem:test:anvil"
+
+[tasks."test::reth"]
+description = "Run integration tests against seismic-reth"
+depends = ["build"]
+run = "bun run viem:test:reth"
+
+########## HIDDEN HELPER TASKS ##########
+
+[tasks.install]
+hide = true
+description = "Install JS dependencies"
+run = "bun install"
