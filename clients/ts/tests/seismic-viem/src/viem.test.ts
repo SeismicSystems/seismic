@@ -1,24 +1,21 @@
-import { afterAll, beforeAll, describe, test } from 'bun:test'
+import { beforeAll, describe, test } from 'bun:test'
 import { Chain } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
-import {
-  buildNode,
-  envChain,
-  loadDotenv,
-  setupNode,
-  testSeismicTx,
-} from '@sviem-tests/index.ts'
+import { connectToNode } from '@sviem-tests/connect.ts'
 import { testAesKeygen } from '@sviem-tests/tests/aesKeygen.ts'
+import { testSeismicTx } from '@sviem-tests/tests/contract/contract.ts'
 import { testDepositContract } from '@sviem-tests/tests/contract/depositContract.ts'
 import { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'
-import { testRng } from '@sviem-tests/tests/precompiles.ts'
-import { testHkdfHex } from '@sviem-tests/tests/precompiles.ts'
-import { testAesGcm } from '@sviem-tests/tests/precompiles.ts'
-import { testSecp256k1 } from '@sviem-tests/tests/precompiles.ts'
-import { testHkdfString } from '@sviem-tests/tests/precompiles.ts'
-import { testEcdh } from '@sviem-tests/tests/precompiles.ts'
-import { testRngWithPers } from '@sviem-tests/tests/precompiles.ts'
+import {
+  testAesGcm,
+  testEcdh,
+  testHkdfHex,
+  testHkdfString,
+  testRng,
+  testRngWithPers,
+  testSecp256k1,
+} from '@sviem-tests/tests/precompiles.ts'
 import {
   testLegacyTxTrace,
   testSeismicTxTrace,
@@ -55,21 +52,17 @@ const account = privateKeyToAccount(TEST_ACCOUNT_PRIVATE_KEY)
 let chain: Chain
 let url: string
 let wsUrl: string
-let port: number
-let exitProcess: () => Promise<void>
 
 beforeAll(async () => {
-  loadDotenv()
-  chain = envChain()
-  port = 8545
-  await buildNode(chain)
-  const node = await setupNode(chain, {
-    port,
-    ws: true,
-  })
-  exitProcess = node.exitProcess
-  url = node.url
-  wsUrl = `ws://localhost:${port}`
+  try {
+    const conn = await connectToNode()
+    chain = conn.chain
+    url = conn.url
+    wsUrl = conn.wsUrl
+  } catch (e) {
+    console.error('Setup failed:', e)
+    process.exit(1)
+  }
 })
 
 describe('Seismic Contract', async () => {
@@ -312,8 +305,4 @@ describe('Transaction Trace', async () => {
     },
     { timeout: TIMEOUT_MS }
   )
-})
-
-afterAll(async () => {
-  await exitProcess()
 })

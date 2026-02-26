@@ -11,12 +11,12 @@ run = [
         "typecheck",
         # we run the build separately even though test::* tasks also build, just for clarity and visibility.
         "build",
-        "test::anvil",
+        "test::sanvil",
     ] },
-    # TODO(samlaf): anvil and reth both use port 8545, so they step on each other's toes.
-    # We should make them use different ports (or even better use os assigned ports) 
+    # TODO(samlaf): sanvil and sreth both use port 8545, so they step on each other's toes.
+    # We should make them use different ports (or even better use os assigned ports)
     # so we can run them in parallel and speed up CI.
-    { task = "test::reth" },
+    { task = "test::sreth" },
 ]
 
 [tasks.clean]
@@ -43,15 +43,25 @@ description = "Build all packages (viem, react, tests)"
 depends = ["install"]
 run = "bun run all:build"
 
-[tasks."test::anvil"]
-description = "Run integration tests against sanvil"
+# Useful if you want to run the test suite against a remote running node (e.g. testnet).
+[tasks."test::remote-node"]
+description = "Run integration tests (assumes a node is already running on RPC_URL or localhost:8545)"
 depends = ["build"]
-run = "bun run viem:test:anvil"
+run = "bun run viem:test"
 
-[tasks."test::reth"]
-description = "Run integration tests against seismic-reth"
-depends = ["build"]
-run = "bun run viem:test:reth"
+[tasks."test::sanvil"]
+description = "Start sanvil, run integration tests, then stop sanvil"
+depends = ["build", "sanvil::start-bg"]
+depends_post = ["sanvil::stop-bg"]
+raw = true
+run = "bun run viem:test"
+
+[tasks."test::sreth"]
+description = "Start seismic-reth, run integration tests, then stop sreth"
+depends = ["build", "sreth::start-bg"]
+depends_post = ["sreth::stop-bg"]
+raw = true
+run = "bun run viem:test"
 
 ########## HIDDEN HELPER TASKS ##########
 

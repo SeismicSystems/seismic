@@ -5,12 +5,9 @@
   "scripts": {
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
-    "test:anvil": "CHAIN=anvil bun test",
-    "test:reth": "CHAIN=reth bun test"
+    "test": "bun test"
   },
   "devDependencies": {
-    "dotenv": "^16.4.7",
-    "terminate": "^2.8.0",
     "viem": "2.x",
     "seismic-viem": "workspace:*",
     "seismic-viem-tests": "workspace:*"
