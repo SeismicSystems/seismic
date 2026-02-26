@@ -83,11 +83,11 @@ run = "mise run sreth::start-local --port ${usage_port} ${usage_quiet:+--quiet}"
 # This is useful for running tests that need a running node.
 [tasks."sreth::start-bg"]
 description = "Start seismic-reth in background via pitchfork (blocks until ready)"
-run = "pitchfork start sreth"
-  
+run = "pitchfork start sreth-local"
+
 [tasks."sreth::stop-bg"]
 description = "Stop background seismic-reth started by sreth::start-bg"
-run = "pitchfork stop sreth"
+run = "pitchfork stop sreth-local"
 
 # sanvil tasks
 
