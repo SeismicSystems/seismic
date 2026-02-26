@@ -42,13 +42,20 @@ jobs:
 
   test-sreth:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: seismic
     steps:
       - uses: actions/checkout@v6
+        with:
+          path: seismic
       # We checkout the seismic-reth repo as a sibling repo. `mise run test::sreth` has this hardcoded requirement for now
       # as it starts reth by cd'ing into ../seismic-reth and running `cargo run ...`
       - uses: actions/checkout@v6
         with:
           repository: seismic-systems/seismic-reth
-          path: ../seismic-reth
+          path: seismic-reth
       - uses: jdx/mise-action@v2
+        with:
+          working_directory: seismic
       - run: mise run test::sreth
