@@ -26,7 +26,7 @@ const deriveWsUrl = (httpUrl: string): string => {
  * @throws If the node is unreachable or returns an unknown chain ID.
  */
 export const connectToNode = async (
-  rpcUrl?: string,
+  rpcUrl?: string
 ): Promise<NodeConnection> => {
   const url = rpcUrl ?? process.env.RPC_URL ?? 'http://127.0.0.1:8545'
 
@@ -47,7 +47,7 @@ export const connectToNode = async (
   } catch (e) {
     throw new Error(
       `Could not reach node at ${url}. Start a node first (e.g. mise run anvil::start).`,
-      { cause: e },
+      { cause: e }
     )
   }
 
@@ -57,7 +57,7 @@ export const connectToNode = async (
       `Unknown chain ID ${chainId} from node at ${url}. ` +
         `Supported: ${Object.entries(chainById)
           .map(([id, c]) => `${id} (${c.name})`)
-          .join(', ')}`,
+          .join(', ')}`
     )
   }
 
