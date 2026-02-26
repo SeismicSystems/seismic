@@ -55,11 +55,17 @@ jobs:
       - uses: jdx/mise-action@v2
         with:
           working_directory: seismic
+
+      # `mise run test::sreth` below starts reth in the background using `cargo run`,
+      # so we cache the built binary to speed up the workflow.
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: seismic-reth -> target
+      # Explicitly build first because `mise run` will timeout after 60 seconds, and building reth
+      # can take longer than that, especially on the first run when the cargo registry cache is cold.
       - run: cargo build --bin seismic-reth
         working-directory: seismic-reth
+
       - run: mise run test::sreth
         working-directory: seismic/clients/ts
