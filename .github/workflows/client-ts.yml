@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: seismic
+        working-directory: seismic/clients/ts
     steps:
       - uses: actions/checkout@v6
         with:
