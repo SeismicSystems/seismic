@@ -53,7 +53,7 @@ jobs:
       # as it starts reth by cd'ing into ../seismic-reth and running `cargo run ...`
       - uses: actions/checkout@v6
         with:
-          repository: seismic-systems/seismic-reth
+          repository: SeismicSystems/seismic-reth
           path: seismic-reth
       - uses: jdx/mise-action@v2
         with:
