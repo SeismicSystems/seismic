@@ -42,9 +42,6 @@ jobs:
 
   test-sreth:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: seismic/clients/ts
     steps:
       - uses: actions/checkout@v6
         with:
@@ -58,4 +55,11 @@ jobs:
       - uses: jdx/mise-action@v2
         with:
           working_directory: seismic
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: seismic-reth -> target
+      - run: cargo build --bin seismic-reth
+        working-directory: seismic-reth
       - run: mise run test::sreth
+        working-directory: seismic/clients/ts
