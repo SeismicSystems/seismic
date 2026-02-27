@@ -56,17 +56,25 @@ dir = "{{config_root}}/../seismic-reth"
 raw = true
 usage = '''
 flag "--port <port>" help="HTTP and WS port" default="8545"
+flag "--chain <chain>" help="Path to chain genesis file (relative to ../seismic-reth)" default="crates/seismic/chainspec/res/genesis/dev.json"
 flag "-q --quiet" help="Silence all log output"
 '''
+# TODO(samlaf): figure out a better way to manage the data dir for local development.
+# We could create a depends task that uses the reth db cli (https://reth.rs/cli/reth/db/drop)
+# to drop the db after use, but right now seismic-reth doesn't have the db cli, so we'd need to compile
+# the reth binary just to drop the db...
 run = """
+rm -rf /tmp/seismic-reth-dev
 cargo run --bin seismic-reth -- node \
   --dev \
   --dev.block-time 2s \
+  --chain ${usage_chain} \
+  --datadir /tmp/seismic-reth-dev \
   --http --http.port ${usage_port} \
   --ws --ws.port ${usage_port} \
   --enclave.mock-server \
   ${usage_quiet:+--quiet}
-"""
+  """
 
 [tasks."sreth::start-local-patch"]
 description = "Build and start seismic-reth with local cargo patches"
@@ -75,9 +83,10 @@ depends_post = ["cargo::local-patches::off"]
 raw = true
 usage = '''
 flag "--port <port>" help="HTTP and WS port" default="8545"
+flag "--chain <chain>" help="Path to chain genesis file (relative to ../seismic-reth)" default="crates/seismic/chainspec/res/genesis/dev.json"
 flag "-q --quiet" help="Silence all log output"
 '''
-run = "mise run sreth::start-local --port ${usage_port} ${usage_quiet:+--quiet}"
+run = "mise run sreth::start-local --port ${usage_port} --chain ${usage_chain} ${usage_quiet:+--quiet}"
 
 # Start sreth in the background using pitchfork (see command in forkpitch.toml).
 # This is useful for running tests that need a running node.
@@ -128,3 +137,18 @@ run = "pitchfork start sanvil"
 [tasks."sanvil::stop-bg"]
 description = "Stop background sanvil started by sanvil::start-bg"
 run = "pitchfork stop sanvil"
+
+# scast tasks
+
+[tasks."scast::local"]
+description = "Build and run scast from local seismic-foundry"
+dir = "{{config_root}}/../seismic-foundry"
+raw = true
+run = "cargo run -p cast -- {{arg(name=\"args\", var=true, required=false)}}"
+
+[tasks."scast::local-patch"]
+description = "Build and run scast with local cargo patches"
+depends = ["cargo::local-patches::on"]
+depends_post = ["cargo::local-patches::off"]
+raw = true
+run = "mise run scast::local -- {{arg(name=\"args\", var=true, required=false)}}"

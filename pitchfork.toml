@@ -2,10 +2,9 @@
 # It's installed and used by mise.toml tasks.
 
 [daemons.sanvil]
-run = "sanvil --port 8545"
+run = "mise run sanvil::start --port 8545"
 ready_port = 8545
 
 [daemons.sreth-local]
-run = "cargo run --bin seismic-reth -- node --dev --dev.block-time 2s --http --http.port 8545 --ws --ws.port 8545 --enclave.mock-server"
-dir = "../seismic-reth"
+run = "mise run sreth::start-local --port 8545"
 ready_port = 8545
