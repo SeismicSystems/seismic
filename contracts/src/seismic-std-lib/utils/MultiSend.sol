@@ -23,7 +23,15 @@ contract MultiSendCallOnly {
      * @notice This method is payable as delegatecalls keep the msg.value from the previous call
      *         If the calling method (e.g. execTransaction) received ETH this would revert otherwise
      */
-    function multiSend(bytes memory transactions) public payable {
+    function multiSend(bytes memory transactions) public payable virtual {
+        _multiSend(transactions);
+    }
+
+    /**
+     * @dev Internal implementation of multiSend. Derived contracts should call this
+     *      directly when they need to bypass access-control on the public entry point.
+     */
+    function _multiSend(bytes memory transactions) internal {
         /* solhint-disable no-inline-assembly */
         assembly {
             let length := mload(transactions)

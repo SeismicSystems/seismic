@@ -84,6 +84,17 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallO
     }
 
     ////////////////////////////////////////////////////////////////////////
+    // Execution Override
+    ////////////////////////////////////////////////////////////////////////
+
+    /// @notice Restricts direct multiSend calls to the contract itself.
+    /// @dev Prevents unauthorized third parties from executing arbitrary calls as this EOA.
+    ///      Internal execution paths in execute() call _multiSend() directly.
+    function multiSend(bytes memory transactions) public payable override onlySelf {
+        _multiSend(transactions);
+    }
+
+    ////////////////////////////////////////////////////////////////////////
     // Key Management
     ////////////////////////////////////////////////////////////////////////
 
@@ -186,7 +197,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallO
             } else {
                 executionData = CryptoUtils.decrypt($.aesKey, nonce, calls);
             }
-            multiSend(executionData);
+            _multiSend(executionData);
         } else {
             Key storage S = $.keys[idx - 1];
             require(S.expiry > block.timestamp, "key expired");
@@ -210,7 +221,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallO
             }
 
             S.nonce++;
-            multiSend(executionData);
+            _multiSend(executionData);
         }
     }
 
