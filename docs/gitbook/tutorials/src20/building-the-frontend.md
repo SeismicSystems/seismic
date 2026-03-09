@@ -34,12 +34,12 @@ The `ShieldedWalletProvider` wraps your application and provides the shielded wa
 import { ShieldedWalletProvider } from "seismic-react";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { seismicDevnet } from "seismic-viem/chains";
+import { seismicTestnet } from "seismic-viem";
 
 const config = createConfig({
-  chains: [seismicDevnet],
+  chains: [seismicTestnet],
   transports: {
-    [seismicDevnet.id]: http("https://rpc-devnet.seismic.systems"),
+    [seismicTestnet.id]: http("https://gcp-1.seismictest.net/rpc"),
   },
 });
 
@@ -49,7 +49,7 @@ function App() {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <ShieldedWalletProvider>
+        <ShieldedWalletProvider config={config}>
           <TokenDashboard />
         </ShieldedWalletProvider>
       </QueryClientProvider>
@@ -84,24 +84,30 @@ This hook returns a contract instance bound to the currently connected shielded 
 
 ## Reading balance (signed read)
 
-Use the `useShieldedRead` hook to query the user's balance. This sends a signed read under the hood, so the contract can verify `msg.sender` and the response is encrypted:
+Use the `useSignedReadContract` hook to query the user's balance. This sends a signed read under the hood, so the contract can verify `msg.sender` and the response is encrypted:
 
 ```typescript
-import { useShieldedRead } from 'seismic-react';
+import { useSignedReadContract } from 'seismic-react';
 import { useAccount } from 'wagmi';
+import { useEffect, useState } from 'react';
 import { formatEther } from 'viem';
 
 function BalanceDisplay() {
   const { address } = useAccount();
+  const [balance, setBalance] = useState<bigint | null>(null);
 
-  const { data: balance, isLoading, error } = useShieldedRead({
+  const { signedRead, isLoading, error } = useSignedReadContract({
     address: SRC20_ADDRESS,
     abi: src20Abi,
-    functionName: 'getBalance',
+    functionName: 'balanceOf',
     args: [address],
-    // Automatically refetches when a new block is produced
-    watch: true,
   });
+
+  useEffect(() => {
+    if (signedRead) {
+      signedRead().then(setBalance);
+    }
+  }, [signedRead]);
 
   if (isLoading) return <p>Loading balance...</p>;
   if (error) return <p>Error loading balance</p>;
@@ -115,14 +121,14 @@ function BalanceDisplay() {
 }
 ```
 
-The `useShieldedRead` hook handles the full signed-read flow: signing the request with the user's key, sending it to `eth_call`, and decrypting the encrypted response. From the component's perspective, it behaves like a standard `useReadContract` from wagmi.
+The `useSignedReadContract` hook handles the full signed-read flow: signing the request with the user's key, sending it to `eth_call`, and decrypting the encrypted response. It returns a `signedRead` function that you call imperatively to perform the read.
 
 ## Transferring tokens (shielded write)
 
-Use the `useShieldedWrite` hook to send a shielded transfer. The calldata is encrypted before leaving the user's machine:
+Use the `useShieldedWriteContract` hook to send a shielded transfer. The calldata is encrypted before leaving the user's machine:
 
 ```typescript
-import { useShieldedWrite } from 'seismic-react';
+import { useShieldedWriteContract } from 'seismic-react';
 import { parseEther } from 'viem';
 import { useState } from 'react';
 
@@ -130,14 +136,13 @@ function TransferForm() {
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
 
-  const { write: transfer, isLoading, isSuccess, error } = useShieldedWrite({
-    address: SRC20_ADDRESS,
-    abi: src20Abi,
-    functionName: 'transfer',
-  });
+  const { writeContract, isLoading, error, hash } = useShieldedWriteContract();
 
   const handleTransfer = () => {
-    transfer({
+    writeContract({
+      address: SRC20_ADDRESS,
+      abi: src20Abi,
+      functionName: 'transfer',
       args: [recipient, parseEther(amount)],
     });
   };
@@ -160,7 +165,7 @@ function TransferForm() {
       <button onClick={handleTransfer} disabled={isLoading}>
         {isLoading ? 'Sending...' : 'Transfer'}
       </button>
-      {isSuccess && <p>Transfer successful.</p>}
+      {hash && <p>Transfer submitted: {hash}</p>}
       {error && <p>Error: {error.message}</p>}
     </div>
   );
@@ -181,81 +186,7 @@ The user sees a standard wallet confirmation prompt. The privacy is handled tran
 
 If your contract uses encrypted events (from the [Encrypted Events](encrypted-events.md) chapter), you can listen for them and decrypt the amounts off-chain:
 
-```typescript
-import { useEffect, useState } from 'react';
-import { parseAbiItem } from 'viem';
-import { usePublicClient } from 'wagmi';
-import { decryptEventData } from 'seismic-viem';
-
-interface TransferEvent {
-  from: string;
-  to: string;
-  amount: string;
-  blockNumber: bigint;
-}
-
-function TransactionHistory({ userPrivateKey, contractPublicKey }: {
-  userPrivateKey: `0x${string}`;
-  contractPublicKey: `0x${string}`;
-}) {
-  const publicClient = usePublicClient();
-  const [transfers, setTransfers] = useState<TransferEvent[]>([]);
-
-  useEffect(() => {
-    async function fetchEvents() {
-      const logs = await publicClient.getLogs({
-        address: SRC20_ADDRESS,
-        event: parseAbiItem(
-          'event Transfer(address indexed from, address indexed to, bytes encryptedAmount)'
-        ),
-        fromBlock: 0n,
-      });
-
-      const decrypted: TransferEvent[] = [];
-
-      for (const log of logs) {
-        try {
-          const amount = await decryptEventData({
-            encryptedData: log.args.encryptedAmount,
-            privateKey: userPrivateKey,
-            contractPublicKey,
-            context: 'src20-transfer-event',
-          });
-
-          decrypted.push({
-            from: log.args.from,
-            to: log.args.to,
-            amount: formatEther(amount),
-            blockNumber: log.blockNumber,
-          });
-        } catch {
-          // Could not decrypt -- this event was not encrypted for us
-        }
-      }
-
-      setTransfers(decrypted);
-    }
-
-    fetchEvents();
-  }, [publicClient, userPrivateKey, contractPublicKey]);
-
-  return (
-    <div>
-      <h2>Transaction History</h2>
-      {transfers.length === 0 && <p>No transfers found.</p>}
-      <ul>
-        {transfers.map((tx, i) => (
-          <li key={i}>
-            Block {tx.blockNumber.toString()}: {tx.from} sent {tx.amount} SRC to {tx.to}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-```
-
-The `decryptEventData` call will throw for events that were not encrypted to the current user's key. The `try/catch` handles this gracefully -- you simply skip events you cannot decrypt.
+Decrypt events client-side using the ECDH shared secret and AES-GCM decryption. See the [seismic-viem precompiles documentation](../../clients/typescript/viem/precompiles/README.md) for the cryptographic primitives.
 
 ## Complete example
 
@@ -284,10 +215,6 @@ function TokenDashboard() {
       <p>Connected: {address}</p>
       <BalanceDisplay />
       <TransferForm />
-      <TransactionHistory
-        userPrivateKey={USER_PRIVATE_KEY}
-        contractPublicKey={CONTRACT_PUBLIC_KEY}
-      />
     </div>
   );
 }
