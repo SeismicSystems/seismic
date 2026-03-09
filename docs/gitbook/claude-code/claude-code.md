@@ -25,11 +25,11 @@ The templates on this site give Claude the knowledge it needs to write correct S
 
 | Template                                                     | Good for                                       | Language   |
 | ------------------------------------------------------------ | ---------------------------------------------- | ---------- |
-| [Seismic Solidity](claude.md-templates/seismic-solidity.md)  | Smart contract development with shielded types | Solidity   |
-| [Seismic Viem](claude.md-templates/seismic-viem.md)          | TypeScript dapp backends and scripts           | TypeScript |
-| [Seismic React](claude.md-templates/seismic-react.md)        | React frontend development                     | TypeScript |
-| [Seismic Alloy (Rust)](claude.md-templates/seismic-alloy.md) | Rust dapp development                          | Rust       |
-| [Seismic Python](claude.md-templates/seismic-python.md)      | Python scripts and backends                    | Python     |
+| [Seismic Solidity](templates/seismic-solidity.md)  | Smart contract development with shielded types | Solidity   |
+| [Seismic Viem](templates/seismic-viem.md)          | TypeScript dapp backends and scripts           | TypeScript |
+| [Seismic React](templates/seismic-react.md)        | React frontend development                     | TypeScript |
+| [Seismic Alloy (Rust)](templates/seismic-alloy.md) | Rust dapp development                          | Rust       |
+| [Seismic Python](templates/seismic-python.md)      | Python scripts and backends                    | Python     |
 
 ## Quick setup
 

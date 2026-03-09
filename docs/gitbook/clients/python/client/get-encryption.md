@@ -240,4 +240,4 @@ def rotate_encryption_key(tee_pk: CompressedPublicKey):
 - [create_async_wallet_client](create-async-wallet-client.md) - Async client factory
 - [PrivateKey](../api-reference/types/private-key.md) - Client private key type
 - [CompressedPublicKey](../api-reference/types/compressed-public-key.md) - TEE public key type
-- [Shielded Write Guide](../shielded-write.md) - How encryption is used in transactions
+- [Shielded Write Guide](../guides/shielded-write.md) - How encryption is used in transactions

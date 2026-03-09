@@ -7,7 +7,7 @@ icon: plug
 
 # Seismic Viem
 
-Low-level TypeScript SDK for [Seismic](https://seismic.systems), built on [viem](https://viem.sh/) 2.x. Provides shielded public and wallet clients, encrypted contract interactions, signed reads, chain configs, and precompile access. This is the foundation that [seismic-react](../seismic-react/) builds upon.
+Low-level TypeScript SDK for [Seismic](https://seismic.systems), built on [viem](https://viem.sh/) 2.x. Provides shielded public and wallet clients, encrypted contract interactions, signed reads, chain configs, and precompile access. This is the foundation that [seismic-react](../react/README.md) builds upon.
 
 ```bash
 npm install seismic-viem viem
@@ -147,7 +147,7 @@ seismic-viem
 | **Use when**         | Server-side, scripts, non-React apps  | React applications                            |
 
 {% hint style="info" %}
-If you are building a React application, consider using [seismic-react](../seismic-react/) which provides React hooks on top of seismic-viem. For Node.js scripts, server-side code, or non-React frontends, use seismic-viem directly.
+If you are building a React application, consider using [seismic-react](../react/README.md) which provides React hooks on top of seismic-viem. For Node.js scripts, server-side code, or non-React frontends, use seismic-viem directly.
 {% endhint %}
 
 ## Next Steps

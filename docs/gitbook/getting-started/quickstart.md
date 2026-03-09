@@ -15,4 +15,4 @@ You can play around with `stype` using our [starter repository](https://github.c
 </strong><strong>sforge test -vv
 </strong></code></pre>
 
-Or if you prefer a more detailed walkthrough of building on Seismic, check out our [Tutorials](../tutorials/table-of-contents.md) section.
+Or if you prefer a more detailed walkthrough of building on Seismic, check out our [Tutorials](../tutorials/src20/README.md) section.

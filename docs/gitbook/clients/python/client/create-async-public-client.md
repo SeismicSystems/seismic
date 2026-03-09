@@ -281,5 +281,5 @@ No TEE public key fetching or encryption setup is performed since the client can
 - [create_public_client](create-public-client.md) - Sync variant (HTTP only)
 - [create_async_wallet_client](create-async-wallet-client.md) - Async client with private key
 - [AsyncSeismicPublicNamespace](../namespaces/async-seismic-public-namespace.md) - The async public `w3.seismic` namespace
-- [Chains Configuration](../chains.md) - Pre-configured chain constants
-- [Contract Instances](../contract-instance.md) - Working with contract wrappers
+- [Chains Configuration](../chains/README.md) - Pre-configured chain constants
+- [Contract Instances](../contract/README.md) - Working with contract wrappers

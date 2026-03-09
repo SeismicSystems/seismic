@@ -7,7 +7,7 @@ icon: wand-magic-sparkles
 
 Claude Code supports [skills](https://docs.anthropic.com/en/docs/claude-code/skills) — reusable task instructions that you can invoke with slash commands. Skills are stored as markdown files in your project and provide step-by-step guidance for specific workflows.
 
-These skills are optional. The [CLAUDE.md templates](../gitbook/claude-code/templates/) cover the core API knowledge that Claude needs. Skills add structured workflows for tasks you do repeatedly.
+These skills are optional. The [CLAUDE.md templates](templates/) cover the core API knowledge that Claude needs. Skills add structured workflows for tasks you do repeatedly.
 
 ## Setup
 

@@ -68,17 +68,17 @@ You just ran shielded contract tests locally. See the [full quickstart](getting-
 
 | I want to...                         | Go to                                                                 |
 | ------------------------------------ | --------------------------------------------------------------------- |
-| Understand why Seismic exists        | [Why Seismic](gitbook/overview/why-seismic.md)                        |
-| See how it works under the hood      | [How Seismic Works](gitbook/overview/how-seismic-works.md)            |
+| Understand why Seismic exists        | [Why Seismic](overview/why-seismic.md)                                |
+| See how it works under the hood      | [How Seismic Works](overview/how-seismic-works.md)                    |
 | Set up my dev environment            | [Installation](getting-started/installation.md)                       |
 | Run my first shielded contract       | [Quickstart](getting-started/quickstart.md)                           |
-| Build a complete app step by step    | [Walnut App Tutorial](/broken/pages/BN5OqFBvn79QEqM2Y5JX)             |
-| Build a private ERC20 token          | [SRC20 Tutorial](gitbook/tutorials/src20/)                            |
-| Learn about shielded types           | [Shielded Types](seismic-solidity/seismic-solidity/shielded-types.md) |
-| Integrate a frontend                 | [Client Libraries](/broken/pages/nQsSEPZ1IbCEkrtaRNSq)                |
-| Deploy to testnet or mainnet         | [Networks](reference/networks.md)                                     |
-| Understand the transaction lifecycle | [Seismic Transaction](gitbook/reference/seismic-transaction.md)       |
-| Run a node                           | [Node Operator FAQ](gitbook/reference/node-operator-faq.md)           |
+| Build a complete app step by step    | [Walnut App Tutorial](tutorials/walnut/understanding-the-walnut-contract.md) |
+| Build a private ERC20 token          | [SRC20 Tutorial](tutorials/src20/README.md)                           |
+| Learn about shielded types           | [Shielded Types](seismic-solidity/shielded-types.md)                  |
+| Integrate a frontend                 | [Client Libraries](clients/README.md)                                 |
+| Deploy to testnet or mainnet         | [Networks](networks/devnet.md)                                        |
+| Understand the transaction lifecycle | [Seismic Transaction](reference/seismic-transaction.md)               |
+| Run a node                           | [Node Operator FAQ](reference/node-operator-faq.md)                   |
 
 ---
 

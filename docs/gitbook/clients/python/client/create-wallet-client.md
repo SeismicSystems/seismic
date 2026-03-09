@@ -188,4 +188,4 @@ Access the encryption state at `w3.seismic.encryption` if needed for advanced us
 - [EncryptionState](encryption-state.md) - Encryption state class
 - [get_encryption](get-encryption.md) - Encryption derivation function
 - [SeismicNamespace](../namespaces/seismic-namespace.md) - The `w3.seismic` namespace
-- [Chains Configuration](../chains.md) - Pre-configured chain constants
+- [Chains Configuration](../chains/README.md) - Pre-configured chain constants

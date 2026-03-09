@@ -297,4 +297,4 @@ A frequent use of the precompiles is encrypting event data so that only the inte
 emit EncryptedData(msg.sender, recipient, encrypted);
 ```
 
-For a complete walkthrough of this pattern, see [Events](../../seismic-solidity/seismic-solidity/events.md).
+For a complete walkthrough of this pattern, see [Events](../seismic-solidity/events.md).

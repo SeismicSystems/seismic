@@ -5,7 +5,7 @@ icon: link
 
 # Chains
 
-`seismic-react` provides pre-configured chain objects compatible with RainbowKit's `getDefaultConfig`. Each chain wraps a [`seismic-viem`](../../seismic-viem/) chain definition with RainbowKit metadata (icon, etc.).
+`seismic-react` provides pre-configured chain objects compatible with RainbowKit's `getDefaultConfig`. Each chain wraps a [`seismic-viem`](../../viem/README.md) chain definition with RainbowKit metadata (icon, etc.).
 
 ## Import
 

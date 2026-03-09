@@ -44,7 +44,7 @@ const client = await createShieldedWalletClient({
 
 ### Sanvil
 
-Local development chain using [Sanvil](../../tools/sanvil.md) (Seismic's fork of Anvil). Chain ID `31337` matches Anvil/Hardhat defaults:
+Local development chain using [Sanvil](../../../networks/devnet.md) (Seismic's fork of Anvil). Chain ID `31337` matches Anvil/Hardhat defaults:
 
 ```typescript
 import { http } from "viem";

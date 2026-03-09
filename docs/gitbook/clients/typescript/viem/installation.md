@@ -164,4 +164,4 @@ If you encounter module resolution issues, ensure your `tsconfig.json` uses `"mo
 
 - [Chains](chains.md) -- Configure network connections
 - [Seismic Viem Overview](./) -- Full SDK overview and architecture
-- [seismic-react](../seismic-react/) -- React hooks layer built on seismic-viem
+- [seismic-react](../react/README.md) -- React hooks layer built on seismic-viem

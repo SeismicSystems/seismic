@@ -8,7 +8,7 @@ metaLinks:
 
 # Collections
 
-All `stype` variables can be stored in Solidity collections, much like their unshielded counterparts. They behave normally (as outlined in [Basics](../../gitbook/seismic-solidity/basics/)) when used as values in these collections. It's when they're used as _both_ the keys and values where it gets interesting. This applies to arrays and maps in particular:
+All `stype` variables can be stored in Solidity collections, much like their unshielded counterparts. They behave normally (as outlined in [Basics](shielded-types.md)) when used as values in these collections. It's when they're used as _both_ the keys and values where it gets interesting. This applies to arrays and maps in particular:
 
 ```
 suint256[] a;  // stype as value
@@ -45,7 +45,7 @@ Observers for any of these operations will not know which elements were read fro
 
 In the previous section, we only knew how to shield what was happening for certain elements. Now, we know how to shield which elements are being modified in the first place.
 
-We can take the ERC20 variant discussed in the [Basics](../../gitbook/seismic-solidity/basics/) section and extend it further to shielded balances, transfer amounts, _and now_ _recipients_.
+We can take the ERC20 variant discussed in the [Basics](shielded-types.md) section and extend it further to shielded balances, transfer amounts, _and now_ _recipients_.
 
 ```
 mapping(saddress => suint256) public balanceOf;  // key is now saddress

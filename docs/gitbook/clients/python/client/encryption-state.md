@@ -309,4 +309,4 @@ If any metadata field changes, decryption will fail even with the correct key an
 - [create_async_wallet_client](create-async-wallet-client.md) - Async client factory
 - [EncryptionNonce](../api-reference/types/encryption-nonce.md) - 12-byte nonce type
 - [TxSeismicMetadata](../api-reference/transaction-types/tx-seismic-metadata.md) - Metadata structure
-- [Shielded Write Guide](../shielded-write.md) - How shielded transactions work
+- [Shielded Write Guide](../guides/shielded-write.md) - How shielded transactions work
