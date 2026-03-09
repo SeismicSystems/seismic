@@ -24,7 +24,7 @@ import {
 | ----------------------------------------- | ----------------------- | -------- | -------------------------------- |
 | [Seismic Testnet](seismic-testnet.md)     | `seismicTestnet`        | `5124`   | Public testnet                   |
 | [Sanvil](sanvil.md)                       | `sanvil`                | `31337`  | Local Sanvil dev node            |
-| [Local Devnet](sanvil.md)                 | `localSeismicDevnet`    | --       | Local seismic-reth `--dev`       |
+| [Local Devnet](sanvil.md)                 | `localSeismicDevnet`    | `5124`   | Local seismic-reth `--dev`       |
 | [Custom Devnet](create-seismic-devnet.md) | `createSeismicDevnet()` | `5124`   | Factory for custom chain configs |
 
 ## Usage with RainbowKit

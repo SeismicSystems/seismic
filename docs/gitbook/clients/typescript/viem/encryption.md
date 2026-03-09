@@ -56,7 +56,7 @@ import { getEncryption } from "seismic-viem";
 
 ```typescript
 import { createShieldedPublicClient, getEncryption } from "seismic-viem";
-import { seismicTestnet } from "seismic-viem/chains";
+import { seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 
 // Fetch the TEE public key from the node
@@ -95,7 +95,7 @@ The `ShieldedWalletClient` exposes encryption operations as client methods. Thes
 
 ```typescript
 import { createShieldedWalletClient } from "seismic-viem";
-import { seismicTestnet } from "seismic-viem/chains";
+import { seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -120,7 +120,7 @@ Every Seismic transaction includes additional fields that carry encryption metad
 
 | Field              | Type      | Description                                               |
 | ------------------ | --------- | --------------------------------------------------------- |
-| `encryptionPubkey` | `Hex`     | Client's compressed secp256k1 public key for this session |
+| `encryptionPubkey` | `Hex`     | Client's compressed secp256k1 public key                  |
 | `encryptionNonce`  | `Hex`     | Random 12-byte AES-GCM nonce                              |
 | `messageVersion`   | `number`  | `0` for normal transactions, `2` for EIP-712 signed       |
 | `recentBlockHash`  | `Hex`     | Recent block hash used for replay protection              |

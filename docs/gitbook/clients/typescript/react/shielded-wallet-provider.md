@@ -181,14 +181,13 @@ The `onAddressChange` callback is useful for initializing state when a wallet co
 
 ```typescript
 import { ShieldedWalletProvider } from 'seismic-react'
-import type { OnAddressChangeParams } from 'seismic-react'
 
 function App() {
   const handleAddressChange = async ({
     publicClient,
     walletClient,
     address,
-  }: OnAddressChangeParams) => {
+  }) => {
     console.log('Connected:', address)
 
     // Example: read user's shielded balance on connect

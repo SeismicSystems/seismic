@@ -163,7 +163,7 @@ Seismic chain configs use a custom transaction request type that extends viem's 
 
 ```typescript
 interface SeismicTxExtras {
-  encryptionPubkey: Hex; // TEE's ECDH public key
+  encryptionPubkey: Hex; // Client's compressed secp256k1 public key
   encryptionNonce: Hex; // AES-GCM nonce for calldata encryption
   messageVersion: number; // Seismic message format version
   recentBlockHash: Hex; // Recent block hash for replay protection
@@ -178,7 +178,7 @@ You do not need to populate these fields manually. The shielded wallet client's 
 
 | Field              | Type      | Description                                               |
 | ------------------ | --------- | --------------------------------------------------------- |
-| `encryptionPubkey` | `Hex`     | The TEE's ECDH public key, fetched during client creation |
+| `encryptionPubkey` | `Hex`     | Client's compressed secp256k1 public key                  |
 | `encryptionNonce`  | `Hex`     | Random nonce for AES-GCM encryption of calldata           |
 | `messageVersion`   | `number`  | Version of the Seismic message format                     |
 | `recentBlockHash`  | `Hex`     | Recent block hash used for transaction replay protection  |

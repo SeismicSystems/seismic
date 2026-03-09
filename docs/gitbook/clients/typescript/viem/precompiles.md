@@ -28,8 +28,8 @@ import {
 | `ecdh`          | `0x...0065` | ECDH key exchange        | `sk`, `pk`                      | `Hex` (shared secret) |
 | `aesGcmEncrypt` | `0x...0066` | AES-GCM encryption       | `aesKey`, `nonce`, `plaintext`  | `Hex` (ciphertext)    |
 | `aesGcmDecrypt` | `0x...0067` | AES-GCM decryption       | `aesKey`, `nonce`, `ciphertext` | `string` (plaintext)  |
-| `hdfk`          | varies      | HKDF key derivation      | `ikm`                           | `Hex` (derived key)   |
-| `secp256k1Sig`  | varies      | secp256k1 signing        | `sk`, `message`                 | `Signature`           |
+| `hdfk`          | `0x...0068` | HKDF key derivation      | `ikm`                           | `Hex` (derived key)   |
+| `secp256k1Sig`  | `0x...0069` | secp256k1 signing        | `sk`, `message`                 | `Signature`           |
 
 {% hint style="info" %}
 Precompile calls execute within the TEE, ensuring cryptographic operations are performed in a secure environment. The inputs and outputs are transmitted over the encrypted channel established during client construction.
@@ -67,7 +67,7 @@ console.log("Random value:", randomValue);
 ```typescript
 import { createShieldedPublicClient } from "seismic-viem";
 import { rng } from "seismic-viem";
-import { seismicTestnet } from "seismic-viem/chains";
+import { seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 
 const client = createShieldedPublicClient({
@@ -314,7 +314,7 @@ All precompiles are available as methods directly on `ShieldedPublicClient` and 
 
 ```typescript
 import { createShieldedPublicClient } from "seismic-viem";
-import { seismicTestnet } from "seismic-viem/chains";
+import { seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 
 const client = createShieldedPublicClient({
@@ -341,7 +341,7 @@ const derivedKey = await client.hdfk("0x...");
 
 ## Custom Precompile Pattern
 
-Each precompile is defined as a `Precompile<P, R>` object with a standard interface. You can use the `callPrecompile` utility to invoke any precompile directly.
+Each precompile is defined as a `Precompile<P, R>` object with a standard interface. You can invoke any precompile directly using its object.
 
 ### `Precompile<P, R>` Type
 
@@ -351,21 +351,6 @@ Each precompile is defined as a `Precompile<P, R>` object with a standard interf
 | `gasCost(args)`        | `(args: P) => bigint` | Computes the gas cost for the given arguments |
 | `encodeParams(args)`   | `(args: P) => Hex`    | ABI-encodes the arguments for the call        |
 | `decodeResult(result)` | `(result: Hex) => R`  | Decodes the raw call result                   |
-
-### Using `callPrecompile`
-
-```typescript
-import { callPrecompile, rngPrecompile } from "seismic-viem";
-
-// Call the RNG precompile directly using the precompile object
-const result = await callPrecompile({
-  client,
-  precompile: rngPrecompile,
-  args: { numBytes: 32n },
-});
-
-console.log("Random value:", result);
-```
 
 ### Available Precompile Objects
 
