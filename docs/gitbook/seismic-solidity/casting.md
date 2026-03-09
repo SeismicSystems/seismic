@@ -18,7 +18,7 @@ suint256 shielded = publicNumber; // Error
 suint256 shielded = suint256(publicNumber); // OK
 ```
 
-This applies to all shielded types: `suint`, `sint`, `sbool`, and `saddress`.
+This applies to all shielded types: `suint`, `sint`, `sbool`, `saddress`, and `sbytes`.
 
 ```solidity
 bool flag = true;
@@ -66,7 +66,7 @@ This is sometimes necessary (e.g., returning a value from a view function or int
 To cast an `saddress` to a `payable` address, use the following pattern:
 
 ```solidity
-address payable pay = payable(address(saddress(someSaddressValue)));
+address payable pay = payable(address(someSaddressValue));
 ```
 
 You can also go in the other direction:
@@ -76,7 +76,7 @@ address payable pay = /* ... */;
 saddress shielded = saddress(address(pay));
 ```
 
-Note that `saddress payable` does not exist as a type. If you need to send ETH to a shielded address, you must first unshield it to a regular `address payable`, which will expose the address.
+`saddress payable` is also a valid type. You can use it directly when you need a shielded address that can receive ETH. Note that sending ETH to an `saddress payable` still requires unshielding to a regular `address payable` first, which will expose the address.
 
 ## Size Casting Between Shielded Integers
 

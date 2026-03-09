@@ -7,7 +7,7 @@ icon: explosion
 
 ## saddress - Shielded Address
 
-An `saddress` variable has all `address` operations supported. As for members, it supports `call`, `delegatecall`, `staticcall`, `code`, and `codehash` _only_. You cannot have `saddress payable` or have `saddress` as a transaction signer.
+An `saddress` variable supports `code` and `codehash` members only. Members like `call`, `delegatecall`, `staticcall`, `balance`, and `transfer` are not available — you must cast to `address` first. `saddress payable` is a valid type (see [Casting](casting.md)).
 
 The universal casting rules and restrictions described in [Basics](shielded-types.md) apply.
 
@@ -17,11 +17,12 @@ saddress b = saddress(0x456);
 
 // == VALID EXAMPLES
 a == b  // false
-b.call()
+b.code
+b.codehash
 
 // == INVALID EXAMPLES
-a.balance
-payable(a)
+a.balance   // must cast to address first
+a.call("")  // must cast to address first
 ```
 
 ### sboolean - Shielded Boolean

@@ -88,38 +88,19 @@ enum Status { Active, Inactive, Suspended }
 
 **What to do instead:** Be aware that literals are embedded in contract bytecode and are publicly visible. When working with small-range values (like enums), consider whether the limited range of possible values undermines the privacy guarantee.
 
-### 5. `.min()` and `.max()` Functions
+### 5. `immutable` and `constant` Shielded Variables
 
-**The problem:** Calling `.min()` and `.max()` on shielded integers can reveal information about the values being compared.
-
-```solidity
-// BAD: Can reveal information about the relative ordering of values
-suint256 a = /* ... */;
-suint256 b = /* ... */;
-suint256 smaller = a.min(b);  // Reveals which is smaller
-```
-
-**Why it leaks:** The result of `.min()` or `.max()` is one of the two input values. If the result is later unshielded or used in a context where it becomes observable, the ordering relationship between the two inputs is revealed.
-
-**What to do instead:** If you need to use the minimum or maximum of two shielded values, keep the result shielded and avoid exposing it. Be cautious about how the result flows through your contract.
-
-### 6. `immutable` Variables
-
-**The problem:** Shielded `immutable` variables are only truly confidential if the constructor calldata is encrypted. If the contract is deployed via a regular (non-Seismic) transaction, the constructor arguments are visible in plaintext.
+Shielded types **cannot** be declared as `immutable` or `constant`. The compiler will reject both with an error. Constants are embedded in bytecode (publicly visible), and immutables are stored in bytecode after construction — neither is compatible with the confidential storage model.
 
 ```solidity
-contract MyContract {
-    suint256 immutable SECRET;
+// Will NOT compile — compiler error
+suint256 immutable SECRET = suint256(42);
 
-    constructor(suint256 _secret) {
-        SECRET = _secret;  // Only private if constructor calldata is encrypted
-    }
-}
+// Will NOT compile — compiler error
+suint256 constant MY_VALUE = suint256(1);
 ```
 
-**Why it leaks:** `immutable` variables are set during construction and stored in the contract bytecode. If the constructor calldata is not encrypted, the initial value is visible in the deployment transaction.
-
-**What to do instead:** Always deploy contracts with shielded `immutable` variables using a Seismic transaction (type `0x4A`), which encrypts the calldata. If you cannot guarantee encrypted deployment, do not use shielded `immutable` variables for sensitive data.
+**What to do instead:** Use a regular `private` shielded variable initialized in the constructor or via a setter function called through a Seismic transaction.
 
 ### 7. Public Getters
 
@@ -151,8 +132,8 @@ function getBalance() external view returns (uint256) {
 **The problem:** Shielded types cannot be declared as `constant`. Constants are embedded directly in the contract bytecode, which is publicly accessible. A "shielded constant" is a contradiction -- the value would be visible to anyone who reads the bytecode.
 
 ```solidity
-// Will NOT compile
-suint256 constant MY_SECRET = 42;
+// Will NOT compile — covered by section 5 above
+suint256 constant MY_SECRET = suint256(42);
 ```
 
 **What to do instead:** Use a regular `private` shielded variable initialized in the constructor or via a Seismic transaction. If the value truly does not need to be secret (e.g., it is a protocol parameter), use a regular unshielded `constant` instead.
@@ -165,10 +146,7 @@ suint256 constant MY_SECRET = 42;
 
 Any function that accepts shielded types as parameters should be called using a Seismic transaction (type `0x4A`), which encrypts the calldata. If calldata is not encrypted, the shielded parameter values are visible in plaintext in the transaction's input data, defeating the purpose of using shielded types.
 
-This applies to:
-
-- Constructor arguments for contracts with shielded `immutable` variables.
-- All function calls that pass shielded values as parameters.
+This applies to all function calls that pass shielded values as parameters.
 
 ```solidity
 // This function should ONLY be called via a Seismic transaction
