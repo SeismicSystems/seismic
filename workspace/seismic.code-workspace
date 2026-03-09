@@ -26,9 +26,6 @@
 			"path": "../../seismic-trie"
 		},
 		{
-			"path": "../../enclave"
-		},
-		{
 			"path": "../../seismic-foundry"
 		},
 		{
@@ -39,6 +36,12 @@
 		},
 		{
 			"path": "../../seismic-solidity"
+		},
+		{
+			"path": "../../seismic-images"
+		},
+		{
+			"path": "../../deploy"
 		},
 	],
 	"settings": {
@@ -51,6 +54,9 @@
 			"../seismic-solidity/deps/nlohmann-json",
 			"../seismic-solidity/deps/range-v3",
 			"../seismic-solidity/deps/fmtlib",
+		],
+		"rust-analyzer.rustfmt.extraArgs": [
+			"+nightly"
 		]
 	}
 }
