@@ -27,7 +27,7 @@ Transparent calls are standard Ethereum operations that do not use Seismic encry
 Contract deployment always uses transparent transactions because Create transactions cannot be seismic. After deployment, you can interact with the contract using shielded calls.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::{Bytes, TxKind};
 
 // Contract bytecode (from compilation)
@@ -59,7 +59,7 @@ After deploying a contract transparently, you can immediately interact with it u
 A transparent write sends a standard `eth_sendTransaction` with unencrypted calldata. Use this for functions that do not handle private data.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::{Address, U256, TxKind};
 use alloy::sol_types::SolCall;
 
@@ -93,7 +93,7 @@ println!("Transparent write confirmed: {:?}", receipt.transaction_hash);
 A transparent read executes a standard `eth_call` with unencrypted calldata. Both `SeismicSignedProvider` and `SeismicUnsignedProvider` can perform transparent reads.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::{Address, TxKind};
 use alloy::sol_types::SolCall;
 
@@ -124,7 +124,7 @@ println!("Result: {:?}", result);
 Transparent reads do not require a private key, so you can use `SeismicUnsignedProvider`:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 // No private key needed
 let url = "https://node.seismicdev.net/rpc".parse()?;
@@ -145,7 +145,7 @@ let result = provider.call(tx).await?;
 This example demonstrates the typical workflow: deploy a contract transparently, then use both shielded and transparent calls.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::{Address, Bytes, U256, TxKind};
 use alloy::sol_types::SolCall;
 use alloy_signer_local::PrivateKeySigner;

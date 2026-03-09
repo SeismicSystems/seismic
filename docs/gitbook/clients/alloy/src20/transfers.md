@@ -16,7 +16,7 @@ SRC20 transfers work similarly to ERC20 transfers, but with calldata encryption 
 All transfer examples require a `SeismicSignedProvider` and the SRC20 interface definition:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::sol;
 use alloy::providers::Provider;
 use alloy::sol_types::SolCall;

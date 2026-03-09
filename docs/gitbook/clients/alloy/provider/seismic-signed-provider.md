@@ -62,7 +62,7 @@ pub async fn new(
 #### Example
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -105,7 +105,7 @@ pub fn new_with_tee_pubkey(
 #### Example
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 // Fetch TEE pubkey separately (e.g., from config or another provider)
@@ -139,7 +139,7 @@ pub async fn sreth_signed_provider(
 For Seismic devnet, testnet, or mainnet.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -161,7 +161,7 @@ pub async fn sfoundry_signed_provider(
 For local sfoundry development instances.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -194,7 +194,7 @@ async fn seismic_call(&self, tx: SendableTx<N>) -> TransportResult<Bytes>
 | `TransportResult<Bytes>` | Decrypted response bytes, or a transport error |
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_primitives::{address, bytes};
 
 let provider = sreth_signed_provider(wallet, url).await?;
@@ -297,7 +297,7 @@ After all fillers run, calldata is encrypted with AES-GCM before the transaction
 ### Shielded Write
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 use alloy_primitives::{address, U256};
 
@@ -330,7 +330,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Signed Read
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 use alloy_primitives::address;
 
@@ -358,7 +358,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Local Development with sfoundry
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
@@ -381,7 +381,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Pre-fetched TEE Pubkey
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]

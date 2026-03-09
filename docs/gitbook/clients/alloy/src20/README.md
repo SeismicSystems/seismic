@@ -71,7 +71,7 @@ SRC20 Token Contract (on-chain, Mercury EVM)
 ## Quick Start
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::sol;
 use alloy::providers::Provider;
 use alloy_primitives::{Address, U256};

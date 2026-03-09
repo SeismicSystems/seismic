@@ -32,7 +32,7 @@ Both providers are generic over `N: SeismicNetwork`, which determines the networ
 ### Signed Provider
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -46,7 +46,7 @@ let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 ### Unsigned Provider
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 let url = "https://node.seismicdev.net/rpc".parse()?;
 

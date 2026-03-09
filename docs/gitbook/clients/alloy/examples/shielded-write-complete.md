@@ -36,7 +36,7 @@ tokio = { version = "1", features = ["full"] }
 ## Complete Example
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::sol;
 use alloy::sol_types::SolCall;
 use alloy_primitives::{Bytes, TxKind, U256};

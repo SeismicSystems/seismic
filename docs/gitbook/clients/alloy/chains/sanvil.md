@@ -57,7 +57,7 @@ By default, Sanvil:
 ### Signed Provider (Full Capabilities)
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
@@ -81,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Unsigned Provider (Read-Only)
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 let url = "http://127.0.0.1:8545".parse()?;
 let provider = sfoundry_unsigned_provider(url);
@@ -92,7 +92,7 @@ let block = provider.get_block_number().await?;
 ### With Explicit Type Parameter
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner =
@@ -113,7 +113,7 @@ Always use `SeismicFoundry` (not `SeismicReth`) when connecting to Sanvil. Sanvi
 ### Local Development Workflow
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
@@ -139,7 +139,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Testing with Multiple Accounts
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 // Anvil/Sanvil pre-funded test accounts
@@ -162,7 +162,7 @@ for key in &test_keys {
 ### Integration Test Setup
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 async fn setup_test_provider()

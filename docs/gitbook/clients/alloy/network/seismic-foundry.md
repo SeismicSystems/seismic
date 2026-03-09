@@ -59,7 +59,7 @@ The Foundry-compatible types handle differences in how Sanvil serializes and des
 ### With SeismicSignedProvider
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
@@ -82,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 The `sfoundry_signed_provider` function creates a `SeismicSignedProvider<SeismicFoundry>` without needing to specify the type parameter:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -95,7 +95,7 @@ let provider = sfoundry_signed_provider(wallet, url).await?;
 ### Unsigned Provider (Read-Only)
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 let url = "http://127.0.0.1:8545".parse()?;
 let provider = sfoundry_unsigned_provider(url);
@@ -151,7 +151,7 @@ let tx_request = seismic_foundry_tx_builder();
 This returns a `SeismicFoundryTransactionRequest` pre-configured with the Seismic transaction type. You can then set fields like `to`, `value`, `input`, etc.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_primitives::{address, U256};
 
 let tx = seismic_foundry_tx_builder()

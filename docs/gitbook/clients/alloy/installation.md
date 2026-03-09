@@ -66,7 +66,7 @@ seismic-alloy-network = { git = "https://github.com/SeismicSystems/seismic-alloy
 The recommended import pattern uses the `prelude` crate, which re-exports commonly used types:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 ```
 
 This brings into scope:
@@ -128,7 +128,7 @@ tokio = { version = "1", features = ["full"] }
 Write `src/main.rs`:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]

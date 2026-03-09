@@ -28,7 +28,7 @@ Complete, runnable code examples demonstrating common Seismic Alloy (Rust) SDK p
 Each example follows this structure:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]

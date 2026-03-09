@@ -86,7 +86,7 @@ The compiled bytecode is in `out/SeismicCounter.sol/SeismicCounter.json`. Extrac
 Contract deployment always uses transparent transactions because Create transactions cannot be seismic.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::sol;
 use alloy::sol_types::SolCall;
 use alloy_primitives::{Bytes, TxKind, U256};
@@ -259,7 +259,7 @@ Event data emitted by `emit` is public and visible on-chain. Event subscription 
 Combining all steps into one program:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::sol;
 use alloy::sol_types::SolCall;
 use alloy_primitives::{Bytes, TxKind, U256};

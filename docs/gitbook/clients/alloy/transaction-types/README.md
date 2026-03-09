@@ -79,7 +79,7 @@ SeismicTxEnvelope (signed wrapper)
 These types are defined in `seismic-alloy-consensus` and re-exported through `seismic-alloy-prelude`:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 // or directly:
 use seismic_alloy_consensus::{TxSeismic, TxSeismicElements, TxSeismicMetadata};
 ```

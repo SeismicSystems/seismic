@@ -56,7 +56,7 @@ Total output: 65 bytes.
 use alloy::providers::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -101,7 +101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 use alloy::providers::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -149,7 +149,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 use alloy::providers::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -197,7 +197,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 use alloy::providers::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use serde_json::json;
 
 #[tokio::main]
@@ -214,7 +214,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let context = json!({
         "action": "transfer",
         "amount": 1000,
-        "recipient": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+        "recipient": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
     });
     let message = serde_json::to_string(&context)?;
 
