@@ -125,5 +125,5 @@ An external observer calling `eth_getStorageAt` can read `totalDeposits` (slot 0
 ## Related
 
 - [Storage](../seismic-solidity/storage.md) — FlaggedStorage model, slot packing, gas details
-- [Shielded Types](../seismic-solidity/shielded-types/) — `suint`, `sint`, `saddress`, `sbool`
+- [Shielded Types](../seismic-solidity/shielded-types.md) — `suint`, `sint`, `saddress`, `sbool`
 - [eth_getStorageAt](rpc-methods/eth-get-storage-at.md) — RPC behavior for private slots

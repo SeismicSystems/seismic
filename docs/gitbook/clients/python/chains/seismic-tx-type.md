@@ -59,4 +59,4 @@ Where `0x4A` is the `SEISMIC_TX_TYPE` prefix.
 - [UnsignedSeismicTx](../api-reference/transaction-types/unsigned-seismic-tx.md) - Seismic transaction structure
 - [sign_seismic_tx_eip712](../api-reference/eip712/sign-seismic-tx-eip712.md) - Transaction signing
 - [ChainConfig](chain-config.md) - Chain configuration with chain IDs
-- [Shielded Write Guide](../shielded-write.md) - Guide to sending Seismic transactions
+- [Shielded Write Guide](../guides/shielded-write.md) - Guide to sending Seismic transactions

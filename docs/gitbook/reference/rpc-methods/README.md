@@ -30,7 +30,7 @@ These methods work identically to their Ethereum counterparts:
 
 | Method                                              | Description                    |
 | --------------------------------------------------- | ------------------------------ |
-| [`net_version`](/broken/pages/AjrdVzmhiJsvMx5wLLn8) | Returns the current network ID |
+| `net_version` | Returns the current network ID |
 
 All other standard Ethereum RPC methods (`eth_blockNumber`, `eth_getBalance`, `eth_chainId`, etc.) work identically to Ethereum and are fully supported.
 

@@ -1,6 +1,6 @@
 # Verify devtool installation
 
-Before continuing, ensure that you have completed the steps in the [Installation](../../../../getting-started/installation.md) section to install all necessary Seismic developer tools:
+Before continuing, ensure that you have completed the steps in the [Installation](../../../getting-started/installation.md) section to install all necessary Seismic developer tools:
 
 • `sforge`: Framework for testing and deploying smart contracts.
 

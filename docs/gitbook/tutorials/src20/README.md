@@ -45,7 +45,7 @@ This is the power of Seismic's approach: privacy is a type-level annotation, not
 
 Before starting, make sure you have:
 
-* **Seismic development tools installed** -- `sforge`, `sanvil`, and `ssolc`. See the [Installation guide](../../../getting-started/installation.md) if you have not set these up yet.
+* **Seismic development tools installed** -- `sforge`, `sanvil`, and `ssolc`. See the [Installation guide](../../getting-started/installation.md) if you have not set these up yet.
 * **Solidity familiarity** -- You should be comfortable writing and reading Solidity contracts.
 * **Basic understanding of ERC20** -- You should know what `balanceOf`, `transfer`, `approve`, and `transferFrom` do.
 

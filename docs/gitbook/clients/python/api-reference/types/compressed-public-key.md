@@ -46,4 +46,4 @@ Seismic uses compressed public keys exclusively:
 
 - [PrivateKey](private-key.md) — corresponding private key type
 - [SeismicElements](../transaction-types/seismic-elements.md) — uses CompressedPublicKey for `encryption_pubkey`
-- [ecdh](../precompiles/ecdh.md) — ECDH key derivation with public keys
+- [ecdh](../../precompiles/ecdh.md) — ECDH key derivation with public keys

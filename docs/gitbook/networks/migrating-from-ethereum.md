@@ -23,7 +23,7 @@ The Seismic development suite replaces Foundry's tools with privacy-aware equiva
 | `anvil`       | `sanvil`           | Local development node |
 | `solc`        | `ssolc`            | Solidity compiler      |
 
-Install the Seismic toolchain by following the [Installation](../../getting-started/installation.md) guide. The short version:
+Install the Seismic toolchain by following the [Installation](../getting-started/installation.md) guide. The short version:
 
 ```bash
 # Install sfoundryup
@@ -89,7 +89,7 @@ uint256 public totalSupply;                      // stays public
 
 The compiler handles the rest. Shielded types compile to `CLOAD`/`CSTORE` instead of `SLOAD`/`SSTORE`. Arithmetic, comparisons, and assignments work exactly the same way.
 
-For details on each shielded type, see [Shielded Types](../../seismic-solidity/seismic-solidity/shielded-types.md).
+For details on each shielded type, see [Shielded Types](../seismic-solidity/shielded-types.md).
 
 ---
 
@@ -119,7 +119,7 @@ function getBalance(address account) external view returns (suint256) {
 ```
 
 {% hint style="info" %}
-Callers must use a **signed read** to call getter functions that check `msg.sender`. A standard `eth_call` zeros out the `from` field on Seismic, so `msg.sender` would be `address(0)`. Client libraries like `seismic-viem` handle signed reads automatically. See [Signed Reads](/broken/pages/Iy1iEnGF6LoJvAy1G6ix) for details.
+Callers must use a **signed read** to call getter functions that check `msg.sender`. A standard `eth_call` zeros out the `from` field on Seismic, so `msg.sender` would be `address(0)`. Client libraries like `seismic-viem` handle signed reads automatically. See [Signed Reads](../reference/seismic-transaction.md#signed-reads) for details.
 {% endhint %}
 
 ---
@@ -151,7 +151,7 @@ function transfer(address to, suint256 amount) external {
 }
 ```
 
-For a complete walkthrough of the encrypted events pattern, see [Events](../../seismic-solidity/seismic-solidity/events.md).
+For a complete walkthrough of the encrypted events pattern, see [Events](../seismic-solidity/events.md).
 
 ---
 
@@ -172,7 +172,7 @@ Key changes in client code:
 - Use **signed reads** instead of plain `eth_call` when reading shielded data that checks `msg.sender`.
 - Listen for encrypted events and decrypt them client-side using the shared secret derived from ECDH.
 
-For library-specific guides, see [Client Libraries](/broken/pages/nQsSEPZ1IbCEkrtaRNSq).
+For library-specific guides, see [Client Libraries](../clients/README.md).
 
 ---
 
@@ -215,7 +215,7 @@ sforge script script/Deploy.s.sol \
     --broadcast
 ```
 
-For network details (RPC URLs, chain IDs, faucets), see [Devnet](devnet.md) and [Networks](../../reference/networks.md).
+For network details (RPC URLs, chain IDs, faucets), see [Devnet](devnet.md) and [Networks](devnet.md).
 
 ---
 
