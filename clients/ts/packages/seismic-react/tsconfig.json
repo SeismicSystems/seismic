@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*", "../seismic-viem/src/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "compilerOptions": {
+    "paths": {
+      "@sviem/*": ["../seismic-viem/src/*"],
+      "@sreact/*": ["./src/*"]
+    },
+    "baseUrl": ".",
+    "rootDir": "../..",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+  },
+  "references": [{ "path": "../seismic-viem/tsconfig.json" }]
+}

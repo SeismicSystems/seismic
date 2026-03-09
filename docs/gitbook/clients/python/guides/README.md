@@ -5,41 +5,55 @@ icon: book-open
 
 # Guides
 
-Comprehensive guides for working with the Seismic Python SDK.
+These guides walk through the core interaction patterns in the Python SDK, from wallet setup to shielded transactions and private token operations.
 
 ## Available Guides
 
 ### [Shielded Write](shielded-write.md)
-Complete guide to sending shielded transactions with encrypted calldata. Covers:
-- Setting up a wallet client
-- Creating contract wrappers
-- Sending shielded writes
-- Gas estimation
-- Transaction confirmation
+
+Send encrypted transactions with `TxSeismic`. Covers the encryption lifecycle, security parameters, the low-level API, and debug mode.
 
 ### [Signed Reads](signed-reads.md)
-Guide to executing signed reads (encrypted eth_call). Covers:
-- Setting up signed call parameters
-- Executing signed reads
-- Decoding results
-- Common patterns and use cases
 
-## Quick Navigation
+Execute encrypted `eth_call` reads that prove your identity via `msg.sender`. Covers when to use `.read` vs `.tread`, what gets encrypted, and the low-level API.
 
-| Topic | Description | Guide |
-|-------|-------------|-------|
-| **Shielded Transactions** | Send encrypted transactions | [Shielded Write](shielded-write.md) |
-| **Signed Reads** | Execute encrypted eth_call | [Signed Reads](signed-reads.md) |
-| **SRC20 Tokens** | Work with SRC20 tokens | [SRC20 Documentation](../src20/) |
-| **Async Patterns** | Async client usage | [Examples](../examples/) |
+### [SRC20 Workflow](src20-workflow.md)
 
-## Related Documentation
+End-to-end token workflow: read metadata, check balances, approve, and transfer using the SRC20 standard.
 
-- [API Reference](../api-reference/) - Complete API documentation
-- [Examples](../examples/) - Runnable code examples
-- [Client Documentation](../client/) - Client setup and configuration
-- [Contract Documentation](../contract/) - Contract interaction patterns
+### [Async Patterns](async-patterns.md)
 
-## Contributing
+Concurrent operations, resource cleanup, and async best practices.
 
-Have a guide you'd like to see? Open an issue or submit a PR!
+## Before You Start
+
+Both shielded writes and signed reads require a wallet client:
+
+```python
+import os
+from seismic_web3 import PrivateKey, SEISMIC_TESTNET
+
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
+
+# Sync
+w3 = SEISMIC_TESTNET.wallet_client(pk)
+
+# Async
+w3 = await SEISMIC_TESTNET.async_wallet_client(pk)
+```
+
+To verify your connection:
+
+```python
+print(f"Chain ID: {w3.eth.chain_id}")
+print(f"Block: {w3.eth.block_number}")
+print(f"Address: {w3.eth.default_account}")
+print(f"TEE public key: {w3.seismic.get_tee_public_key().to_0x_hex()}")
+```
+
+## See Also
+
+- [Client Setup](../client/) — Full client configuration reference
+- [Contract Interaction](../contract/) — Contract wrapper patterns
+- [SRC20 Tokens](../src20/) — Token standard documentation
+- [API Reference](../api-reference/) — Complete API documentation

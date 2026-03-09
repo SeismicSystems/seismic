@@ -1,0 +1,64 @@
+---
+description: Creates a Seismic chain configuration for connecting to Seismic nodes.
+---
+
+# Create a Seismic chain configuration
+
+## Import
+
+```ts
+import { createSeismicDevnet } from 'seismic-viem'
+```
+
+## Usage
+
+Creates a Seismic chain configuration that can be used with clients.
+
+```ts
+import { createSeismicDevnet } from 'seismic-viem'
+
+const chain = createSeismicDevnet({
+  nodeHost: 'gcp-1.seismictest.net',
+  explorerUrl: 'https://seismic-testnet.socialscan.io',
+})
+```
+
+## Return Value
+
+`Chain` - A chain configuration object that can be used with viem clients, containing:
+
+- Chain ID: 5124
+- Network name: 'Seismic'
+- Native ETH currency configuration
+- RPC URLs (HTTP and WebSocket endpoints)
+- Block explorer configuration (if applicable)
+- Seismic-specific transaction formatters
+
+## Parameters
+
+### params
+
+The parameters for creating a Seismic chain.
+
+```ts
+const chain = createSeismicDevnet({
+  nodeHost: 'gcp-1.seismictest.net', // [!code focus]
+  explorerUrl: 'https://seismic-testnet.socialscan.io' // optional [!code focus]
+})
+```
+
+#### nodeHost
+
+- **Type:** `string`
+
+The hostname for the node (e.g. `gcp-1.seismictest.net`).
+
+#### explorerUrl (optional)
+
+- **Type:** `string`
+
+Block explorer URL.
+
+## Throws
+
+Throws if `nodeHost` is not provided.

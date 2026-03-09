@@ -1,0 +1,63 @@
+[env]
+# Set MISE_SFORGE_TASK to choose which sforge to use.
+# One of "sforge" (default), "sforge-local", or "sforge-local-patch".
+MISE_SFORGE_TASK = "sforge"
+# sforge uses /usr/local/bin/ssolc by default, which foundryup installs from the seismic branch.
+# Thus we need to point sforge to a different ssolc binary.
+FOUNDRY_SOLC = "{{env.HOME}}/.local/share/mise/installs/ssolc/tmp-audit-fixes/ssolc"
+# We need via-ir to compile the DepositContract since it runs into stack-too-deep otherwise.
+FOUNDRY_PROFILE = "via-ir"
+
+# TODO(samlaf): we skip artifacts::check in CI because it isn't deterministic.
+# Need to figure out a way to make it.
+[tasks.ci]
+description = "Run full CI (fmt-check, check-artifacts, test)"
+run = { tasks = ["fmt-check", "test"] }
+
+[tasks.test]
+description = "Run contract tests"
+run = "mise run $MISE_SFORGE_TASK -- test"
+
+[tasks.fmt]
+description = "Format contracts"
+run = "mise run $MISE_SFORGE_TASK -- fmt"
+
+[tasks.fmt-check]
+description = "Check contract formatting"
+run = "mise run $MISE_SFORGE_TASK -- fmt --check"
+
+[tasks."artifacts::sync"]
+description = "Sync compiled artifacts"
+run = "bash script/sync-artifacts.sh"
+
+[tasks."artifacts::check"]
+description = "Check artifacts are up to date"
+depends = ["artifacts::sync"]
+run = """
+git diff --exit-code artifacts/ || \
+  (echo "Artifacts are out of date. Run 'mise run sync-artifacts' and commit." && exit 1)
+"""
+
+########## sforge aliases (used by high-level tasks above, but can be used individually) ##########
+
+[tasks.sforge]
+description = "Run mise-installed sforge"
+raw = true
+usage = 'arg "[args]" var=#true help="Arguments to pass to sforge"'
+run = "sforge ${usage_args}"
+
+[tasks.sforge-local]
+description = "Run locally-built sforge (builds if needed)"
+dir = "{{config_root}}/../../seismic-foundry"
+raw = true
+usage = 'arg "[args]" var=#true help="Arguments to pass to sforge"'
+run = "cargo run -p forge -- ${usage_args}"
+
+[tasks.sforge-local-patch]
+description = "Run locally-built sforge with local cargo patches (builds if needed)"
+depends = ["cargo::local-patches::on"]
+depends_post = ["cargo::local-patches::off"]
+dir = "{{config_root}}/../../seismic-foundry"
+raw = true
+usage = 'arg "[args]" var=#true help="Arguments to pass to sforge"'
+run = "cargo run -p forge -- ${usage_args}"

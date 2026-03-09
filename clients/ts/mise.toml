@@ -1,0 +1,71 @@
+[hooks]
+enter = "bun install"
+
+########## TASKS ##########
+
+[tasks.ci]
+description = "Run all CI checks (lint, typecheck, build, test)"
+run = [
+    { tasks = [
+        "lint::check",
+        "typecheck",
+        # we run the build separately even though test::* tasks also build, just for clarity and visibility.
+        "build",
+        "test::sanvil",
+    ] },
+    # TODO(samlaf): sanvil and sreth both use port 8545, so they step on each other's toes.
+    # We should make them use different ports (or even better use os assigned ports)
+    # so we can run them in parallel and speed up CI.
+    { task = "test::sreth" },
+]
+
+[tasks.clean]
+description = "Remove all dist/ directories"
+run = "bun run clean"
+
+[tasks."lint"]
+description = "Run ESLint + Prettier with auto-fix"
+depends = ["install"]
+run = "bun run lint"
+
+[tasks."lint::check"]
+description = "Run ESLint + Prettier check (no auto-fix)"
+depends = ["install"]
+run = "bun run lint:check"
+
+[tasks.typecheck]
+description = "Type-check all packages"
+depends = ["install"]
+run = "bun run typecheck"
+
+[tasks.build]
+description = "Build all packages (viem, react, tests)"
+depends = ["install"]
+run = "bun run all:build"
+
+# Useful if you want to run the test suite against a remote running node (e.g. testnet).
+[tasks."test::remote-node"]
+description = "Run integration tests (assumes a node is already running on RPC_URL or localhost:8545)"
+depends = ["build"]
+run = "bun run viem:test"
+
+[tasks."test::sanvil"]
+description = "Start sanvil, run integration tests, then stop sanvil"
+depends = ["build", "sanvil::start-bg"]
+depends_post = ["sanvil::stop-bg"]
+raw = true
+run = "bun run viem:test"
+
+[tasks."test::sreth"]
+description = "Start seismic-reth, run integration tests, then stop sreth"
+depends = ["build", "sreth::start-bg"]
+depends_post = ["sreth::stop-bg"]
+raw = true
+run = "bun run viem:test"
+
+########## HIDDEN HELPER TASKS ##########
+
+[tasks.install]
+hide = true
+description = "Install JS dependencies"
+run = "bun install"

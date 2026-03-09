@@ -1,0 +1,71 @@
+name: Typescript Client
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["clients/ts/**"]
+  pull_request:
+    paths: ["clients/ts/**"]
+
+defaults:
+  run:
+    working-directory: clients/ts
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v2
+      - run: mise run lint::check
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v2
+      - run: mise run typecheck
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v2
+      - run: mise run build
+
+  test-sanvil:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v2
+      - run: mise run test::sanvil
+
+  test-sreth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: seismic
+      # We checkout the seismic-reth repo as a sibling repo. `mise run test::sreth` has this hardcoded requirement for now
+      # as it starts reth by cd'ing into ../seismic-reth and running `cargo run ...`
+      - uses: actions/checkout@v6
+        with:
+          repository: SeismicSystems/seismic-reth
+          path: seismic-reth
+      - uses: jdx/mise-action@v2
+        with:
+          working_directory: seismic
+
+      # `mise run test::sreth` below starts reth in the background using `cargo run`,
+      # so we cache the built binary to speed up the workflow.
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: seismic-reth -> target
+      # Explicitly build first because `mise run` will timeout after 60 seconds, and building reth
+      # can take longer than that, especially on the first run when the cargo registry cache is cold.
+      - run: cargo build --bin seismic-reth
+        working-directory: seismic-reth
+
+      - run: mise run test::sreth
+        working-directory: seismic/clients/ts

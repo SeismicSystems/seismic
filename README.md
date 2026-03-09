@@ -26,18 +26,20 @@ seismic-workspace/                # parent directory
 ├── seismic/                      # monorepo (docs, scripts, workspace config)
 │   ├── workspace/                # cross-repo workspace files (source of truth)
 │   └── contracts/                # Solidity contracts
+│   ├── clients/ts/               # TypeScript client (Viem + React)
+│   └── clients/py/               # Python client (Web3.py) 
 ├── seismic-reth/                 # execution client (fork of reth)
-├── seismic-foundry/              # dev tools: sforge, sanvil, scast (fork of foundry)
-├── seismic-revm/                 # Mercury EVM (fork of revm)
 ├── seismic-evm/                  # block execution layer (fork of alloy-evm)
+├── seismic-revm/                 # Mercury EVM (fork of revm)
+├── seismic-revm-inspectors/      # EVM tracing (fork of revm-inspectors)
 ├── seismic-alloy/                # Rust SDK: TxSeismic, providers
 ├── seismic-alloy-core/           # primitives: FlaggedStorage, shielded types (fork of alloy-core)
 ├── seismic-trie/                 # Merkle trie for FlaggedStorage (fork of alloy-trie)
-├── seismic-revm-inspectors/      # EVM tracing (fork of revm-inspectors)
-├── seismic-compilers/            # compiler integration for sforge (fork of foundry-compilers)
+├── seismic-foundry/              # dev tools: sforge, sanvil, scast (fork of foundry)
 ├── seismic-foundry-fork-db/      # fork DB with FlaggedStorage (fork of foundry-fork-db)
-├── seismic-solidity/             # Solidity compiler with shielded types (fork of solidity)
-└── seismic-client/               # TypeScript SDK (Viem + Wagmi)
+├── seismic-compilers/            # compiler integration for sforge (fork of foundry-compilers)
+├── enclave/                      # TEE enclave server and contracts
+└── seismic-solidity/             # Solidity compiler with shielded types (fork of solidity)
 ```
 
 After cloning, create symlinks for the cross-repo workspace config:
@@ -53,6 +55,12 @@ For VS Code multi-repo navigation, open `seismic/workspace/seismic.code-workspac
 ```sh
 code seismic/workspace/seismic.code-workspace
 ```
+
+### Dev Env
+
+We use mise to manage our dev environment, including dependency version management and running common tasks. It is not mandatory to use mise, but we recommend it for ease of use and consistency. Start by [installing mise](https://mise.jdx.dev/getting-started.html), and then run `mise install`. This will install the latest version of the Seismic Dev Environment, which includes all the tools you need to build and test Seismic (sforge, sanvil, scast, ssolc, etc.). It will also set up your PATH so that you can run these tools from anywhere inside the repo. Make sure to take a look at comments inside the various `mise.toml` files across the repos, and run `mise run` from anywhere to see the tasks available in that subdir.
+
+![](assets/mise-demo.gif)
 
 ### Docs
 

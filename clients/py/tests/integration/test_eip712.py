@@ -26,7 +26,6 @@ from tests.integration.contracts import (
 
 if TYPE_CHECKING:
     from eth_typing import ChecksumAddress
-    from hexbytes import HexBytes
     from web3 import Web3
 
     from seismic_web3.contract.shielded import ShieldedContract
@@ -46,10 +45,6 @@ def contract(w3: Web3, plain_w3: Web3, account_address: str) -> ShieldedContract
 
 def _deploy(plain_w3: Web3, account_address: str) -> ChecksumAddress:
     return deploy_contract(plain_w3, SEISMIC_COUNTER_BYTECODE, account_address)
-
-
-def _decode_bool(raw: HexBytes) -> int:
-    return int.from_bytes(raw[-32:], "big")
 
 
 # ===================================================================
@@ -81,23 +76,17 @@ class TestEIP712ShieldedRead:
     """Shielded reads via contract.read with EIP-712 signing."""
 
     def test_isOdd_initial(self, contract: ShieldedContract) -> None:
-        result = contract.read.isOdd()
-        assert result is not None
-        assert _decode_bool(result) == 0
+        assert contract.read.isOdd() is False
 
     def test_isOdd_after_odd_set(self, contract: ShieldedContract, w3: Web3) -> None:
         tx = contract.write.setNumber(11)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
-        result = contract.read.isOdd()
-        assert result is not None
-        assert _decode_bool(result) == 1
+        assert contract.read.isOdd() is True
 
     def test_isOdd_after_even_set(self, contract: ShieldedContract, w3: Web3) -> None:
         tx = contract.write.setNumber(10)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
-        result = contract.read.isOdd()
-        assert result is not None
-        assert _decode_bool(result) == 0
+        assert contract.read.isOdd() is False
 
 
 class TestEIP712DebugWrite:
@@ -134,15 +123,11 @@ class TestEIP712Lifecycle:
     def test_full_lifecycle(self, contract: ShieldedContract, w3: Web3) -> None:
         # setNumber(11) -> isOdd == true
         w3.eth.wait_for_transaction_receipt(contract.write.setNumber(11), timeout=30)
-        result = contract.read.isOdd()
-        assert result is not None
-        assert _decode_bool(result) == 1
+        assert contract.read.isOdd() is True
 
         # increment() -> 12 -> isOdd == false
         w3.eth.wait_for_transaction_receipt(contract.write.increment(), timeout=30)
-        result = contract.read.isOdd()
-        assert result is not None
-        assert _decode_bool(result) == 0
+        assert contract.read.isOdd() is False
 
 
 # ===================================================================

@@ -7,35 +7,19 @@ pragma solidity ^0.8.13;
 ///         tests to exercise the event watcher without requiring a full
 ///         SRC20 + Intelligence integration.
 contract MockSRC20Events {
-    event Transfer(
-        address indexed from,
-        address indexed to,
-        bytes32 indexed encryptKeyHash,
-        bytes encryptedAmount
-    );
+    event Transfer(address indexed from, address indexed to, bytes32 indexed encryptKeyHash, bytes encryptedAmount);
 
     event Approval(
-        address indexed owner,
-        address indexed spender,
-        bytes32 indexed encryptKeyHash,
-        bytes encryptedAmount
+        address indexed owner, address indexed spender, bytes32 indexed encryptKeyHash, bytes encryptedAmount
     );
 
-    function emitTransfer(
-        address from,
-        address to,
-        bytes32 encryptKeyHash,
-        bytes calldata encryptedAmount
-    ) external {
+    function emitTransfer(address from, address to, bytes32 encryptKeyHash, bytes calldata encryptedAmount) external {
         emit Transfer(from, to, encryptKeyHash, encryptedAmount);
     }
 
-    function emitApproval(
-        address owner,
-        address spender,
-        bytes32 encryptKeyHash,
-        bytes calldata encryptedAmount
-    ) external {
+    function emitApproval(address owner, address spender, bytes32 encryptKeyHash, bytes calldata encryptedAmount)
+        external
+    {
         emit Approval(owner, spender, encryptKeyHash, encryptedAmount);
     }
 }

@@ -1,0 +1,17 @@
+name: Mise
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["**/mise.toml"]
+  pull_request:
+    paths: ["**/mise.toml"]
+
+jobs:
+  # linter for the mise.toml files themselves, to catch common mistakes and enforce consistency across the files.
+  validate-tasks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v2
+      - run: mise tasks validate

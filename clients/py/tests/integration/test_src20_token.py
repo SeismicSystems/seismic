@@ -1,7 +1,6 @@
 """Integration tests for SRC20 token (TestToken with shielded balances)."""
 
 import pytest
-from hexbytes import HexBytes
 from web3 import Web3
 
 from seismic_web3.contract.shielded import ShieldedContract
@@ -10,16 +9,6 @@ from tests.integration.contracts import (
     TEST_TOKEN_BYTECODE,
     deploy_contract,
 )
-
-
-def _decode_uint256(raw: HexBytes) -> int:
-    """Decode a uint256 from raw ABI-encoded bytes."""
-    return int.from_bytes(raw[-32:], "big")
-
-
-def _decode_bool(raw: HexBytes) -> int:
-    """Decode a bool from raw ABI-encoded bytes."""
-    return int.from_bytes(raw[-32:], "big")
 
 
 @pytest.fixture
@@ -33,17 +22,16 @@ class TestTokenMetadata:
     """Test SRC20 metadata functions (name, symbol, decimals)."""
 
     def test_decimals(self, token: ShieldedContract) -> None:
-        result = token.tread.decimals()
-        assert _decode_uint256(result) == 18
+        assert token.tread.decimals() == 18
 
     def test_name_is_nonempty(self, token: ShieldedContract) -> None:
         result = token.tread.name()
-        assert result is not None
+        assert isinstance(result, str)
         assert len(result) > 0
 
     def test_symbol_is_nonempty(self, token: ShieldedContract) -> None:
         result = token.tread.symbol()
-        assert result is not None
+        assert isinstance(result, str)
         assert len(result) > 0
 
 
@@ -51,9 +39,7 @@ class TestBalanceOf:
     """Verify balanceOf() works with no arguments (SRC20 vs ERC20 difference)."""
 
     def test_initial_balance_is_zero(self, token: ShieldedContract) -> None:
-        result = token.read.balanceOf()
-        assert result is not None
-        assert _decode_uint256(result) == 0
+        assert token.read.balanceOf() == 0
 
 
 class TestMint:
@@ -78,10 +64,7 @@ class TestMint:
     ) -> None:
         tx = token.write.mint(account_address, 500)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
-
-        result = token.read.balanceOf()
-        assert result is not None
-        assert _decode_uint256(result) == 500
+        assert token.read.balanceOf() == 500
 
     def test_mint_multiple_adds_up(
         self,
@@ -95,9 +78,7 @@ class TestMint:
         tx2 = token.write.mint(account_address, 200)
         w3.eth.wait_for_transaction_receipt(tx2, timeout=30)
 
-        result = token.read.balanceOf()
-        assert result is not None
-        assert _decode_uint256(result) == 500
+        assert token.read.balanceOf() == 500
 
 
 class TestTransfer:
@@ -130,9 +111,7 @@ class TestTransfer:
         tx = token.write.transfer(recipient, 400)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
 
-        result = token.read.balanceOf()
-        assert result is not None
-        assert _decode_uint256(result) == 600
+        assert token.read.balanceOf() == 600
 
 
 class TestApprove:
@@ -160,9 +139,7 @@ class TestBurn:
         tx = token.write.burn(account_address, 300)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
 
-        result = token.read.balanceOf()
-        assert result is not None
-        assert _decode_uint256(result) == 700
+        assert token.read.balanceOf() == 700
 
 
 class TestSRC20Lifecycle:
@@ -175,18 +152,14 @@ class TestSRC20Lifecycle:
         account_address: str,
     ) -> None:
         # 1. Initial balance is 0
-        result = token.read.balanceOf()
-        assert result is not None
-        assert _decode_uint256(result) == 0
+        assert token.read.balanceOf() == 0
 
         # 2. Mint 1000 to self
         tx = token.write.mint(account_address, 1000)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
 
         # 3. Balance is now 1000
-        result = token.read.balanceOf()
-        assert result is not None
-        assert _decode_uint256(result) == 1000
+        assert token.read.balanceOf() == 1000
 
         # 4. Transfer 250 to another address
         recipient = "0x000000000000000000000000000000000000dEaD"
@@ -194,15 +167,11 @@ class TestSRC20Lifecycle:
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
 
         # 5. Balance is now 750
-        result = token.read.balanceOf()
-        assert result is not None
-        assert _decode_uint256(result) == 750
+        assert token.read.balanceOf() == 750
 
         # 6. Burn 150 from self
         tx = token.write.burn(account_address, 150)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
 
         # 7. Balance is now 600
-        result = token.read.balanceOf()
-        assert result is not None
-        assert _decode_uint256(result) == 600
+        assert token.read.balanceOf() == 600
