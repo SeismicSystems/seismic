@@ -6,6 +6,11 @@
 
 [patch.crates-io]
 
+# seismic-evm
+alloy-evm = { path = "./seismic-evm/crates/evm" }
+alloy-op-evm = { path = "./seismic-evm/crates/op-evm" }
+alloy-seismic-evm = { path = "./seismic-evm/crates/seismic-evm" }
+
 # seismic-revm
 revm = { path = "./seismic-revm/crates/revm" }
 revm-bytecode = { path = "./seismic-revm/crates/bytecode" }
@@ -22,12 +27,20 @@ revm-state = { path = "./seismic-revm/crates/state" }
 op-revm = { path = "./seismic-revm/crates/op-revm" }
 seismic-revm = { path = "./seismic-revm/crates/seismic" }
 
-# seismic-compilers
-foundry-compilers = { path = "./seismic-compilers/crates/compilers" }
-foundry-compilers-core = { path = "./seismic-compilers/crates/core" }
-foundry-compilers-artifacts = { path = "./seismic-compilers/crates/artifacts/artifacts" }
-foundry-compilers-artifacts-solc = { path = "./seismic-compilers/crates/artifacts/solc" }
-foundry-compilers-artifacts-vyper = { path = "./seismic-compilers/crates/artifacts/vyper" }
+# seismic-revm-inspectors
+revm-inspectors = { path = "./seismic-revm-inspectors" }
+
+# seismic-trie
+alloy-trie = { path = "./seismic-trie" }
+
+# seismic-alloy
+seismic-alloy-consensus = { path = "./seismic-alloy/crates/consensus" }
+seismic-alloy-network = { path = "./seismic-alloy/crates/network" }
+seismic-alloy-genesis = { path = "./seismic-alloy/crates/genesis" }
+seismic-prelude = { path = "./seismic-alloy/crates/prelude" }
+seismic-alloy-provider = { path = "./seismic-alloy/crates/provider" }
+seismic-alloy-rpc-types = { path = "./seismic-alloy/crates/rpc-types" }
+seismic-alloy-trie = { path = "./seismic-alloy/crates/trie" }
 
 # seismic-alloy-core
 alloy-dyn-abi = { path = "./seismic-alloy-core/crates/dyn-abi" }
@@ -39,23 +52,24 @@ alloy-sol-macro-input = { path = "./seismic-alloy-core/crates/sol-macro-input" }
 alloy-sol-types = { path = "./seismic-alloy-core/crates/sol-types" }
 alloy-sol-type-parser = { path = "./seismic-alloy-core/crates/sol-type-parser" }
 
-# seismic-trie
-alloy-trie = { path = "./seismic-trie" }
-
-# seismic-alloy
-seismic-alloy-consensus = { path = "./seismic-alloy/crates/consensus" }
-seismic-alloy-network = { path = "./seismic-alloy/crates/network" }
-seismic-prelude = { path = "./seismic-alloy/crates/prelude" }
-seismic-alloy-provider = { path = "./seismic-alloy/crates/provider" }
-seismic-alloy-rpc-types = { path = "./seismic-alloy/crates/rpc-types" }
-
-# seismic-evm
-alloy-evm = { path = "./seismic-evm/crates/evm" }
-alloy-op-evm = { path = "./seismic-evm/crates/op-evm" }
-alloy-seismic-evm = { path = "./seismic-evm/crates/seismic-evm" }
+# alloy upstream — pinned to match seismic-alloy's exact version requirements.
+# Needed because the seismic-alloy-core fork of alloy-primitives isn't compatible
+# with arbitrary crates.io versions of these crates.
+alloy-consensus = { git = "https://github.com/alloy-rs/alloy", tag = "v1.1.0" }
+alloy-eips = { git = "https://github.com/alloy-rs/alloy", tag = "v1.1.0" }
+alloy-serde = { git = "https://github.com/alloy-rs/alloy", tag = "v1.1.0" }
+alloy-network-primitives = { git = "https://github.com/alloy-rs/alloy", tag = "v1.1.0" }
+alloy-tx-macros = { git = "https://github.com/alloy-rs/alloy", tag = "v1.1.0" }
 
 # seismic-foundry-fork-db
 foundry-fork-db = { path = "./seismic-foundry-fork-db" }
+
+# seismic-compilers
+foundry-compilers = { path = "./seismic-compilers/crates/compilers" }
+foundry-compilers-core = { path = "./seismic-compilers/crates/core" }
+foundry-compilers-artifacts = { path = "./seismic-compilers/crates/artifacts/artifacts" }
+foundry-compilers-artifacts-solc = { path = "./seismic-compilers/crates/artifacts/solc" }
+foundry-compilers-artifacts-vyper = { path = "./seismic-compilers/crates/artifacts/vyper" }
 
 # enclave
 seismic-enclave = { path = "./enclave/crates/enclave" }
