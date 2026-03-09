@@ -1,0 +1,69 @@
+import type { ChildProcess } from 'node:child_process'
+
+import { killProcess, runProcess } from '@sviem-tests/process/manage.ts'
+import {
+  NodeProcess,
+  NodeProcessOptions,
+  SpawnedNode,
+  parseVerbosity,
+} from '@sviem-tests/process/node.ts'
+
+const DEFAULT_PORT = 8545
+
+const spawnAnvil = async (
+  options: NodeProcessOptions = {}
+): Promise<ChildProcess> => {
+  const {
+    port = DEFAULT_PORT,
+    silent = true,
+    verbosity,
+    waitMs = 2_000,
+  } = options
+  const silentArg = silent ? ['--silent'] : []
+  const args = [
+    '--port',
+    port.toString(),
+    ...silentArg,
+    ...parseVerbosity(verbosity),
+  ]
+
+  return runProcess('sanvil', {
+    args,
+    waitMs,
+    stdio: 'ignore',
+  })
+}
+
+/**
+ * Runs `sanvil` in silent mode in the background
+ */
+const runSanvil = async (
+  options: NodeProcessOptions = {}
+): Promise<NodeProcess> => {
+  const { port = DEFAULT_PORT } = options
+  const sanvilProcess = await spawnAnvil(options)
+  // Check if process is running by verifying the URL is accessible, etc.
+  try {
+    return { process: sanvilProcess, url: `http://127.0.0.1:${port}` }
+  } catch (e) {
+    await killProcess(sanvilProcess)
+    throw new Error(`Failed to start seismic-anvil: ${e}`)
+  }
+}
+
+export const setupAnvilNode = async ({
+  port = 8545,
+  ...rest
+}: NodeProcessOptions = {}): Promise<SpawnedNode> => {
+  const anvilProcess = await runSanvil({ port, ...rest })
+  const nodeUrl = anvilProcess.url
+
+  const exitProcess = async () => {
+    await killProcess(anvilProcess.process)
+  }
+
+  return {
+    url: nodeUrl,
+    exitProcess,
+  }
+}

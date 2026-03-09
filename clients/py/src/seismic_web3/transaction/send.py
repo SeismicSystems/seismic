@@ -497,7 +497,7 @@ def signed_call(
     gas: int = _DEFAULT_GAS,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
-) -> HexBytes | None:
+) -> HexBytes:
     """Execute a signed read (sync).
 
     Encrypts calldata, signs the transaction, sends it as an
@@ -514,7 +514,7 @@ def signed_call(
         security: Optional security parameter overrides.
 
     Returns:
-        Decrypted response bytes, or ``None`` if the response is empty.
+        Decrypted response bytes (empty ``HexBytes`` if the response is empty).
     """
     params = _build_metadata_params(
         private_key, encryption, to, value, security, signed_read=True, eip712=eip712
@@ -553,7 +553,7 @@ def signed_call(
     raw_result: str = response.get("result", "0x")
 
     if not raw_result or raw_result == "0x":
-        return None
+        return HexBytes(b"")
 
     result_bytes = HexBytes(raw_result)
     return encryption.decrypt(
@@ -574,7 +574,7 @@ async def async_signed_call(
     gas: int = _DEFAULT_GAS,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
-) -> HexBytes | None:
+) -> HexBytes:
     """Execute a signed read (async).
 
     Same pipeline as :func:`signed_call` but with async chain
@@ -591,7 +591,7 @@ async def async_signed_call(
         security: Optional security parameter overrides.
 
     Returns:
-        Decrypted response bytes, or ``None`` if the response is empty.
+        Decrypted response bytes (empty ``HexBytes`` if the response is empty).
     """
     params = _build_metadata_params(
         private_key, encryption, to, value, security, signed_read=True, eip712=eip712
@@ -630,7 +630,7 @@ async def async_signed_call(
     raw_result: str = response.get("result", "0x")
 
     if not raw_result or raw_result == "0x":
-        return None
+        return HexBytes(b"")
 
     result_bytes = HexBytes(raw_result)
     return encryption.decrypt(

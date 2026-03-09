@@ -158,9 +158,7 @@ tx_hash = contract.twrite.transfer(
 ### Combining Parameters
 
 ```python
-tx_hash = contract.twrite.complexOperation(
-    arg1,
-    arg2,
+tx_hash = contract.twrite.deposit(
     value=10**17,               # 0.1 ETH
     gas=200_000,
     maxFeePerGas=40 * 10**9,    # 40 gwei
@@ -238,11 +236,8 @@ Anyone can:
 # Public token approval (amount is public anyway)
 tx_hash = contract.twrite.approve(spender, amount)
 
-# Public registration (no sensitive data)
-tx_hash = contract.twrite.register(username)
-
-# Public voting (open ballot)
-tx_hash = contract.twrite.vote(proposal_id, True)
+# Public state update (no sensitive data)
+tx_hash = contract.twrite.setNumber(42)
 ```
 
 ***
@@ -262,11 +257,8 @@ tx_hash = contract.twrite.vote(proposal_id, True)
 # Private balance transfer — use .write
 tx_hash = contract.write.transfer(recipient, secret_amount)
 
-# Private auction bid — use .write
-tx_hash = contract.write.bid(secret_bid_amount)
-
-# Private vote — use .write
-tx_hash = contract.write.castPrivateVote(candidate_id)
+# Private withdrawal — use .write
+tx_hash = contract.write.withdraw(amount)
 ```
 
 ***
@@ -329,7 +321,7 @@ tx_hash = contract.twrite.transfer(recipient, amount)
 
 ```python
 # Gas is auto-estimated if not provided
-tx_hash = contract.twrite.complexMethod(args)  # Gas estimated automatically
+tx_hash = contract.twrite.setNumber(42)  # Gas estimated automatically
 ```
 
 ***

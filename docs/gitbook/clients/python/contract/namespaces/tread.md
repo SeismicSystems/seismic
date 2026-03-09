@@ -16,7 +16,7 @@ When you call `contract.tread.functionName(...)`, the SDK:
 1. Encodes your function call using the contract ABI
 2. Constructs a standard `eth_call` request
 3. Executes the call against the node's state
-4. Returns the raw result
+4. ABI-decodes the result and returns Python values
 
 **No encryption** is applied — calldata and results are visible to anyone observing the request.
 
@@ -28,8 +28,13 @@ When you call `contract.tread.functionName(...)`, the SDK:
 result = contract.tread.functionName(arg1, arg2, ...)
 ```
 
-- **Sync**: Returns `HexBytes` immediately
-- **Async**: Returns `HexBytes` (must `await`)
+- **Sync**: Returns decoded Python value immediately
+- **Async**: Returns decoded Python value (must `await`)
+
+Return values are **automatically ABI-decoded**:
+- **Single output** (e.g. `returns (uint256)`): returns the value directly (`int`, `bool`, `str`, etc.)
+- **Multiple outputs** (e.g. `returns (uint256, bool)`): returns a `tuple`
+- **No outputs defined in ABI**: returns `None`
 
 ***
 
@@ -67,15 +72,13 @@ The call uses default parameters:
 
 ```python
 from seismic_web3 import create_public_client
-from eth_abi import decode
 
 # Create client and contract
 w3 = create_public_client(...)
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
-# Read and decode
-result = contract.tread.totalSupply()
-total_supply = decode(['uint256'], result)[0]
+# Results are automatically decoded
+total_supply = contract.tread.totalSupply()  # int
 print(f"Total supply: {total_supply}")
 ```
 
@@ -83,93 +86,67 @@ print(f"Total supply: {total_supply}")
 
 ```python
 from seismic_web3 import create_async_public_client
-from eth_abi import decode
 
 # Create async client and contract
 w3 = create_async_public_client(...)
 contract = w3.seismic.contract(address="0x...", abi=ABI)
 
-# Read and decode
-result = await contract.tread.totalSupply()
-total_supply = decode(['uint256'], result)[0]
+# Results are automatically decoded
+total_supply = await contract.tread.totalSupply()
 print(f"Total supply: {total_supply}")
 ```
 
 ### Reading with Arguments
 
 ```python
-from eth_abi import decode
-
-# Single argument
-result = contract.tread.balanceOf("0x1234...")
-balance = decode(['uint256'], result)[0]
+# Single argument — returns decoded value directly
+balance = contract.tread.balanceOf("0x1234...")  # int
 
 # Multiple arguments
-result = contract.tread.allowance("0x1234...", "0x5678...")
-allowance = decode(['uint256'], result)[0]
+allowance = contract.tread.allowance("0x1234...", "0x5678...")  # int
 ```
 
 ### Multiple Return Values
 
 ```python
-from eth_abi import decode
-
-# Function returns multiple values
-result = contract.tread.getUserInfo(address)
-name, age, active = decode(['string', 'uint256', 'bool'], result)
+# Function returns multiple values — returned as tuple
+name, balance, active = contract.tread.getUserInfo(user_address)
 
 print(f"Name: {name}")
-print(f"Age: {age}")
+print(f"Balance: {balance}")
 print(f"Active: {active}")
 ```
 
 ### Array and Struct Returns
 
 ```python
-from eth_abi import decode
+# Array return — returned as list
+holders = contract.tread.getHolders()  # list[str]
 
-# Array return
-result = contract.tread.getTopHolders()
-holders = decode(['address[]'], result)[0]
-
-# Struct-like return (tuple)
-result = contract.tread.getConfig()
-max_supply, fee_rate, paused = decode(['uint256', 'uint256', 'bool'], result)
+# Struct-like return (multiple outputs) — returned as tuple
+max_deposit, fee_rate, paused = contract.tread.getConfig()
 ```
 
 ***
 
 ## Return Value
 
-Returns `HexBytes` containing the raw ABI-encoded result.
+Returns the **ABI-decoded Python value**:
+
+- **Single output** (e.g. `returns (uint256)`): the value directly — `int`, `bool`, `str`, `bytes`, etc.
+- **Multiple outputs** (e.g. `returns (uint112, uint112, uint32)`): a `tuple` of decoded values
+- **No outputs defined in ABI**: `None`
 
 ```python
-result = contract.tread.totalSupply()
-assert isinstance(result, HexBytes)
+# Single return value — unwrapped from tuple
+total_supply = contract.tread.totalSupply()  # int
+name = contract.tread.name()                  # str
 
-# Decode to get actual value
-from eth_abi import decode
-value = decode(['uint256'], result)[0]
-```
+# Multiple return values — tuple
+max_deposit, fee_rate, paused = contract.tread.getConfig()
 
-### Decoding Results
-
-Results are **raw ABI-encoded bytes**. Use `eth_abi` to decode:
-
-```python
-from eth_abi import decode
-
-# Single return value
-result = contract.tread.name()
-name = decode(['string'], result)[0]
-
-# Multiple return values
-result = contract.tread.getReserves()
-reserve0, reserve1, timestamp = decode(['uint112', 'uint112', 'uint32'], result)
-
-# Complex types
-result = contract.tread.getArray()
-values = decode(['uint256[]'], result)[0]
+# Array return
+holders = contract.tread.getHolders()         # list
 ```
 
 ***
@@ -180,23 +157,25 @@ Standard `eth_call` does **not** prove your identity. The contract sees `msg.sen
 
 ### Problem Example
 
+SRC20's `balanceOf()` takes no arguments and returns the caller's balance:
+
 ```solidity
-// This contract function depends on msg.sender
-function getMyBalance() external view returns (uint256) {
+// SRC20 balanceOf — uses msg.sender internally
+function balanceOf() external view returns (suint256) {
     return balances[msg.sender];
 }
 ```
 
 With **transparent read** (`.tread`):
 ```python
-# msg.sender is 0x0 — returns 0x0's balance
-balance = contract.tread.getMyBalance()  # Almost always 0
+# msg.sender is 0x0 — returns 0x0's balance (int)
+balance = contract.tread.balanceOf()  # Almost always 0
 ```
 
 With **signed read** (`.read`):
 ```python
-# msg.sender is your address — returns your balance
-balance = contract.read.getMyBalance()  # Your actual balance
+# msg.sender is your address — returns your balance (int)
+balance = contract.read.balanceOf()  # Your actual balance
 ```
 
 ### When .tread Works
@@ -212,7 +191,7 @@ Use `.tread` when the contract function:
 function totalSupply() external view returns (uint256);
 function balanceOf(address account) external view returns (uint256);
 function name() external view returns (string);
-function getConfig() external view returns (Config);
+function getConfig() external view returns (uint256, uint256, bool);
 ```
 
 ### When .tread Fails
@@ -224,10 +203,9 @@ Use `.read` when the contract function:
 
 **Examples**:
 ```solidity
-// These require .read (signed read)
-function getMyBalance() external view returns (uint256);
-function isAuthorized() external view returns (bool);
-function getMyVotes() external view returns (uint256);
+// These require .read (signed read) — they use msg.sender internally
+function balanceOf() external view returns (suint256);   // SRC20
+function allowance() external view returns (suint256);    // SRC20
 ```
 
 ***
@@ -270,16 +248,16 @@ The node (and anyone monitoring) can see:
 ### Examples
 
 ```python
-# Public token metadata
-name = decode(['string'], contract.tread.name())[0]
-symbol = decode(['string'], contract.tread.symbol())[0]
-decimals = decode(['uint8'], contract.tread.decimals())[0]
+# Public token metadata — auto-decoded
+name = contract.tread.name()            # str
+symbol = contract.tread.symbol()        # str
+decimals = contract.tread.decimals()    # int
 
 # Public balances
-balance = decode(['uint256'], contract.tread.balanceOf(address))[0]
+balance = contract.tread.balanceOf(address)  # int
 
 # Public configuration
-max_supply = decode(['uint256'], contract.tread.maxSupply())[0]
+item_count = contract.tread.getItemCount()   # int
 ```
 
 ***
@@ -296,14 +274,11 @@ max_supply = decode(['uint256'], contract.tread.maxSupply())[0]
 ### Examples (Use `.read` for these)
 
 ```python
-# Requires msg.sender — use .read
-my_balance = contract.read.getMyBalance()
+# SRC20 balanceOf uses msg.sender — use .read
+my_balance = contract.read.balanceOf()
 
-# Requires authentication — use .read
-is_authorized = contract.read.isAuthorized()
-
-# Private data — use .read
-private_data = contract.read.getPrivateData()
+# SRC20 allowance uses msg.sender — use .read
+my_allowance = contract.read.allowance(spender_address)
 ```
 
 ***
@@ -320,11 +295,8 @@ private_data = contract.read.getPrivateData()
 ## Error Handling
 
 ```python
-from eth_abi import decode
-
 try:
-    result = contract.tread.balanceOf(address)
-    balance = decode(['uint256'], result)[0]
+    balance = contract.tread.balanceOf(address)
     print(f"Balance: {balance}")
 
 except Exception as e:
@@ -357,14 +329,14 @@ except Exception as e:
 
 **Mistake**: Using `.tread` for caller-specific functions
 ```python
-# BAD: Returns 0x0's balance (usually 0)
-balance = contract.tread.getMyBalance()
+# BAD: SRC20 balanceOf uses msg.sender — returns 0x0's balance
+balance = contract.tread.balanceOf()
 ```
 
 **Fix**: Use `.read` to prove your identity
 ```python
 # GOOD: Returns your actual balance
-balance = contract.read.getMyBalance()
+balance = contract.read.balanceOf()
 ```
 
 ***
@@ -376,20 +348,12 @@ balance = contract.read.getMyBalance()
 ```python
 import asyncio
 
-# Read multiple values concurrently
-results = await asyncio.gather(
+# Read multiple values concurrently — each is auto-decoded
+total_supply, name, symbol = await asyncio.gather(
     contract.tread.totalSupply(),
     contract.tread.name(),
     contract.tread.symbol(),
 )
-
-total_supply_raw, name_raw, symbol_raw = results
-
-# Decode
-from eth_abi import decode
-total_supply = decode(['uint256'], total_supply_raw)[0]
-name = decode(['string'], name_raw)[0]
-symbol = decode(['string'], symbol_raw)[0]
 ```
 
 ### Read with Timeout

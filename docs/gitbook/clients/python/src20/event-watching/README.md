@@ -1,169 +1,58 @@
 ---
 description: Watch and decrypt SRC20 Transfer and Approval events
-icon: eye
+icon: radar
 ---
 
 # Event Watching
 
-Watch SRC20 Transfer and Approval events with automatic decryption of encrypted amounts.
+SRC20 tokens emit Transfer and Approval events with encrypted amounts. The event watching system polls for these events, decrypts them using your viewing key, and invokes callbacks with decoded data.
 
-## Overview
+## Factory Functions
 
-SRC20 tokens emit Transfer and Approval events with encrypted amounts. The event watching system provides tools to:
+| Function | Description |
+| --- | --- |
+| [watch_src20_events](watch-src20-events.md) | Watch with automatic key fetching from Directory |
+| [watch_src20_events_with_key](../intelligence-providers/watch-src20-events-with-key.md) | Watch with an explicit viewing key |
 
-- Poll for SRC20 events matching your viewing key
-- Automatically decrypt encrypted amounts using AES-256-GCM
-- Invoke callbacks with fully decoded event data
-- Handle both sync (threading) and async (asyncio) execution models
+Both have async variants (`async_watch_src20_events`, `async_watch_src20_events_with_key`).
 
-## Quick Start
+## Watcher Classes
 
-### Watch Your Own Events
+| Class | Description |
+| --- | --- |
+| [SRC20EventWatcher](src20-event-watcher.md) | Thread-based polling watcher (sync) |
+| [AsyncSRC20EventWatcher](async-src20-event-watcher.md) | Task-based polling watcher (async) |
+
+## Example
 
 ```python
 import os
-from seismic_web3 import create_wallet_client, PrivateKey
+from seismic_web3 import PrivateKey, SEISMIC_TESTNET
 from seismic_web3.src20 import watch_src20_events
 
-private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
-w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
+pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
+w3 = SEISMIC_TESTNET.wallet_client(pk)
 
 watcher = watch_src20_events(
     w3,
     encryption=w3.seismic.encryption,
-    private_key=private_key,
+    private_key=pk,
     on_transfer=lambda log: print(f"Transfer: {log.decrypted_amount}"),
+    on_approval=lambda log: print(f"Approval: {log.decrypted_amount}"),
 )
 
 # Later...
 watcher.stop()
 ```
 
-### Watch with Explicit Key
-
-```python
-import os
-from web3 import Web3
-from seismic_web3 import Bytes32
-from seismic_web3.src20 import watch_src20_events_with_key
-
-w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
-viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"].removeprefix("0x")))
-
-watcher = watch_src20_events_with_key(
-    w3,
-    viewing_key=viewing_key,
-    on_transfer=lambda log: print(f"Transfer: {log.decrypted_amount}"),
-)
-```
-
-## Factory Functions
-
-High-level functions that create and start watchers:
-
-| Function | Description |
-|----------|-------------|
-| [watch_src20_events](watch-src20-events.md) | Watch with automatic key fetching (sync) |
-| [watch_src20_events_with_key](watch-src20-events-with-key.md) | Watch with explicit viewing key (sync) |
-
-Both have async variants (`async_watch_src20_events`, `async_watch_src20_events_with_key`).
-
-## Watcher Classes
-
-Low-level classes for advanced use cases:
-
-| Class | Description |
-|-------|-------------|
-| [SRC20EventWatcher](src20-event-watcher.md) | Thread-based watcher (sync) |
-| [AsyncSRC20EventWatcher](async-src20-event-watcher.md) | Task-based watcher (async) |
-
-## Event Types
-
-Decoded event data structures:
-
-| Type | Description |
-|------|-------------|
-| [DecryptedTransferLog](../types/decrypted-transfer-log.md) | Transfer event with decrypted amount |
-| [DecryptedApprovalLog](../types/decrypted-approval-log.md) | Approval event with decrypted amount |
-
 ## How It Works
 
-1. **Key hash filtering** - Events are filtered by `keccak256(viewing_key)` in the event topics
-2. **Polling** - The watcher polls `eth_getLogs` at a configurable interval
-3. **Decryption** - Encrypted amounts are decrypted using AES-256-GCM with the viewing key
-4. **Callbacks** - User callbacks are invoked with fully decoded event data
-
-## Sync vs Async
-
-### Sync (Threading)
-
-- Runs in a background daemon thread
-- Uses `Web3` (synchronous)
-- Callbacks are regular functions
-- Good for scripts and simple applications
-
-```python
-watcher = watch_src20_events(w3, ...)
-watcher.stop()
-```
-
-### Async (asyncio)
-
-- Runs as an `asyncio.Task`
-- Uses `AsyncWeb3` (asynchronous)
-- Callbacks can be async or sync functions
-- Good for async applications and WebSocket connections
-
-```python
-watcher = await async_watch_src20_events(w3, ...)
-await watcher.stop()
-```
-
-## Common Patterns
-
-### Context Manager
-
-```python
-with watch_src20_events(...) as watcher:
-    time.sleep(60)
-# Automatically stopped
-```
-
-### Error Handling
-
-```python
-def on_error(exc: Exception):
-    print(f"Error: {exc}")
-
-watcher = watch_src20_events(
-    w3,
-    ...,
-    on_error=on_error,
-)
-```
-
-### Filter by Token
-
-```python
-watcher = watch_src20_events(
-    w3,
-    ...,
-    token_address="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-)
-```
-
-### Historical Events
-
-```python
-watcher = watch_src20_events(
-    w3,
-    ...,
-    from_block=1000000,  # Start from specific block
-)
-```
+1. **Key hash** — `keccak256(viewing_key)` is used to filter events by the 4th topic
+2. **Polling** — `eth_getLogs` at a configurable interval (default 2s)
+3. **Decryption** — AES-256-GCM with the viewing key (no AAD)
+4. **Callbacks** — invoked with [`DecryptedTransferLog`](../types/decrypted-transfer-log.md) or [`DecryptedApprovalLog`](../types/decrypted-approval-log.md)
 
 ## See Also
 
-- [Directory](../directory/README.md) - Manage viewing keys
-- [Types](../types/README.md) - Event data structures
-- [SRC20 Overview](../README.md) - Full SRC20 documentation
+- [Types](../types/) — Decrypted event data structures
+- [Intelligence Providers](../intelligence-providers/) — Viewing key management
