@@ -305,5 +305,5 @@ From here, you can:
 
 - **Explore the client library docs** -- The [Client Libraries section](../../clients/README.md) has detailed API references for `seismic-viem` and `seismic-react`, including all available hooks, wallet client methods, and precompile utilities.
 - **Add wallet integration** -- See the [Wallet Guides](../../clients/typescript/react/wallet-guides/README.md) for step-by-step instructions on integrating RainbowKit, Privy, or AppKit with `seismic-react`.
-- **Deploy to testnet** -- The [Networks page](../../networks/devnet.md) has network configuration and faucet information for deploying your SRC20 to a live Seismic network.
+- **Deploy to testnet** -- The [Networks page](../../networks/local-development.md) has network configuration and faucet information for deploying your SRC20 to a live Seismic network.
 - **Extend the contract** -- Consider adding features like shielded `saddress` for the recipient (hiding who receives tokens), burn functions, or governance mechanisms.

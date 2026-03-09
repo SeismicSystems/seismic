@@ -1,20 +1,20 @@
 ---
-description: Try out the developer testnet
+description: Local development with Seismic Foundry
 icon: down-right
 metaLinks:
   alternates:
     - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/appendix/devnet
 ---
 
-# Deploy an Encrypted Contract on our Devnet
+# Local Development
 
 <figure><img src="../../.gitbook/assets/Screenshot 2025-03-25 at 3.27.58 PM.png" alt=""><figcaption></figcaption></figure>
 
-Welcome! This walkthrough is quick. It only requires a minute of actual attention, while the rest is waiting. **If you run into any issues, please check if it's one of the 10 common errors resolved in the** [**FAQ**](devnet.md#faq) **section.** You can also hop in [our discord](https://discord.com/invite/seismic) and ask questions in the `#devnet` channel.
+Welcome! This walkthrough is quick. It only requires a minute of actual attention, while the rest is waiting. **If you run into any issues, please check if it's one of the 10 common errors resolved in the** [**FAQ**](local-development.md#faq) **section.** You can also hop in [our discord](https://discord.com/invite/seismic) and ask questions in the `#devnet` channel.
 
 If you end up deploying your own custom contract, please send the github link to [@lyronc](https://t.me/lyronc) on TG! Also note, this **is not an incentivized testnet**.
 
-Works on Mac, Linux, and Windows via WSL (see [FAQ](devnet.md#faq)).
+Works on Mac, Linux, and Windows via WSL (see [FAQ](local-development.md#faq)).
 
 ## Deploy an encrypted contract
 
@@ -127,7 +127,7 @@ sudo apt install cargo -y
 
 <summary>I'm getting <code>jq (command not found)</code>.</summary>
 
-Means [step #2](devnet.md#id-2.-install-jq) didn't work. If you're on Linux, run
+Means [step #2](local-development.md#id-2.-install-jq) didn't work. If you're on Linux, run
 
 ```bash
 sudo apt-get install jq
@@ -174,7 +174,7 @@ sudo apt install cargo -y
 
 <summary>I'm getting <code>command not found: sfoundryup</code> .</summary>
 
-If this comes up even after you complete [step #3](devnet.md#id-3.-install-sfoundryup) successfully, restart your terminal. Should be able to run it after.
+If this comes up even after you complete [step #3](local-development.md#id-3.-install-sfoundryup) successfully, restart your terminal. Should be able to run it after.
 
 </details>
 

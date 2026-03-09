@@ -215,7 +215,7 @@ sforge script script/Deploy.s.sol \
     --broadcast
 ```
 
-For network details (RPC URLs, chain IDs, faucets), see [Devnet](devnet.md) and [Networks](devnet.md).
+For network details (RPC URLs, chain IDs, faucets), see [Devnet](local-development.md) and [Networks](local-development.md).
 
 ---
 

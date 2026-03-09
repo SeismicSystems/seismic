@@ -221,7 +221,7 @@
 
 ## Networks & Deployment
 
-* [Devnet](networks/devnet.md)
+* [Local Development](networks/local-development.md)
 * [Migrating from Ethereum](networks/migrating-from-ethereum.md)
 
 ## Reference
