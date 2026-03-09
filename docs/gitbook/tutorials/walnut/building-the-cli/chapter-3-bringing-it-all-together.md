@@ -44,8 +44,7 @@ Import the required libraries to read environment variables, define network conf
 ```typescript
 import dotenv from 'dotenv'
 import { join } from 'path'
-import { seismicDevnet } from 'seismic-viem'
-import { anvil } from 'viem/chains'
+import { seismicTestnet, sanvil } from 'seismic-viem'
 
 import { CONTRACT_DIR, CONTRACT_NAME } from '../lib/constants'
 import { readContractABI, readContractAddress } from '../lib/utils'
@@ -93,7 +92,7 @@ Determine whether to use the local `sanvil`node (31337) or the Seismic devnet.
 
 ```typescript
   const chain =
-    process.env.CHAIN_ID === anvil.id.toString() ? anvil : seismicDevnet
+    process.env.CHAIN_ID === sanvil.id.toString() ? sanvil : seismicTestnet
 ```
 
 #### Define players

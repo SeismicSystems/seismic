@@ -146,9 +146,7 @@ Allows a player to shake the Walnut, incrementing the kernel. This supports mult
 async shake(playerName: string, numShakes: number) {
   console.log(`- Player ${playerName} writing shake()`)
   const contract = this.getPlayerContract(playerName)
-  const walletClient = this.getWalletClient(playerName)
   await contract.write.shake([numShakes], { gas: 50000n }) // signed write
-  })
 }
 ```
 
