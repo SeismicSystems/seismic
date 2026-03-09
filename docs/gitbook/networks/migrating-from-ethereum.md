@@ -72,6 +72,7 @@ For every state variable you want to shield, change the type from its standard S
 | `int256`               | `sint256`                |
 | `address`              | `saddress`               |
 | `bool`                 | `sbool`                  |
+| `bytes32`, `bytes16`...| `sbytes32`, `sbytes16`...|
 
 **Before (Ethereum):**
 
@@ -164,7 +165,7 @@ Replace your Ethereum client libraries with their Seismic equivalents:
 | `viem`           | `seismic-viem`     | `npm install seismic-viem`         |
 | `wagmi`          | `seismic-react`    | `npm install seismic-react`        |
 | `alloy` (Rust)   | `seismic-alloy`    | Add `seismic-alloy-provider` crate |
-| `web3.py`        | `seismic-python`   | `pip install seismic-py`           |
+| `web3.py`        | `seismic-web3`     | `pip install seismic-web3`         |
 
 Key changes in client code:
 
