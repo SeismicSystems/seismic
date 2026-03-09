@@ -189,7 +189,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallO
             multiSend(executionData);
         } else {
             Key storage S = $.keys[idx - 1];
-            require(S.expiry > block.timestamp, "key expired");
+            require(S.expiry == 0 || S.expiry > block.timestamp, "key expired");
             require(idx == $.keyToSessionIndex[_generateKeyIdentifier(S.keyType, S.publicKey)], "key revoked");
 
             bytes32 dig = _hashTypedDataV4(S.nonce, calls, DOMAIN_SEPARATOR);
@@ -255,7 +255,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallO
     /// @return valid True if the signature is valid
     function verifyAndConsumeNonce(uint32 idx, bytes calldata message, bytes calldata sig) external returns (bool) {
         Key storage key = _getStorage().keys[idx - 1];
-        require(key.expiry > block.timestamp, "key expired");
+        require(key.expiry == 0 || key.expiry > block.timestamp, "key expired");
         require(idx == getKeyIndex(key.keyType, key.publicKey), "key revoked");
         bytes32 domainSeparator = getDomainSeparator();
         bytes32 digest = _hashTypedDataV4(key.nonce, message, domainSeparator);
