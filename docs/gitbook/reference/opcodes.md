@@ -40,7 +40,7 @@ function cstoreExample(uint256 slot, uint256 value) internal {
 
 ## `CLOAD`
 
-Reads a value from a slot marked as **private**. Returns `0` if the slot is public.
+Reads a value from a storage slot. `CLOAD` can access both private and public slots — it is strictly more powerful than `SLOAD`.
 
 ```solidity
 contract PrivateBalance {
@@ -49,8 +49,7 @@ contract PrivateBalance {
     function getBalance() external view returns (suint256) {
         return balance;
         // Compiler generates:
-        //   CLOAD slot(balance) → returns value only if is_private=true
-        //                       → returns 0 if slot is public
+        //   CLOAD slot(balance) → returns the value (works for both private and public slots)
     }
 }
 ```
@@ -69,7 +68,7 @@ function cloadExample(uint256 slot) internal view returns (uint256 value) {
 
 ## `SSTORE` / `SLOAD` (Standard)
 
-Standard EVM storage operations. `SSTORE` marks the slot as **public**. `SLOAD` returns `0` if the slot is private.
+Standard EVM storage operations. `SSTORE` marks the slot as **public**. `SLOAD` reverts if the slot is private.
 
 ```solidity
 contract PublicCounter {
@@ -78,7 +77,7 @@ contract PublicCounter {
     function increment() external {
         count += 1;
         // Compiler generates:
-        //   SLOAD  slot(count)       → read current value (returns 0 if private)
+        //   SLOAD  slot(count)       → read current value (reverts if private)
         //   SSTORE slot(count), new  → write new value, slot marked is_private=false
     }
 }
@@ -91,9 +90,9 @@ Every storage slot is a pair: `(value: U256, is_private: bool)`. The flag is set
 | Operation                 | Result                    |
 | ------------------------- | ------------------------- |
 | `SLOAD` on a public slot  | Returns the value         |
-| `SLOAD` on a private slot | Returns `0`               |
+| `SLOAD` on a private slot | Reverts                   |
 | `CLOAD` on a private slot | Returns the value         |
-| `CLOAD` on a public slot  | Returns `0`               |
+| `CLOAD` on a public slot  | Returns the value         |
 | `SSTORE` to a slot        | Marks the slot as public  |
 | `CSTORE` to a slot        | Marks the slot as private |
 
