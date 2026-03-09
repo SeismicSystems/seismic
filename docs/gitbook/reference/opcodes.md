@@ -18,7 +18,7 @@ contract PrivateCounter {
     suint256 private count;  // shielded type → compiler uses CSTORE
 
     function increment() external {
-        count = count + suint256.wrap(1);
+        count = count + suint256(1);
         // Compiler generates:
         //   CLOAD  slot(count)       → read current value
         //   CSTORE slot(count), new  → write new value, slot marked is_private=true
@@ -110,7 +110,7 @@ contract MixedStorage {
         // Compiler: SLOAD slot(0) → SSTORE slot(0), is_private=false
 
         // Private update — hidden from observers
-        userBalance = userBalance + suint256.wrap(msg.value);
+        userBalance = userBalance + suint256(msg.value);
         // Compiler: CLOAD slot(1) → CSTORE slot(1), is_private=true
     }
 }
