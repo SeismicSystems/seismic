@@ -38,39 +38,51 @@ The encryption flow uses three of Seismic's precompiles:
 
 The ECDH precompile at address `0x65` performs Elliptic Curve Diffie-Hellman key agreement. Given a private key and a public key, it produces a shared secret that both parties can independently derive.
 
-For event encryption, the contract needs a keypair. You can generate one at deployment time and store the public key on-chain:
+<!-- TODO: When shielded bytecode deployment is supported, update this section — the private key can be passed directly in the constructor instead of requiring a post-deploy setContractKey() call. -->
+For event encryption, the contract needs a keypair. The private key must **not** be passed as a constructor argument -- constructor calldata is not encrypted (CREATE/CREATE2 transactions are standard Ethereum transaction types), so the key would leak in the deployment data.
+
+Instead, set the key after deployment via a Seismic transaction (type `0x4A`), which encrypts calldata:
 
 ```solidity
-bytes32 private contractPrivateKey;
+address public owner;
+sbytes32 contractPrivateKey;
 bytes public contractPublicKey;
 
 constructor(
     string memory _name,
     string memory _symbol,
-    uint256 _initialSupply,
-    bytes32 _contractPrivateKey,
-    bytes memory _contractPublicKey
+    uint256 _initialSupply
 ) {
     name = _name;
     symbol = _symbol;
     totalSupply = _initialSupply;
     balanceOf[msg.sender] = suint256(_initialSupply);
-    contractPrivateKey = _contractPrivateKey;
-    contractPublicKey = _contractPublicKey;
+    owner = msg.sender;
+}
+
+/// @notice Call this immediately after deployment using a Seismic transaction.
+function setContractKey(bytes32 _privateKey, bytes memory _publicKey) external {
+    require(msg.sender == owner, "Only owner");
+    require(bytes32(contractPrivateKey) == bytes32(0), "Already set");
+    contractPrivateKey = sbytes32(_privateKey);
+    contractPublicKey = _publicKey;
 }
 ```
+
+Because `setContractKey` is called via a Seismic transaction, the private key is encrypted in the calldata before it leaves the caller's machine. The key is stored as `sbytes32`, so the compiler routes it through shielded storage — observers see `0x00...0` instead of the actual key.
 
 To derive a shared secret with a specific recipient, the contract calls the ECDH precompile with its own private key and the recipient's public key:
 
 ```solidity
-function _deriveSharedSecret(bytes memory recipientPublicKey) internal view returns (bytes32) {
+function _deriveSharedSecret(bytes memory recipientPublicKey) internal view returns (sbytes32) {
+    require(bytes32(contractPrivateKey) != bytes32(0), "Contract key not set");
     // Call ECDH precompile at 0x65
     // Note: private key comes FIRST, then public key
     (bool success, bytes memory result) = address(0x65).staticcall(
-        abi.encodePacked(contractPrivateKey, recipientPublicKey)
+        abi.encodePacked(bytes32(contractPrivateKey), recipientPublicKey)
     );
     require(success, "ECDH failed");
-    return abi.decode(result, (bytes32));
+    return sbytes32(abi.decode(result, (bytes32)));
 }
 ```
 
@@ -79,14 +91,14 @@ function _deriveSharedSecret(bytes memory recipientPublicKey) internal view retu
 The raw ECDH shared secret should not be used directly as an encryption key. The HKDF precompile at address `0x68` derives a proper cryptographic key from the shared secret:
 
 ```solidity
-function _deriveEncryptionKey(bytes32 sharedSecret) internal view returns (bytes32) {
+function _deriveEncryptionKey(sbytes32 sharedSecret) internal view returns (sbytes32) {
     // Call HKDF precompile at 0x68
     // Pass raw key material bytes directly
     (bool success, bytes memory result) = address(0x68).staticcall(
-        abi.encodePacked(sharedSecret)
+        abi.encodePacked(bytes32(sharedSecret))
     );
     require(success, "HKDF failed");
-    return abi.decode(result, (bytes32));
+    return sbytes32(abi.decode(result, (bytes32)));
 }
 ```
 
@@ -97,11 +109,11 @@ The second argument is a context string (sometimes called "info" in HKDF termino
 The AES-GCM Encrypt precompile at address `0x66` encrypts the data:
 
 ```solidity
-function _encrypt(bytes32 key, bytes12 nonce, bytes memory plaintext) internal view returns (bytes memory) {
+function _encrypt(sbytes32 key, bytes12 nonce, bytes memory plaintext) internal view returns (bytes memory) {
     // Call AES-GCM Encrypt precompile at 0x66
     // Input format: key (32 bytes) + nonce (12 bytes) + plaintext
     (bool success, bytes memory ciphertext) = address(0x66).staticcall(
-        abi.encodePacked(uint256(key), nonce, plaintext)
+        abi.encodePacked(bytes32(key), nonce, plaintext)
     );
     require(success, "Encryption failed");
     return ciphertext;
@@ -120,10 +132,10 @@ function _emitEncryptedTransfer(
     bytes memory recipientPublicKey
 ) internal {
     // Derive shared secret between contract and recipient
-    bytes32 sharedSecret = _deriveSharedSecret(recipientPublicKey);
+    sbytes32 sharedSecret = _deriveSharedSecret(recipientPublicKey);
 
     // Derive encryption key
-    bytes32 encKey = _deriveEncryptionKey(sharedSecret);
+    sbytes32 encKey = _deriveEncryptionKey(sharedSecret);
 
     // Encrypt the amount (nonce can be derived or generated per-event)
     bytes12 nonce = bytes12(keccak256(abi.encodePacked(from, to, block.number)));

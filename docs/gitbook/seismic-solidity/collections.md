@@ -41,7 +41,7 @@ m[k] += a[idx];
 
 Observers for any of these operations will not know which elements were read from / written to.
 
-<figure><img src="../../.gitbook/assets/figures (1).png" alt=""><figcaption><p>Using an <code>stype</code> as the key and value to a collection shields which element you're using.</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/shielded-collection-access.png" alt=""><figcaption><p>Using an <code>stype</code> as the key and value to a collection shields which element you're using.</p></figcaption></figure>
 
 In the previous section, we only knew how to shield what was happening for certain elements. Now, we know how to shield which elements are being modified in the first place.
 

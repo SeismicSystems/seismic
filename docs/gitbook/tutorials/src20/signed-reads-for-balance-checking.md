@@ -22,7 +22,7 @@ A **signed read** solves both problems. It is a Seismic transaction (type `0x4A`
 
 * The `from` field is cryptographically verified, so the contract can trust `msg.sender`.
 * The response is encrypted to the sender's encryption public key (included in the Seismic transaction's elements). Even if someone intercepts the response, they cannot decrypt it.
-* The `signed_read` flag in SeismicElements is set to `true`, which prevents anyone from replaying this payload as a write transaction.
+* The `signed_read` flag in SeismicElements should be set to `true`, in order to prevent anyone from replaying this payload as a write transaction.
 
 From the contract's perspective, a signed read looks like a normal view function call. The difference is entirely at the transport layer.
 
@@ -45,7 +45,7 @@ This function does three things:
 
 1. **Checks `msg.sender`** -- Only the account owner can query their own balance. With a vanilla `eth_call`, `msg.sender` would be `address(0)` and this check would always fail. With a signed read, `msg.sender` is the actual caller.
 2. **Casts to `uint256`** -- The shielded `suint256` value is cast to a regular `uint256` for the return value. Shielded types cannot be returned from external functions.
-3. **Returns the balance** -- The return value is encrypted to the caller's key by the Seismic node before being sent back. Even though the function returns a `uint256`, the response payload is encrypted.
+3. **Returns the balance** -- The return value is encrypted to the caller's key by the Seismic node before being sent back. Even though the function returns a `uint256`, the response is encrypted because the call was made with a signed read.
 
 ### Allowance checking
 
@@ -65,7 +65,7 @@ Here, either the owner or the spender can check the allowance. Both parties have
 
 ## Client-side code
 
-On the client side, signed reads are handled transparently by `seismic-viem`. When you use a `ShieldedWalletClient` or a `ShieldedContract`, read calls are automatically sent as signed reads.
+On the client side, `seismic-viem` handles signed reads automatically under the hood. When you use a `ShieldedWalletClient` or a `ShieldedContract`, read calls are sent as signed reads. If you need an unsigned read (a vanilla `eth_call`), use `contract.tread` instead.
 
 ### Using a shielded contract instance
 

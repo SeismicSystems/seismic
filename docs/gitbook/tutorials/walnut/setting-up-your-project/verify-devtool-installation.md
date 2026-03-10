@@ -10,4 +10,4 @@ Before continuing, ensure that you have completed the steps in the [Installation
 
 Run each of the above commands in your terminal with a `--version` flag to ensure that they're installed correctly.
 
-Also ensure that you have [bun](https://bun.sh) installed on your machine. If you do not have `bun` installed, follow the instructions [here](https://bun.sh/docs/installation) to install it on your machine.
+This tutorial uses [bun](https://bun.sh) as the JavaScript runtime. Other runtimes like Node.js should also work, but the commands below assume bun. If you don't have it installed, follow the instructions [here](https://bun.sh/docs/installation).

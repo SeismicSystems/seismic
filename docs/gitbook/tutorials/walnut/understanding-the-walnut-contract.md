@@ -6,7 +6,7 @@ icon: acorn
 
 Imagine you’re holding a walnut, an unassuming object. Inside it lies a number, a secret **only revealed when you crack the shell**. There are primarily two actions you can take on this walnut: either **shaking** it or **hitting** it. **Shaking** the walnut some `n` number of times increments the number inside by `n`, while **hitting** the walnut brings it one step closer to the shell cracking. **You can only see the number inside if you have contributed to the cracking the shell, i.e., you have hit the walnut at least once.** This collaborative challenge is the heart of the Walnut App, and it’s all powered by the Walnut smart contract. Let’s dive into the inner workings of the contract and uncover how each part fuels this game.
 
-The contract can be found in the `packages/contracts/Walnut.sol` file of the starter repo.
+The contract can be found in the `packages/contracts/Walnut.sol` file of the [starter repo](https://github.com/SeismicSystems/seismic-starter).
 
 ## State variables
 
@@ -16,7 +16,7 @@ Think of the shell as the Walnut’s durability. `startShell` is the Walnut’s 
 
 ### startNumber and number
 
-These are the secret numbers at the heart of the Walnut. `startNumber` initializes the hidden `number`, while `number` evolves as players shake the Walnut. Being `suint256` (shielded integers), these numbers remain encrypted on-chain—visible only to authorized participants.
+These are the secret numbers at the heart of the Walnut. `startNumber` initializes the hidden `number`, while `number` evolves as players shake the Walnut. Being `suint256` (shielded integers), these numbers remain shielded on-chain—visible only to authorized participants.
 
 ### round
 
@@ -41,7 +41,7 @@ This function allows a player to hit the Walnut, reducing its durability and bri
 
 ### shake (suint256 \_numShakes)
 
-This function allows a player to shake the walnut `_numShakes` number of times. Since this is a **write** function that takes in an `stype` as one of its parameters, calling this function would constitute a **Seismic write.**
+This function allows a player to shake the walnut `_numShakes` number of times. Since it takes a shielded type as a parameter, you should use a Seismic transaction to keep the input private.
 
 **What happens:**
 
@@ -50,7 +50,7 @@ This function allows a player to shake the walnut `_numShakes` number of times. 
 
 ### look ( )
 
-This function allows contributors to the current round to view the `number` inside the walnut. Since this is a **view** function that **reveals an `stype`,** calling this function would constitute a **Seismic read.**
+This function allows contributors to the current round to view the `number` inside the walnut. Since it returns a shielded type, you should use a [signed read](../../reference/seismic-transaction.md#signed-reads) so the contract can identify the caller.
 
 **What happens:**
 

@@ -8,13 +8,7 @@ In this chapter, you’ll write tests to verify that the Walnut contract behaves
 
 ### Getting Started
 
-Navigate to the test folder in your Walnut App and open the `Walnut.t.sol` file located at:
-
-```bash
-packages/contracts/test/Walnut.t.sol
-```
-
-This file is where you’ll write all the test cases for the Walnut contract. Start with the following base code:
+Open `packages/contracts/test/Walnut.t.sol`. This is where you’ll write all the test cases for the Walnut contract. Start with the following base code:
 
 ```solidity
 // SPDX-License-Identifier: MIT License
@@ -28,7 +22,7 @@ contract WalnutTest is Test {
 
     function setUp() public {
         // Initialize a Walnut with shell strength = 2 and kernel = 0
-        walnut = new Walnut(2, suint256(0));
+        walnut = new Walnut(2, 0);
     }
 }
 ```
@@ -217,7 +211,7 @@ function test_ContributorInRound2() public {
 }
 ```
 
-You can find the entire test file [here](https://github.com/SeismicSystems/seismic-starter/blob/6251e663814ad9018441b15edc6a3a83fd9d38ce/packages/contracts/test/Walnut.t.sol#L1).
+You can find the entire test file [here](https://github.com/SeismicSystems/seismic-starter/blob/main/packages/contracts/test/Walnut.t.sol).
 
 Test out the file by running the following inside the `packages/contracts` directory:
 

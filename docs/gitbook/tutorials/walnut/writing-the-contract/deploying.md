@@ -8,11 +8,7 @@ In this chapter, you’ll deploy your Walnut contract to a local Seismic node fo
 
 ### Writing the deploy script
 
-Navigate to the script folder in your Walnut App and open the `Walnut.s.sol` file located at:
-
-```bash
-packages/contracts/script
-```
+Open `packages/contracts/script/Walnut.s.sol` and add the following:
 
 and add the following to it:
 
@@ -30,7 +26,7 @@ contract WalnutScript is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVKEY");
 
         vm.startBroadcast(deployerPrivateKey);
-        walnut = new Walnut(3, suint256(0));
+        walnut = new Walnut(3, 0);
         vm.stopBroadcast();
     }
 }

@@ -5,7 +5,7 @@ icon: browser
 
 # Building the Frontend
 
-This chapter connects the SRC20 contract to a React frontend using `seismic-react`, which composes with wagmi to provide shielded reads, shielded writes, and encrypted communication out of the box. _Estimated time: \~25 minutes._
+This chapter connects the SRC20 contract to a React frontend using `seismic-react`, which composes with [wagmi](https://wagmi.sh/) to provide shielded reads, shielded writes, and encrypted communication out of the box. _Estimated time: \~25 minutes._
 
 ## Overview
 
@@ -180,7 +180,7 @@ When `transfer()` is called, the `seismic-react` library:
 4. Wraps everything in a Seismic transaction (type `0x4A`).
 5. Broadcasts the encrypted transaction.
 
-The user sees a standard wallet confirmation prompt. The privacy is handled transparently.
+The user sees a standard wallet confirmation prompt. The privacy happens automatically under the hood.
 
 ## Decrypting events
 
@@ -194,7 +194,8 @@ Here is the full dashboard component that ties everything together:
 
 ```tsx
 import { useAccount } from "wagmi";
-import { formatEther } from "viem";
+import { BalanceDisplay } from "./BalanceDisplay";
+import { TransferForm } from "./TransferForm";
 
 function TokenDashboard() {
   const { address, isConnected } = useAccount();
@@ -232,5 +233,5 @@ From here, you can:
 
 - **Explore the client library docs** -- The [Client Libraries section](../../clients/README.md) has detailed API references for `seismic-viem` and `seismic-react`, including all available hooks, wallet client methods, and precompile utilities.
 - **Add wallet integration** -- See the [Wallet Guides](../../clients/typescript/react/wallet-guides/README.md) for step-by-step instructions on integrating RainbowKit, Privy, or AppKit with `seismic-react`.
-- **Deploy to testnet** -- See [Migrating from Ethereum](../../networks/migrating-from-ethereum.md) for deploying your SRC20 to a live Seismic network.
+- **Deploy to testnet** -- See the [deploy section](../../networks/migrating-from-ethereum.md#step-8-deploy) for deploying your SRC20 to a live Seismic network.
 - **Extend the contract** -- Consider adding features like shielded `saddress` for the recipient (hiding who receives tokens), burn functions, or governance mechanisms.

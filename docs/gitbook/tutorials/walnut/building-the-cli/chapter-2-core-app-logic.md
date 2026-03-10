@@ -6,7 +6,7 @@ icon: tablet-screen-button
 
 In this chapter, you’ll write the core logic to interact with the Walnut contract by creating an App class. This class will initialize player-specific wallet clients and contracts, and provide easy-to-use functions like hit, shake, reset, and look. _Estimated time: \~20 minutes_
 
-Now, navigate to `packages/cli/src/` and create a file called `app.ts` which will contain the core logic for the CLI:
+Create a file called `app.ts` in `packages/cli/src/` which will contain the core logic for the CLI:
 
 ```
 # Assuming you are in packages/cli/lib
@@ -69,7 +69,7 @@ export class App {
 
 ### Add initialization logic to App
 
-The `init()`method sets up individual wallet clients and contract instances for each player, enabling multiplayer interactions. Each player gets their own wallet client and a direct connection to the contract.
+The `init()` method sets up individual wallet clients and contract instances for each player, enabling multiplayer interactions. Each player gets their own wallet client and a direct connection to the contract.
 
 ```typescript
 async init() {

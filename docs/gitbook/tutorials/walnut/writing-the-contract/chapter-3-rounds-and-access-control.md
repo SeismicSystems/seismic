@@ -34,12 +34,13 @@ The reset mechanism allows the Walnut to be reused for multiple rounds, with eac
 Here’s how we can implement the reset function:
 
 ```solidity
-    // The current round number.
-    uint256 round; 
-    
+    uint256 initialShellStrength; // Store the starting shell strength for resets.
+    suint256 initialKernel;       // Store the starting kernel value for resets.
+    uint256 round;                // The current round number.
+
     // Event to log resets.
     event Reset(uint256 indexed newRound, uint256 shellStrength);
-    
+
     function reset() public requireCracked {
         shellStrength = initialShellStrength; // Restore the shell strength.
         kernel = initialKernel; // Reset the kernel to its original value.
@@ -47,6 +48,8 @@ Here’s how we can implement the reset function:
         emit Reset(round, shellStrength); // Log the reset action.
     }
 ```
+
+These new state variables (`initialShellStrength` and `initialKernel`) should be set in the constructor alongside the existing assignments:
 
 **What’s Happening Here?**
 
@@ -126,12 +129,12 @@ contract Walnut {
     // Event to log resets.
     event Reset(uint256 indexed newRound, uint256 shellStrength);
 
-    constructor(uint256 _shellStrength, suint256 _kernel) {
+    constructor(uint256 _shellStrength, uint256 _kernel) {
         initialShellStrength = _shellStrength; // Set the initial shell strength.
         shellStrength = _shellStrength; // Initialize the shell strength.
 
-        initialKernel = _kernel; // Set the initial kernel value.
-        kernel = _kernel; // Initialize the kernel value.
+        initialKernel = suint256(_kernel); // Set the initial kernel value (cast to shielded).
+        kernel = suint256(_kernel); // Initialize the kernel value (cast to shielded).
 
         round = 1; // Start with the first round.
     }
@@ -165,11 +168,6 @@ contract Walnut {
     // Look at the kernel if the shell is cracked and the caller contributed.
     function look() public view requireCracked onlyContributor returns (uint256) {
         return uint256(kernel); // Return the kernel value.
-    }
-
-    // Set the kernel to a specific value.
-    function set_number(suint _kernel) public {
-        kernel = _kernel;
     }
 
     // Modifier to ensure the shell is fully cracked.

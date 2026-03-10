@@ -9,7 +9,7 @@ coverY: 0
 
 # Welcome to Seismic!
 
-**Seismic is an EVM blockchain with native on-chain privacy.** Write Solidity. Use Foundry. Deploy with Viem. The only difference: your users' data stays private.
+**Seismic is an EVM blockchain with native on-chain privacy.** Write Solidity. Deploy with Foundry. Interact with Viem. The only difference: your users' data stays private.
 
 ---
 
@@ -37,14 +37,14 @@ function transfer(address to, suint256 amount) public {  // uint256 → suint256
 }
 ```
 
-That `s` prefix tells the Seismic compiler to encrypt the value at rest, in transit, and during execution. Observers see `0x000` instead of actual balances and amounts. Everything else — the Solidity syntax, the EVM execution model, the deployment flow — stays exactly the same.
+The `s` prefix tells the Seismic compiler to shield the underlying value. Observers see `0x00...0` instead of actual balances and amounts. Everything else — the Solidity syntax, the EVM execution model, the deployment flow — stays exactly the same.
 
 ---
 
 ### What you can build
 
-- **Private tokens** — ERC20s where balances and transfer amounts are hidden from observers
-- **Confidential DeFi** — AMMs and lending protocols where positions, prices, and liquidation thresholds stay private
+- **Shielded tokens** — ERC20s where balances and transfer amounts are hidden from observers
+- **Confidential DeFi** — AMMs and lending protocols where positions, prices, and liquidation thresholds are shielded
 - **Compliant finance** — Privacy with built-in access control so regulators can verify without exposing user data
 - **Private voting** — On-chain governance where votes are secret until tallied
 
@@ -73,10 +73,10 @@ You just ran shielded contract tests locally. See the [full quickstart](getting-
 | Set up my dev environment            | [Installation](getting-started/installation.md)                       |
 | Run my first shielded contract       | [Quickstart](getting-started/quickstart.md)                           |
 | Build a complete app step by step    | [Walnut App Tutorial](tutorials/walnut/understanding-the-walnut-contract.md) |
-| Build a private ERC20 token          | [SRC20 Tutorial](tutorials/src20/README.md)                           |
+| Build a shielded ERC20 token          | [SRC20 Tutorial](tutorials/src20/README.md)                           |
 | Learn about shielded types           | [Shielded Types](seismic-solidity/shielded-types.md)                  |
 | Integrate a frontend                 | [Client Libraries](clients/README.md)                                 |
-| Deploy to testnet or mainnet         | [Migrating from Ethereum](networks/migrating-from-ethereum.md)        |
+| Deploy to testnet         | [Migrating from Ethereum](networks/migrating-from-ethereum.md)        |
 | Understand the transaction lifecycle | [Seismic Transaction](reference/seismic-transaction.md)               |
 | Run a node                           | [Node Operator FAQ](reference/node-operator-faq.md)                   |
 
