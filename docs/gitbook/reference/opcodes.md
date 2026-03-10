@@ -68,7 +68,7 @@ function cloadExample(uint256 slot) internal view returns (uint256 value) {
 
 ## `SSTORE` / `SLOAD` (Standard)
 
-Standard EVM storage operations. `SSTORE` marks the slot as **public**. `SLOAD` reverts if the slot is private.
+Standard EVM storage operations. `SSTORE` marks the slot as **public**. `SLOAD` reverts if the slot is private. Unlike in Ethereum, `SLOAD` can have side effects. In particular, it can revert when attempting to `SLOAD` a storage slot that contains a shielded value.
 
 ```solidity
 contract PublicCounter {
