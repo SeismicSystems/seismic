@@ -44,7 +44,7 @@ sol! {
 Token metadata (name, symbol, decimals, totalSupply) is not shielded. Use a plain transparent read:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::providers::Provider;
 use alloy::sol_types::SolCall;
 use alloy_primitives::Address;
@@ -106,7 +106,7 @@ Metadata reads do not require a wallet or signed provider. An unsigned provider 
 `balanceOf()` is a shielded read. The contract uses `msg.sender` to authenticate the caller, so you must use `seismic_call()` (a signed read) on a `SeismicSignedProvider`.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::providers::Provider;
 use alloy::sol_types::SolCall;
 use alloy_primitives::{Address, U256};
@@ -152,7 +152,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Allowance reads may also be shielded depending on the contract implementation. Use a signed read to be safe:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::providers::Provider;
 use alloy::sol_types::SolCall;
 use alloy_primitives::{Address, U256};
@@ -193,7 +193,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Send tokens using a shielded write. The transfer amount is encrypted in calldata:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::providers::Provider;
 use alloy::sol_types::SolCall;
 use alloy_primitives::{Address, U256};
@@ -235,7 +235,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Approve a Spender
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::providers::Provider;
 use alloy::sol_types::SolCall;
 use alloy_primitives::{Address, U256};

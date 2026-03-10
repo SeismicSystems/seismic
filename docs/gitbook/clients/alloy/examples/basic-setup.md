@@ -39,7 +39,7 @@ tokio = { version = "1", features = ["full"] }
 A signed provider can send shielded writes, perform signed reads, and execute all standard Alloy provider operations.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 An unsigned provider does not require a private key. It can query chain state, read public data, and subscribe to events (via WebSocket), but cannot send transactions or perform signed reads.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -114,7 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 The SDK provides shorthand functions that select the correct network type automatically:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
@@ -140,7 +140,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 For local testing using Sanvil (Seismic Anvil):
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 use alloy_node_bindings::Anvil;
 
@@ -176,7 +176,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## Error Handling
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]

@@ -12,30 +12,37 @@ Precompiles are called like regular contracts using `staticcall` or `call` to th
 
 | Address | Name            | Purpose                                                    |
 | ------- | --------------- | ---------------------------------------------------------- |
-| `0x64`  | RNG             | Securely generate a random number inside the TEE           |
-| `0x65`  | ECDH            | Derive a shared secret from a public key and a private key |
-| `0x66`  | AES-GCM Encrypt | Encrypt data with AES-GCM authenticated encryption         |
-| `0x67`  | AES-GCM Decrypt | Decrypt data with AES-GCM authenticated encryption         |
-| `0x68`  | HKDF            | Derive cryptographic keys from input key material          |
+| `0x64`  | RNG             | Securely generate random bytes inside the TEE              |
+| `0x65`  | ECDH            | Derive an AES key from a private key and a public key      |
+| `0x66`  | AES-GCM Encrypt | Encrypt data with AES-256-GCM authenticated encryption     |
+| `0x67`  | AES-GCM Decrypt | Decrypt data with AES-256-GCM authenticated encryption     |
+| `0x68`  | HKDF            | Derive a 32-byte key from input key material               |
 | `0x69`  | secp256k1 Sign  | Sign a message hash with a secp256k1 private key           |
+
+{% hint style="warning" %}
+All precompiles expect **raw concatenated bytes** as input, not ABI-encoded data. Use `abi.encodePacked` (not `abi.encode`) when constructing input in Solidity.
+{% endhint %}
 
 ***
 
 ## RNG (`0x64`)
 
-Securely generate a random number inside the TEE. The randomness is derived from the provided seed combined with TEE-internal entropy, ensuring that the output is unpredictable to all parties -- including the node operator.
+Securely generate random bytes inside the TEE. The randomness is derived from TEE-internal entropy combined with optional personalization data, ensuring that the output is unpredictable to all parties -- including the node operator.
 
 ### Input
 
-| Field | Type    | Description                                           |
-| ----- | ------- | ----------------------------------------------------- |
-| seed  | `bytes` | Arbitrary seed bytes used to influence the RNG output |
+Raw bytes in the following layout:
+
+| Offset  | Field              | Type     | Description                                              |
+| ------- | ------------------ | -------- | -------------------------------------------------------- |
+| `[0:4]` | output length      | `uint32` | Number of random bytes to generate (big-endian)          |
+| `[4:]`  | personalization    | `bytes`  | Optional personalization data to influence the RNG output |
 
 ### Output
 
-| Field        | Type    | Description                     |
-| ------------ | ------- | ------------------------------- |
-| random bytes | `bytes` | Securely generated random bytes |
+| Field        | Type    | Description                                     |
+| ------------ | ------- | ----------------------------------------------- |
+| random bytes | `bytes` | Securely generated random bytes of the requested length |
 
 ### Use cases
 
@@ -46,9 +53,20 @@ Securely generate a random number inside the TEE. The randomness is derived from
 ### Solidity example
 
 ```solidity
-function getRandomNumber(bytes memory seed) internal view returns (bytes memory) {
+function getRandomBytes(uint32 numBytes) internal view returns (bytes memory) {
     (bool success, bytes memory result) = address(0x64).staticcall(
-        abi.encode(seed)
+        abi.encodePacked(numBytes)
+    );
+    require(success, "RNG precompile failed");
+    return result;
+}
+
+function getRandomBytesWithPersonalization(
+    uint32 numBytes,
+    bytes memory pers
+) internal view returns (bytes memory) {
+    (bool success, bytes memory result) = address(0x64).staticcall(
+        abi.encodePacked(numBytes, pers)
     );
     require(success, "RNG precompile failed");
     return result;
@@ -59,39 +77,45 @@ function getRandomNumber(bytes memory seed) internal view returns (bytes memory)
 
 ## ECDH (`0x65`)
 
-Elliptic Curve Diffie-Hellman key agreement on the secp256k1 curve. Given a public key and a private key, produces a shared secret that both parties can independently derive. This is the foundation for encrypted communication between a contract and a user.
+Elliptic Curve Diffie-Hellman key agreement on the secp256k1 curve, followed by HKDF key derivation. Given a private key and a public key, produces a derived AES-256 key that both parties can independently compute. This is the foundation for encrypted communication between a contract and a user.
+
+{% hint style="info" %}
+The output is a **derived AES key**, not the raw ECDH shared secret. The precompile internally runs ECDH followed by HKDF-SHA256 to produce a key suitable for AES-256-GCM encryption.
+{% endhint %}
 
 ### Input
 
-| Field       | Type      | Description                                |
-| ----------- | --------- | ------------------------------------------ |
-| public key  | `bytes33` | Compressed secp256k1 public key (33 bytes) |
-| private key | `bytes32` | secp256k1 private key (32 bytes)           |
+Raw bytes in the following layout (65 bytes total):
+
+| Offset    | Field       | Type      | Description                                |
+| --------- | ----------- | --------- | ------------------------------------------ |
+| `[0:32]`  | private key | `bytes32` | secp256k1 private key (32 bytes)           |
+| `[32:65]` | public key  | `bytes33` | Compressed secp256k1 public key (33 bytes) |
 
 ### Output
 
-| Field         | Type      | Description                          |
-| ------------- | --------- | ------------------------------------ |
-| shared secret | `bytes32` | The derived shared secret (32 bytes) |
+| Field       | Type      | Description                                  |
+| ----------- | --------- | -------------------------------------------- |
+| derived key | `bytes32` | A 32-byte AES key derived via ECDH + HKDF    |
 
 ### Use cases
 
 * Key agreement between a contract and a user for encrypting event data
-* Establishing shared secrets for private communication channels
+* Establishing shared encryption keys for private communication channels
 * Enabling per-recipient encryption of on-chain data
 
 ### Solidity example
 
 ```solidity
-function deriveSharedSecret(
-    bytes memory recipientPubKey,
-    bytes32 senderPrivKey
+function deriveAESKey(
+    bytes32 privateKey,
+    bytes memory compressedPubKey  // 33 bytes
 ) internal view returns (bytes32) {
     (bool success, bytes memory result) = address(0x65).staticcall(
-        abi.encode(recipientPubKey, senderPrivKey)
+        abi.encodePacked(privateKey, compressedPubKey)
     );
     require(success, "ECDH precompile failed");
-    return abi.decode(result, (bytes32));
+    return bytes32(result);
 }
 ```
 
@@ -99,16 +123,21 @@ function deriveSharedSecret(
 
 ## AES-GCM Encrypt (`0x66`)
 
-Encrypt data using AES-GCM (Galois/Counter Mode) authenticated encryption. Supports both AES-128 and AES-256 depending on the key length. Produces ciphertext with an authentication tag that guarantees integrity and authenticity.
+Encrypt data using AES-256-GCM (Galois/Counter Mode) authenticated encryption. Produces ciphertext with an appended authentication tag that guarantees integrity and authenticity.
+
+{% hint style="info" %}
+Only AES-256 is supported. The key must be exactly 32 bytes.
+{% endhint %}
 
 ### Input
 
-| Field     | Type      | Description                                                            |
-| --------- | --------- | ---------------------------------------------------------------------- |
-| key       | `bytes`   | AES key (16 bytes for AES-128, 32 bytes for AES-256)                   |
-| nonce     | `bytes12` | Initialization vector / nonce (12 bytes)                               |
-| plaintext | `bytes`   | The data to encrypt                                                    |
-| aad       | `bytes`   | Additional authenticated data (AAD) -- authenticated but not encrypted |
+Raw bytes in the following layout:
+
+| Offset    | Field     | Type      | Description                      |
+| --------- | --------- | --------- | -------------------------------- |
+| `[0:32]`  | key       | `bytes32` | AES-256 key (32 bytes)           |
+| `[32:44]` | nonce     | `bytes12` | Initialization vector (12 bytes) |
+| `[44:]`   | plaintext | `bytes`   | The data to encrypt              |
 
 ### Output
 
@@ -124,16 +153,16 @@ Encrypt data using AES-GCM (Galois/Counter Mode) authenticated encryption. Suppo
 
 ### Solidity example
 
+See [CryptoUtils.sol](https://github.com/SeismicSystems/seismic/blob/main/contracts/src/seismic-std-lib/utils/precompiles/CryptoUtils.sol) for the production implementation.
+
 ```solidity
 function aesEncrypt(
-    bytes memory key,
-    bytes12 nonce,
-    bytes memory plaintext,
-    bytes memory aad
+    suint256 key,
+    uint96 nonce,
+    bytes memory plaintext
 ) internal view returns (bytes memory) {
-    (bool success, bytes memory result) = address(0x66).staticcall(
-        abi.encode(key, nonce, plaintext, aad)
-    );
+    bytes memory input = abi.encodePacked(uint256(key), nonce, plaintext);
+    (bool success, bytes memory result) = address(0x66).staticcall(input);
     require(success, "AES-GCM Encrypt precompile failed");
     return result;
 }
@@ -143,16 +172,17 @@ function aesEncrypt(
 
 ## AES-GCM Decrypt (`0x67`)
 
-Decrypt data that was encrypted with AES-GCM. Verifies the authentication tag before returning the plaintext. If the tag does not match (indicating tampering or wrong key), the call fails.
+Decrypt data that was encrypted with AES-256-GCM. Verifies the authentication tag before returning the plaintext. If the tag does not match (indicating tampering or wrong key), the call fails.
 
 ### Input
 
-| Field                 | Type      | Description                                               |
-| --------------------- | --------- | --------------------------------------------------------- |
-| key                   | `bytes`   | AES key (must match the key used for encryption)          |
-| nonce                 | `bytes12` | Initialization vector / nonce (12 bytes)                  |
-| ciphertext + auth tag | `bytes`   | Encrypted data concatenated with authentication tag       |
-| aad                   | `bytes`   | Additional authenticated data (must match encryption AAD) |
+Raw bytes in the following layout:
+
+| Offset    | Field                 | Type      | Description                                         |
+| --------- | --------------------- | --------- | --------------------------------------------------- |
+| `[0:32]`  | key                   | `bytes32` | AES-256 key (must match the key used for encryption) |
+| `[32:44]` | nonce                 | `bytes12` | Initialization vector (12 bytes)                    |
+| `[44:]`   | ciphertext + auth tag | `bytes`   | Encrypted data concatenated with authentication tag |
 
 ### Output
 
@@ -170,14 +200,12 @@ Decrypt data that was encrypted with AES-GCM. Verifies the authentication tag be
 
 ```solidity
 function aesDecrypt(
-    bytes memory key,
-    bytes12 nonce,
-    bytes memory ciphertext,
-    bytes memory aad
+    suint256 key,
+    uint96 nonce,
+    bytes memory ciphertext
 ) internal view returns (bytes memory) {
-    (bool success, bytes memory result) = address(0x67).staticcall(
-        abi.encode(key, nonce, ciphertext, aad)
-    );
+    bytes memory input = abi.encodePacked(uint256(key), nonce, ciphertext);
+    (bool success, bytes memory result) = address(0x67).staticcall(input);
     require(success, "AES-GCM Decrypt precompile failed");
     return result;
 }
@@ -187,43 +215,37 @@ function aesDecrypt(
 
 ## HKDF (`0x68`)
 
-HMAC-based Key Derivation Function ([RFC 5869](https://datatracker.ietf.org/doc/html/rfc5869)). Derives one or more cryptographic keys from input key material. Commonly used to turn a shared secret (from ECDH) into an encryption key suitable for AES-GCM.
+HMAC-based Key Derivation Function ([RFC 5869](https://datatracker.ietf.org/doc/html/rfc5869)). Derives a 32-byte cryptographic key from input key material. Commonly used to turn a shared secret (from ECDH) into an encryption key suitable for AES-GCM.
+
+{% hint style="info" %}
+The Seismic HKDF precompile uses hardcoded parameters: salt is `None`, info is a fixed internal string, and the output is always 32 bytes. The only user-supplied input is the raw key material.
+{% endhint %}
 
 ### Input
 
 | Field              | Type    | Description                                           |
 | ------------------ | ------- | ----------------------------------------------------- |
-| input key material | `bytes` | The source key material (e.g., an ECDH shared secret) |
-| salt               | `bytes` | Optional salt value (can be empty)                    |
-| info               | `bytes` | Context and application-specific information          |
-| output length      | `uint`  | Desired length of the derived key in bytes            |
+| input key material | `bytes` | The source key material (e.g., raw ECDH shared point) |
 
 ### Output
 
-| Field       | Type    | Description                   |
-| ----------- | ------- | ----------------------------- |
-| derived key | `bytes` | The derived cryptographic key |
+| Field       | Type      | Description                       |
+| ----------- | --------- | --------------------------------- |
+| derived key | `bytes32` | The derived 32-byte key           |
 
 ### Use cases
 
-* Deriving AES encryption keys from ECDH shared secrets
-* Generating multiple keys from a single shared secret (e.g., one for encryption, one for MAC)
-* Key stretching and domain separation
+* Deriving AES encryption keys from shared secrets
+* Key derivation with domain separation
 
 ### Solidity example
 
 ```solidity
-function deriveKey(
-    bytes memory ikm,
-    bytes memory salt,
-    bytes memory info,
-    uint256 outputLength
-) internal view returns (bytes memory) {
-    (bool success, bytes memory result) = address(0x68).staticcall(
-        abi.encode(ikm, salt, info, outputLength)
-    );
+function deriveKey(bytes memory ikm) internal view returns (bytes32) {
+    (bool success, bytes memory result) = address(0x68).staticcall(ikm);
     require(success, "HKDF precompile failed");
-    return result;
+    require(result.length == 32, "Invalid HKDF output length");
+    return bytes32(result);
 }
 ```
 
@@ -239,10 +261,12 @@ This precompile gives the contract the ability to sign arbitrary messages. The p
 
 ### Input
 
-| Field        | Type      | Description                             |
-| ------------ | --------- | --------------------------------------- |
-| message hash | `bytes32` | The 32-byte hash of the message to sign |
-| private key  | `bytes32` | The secp256k1 private key (32 bytes)    |
+Raw bytes in the following layout (64 bytes total):
+
+| Offset    | Field        | Type      | Description                             |
+| --------- | ------------ | --------- | --------------------------------------- |
+| `[0:32]`  | private key  | `bytes32` | The secp256k1 private key (32 bytes)    |
+| `[32:64]` | message hash | `bytes32` | The 32-byte hash of the message to sign |
 
 ### Output
 
@@ -260,11 +284,11 @@ This precompile gives the contract the ability to sign arbitrary messages. The p
 
 ```solidity
 function signMessage(
-    bytes32 messageHash,
-    bytes32 privateKey
+    bytes32 privateKey,
+    bytes32 messageHash
 ) internal view returns (bytes memory) {
     (bool success, bytes memory result) = address(0x69).staticcall(
-        abi.encode(messageHash, privateKey)
+        abi.encodePacked(privateKey, messageHash)
     );
     require(success, "secp256k1 Sign precompile failed");
     return result;
@@ -275,26 +299,26 @@ function signMessage(
 
 ## Common pattern: Encrypted events
 
-A frequent use of the precompiles is encrypting event data so that only the intended recipient can read it. The typical flow chains ECDH, HKDF, and AES-GCM Encrypt together:
+A frequent use of the precompiles is encrypting event data so that only the intended recipient can read it. The typical flow chains ECDH and AES-GCM Encrypt together:
 
 ```solidity
-// 1. Derive shared secret with the recipient
-(bool ok1, bytes memory secret) = address(0x65).staticcall(
-    abi.encode(recipientPubKey, contractPrivKey)
+// 1. Derive an AES key via ECDH (private key first, then public key)
+(bool ok1, bytes memory aesKeyBytes) = address(0x65).staticcall(
+    abi.encodePacked(contractPrivKey, recipientCompressedPubKey)
 );
+require(ok1, "ECDH failed");
+suint256 aesKey = suint256(bytes32(aesKeyBytes));
 
-// 2. Derive an AES key from the shared secret
-(bool ok2, bytes memory aesKey) = address(0x68).staticcall(
-    abi.encode(secret, "", "encryption-key", 32)
-);
+// 2. Generate a random nonce
+uint96 nonce = CryptoUtils.generateRandomNonce();
 
 // 3. Encrypt the sensitive data
-(bool ok3, bytes memory encrypted) = address(0x66).staticcall(
-    abi.encode(aesKey, nonce, plaintext, "")
-);
+bytes memory input = abi.encodePacked(uint256(aesKey), nonce, plaintext);
+(bool ok2, bytes memory encrypted) = address(0x66).staticcall(input);
+require(ok2, "AES encrypt failed");
 
 // 4. Emit a regular event with the encrypted bytes
-emit EncryptedData(msg.sender, recipient, encrypted);
+emit EncryptedData(msg.sender, recipient, nonce, encrypted);
 ```
 
 For a complete walkthrough of this pattern, see [Events](../seismic-solidity/events.md).

@@ -11,10 +11,12 @@ Before proceeding to write the CLI, you need to be acquainted with some of the f
 The **shielded wallet client** is the shielded/Seismic counterpart of the **wallet client** in `viem` . It is used to enable extended functionality for interacting with shielded blockchain features, wallet operations, and encryption. It can be initialized using the `createShieldedWalletClient` function as follows:
 
 ```typescript
+import { privateKeyToAccount } from 'viem/accounts'
+
 const walletClient = await createShieldedWalletClient({
   chain: seismicChain,
   transport: httpTransport,
-  privateKey: '0xabcdef...',
+  account: privateKeyToAccount('0xabcdef...'),
 })
 ```
 
@@ -22,7 +24,7 @@ const walletClient = await createShieldedWalletClient({
 
 1. `chain` : a well-defined [Chain](https://github.com/wevm/viem/blob/main/src/types/chain.ts) object
 2. `transport` : the method of transport of interacting with the chain (`http` /`ws` along with the corresponding RPC URL)
-3. `privateKey`: the private key to create the client for
+3. `account`: a viem Account object (e.g. from `privateKeyToAccount()`)
 
 Once initialized, it can then be used to perform wallet operations or shielded-specific [actions.](https://seismic-docs.netlify.app/seismic-viem/functions/createShieldedWalletClient)
 
@@ -30,7 +32,7 @@ Once initialized, it can then be used to perform wallet operations or shielded-s
 
 A shielded contract instance provides an interface to interact with a shielded contract onchain. It has extended functionality for performing shielded write operations, signed reads, and contract interaction for a **specific contract** performed by a **specific wallet client** that it is initialized with. It can be initialized with the `getShieldedContract` as follows:
 
-```solidity
+```typescript
 const contract = getShieldedContract({
   abi: myContractAbi,
   address: '0x1234...',
@@ -50,7 +52,7 @@ This function extends the base `getContract` functionality by adding:
 * **Signed read actions** for `pure` and `view` functions.
 * Proxy-based access to dynamically invoke contract methods.
 
-```solidity
+```typescript
 // Perform a shielded write
 await contract.write.myFunction([arg1, arg2], { gas: 50000n })
  

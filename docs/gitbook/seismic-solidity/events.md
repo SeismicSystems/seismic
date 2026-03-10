@@ -17,7 +17,7 @@ event ConfidentialEvent(suint256 confidentialData); // Compilation error
 
 This restriction exists because events are stored in transaction logs, which are publicly accessible on-chain. Emitting a shielded value in an event would defeat the purpose of shielding it in the first place -- the value would be visible to anyone inspecting the logs.
 
-This applies to all shielded types: `suint`, `sint`, `sbool`, and `saddress`.
+This applies to all shielded types: `suint`, `sint`, `sbool`, `saddress`, and `sbytes`.
 
 ## The Workaround: Encrypted Events via Precompiles
 

@@ -48,7 +48,7 @@ The `Network` implementation for `SeismicReth` defines the following associated 
 The most common way to use `SeismicReth` is as the type parameter for `SeismicSignedProvider`:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 The `sreth_signed_provider` function creates a `SeismicSignedProvider<SeismicReth>` without needing to specify the type parameter:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -86,7 +86,7 @@ let provider = sreth_signed_provider(wallet, url).await?;
 For read-only access without a private key:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 let url = "https://node.seismicdev.net/rpc".parse()?;
 let provider = sreth_unsigned_provider(url);

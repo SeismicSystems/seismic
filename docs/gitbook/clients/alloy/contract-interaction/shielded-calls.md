@@ -50,7 +50,7 @@ A shielded write sends an encrypted transaction that modifies on-chain state. Th
 ### Building the Transaction
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::{Address, U256, TxKind};
 use alloy::sol_types::SolCall;
 
@@ -82,7 +82,7 @@ println!("Status: {:?}", receipt.status());
 ### Complete Example
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::{Address, U256, TxKind};
 use alloy::sol_types::SolCall;
 use alloy_signer_local::PrivateKeySigner;
@@ -131,7 +131,7 @@ A signed read executes an encrypted `eth_call` that proves the caller's identity
 ### Building the Read Request
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::TxKind;
 use alloy::sol_types::SolCall;
 
@@ -160,7 +160,7 @@ println!("Is odd: {is_odd}");
 ### Complete Example
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::{Address, TxKind};
 use alloy::sol_types::SolCall;
 use alloy_signer_local::PrivateKeySigner;

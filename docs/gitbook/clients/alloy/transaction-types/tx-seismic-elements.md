@@ -41,7 +41,7 @@ pub struct TxSeismicElements {
 impl Default for TxSeismicElements {
     fn default() -> Self {
         Self {
-            encryption_pubkey: /* identity point */,
+            encryption_pubkey: /* hardcoded default public key */,
             encryption_nonce: U96::ZERO,
             message_version: 0,
             recent_block_hash: B256::ZERO,
@@ -72,7 +72,7 @@ Default values are placeholders. The `SeismicElementsFiller` replaces them with 
 ### Example
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::{B256, U96};
 
 let elements = TxSeismicElements::default()
@@ -88,16 +88,16 @@ let elements = TxSeismicElements::default()
 
 | Function                        | Signature                                                    | Description                                        |
 | ------------------------------- | ------------------------------------------------------------ | -------------------------------------------------- |
-| `get_rand_encryption_keypair()` | `fn get_rand_encryption_keypair() -> (SecretKey, PublicKey)` | Generate a random secp256k1 keypair for encryption |
+| `get_rand_encryption_keypair()` | `fn get_rand_encryption_keypair() -> Keypair` | Generate a random secp256k1 keypair for encryption |
 | `get_rand_encryption_nonce()`   | `fn get_rand_encryption_nonce() -> U96`                      | Generate a random 12-byte AES-GCM nonce            |
 
 ### Example
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 // Generate random encryption keypair
-let (secret_key, public_key) = TxSeismicElements::get_rand_encryption_keypair();
+let keypair = TxSeismicElements::get_rand_encryption_keypair();
 
 // Generate random nonce
 let nonce = TxSeismicElements::get_rand_encryption_nonce();
@@ -111,15 +111,15 @@ let nonce = TxSeismicElements::get_rand_encryption_nonce();
 
 | Method                              | Signature                                                                                       | Description                                                   |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `encrypt(sk, plaintext, metadata)`  | `fn encrypt(&self, sk: &SecretKey, plaintext: &[u8], metadata: &TxSeismicMetadata) -> Vec<u8>`  | Encrypt plaintext using ECDH-derived key and metadata as AAD  |
-| `decrypt(sk, ciphertext, metadata)` | `fn decrypt(&self, sk: &SecretKey, ciphertext: &[u8], metadata: &TxSeismicMetadata) -> Vec<u8>` | Decrypt ciphertext using ECDH-derived key and metadata as AAD |
+| `encrypt(sk, plaintext, metadata)`  | `fn encrypt(&self, sk: &SecretKey, plaintext: &Bytes, metadata: &TxSeismicMetadata) -> Result<Bytes, anyhow::Error>`    | Encrypt plaintext using ECDH-derived key and metadata as AAD  |
+| `decrypt(sk, ciphertext, metadata)` | `fn decrypt(&self, sk: &SecretKey, ciphertext: &Bytes, metadata: &TxSeismicMetadata) -> Result<Vec<u8>, anyhow::Error>` | Decrypt ciphertext using ECDH-derived key and metadata as AAD |
 
 ### Client-Side Encryption
 
 | Method                                                        | Signature                                                                                                                             | Description                                        |
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `client_encrypt(plaintext, network_pk, client_sk, metadata)`  | `fn client_encrypt(&self, plaintext: &[u8], network_pk: &PublicKey, client_sk: &SecretKey, metadata: &TxSeismicMetadata) -> Vec<u8>`  | Client-side encrypt using network (TEE) public key |
-| `client_decrypt(ciphertext, network_pk, client_sk, metadata)` | `fn client_decrypt(&self, ciphertext: &[u8], network_pk: &PublicKey, client_sk: &SecretKey, metadata: &TxSeismicMetadata) -> Vec<u8>` | Client-side decrypt using network (TEE) public key |
+| `client_encrypt(plaintext, network_pk, client_sk, metadata)`  | `fn client_encrypt(&self, plaintext: &Bytes, network_pk: &PublicKey, client_sk: &SecretKey, metadata: &TxSeismicMetadata) -> Result<Bytes, anyhow::Error>`    | Client-side encrypt using network (TEE) public key |
+| `client_decrypt(ciphertext, network_pk, client_sk, metadata)` | `fn client_decrypt(&self, ciphertext: &Bytes, network_pk: &PublicKey, client_sk: &SecretKey, metadata: &TxSeismicMetadata) -> Result<Vec<u8>, anyhow::Error>` | Client-side decrypt using network (TEE) public key |
 
 ### Encryption Flow
 
@@ -161,7 +161,7 @@ Controls the signing method:
 - **`0`** -- Raw signing: the signing hash is computed from the RLP encoding of the unsigned transaction
 - **`2` or higher** -- EIP-712 signing: the signing hash is computed from structured typed data
 
-The SDK defaults to EIP-712 (`message_version = 2`) for better wallet compatibility.
+The default value is `0` (raw RLP signing). Set `message_version = 2` for EIP-712 typed data signing.
 
 ### recent_block_hash
 
@@ -183,7 +183,7 @@ The filler pipeline sets this based on whether you call `send_transaction()` or 
 ### Automatic Construction (Typical)
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 // The filler pipeline handles TxSeismicElements construction
 let tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
@@ -198,14 +198,14 @@ provider.send_transaction(tx.into()).await?;
 ### Manual Construction (Advanced)
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::{B256, U96};
 
-let (client_sk, client_pk) = TxSeismicElements::get_rand_encryption_keypair();
+let keypair = TxSeismicElements::get_rand_encryption_keypair();
 let nonce = TxSeismicElements::get_rand_encryption_nonce();
 
 let elements = TxSeismicElements {
-    encryption_pubkey: client_pk,
+    encryption_pubkey: keypair.public_key(),
     encryption_nonce: nonce,
     message_version: 2,
     recent_block_hash: B256::from_slice(&latest_hash),

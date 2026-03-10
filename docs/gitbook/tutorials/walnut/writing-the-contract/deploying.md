@@ -55,7 +55,7 @@ RPC_URL=http://127.0.0.1:8545
 PRIVKEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 ```
 
-The `RPC_URL` denotes the port on which `sanvil` is running and the `PRIVKEY` is one of the nine standard `sanvil` testing private keys.
+The `RPC_URL` denotes the port on which `sanvil` is running and the `PRIVKEY` is one of the ten standard `sanvil` testing private keys.
 
 3. Now, from `packages/contracts`, run
 

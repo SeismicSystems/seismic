@@ -65,8 +65,9 @@ To derive a shared secret with a specific recipient, the contract calls the ECDH
 ```solidity
 function _deriveSharedSecret(bytes memory recipientPublicKey) internal view returns (bytes32) {
     // Call ECDH precompile at 0x65
+    // Note: private key comes FIRST, then public key
     (bool success, bytes memory result) = address(0x65).staticcall(
-        abi.encode(contractPrivateKey, recipientPublicKey)
+        abi.encodePacked(contractPrivateKey, recipientPublicKey)
     );
     require(success, "ECDH failed");
     return abi.decode(result, (bytes32));
@@ -80,8 +81,9 @@ The raw ECDH shared secret should not be used directly as an encryption key. The
 ```solidity
 function _deriveEncryptionKey(bytes32 sharedSecret) internal view returns (bytes32) {
     // Call HKDF precompile at 0x68
+    // Pass raw key material bytes directly
     (bool success, bytes memory result) = address(0x68).staticcall(
-        abi.encode(sharedSecret, "src20-transfer-event")
+        abi.encodePacked(sharedSecret)
     );
     require(success, "HKDF failed");
     return abi.decode(result, (bytes32));
@@ -95,10 +97,11 @@ The second argument is a context string (sometimes called "info" in HKDF termino
 The AES-GCM Encrypt precompile at address `0x66` encrypts the data:
 
 ```solidity
-function _encrypt(bytes32 key, bytes memory plaintext) internal view returns (bytes memory) {
+function _encrypt(bytes32 key, bytes12 nonce, bytes memory plaintext) internal view returns (bytes memory) {
     // Call AES-GCM Encrypt precompile at 0x66
+    // Input format: key (32 bytes) + nonce (12 bytes) + plaintext
     (bool success, bytes memory ciphertext) = address(0x66).staticcall(
-        abi.encode(key, plaintext)
+        abi.encodePacked(uint256(key), nonce, plaintext)
     );
     require(success, "Encryption failed");
     return ciphertext;
@@ -122,9 +125,10 @@ function _emitEncryptedTransfer(
     // Derive encryption key
     bytes32 encKey = _deriveEncryptionKey(sharedSecret);
 
-    // Encrypt the amount
+    // Encrypt the amount (nonce can be derived or generated per-event)
+    bytes12 nonce = bytes12(keccak256(abi.encodePacked(from, to, block.number)));
     bytes memory plaintext = abi.encode(uint256(amount));
-    bytes memory encryptedAmount = _encrypt(encKey, plaintext);
+    bytes memory encryptedAmount = _encrypt(encKey, nonce, plaintext);
 
     // Emit with encrypted data
     emit Transfer(from, to, encryptedAmount);
@@ -172,32 +176,7 @@ The recipient can decrypt the event data by performing the reverse of the encryp
 3. Run HKDF with the same context string (`"src20-transfer-event"`) to derive the same encryption key.
 4. Decrypt the `encryptedAmount` from the event log using AES-GCM Decrypt.
 
-In TypeScript with `seismic-viem`:
-
-```typescript
-import { decryptEventData } from "seismic-viem";
-
-// Listen for Transfer events
-const logs = await publicClient.getLogs({
-  address: SRC20_ADDRESS,
-  event: parseAbiItem(
-    "event Transfer(address indexed from, address indexed to, bytes encryptedAmount)",
-  ),
-  fromBlock: "latest",
-});
-
-for (const log of logs) {
-  // Decrypt the amount using the recipient's private key and the contract's public key
-  const decryptedAmount = await decryptEventData({
-    encryptedData: log.args.encryptedAmount,
-    privateKey: recipientPrivateKey,
-    contractPublicKey: contractPubKey,
-    context: "src20-transfer-event",
-  });
-
-  console.log(`Transfer from ${log.args.from}: ${decryptedAmount} tokens`);
-}
-```
+Decrypt events client-side using the ECDH shared secret and AES-GCM decryption. See the [seismic-viem precompiles documentation](../../clients/typescript/viem/precompiles/README.md) for the cryptographic primitives.
 
 ## Who can read what
 

@@ -15,7 +15,7 @@ seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
 ## Quick Example
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```rust
 // Unsigned provider -- read-only (no private key needed)
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 let url = "https://node.seismicdev.net/rpc".parse()?;
 let provider = sreth_unsigned_provider(url);

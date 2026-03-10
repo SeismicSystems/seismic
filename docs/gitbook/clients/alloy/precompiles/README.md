@@ -53,7 +53,7 @@ Precompile calls are read-only `eth_call` operations. They do not require a `Sei
 ## Quick Example
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::providers::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;

@@ -27,7 +27,7 @@ The encrypted calldata is bound to the transaction context (chain ID, nonce, blo
 Shielded writes require a `SeismicSignedProvider` because you need a private key for both transaction signing and ECDH key derivation.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -126,19 +126,19 @@ These values are set automatically by the filler pipeline. You do not need to se
 The filler pipeline processes your transaction in this order:
 
 ```
-1. SeismicElementsFiller
+1. WalletFiller
+   - Sets the `from` field on the transaction
+
+2. NonceFiller + ChainIdFiller
+   - Sets nonce and chain ID
+
+3. SeismicElementsFiller
    - Attaches encryption_pubkey, encryption_nonce, recent_block_hash, expires_at_block
    - Encrypts calldata with AES-GCM
    - AAD = RLP-encoded TxSeismicMetadata (binds ciphertext to tx context)
 
-2. SeismicGasFiller
+4. SeismicGasFiller
    - Estimates gas limit and gas price
-
-3. NonceFiller + ChainIdFiller
-   - Sets nonce and chain ID
-
-4. WalletFiller
-   - Signs the fully populated transaction
 ```
 
 You never call encryption functions manually. The `.seismic()` marker tells the filler pipeline to handle everything.
@@ -215,7 +215,7 @@ println!("Success! Block: {:?}", receipt.block_number());
 ### Complete example
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::sol;
 use alloy::sol_types::SolCall;
 use alloy_primitives::{Bytes, TxKind, U256};

@@ -265,7 +265,7 @@ The ephemeral keypair used for ECDH is separate from the wallet's signing key. C
 ### Inspecting TEE Public Key
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -282,7 +282,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Signed Provider with Automatic Encryption
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 use alloy_primitives::address;
 

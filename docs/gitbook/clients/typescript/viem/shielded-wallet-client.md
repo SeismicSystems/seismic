@@ -47,7 +47,7 @@ A viem `Client` extended with `PublicActions`, `WalletActions`, `EncryptionActio
 
 ```typescript
 import { createShieldedWalletClient } from "seismic-viem";
-import { seismicTestnet } from "seismic-viem/chains";
+import { seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -128,7 +128,7 @@ The wallet client automatically includes all public client actions -- you can ca
 
 ```typescript
 import { createShieldedWalletClient } from "seismic-viem";
-import { seismicTestnet } from "seismic-viem/chains";
+import { seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -180,7 +180,7 @@ import {
   createShieldedPublicClient,
   createShieldedWalletClient,
 } from "seismic-viem";
-import { seismicTestnet } from "seismic-viem/chains";
+import { seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 

@@ -11,7 +11,7 @@ icon: globe-pointer
 
 Before you begin, make sure your machine meets the following requirements:
 
-* x84\_64 or arm64 architecture
+* x86\_64 or arm64 architecture
 * MacOS, Ubuntu, or Windows
 
 ***

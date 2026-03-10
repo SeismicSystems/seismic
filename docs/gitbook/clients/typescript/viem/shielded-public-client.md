@@ -39,7 +39,7 @@ A viem `PublicClient` extended with `ShieldedPublicActions`, `DepositContractPub
 
 ```typescript
 import { createShieldedPublicClient } from "seismic-viem";
-import { seismicTestnet } from "seismic-viem/chains";
+import { seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 
 const publicClient = createShieldedPublicClient({
@@ -115,7 +115,7 @@ Seismic does not support `eth_getStorageAt`. Calling `publicClient.getStorageAt(
 
 ```typescript
 import { createShieldedPublicClient } from "seismic-viem";
-import { seismicTestnet } from "seismic-viem/chains";
+import { seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 
 const publicClient = createShieldedPublicClient({
@@ -131,7 +131,7 @@ console.log("TEE public key:", teePublicKey);
 
 ```typescript
 import { createShieldedPublicClient } from "seismic-viem";
-import { seismicTestnet } from "seismic-viem/chains";
+import { seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 
 const publicClient = createShieldedPublicClient({
@@ -140,18 +140,18 @@ const publicClient = createShieldedPublicClient({
 });
 
 // Generate a random number
-const randomValue = await publicClient.rng({ numWords: 1 });
+const randomValue = await publicClient.rng({ numBytes: 1 });
 console.log("Random value:", randomValue);
 
 // ECDH key exchange
 const sharedSecret = await publicClient.ecdh({
-  privateKey: "0x...",
-  publicKey: "0x...",
+  sk: "0x...",
+  pk: "0x...",
 });
 
 // AES-GCM encryption
 const ciphertext = await publicClient.aesGcmEncryption({
-  key: "0x...",
+  aesKey: "0x...",
   plaintext: "0x...",
   nonce: "0x...",
 });

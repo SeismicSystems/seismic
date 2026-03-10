@@ -67,7 +67,7 @@ seismic-viem
     ├── ecdh                         — key exchange
     ├── aesGcmEncrypt / Decrypt      — on-chain encryption
     ├── hkdf                         — key derivation
-    └── secp256k1Sign                — signature generation
+    └── secp256k1Sig                 — signature generation
 ```
 
 ## Documentation Navigation
@@ -133,7 +133,7 @@ seismic-viem
 - **Contract interaction** -> Contract Instance, Shielded Writes, Signed Reads
 - **Chains** -> [Chains](chains.md) (`seismicTestnet`, `sanvil`, `createSeismicDevnet`)
 - **Encryption** -> Encryption (`getEncryption`, `AesGcmCrypto`)
-- **Precompiles** -> Precompiles (`rng`, `ecdh`, `aesGcmEncrypt`, `hkdf`, `secp256k1Sign`)
+- **Precompiles** -> Precompiles (`rng`, `ecdh`, `aesGcmEncrypt`, `hkdf`, `secp256k1Sig`)
 
 ## Comparison with seismic-react
 
@@ -142,8 +142,8 @@ seismic-viem
 | **Level**            | Low-level SDK                         | React hooks layer                             |
 | **Framework**        | Framework-agnostic TypeScript         | React 18+                                     |
 | **Foundation**       | Built directly on viem 2.x            | Built on seismic-viem + wagmi                 |
-| **Client creation**  | Manual (`createShieldedWalletClient`) | Automatic via `ShieldedProvider`              |
-| **State management** | Manual                                | React hooks (`useShieldedWalletClient`, etc.) |
+| **Client creation**  | Manual (`createShieldedWalletClient`) | Automatic via `ShieldedWalletProvider`        |
+| **State management** | Manual                                | React hooks (`useShieldedWallet`, etc.)       |
 | **Use when**         | Server-side, scripts, non-React apps  | React applications                            |
 
 {% hint style="info" %}

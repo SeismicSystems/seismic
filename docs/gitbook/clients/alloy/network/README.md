@@ -31,7 +31,7 @@ The [`SeismicNetwork`](seismic-network-trait.md) trait is the foundation of the 
 - Extract Seismic metadata from signed envelopes
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 // SeismicReth for production
 let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
@@ -59,7 +59,7 @@ In most cases, you will use the convenience constructors (`sreth_signed_provider
 ### Production / Testnet
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -73,7 +73,7 @@ let provider = sreth_signed_provider(wallet, url).await?;
 ### Local Development (Sanvil)
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;

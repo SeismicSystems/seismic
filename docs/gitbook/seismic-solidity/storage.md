@@ -29,13 +29,13 @@ The FlaggedStorage model enforces strict separation between public and confident
 | Operation                 | Result                    |
 | ------------------------- | ------------------------- |
 | `SLOAD` on a public slot  | Returns the value         |
-| `SLOAD` on a private slot | Returns `0`               |
+| `SLOAD` on a private slot | Reverts                   |
 | `CLOAD` on a private slot | Returns the value         |
-| `CLOAD` on a public slot  | Returns `0`               |
+| `CLOAD` on a public slot  | Returns the value         |
 | `SSTORE` to a slot        | Marks the slot as public  |
 | `CSTORE` to a slot        | Marks the slot as private |
 
-This means that if an external contract or observer uses `SLOAD` to read a shielded storage slot, they will get `0` -- not the actual value. The data is only accessible via `CLOAD`, which is what the compiler generates for shielded type access.
+This means that if an external contract or observer uses `SLOAD` to read a shielded storage slot, the operation will revert. `CLOAD` can access both private and public slots — the compiler generates `CLOAD` for all shielded type access.
 
 {% hint style="info" %}
 Storage slots are not permanently fixed as public or private. The flag is set by the most recent store operation. However, mixing public and private writes to the same slot is strongly discouraged and should only be done via inline assembly with extreme care.

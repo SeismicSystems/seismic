@@ -37,7 +37,7 @@ where
 The most common pattern is to create a wallet from a `PrivateKeySigner`:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -49,7 +49,7 @@ The `From` implementation is available for any type that implements `TxSigner<Si
 ### With `new()`
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -166,7 +166,7 @@ This is the most ergonomic way to create a wallet from a single signer.
 ### Basic Wallet Creation
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -180,7 +180,7 @@ let provider = SeismicSignedProvider::new(wallet, url).await?;
 ### Multi-Account Wallet
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let deployer: PrivateKeySigner = "0xDEPLOYER_KEY".parse()?;
@@ -196,7 +196,7 @@ wallet.register_signer(user);
 ### Switching Default Signer
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let alice: PrivateKeySigner = "0xALICE_KEY".parse()?;
@@ -215,7 +215,7 @@ wallet.set_default_signer(bob_addr);
 ### Local Development with SeismicFoundry
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 // Well-known Anvil test key

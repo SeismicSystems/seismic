@@ -48,10 +48,10 @@ In the previous section, we only knew how to shield what was happening for certa
 We can take the ERC20 variant discussed in the [Basics](shielded-types.md) section and extend it further to shielded balances, transfer amounts, _and now_ _recipients_.
 
 ```
-mapping(saddress => suint256) public balanceOf;  // key is now saddress
+mapping(saddress => suint256) private balanceOf;  // key is now saddress
 
 function transfer(saddress to, suint256 amount) public {  // recipient now saddress
-    balanceOf[msg.sender] -= amount;
+    balanceOf[saddress(msg.sender)] -= amount;
     balanceOf[to] += amount;
 }
 ```

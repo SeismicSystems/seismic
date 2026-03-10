@@ -83,8 +83,8 @@ pub const TX_TYPE: u8 = 0x4A;
 
 | Method                                       | Signature                                                                                     | Description                                                   |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `encrypt_input_aead(sk, plaintext, sender)`  | `fn encrypt_input_aead(&self, sk: &SecretKey, plaintext: &[u8], sender: Address) -> Vec<u8>`  | Encrypts calldata using AEAD with transaction metadata as AAD |
-| `decrypt_input_aead(sk, ciphertext, sender)` | `fn decrypt_input_aead(&self, sk: &SecretKey, ciphertext: &[u8], sender: Address) -> Vec<u8>` | Decrypts calldata using AEAD with transaction metadata as AAD |
+| `encrypt_input_aead(sk, plaintext, sender)`  | `fn encrypt_input_aead(&self, sk: &SecretKey, plaintext: &Bytes, sender: Address) -> Result<Bytes, anyhow::Error>`    | Encrypts calldata using AEAD with transaction metadata as AAD |
+| `decrypt_input_aead(sk, ciphertext, sender)` | `fn decrypt_input_aead(&self, sk: &SecretKey, ciphertext: &Bytes, sender: Address) -> Result<Vec<u8>, anyhow::Error>` | Decrypts calldata using AEAD with transaction metadata as AAD |
 
 ### Validation
 
@@ -92,7 +92,7 @@ pub const TX_TYPE: u8 = 0x4A;
 | ---------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
 | `validate_recent_block_hash(recent_blocks)`    | `fn validate_recent_block_hash(&self, recent_blocks: &[B256]) -> bool`         | Verifies that `recent_block_hash` exists in the provided block list |
 | `validate_expiration(current_block)`           | `fn validate_expiration(&self, current_block: u64) -> bool`                    | Checks that the transaction has not expired                         |
-| `validate_block(current_block, recent_blocks)` | `fn validate_block(&self, current_block: u64, recent_blocks: &[B256]) -> bool` | Combined freshness and expiration validation                        |
+| `validate_block(current_block, recent_blocks)` | `fn validate_block(&self, current_block: u64, recent_blocks: &[B256]) -> Result<(), SeismicValidationError>` | Combined freshness and expiration validation                        |
 
 ## Examples
 
@@ -101,7 +101,7 @@ pub const TX_TYPE: u8 = 0x4A;
 In practice, you rarely construct `TxSeismic` directly. The filler pipeline builds it from a `SeismicTransactionRequest`. However, for reference:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::{Bytes, U256, TxKind, Address, B256};
 
 let tx = TxSeismic {
@@ -126,7 +126,7 @@ let tx = TxSeismic {
 ### Using the Builder Pattern (Recommended)
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::primitives::{U256, TxKind};
 use alloy::sol_types::SolCall;
 

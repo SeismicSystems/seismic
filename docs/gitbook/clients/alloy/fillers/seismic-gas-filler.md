@@ -77,7 +77,7 @@ This restriction exists because the Seismic transaction type (`0x4A`) is designe
 In most cases, `SeismicGasFiller` is configured automatically by the provider:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -93,7 +93,7 @@ let provider = sreth_signed_provider(wallet, url).await?;
 If building a custom provider stack:
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 
 let rpc_url: reqwest::Url = "https://node.seismicdev.net/rpc".parse()?;
 let gas_filler = SeismicGasFiller::with_url(rpc_url);

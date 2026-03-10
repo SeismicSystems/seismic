@@ -45,7 +45,7 @@ Both the calldata you send **and** the result you get back are encrypted. An obs
 Signed reads require a `SeismicSignedProvider` because the provider needs an ephemeral keypair for ECDH key derivation and response decryption.
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -149,7 +149,7 @@ Under the hood, `seismic_call()` performs the following sequence:
 ### Complete example
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::foundry::*;
 use alloy::sol;
 use alloy::sol_types::SolCall;
 use alloy_primitives::{Bytes, TxKind};

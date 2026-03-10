@@ -70,14 +70,14 @@ On the client side, signed reads are handled transparently by `seismic-viem`. Wh
 ### Using a shielded contract instance
 
 ```typescript
-import { createShieldedWalletClient, getShieldedContract } from "seismic-viem";
+import { createShieldedWalletClient, getShieldedContract, seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 // Create a shielded wallet client
 const walletClient = await createShieldedWalletClient({
-  chain: seismicDevnet,
-  transport: http("https://rpc-devnet.seismic.systems"),
+  chain: seismicTestnet,
+  transport: http("https://gcp-1.seismictest.net/rpc"),
   account: privateKeyToAccount(PRIVATE_KEY),
 });
 
