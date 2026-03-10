@@ -11,7 +11,7 @@ Seismic introduces two new EVM instructions to handle confidential storage: `CST
 
 ## `CSTORE`
 
-Stores a value and marks the slot as **private** (confidential).
+Stores a value and marks the slot as **private** (confidential). The gas cost is the same for storing any value, regardless of size. This means `CSTORE` will be more expensive than `SSTORE` by design
 
 ```solidity
 contract PrivateCounter {
@@ -40,7 +40,7 @@ function cstoreExample(uint256 slot, uint256 value) internal {
 
 ## `CLOAD`
 
-Reads a value from a storage slot. `CLOAD` can access both private and public slots — it is strictly more powerful than `SLOAD`.
+Reads a value from a storage slot. `CLOAD` can access both private and public slots — it is strictly more powerful than `SLOAD`. Note that the tradeoff is that `CLOAD` will consume more gas: if it didn't, it would leak information about the size of the shielded value
 
 ```solidity
 contract PrivateBalance {
