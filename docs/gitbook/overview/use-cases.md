@@ -21,7 +21,7 @@ function transfer(address to, suint256 amount) public {
 }
 ```
 
-The only difference from a standard ERC20: `uint256` becomes `suint256`. The compiler routes all balance reads and writes through shielded storage automatically. Observers see `0x000` for all balances and amounts.
+The only difference from a standard ERC20: `uint256` becomes `suint256`. The compiler routes all balance reads and writes through shielded storage automatically. Observers see `0x00...0` for all balances and amounts.
 
 For a full walkthrough, see the [SRC20 tutorial](../tutorials/src20/).
 
@@ -51,7 +51,7 @@ The constant-product formula is standard AMM logic. Shielding the reserves and a
 
 ## Compliant finance (Intelligence Contracts)
 
-Privacy with built-in access control. A compliance officer can view balances for regulatory purposes, but the general public cannot. This pattern is sometimes called an "Intelligence Contract" -- a private contract that selectively reveals information to authorized parties.
+Contracts can optionally implement access control over shielded data — for example, exposing a view function that only authorized addresses can call. This pattern is sometimes called an "Intelligence Contract": a shielded contract that selectively reveals information to specific parties.
 
 ```solidity
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -74,7 +74,7 @@ function transfer(address to, suint256 amount) public {
 }
 ```
 
-Balances are stored as `suint256` so they are shielded by default. The `getBalance` function casts the shielded value to a regular `uint256` for return, but only if the caller is the account owner or holds the `COMPLIANCE_ROLE`. Everyone else is rejected.
+In this example, balances are stored as `suint256` so they are shielded by default. The `getBalance` function casts the shielded value to a regular `uint256` for return, but only if the caller is the account owner or holds the `COMPLIANCE_ROLE`. Everyone else is rejected.
 
 ## Private voting
 

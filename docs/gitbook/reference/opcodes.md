@@ -83,6 +83,26 @@ contract PublicCounter {
 }
 ```
 
+## `TIMESTAMP_MS`
+
+Returns the current block timestamp in **milliseconds**. Seismic produces multiple blocks per second, so standard `TIMESTAMP` (which returns unix seconds) cannot distinguish between them.
+
+In Seismic Solidity:
+
+* `block.timestamp` — returns unix seconds, same as standard Solidity
+* `block.timestamp_ms` — returns unix milliseconds
+* `block.timestamp_seconds` — alias for `block.timestamp`, for readability
+
+```solidity
+contract TimestampExample {
+    function getTimestamps() external view returns (uint256 sec, uint256 ms) {
+        sec = block.timestamp;       // unix seconds (same as Ethereum)
+        ms = block.timestamp_ms;     // unix milliseconds (Seismic-specific)
+        // block.timestamp_seconds is also available as an alias for block.timestamp
+    }
+}
+```
+
 ## FlaggedStorage Access Rules
 
 Every storage slot is a pair: `(value: U256, is_private: bool)`. The flag is set by the most recent store operation.
