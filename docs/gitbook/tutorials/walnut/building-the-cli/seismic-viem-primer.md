@@ -4,18 +4,20 @@ icon: file-lines
 
 # Quick primer: seismic-viem
 
-Before proceeding to write the CLI, you need to be acquainted with some of the functions and utilities used to enable Seismic primitives (e.g. shielded reads, shielded writes etc.) through our client library, `seismic-viem` , which we will be using heavily to write the CLI. The detailed docs for `seismic-viem` can be found [here](https://seismic-docs.netlify.app/). _Estimated time: \~15 minutes_
+Before proceeding to write the CLI, you need to be acquainted with some of the functions and utilities used to enable Seismic primitives (e.g. shielded reads, shielded writes etc.) through our client library, `seismic-viem` , which we will be using heavily to write the CLI. The detailed docs for `seismic-viem` can be found [here](../../../clients/typescript/viem/README.md). _Estimated time: \~15 minutes_
 
 ### Shielded wallet client
 
 The **shielded wallet client** is the shielded/Seismic counterpart of the **wallet client** in `viem` . It is used to enable extended functionality for interacting with shielded blockchain features, wallet operations, and encryption. It can be initialized using the `createShieldedWalletClient` function as follows:
 
 ```typescript
+import { createShieldedWalletClient, sanvil } from 'seismic-viem'
+import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
 const walletClient = await createShieldedWalletClient({
-  chain: seismicChain,
-  transport: httpTransport,
+  chain: sanvil,
+  transport: http(),
   account: privateKeyToAccount('0xabcdef...'),
 })
 ```
@@ -26,7 +28,7 @@ const walletClient = await createShieldedWalletClient({
 2. `transport` : the method of transport of interacting with the chain (`http` /`ws` along with the corresponding RPC URL)
 3. `account`: a viem Account object (e.g. from `privateKeyToAccount()`)
 
-Once initialized, it can then be used to perform wallet operations or shielded-specific [actions.](https://seismic-docs.netlify.app/seismic-viem/functions/createShieldedWalletClient)
+Once initialized, it can then be used to perform wallet operations or shielded-specific [actions](../../../clients/typescript/viem/shielded-wallet-client.md#actions).
 
 ### Shielded contract
 
@@ -42,7 +44,7 @@ const contract = getShieldedContract({
 
 It takes in the following parameters:
 
-1. `abi` : the ABI of the contract it is interacting with.
+1. `abi` : the ABI of the contract. After running `sforge build`, the ABI is in `out/<ContractName>.sol/<ContractName>.json`. You can also generate it manually with `ssolc --abi <file>.sol`. To use it in your code, you can import the JSON file directly, or copy the ABI array into a constant in your source (more tedious, but gives you better type inference).
 2. `address` : the address of the deployed contract it is interacting with.
 3. `client` : the shielded wallet client that the interactions are to be performed by.
 

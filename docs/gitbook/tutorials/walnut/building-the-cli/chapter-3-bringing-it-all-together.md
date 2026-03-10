@@ -27,15 +27,15 @@ BOB_PRIVKEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
 
 **What’s Happening Here?**
 
-• `CHAIN_ID=31337` : `31337`is the default chain ID for `sanvil`(your local Seismic node).
+• `CHAIN_ID=31337` : `31337` is the default chain ID for `sanvil` (your local Seismic node).
 
 • `RPC_URL=http://127.0.0.1:8545` : This is the RPC URL for interacting with the local Seismic node.
 
-• `ALICE_PRIVKEY`and `BOB_PRIVKEY` : These are Alice and Bob’s private keys, allowing them to play the game. (These again are standard test keys provided by `sanvil`)
+• `ALICE_PRIVKEY` and `BOB_PRIVKEY` : These are Alice and Bob’s private keys, allowing them to play the game. (These are standard test keys provided by `sanvil`)
 
 ### Write index.ts
 
-Now, we’ll create the main entry point for our game session. This file will simulate gameplay, initializing players and having them interact with the Walnut contract. Open `packages/cli/src/index.ts`and follow these steps:
+Now, we’ll create the main entry point for our game session. This file will simulate gameplay, initializing players and having them interact with the Walnut contract. Open `packages/cli/src/index.ts` and follow these steps:
 
 #### Import Dependencies
 
@@ -88,7 +88,7 @@ The contract’s ABI and deployed address are read from files generated during d
 
 #### Select the blockchain network
 
-Determine whether to use the local `sanvil`node (31337) or the Seismic devnet.
+Determine whether to use the local `sanvil` node (31337) or the Seismic devnet.
 
 ```typescript
   const chain =
@@ -184,7 +184,7 @@ This ensures that the script runs when executed.
 main()
 ```
 
-The entire `index.ts` file can be found [here](https://github.com/SeismicSystems/seismic-starter/blob/ameya/baby-walnut/packages/cli/src/index.ts)
+The entire `index.ts` file can be found [here](https://github.com/SeismicSystems/seismic-starter/blob/main/packages/cli/src/index.ts)
 
 ### Running the CLI
 
@@ -220,6 +220,6 @@ You should see something like this as the output:
 ✅ Received expected revert
 ```
 
-This output logs the events during two rounds of gameplay in the Walnut contract, showing interactions by Alice and Bob, along with a revert error when Alice attempts to call `look()`in Round 2.
+This output logs the events during two rounds of gameplay in the Walnut contract, showing interactions by Alice and Bob, along with a revert error when Alice attempts to call `look()` in Round 2.
 
-Congratulations! You've reached the end of the tutorial. You can find the code for the entire project [here](https://github.com/SeismicSystems/seismic-starter/tree/ameya/baby-walnut).
+Congratulations! You've reached the end of the tutorial. You can find the code for the entire project [here](https://github.com/SeismicSystems/seismic-starter).

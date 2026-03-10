@@ -6,7 +6,7 @@ Now that the `contracts` subdirectory has been initialized, you should now initi
 
 ```bash
 # Assuming you are currently in the contracts directory
-cd ../cli
+cd ../packages/cli
 ```
 
 2. **Initialize a new bun project**
@@ -33,7 +33,7 @@ mkdir -p src && mv -t src index.ts
     },
     "dependencies": {
         "dotenv": "^16.4.7",
-        "seismic-viem": "1.0.9",
+        "seismic-viem": "^1.1.0",
         "viem": "^2.22.3"
     },
     "devDependencies": {

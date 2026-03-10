@@ -13,9 +13,9 @@ The shell determines the Walnut’s resilience. It has an integer strength (`she
 ```solidity
     uint256 shellStrength; // The strength of the Walnut's shell.
 
-    constructor(uint256 _shellStrength, suint256 _kernel) {
+    constructor(uint256 _shellStrength, uint256 _kernel) {
         shellStrength = _shellStrength; // Set the initial shell strength.
-        kernel = _kernel; // Initialize the kernel.
+        kernel = suint256(_kernel); // Initialize the kernel (cast to shielded).
     }
 ```
 
@@ -23,25 +23,26 @@ The shell determines the Walnut’s resilience. It has an integer strength (`she
 
 Each time the Walnut is hit, the shell strength decreases, simulating damage to the protective shell. This is crucial for revealing the kernel, **as the shell must be fully broken for the kernel to be accessed:**
 
-<pre class="language-solidity"><code class="lang-solidity"><strong>    // Event to log hits
-</strong>    event Hit(address indexed hitter, uint256 remainingShellStrength);
-    
-    // Function to hit the walnut shell
-    function hit() public {
-        shellStrength--; // Decrease the shell strength.
-        emit Hit(msg.sender, shellStrength); // Log the hit event.
-    }
+```solidity
+    // Event to log hits
+    event Hit(address indexed hitter, uint256 remainingShellStrength);
 
     // Modifier to ensure the shell is not cracked.
     modifier requireIntact() {
         require(shellStrength > 0, "SHELL_ALREADY_CRACKED");
         _;
     }
-</code></pre>
 
-### What's happening here?
+    // Function to hit the walnut shell
+    function hit() public requireIntact {
+        shellStrength--; // Decrease the shell strength.
+        emit Hit(msg.sender, shellStrength); // Log the hit event.
+    }
+```
 
-* **The `requireIntact`** modifier: Ensures that the function cannot be called if the Walnut’s shell is already broken (`shellStrength == 0`). This prevents unnecessary calls after the shell is fully cracked. We can now also add this modifier to the shake function in order to restrict `shake` being called even after the shell is broken:
+### What’s happening here?
+
+* **The `requireIntact`** modifier: Ensures that the function cannot be called if the Walnut’s shell is already broken (`shellStrength == 0`). This prevents underflow and unnecessary calls after the shell is fully cracked. We also add this modifier to the shake function:
 
 ```solidity
     function shake(suint256 _numShakes) public requireIntact {
@@ -50,7 +51,7 @@ Each time the Walnut is hit, the shell strength decreases, simulating damage to 
     }
 ```
 
-* **Decrementing the shell**: Each call to `hit`decreases the shell’s strength (`shellStrength`) by one.
+* **Decrementing the shell**: Each call to `hit` decreases the shell’s strength (`shellStrength`) by one.
 * **Logging the action**: The `Hit` event records the hitter’s address `(msg.sender)` and the remaining shell strength.
 
 ### Example call:
@@ -59,7 +60,7 @@ Here’s how calling the hit function works in practice:
 
 • **Initial State**: The shell strength is set to 5.
 
-• **First Hit**: A player calls hit(). The shell strength decreases to 4.
+• **First Hit**: A player calls `hit()`. The shell strength decreases to 4.
 
 • **Subsequent Hits**: Each additional hit reduces the shell strength by 1 until it reaches 0
 
@@ -110,9 +111,9 @@ contract Walnut {
     event Shake(address indexed shaker); // Logs when the Walnut is shaken.
 
     // Constructor to initialize the shell and kernel.
-    constructor(uint256 _shellStrength, suint256 _kernel) {
+    constructor(uint256 _shellStrength, uint256 _kernel) {
         shellStrength = _shellStrength; // Set the initial shell strength.
-        kernel = _kernel; // Initialize the kernel.
+        kernel = suint256(_kernel); // Initialize the kernel (cast to shielded).
     }
 
     // Function to hit the Walnut and reduce its shell strength.

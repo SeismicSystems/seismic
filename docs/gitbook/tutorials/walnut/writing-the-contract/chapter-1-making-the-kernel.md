@@ -17,9 +17,14 @@ pragma solidity ^0.8.13;
 contract Walnut {
     suint256 kernel; // The shielded kernel (number inside the Walnut)
 
+    event Shake(address indexed player);
+
     // Constructor to initialize the kernel
-    constructor(suint256 _kernel) {
-        kernel = _kernel;
+    // Note: use uint256 here, not suint256 — constructor calldata is not
+    // encrypted (CREATE/CREATE2 does not use Seismic transactions), so
+    // shielded constructor parameters would leak their values.
+    constructor(uint256 _kernel) {
+        kernel = suint256(_kernel);
     }
 }
 ```
@@ -37,6 +42,6 @@ function shake(suint256 _numShakes) public {
 
 **What's happening here?**
 
-Since `shake` takes in an `stype` as one of its parameters, it is key that no information about this parameter (in this case, the number of shakes) is leaked at any time during the function call. This means that the value of `_numShakes` is known only to the function caller and is encrypted on-chain.
+Since `shake` takes a shielded type as a parameter, you should use a Seismic transaction to keep the input private. The value of `_numShakes` is known only to the function caller and is shielded on-chain.
 
-The function also updates a state variable (`kernel` ) and hence constitutes a state transition, which makes a call to this function a **shielded write.**
+The function also updates a shielded state variable (`kernel`), so you should use a Seismic transaction (a **shielded write**) when calling it.

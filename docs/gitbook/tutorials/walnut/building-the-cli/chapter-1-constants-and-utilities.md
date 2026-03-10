@@ -8,7 +8,7 @@ In this chapter, you will learn about defining and constants and utility functio
 
 First, navigate to the root of the directory/monorepo and run `bun install` to install all the dependencies.
 
-Now, navigate to make a `lib` folder inside `packages/cli`with the files `constants.ts` and `utils.ts` and navigate to it:
+Now, create a `lib` folder inside `packages/cli` with the files `constants.ts` and `utils.ts`:
 
 ```
 mkdir -p packages/cli/lib

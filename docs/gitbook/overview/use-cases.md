@@ -34,7 +34,7 @@ suint256 reserve0;
 suint256 reserve1;
 mapping(address => suint256) liquidity;
 
-function swap(address tokenIn, suint256 amountIn) public returns (suint256 amountOut) {
+function swap(address tokenIn, suint256 amountIn) internal returns (suint256 amountOut) {
     if (tokenIn == token0) {
         amountOut = (amountIn * reserve1) / (reserve0 + amountIn);
         reserve0 += amountIn;

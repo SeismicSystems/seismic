@@ -9,7 +9,7 @@ icon: keyboard-brightness
 
 ### Mappings to foundry
 
-Seismic's development toolkit closely mirrors [foundry](https://getfoundry.sh/) (it's a fork!). The mapping is as follows:
+Seismic's development toolkit closely mirrors [Foundry](https://getfoundry.sh/) (it's a [fork](https://github.com/SeismicSystems/seismic-foundry)!). The mapping is as follows:
 
 ```
 // foundry tool -> seismic version of foundry tool

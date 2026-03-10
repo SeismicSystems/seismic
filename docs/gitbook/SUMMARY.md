@@ -16,6 +16,13 @@
 
 ## Tutorials
 
+* [SRC20: Private Token](tutorials/src20/README.md)
+  * [ERC20 to SRC20: What Changes](tutorials/src20/erc20-to-src20.md)
+  * [Shielded Balances and Transfers](tutorials/src20/shielded-balances-and-transfers.md)
+  * [Encrypted Events](tutorials/src20/encrypted-events.md)
+  * [Signed Reads](tutorials/src20/signed-reads-for-balance-checking.md)
+  * [Intelligence Contracts](tutorials/src20/intelligence-contracts.md)
+  * [Building the Frontend](tutorials/src20/building-the-frontend.md)
 * [Walnut App](tutorials/walnut/understanding-the-walnut-contract.md)
   * [Setting Up Your Project](tutorials/walnut/setting-up-your-project/README.md)
     * [Verify devtool installation](tutorials/walnut/setting-up-your-project/verify-devtool-installation.md)
@@ -33,13 +40,6 @@
     * [Ch 1: Constants and Utilities](tutorials/walnut/building-the-cli/chapter-1-constants-and-utilities.md)
     * [Ch 2: Core App Logic](tutorials/walnut/building-the-cli/chapter-2-core-app-logic.md)
     * [Ch 3: Bringing It All Together](tutorials/walnut/building-the-cli/chapter-3-bringing-it-all-together.md)
-* [SRC20: Private Token](tutorials/src20/README.md)
-  * [ERC20 to SRC20: What Changes](tutorials/src20/erc20-to-src20.md)
-  * [Shielded Balances and Transfers](tutorials/src20/shielded-balances-and-transfers.md)
-  * [Encrypted Events](tutorials/src20/encrypted-events.md)
-  * [Signed Reads](tutorials/src20/signed-reads-for-balance-checking.md)
-  * [Intelligence Contracts](tutorials/src20/intelligence-contracts.md)
-  * [Building the Frontend](tutorials/src20/building-the-frontend.md)
 
 ## Seismic Solidity
 
