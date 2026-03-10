@@ -4,38 +4,7 @@ icon: question
 
 # Why Seismic
 
-## One letter changes everything
-
-Here is a standard ERC20 token:
-
-```solidity
-// Standard ERC20 — balances visible to everyone
-mapping(address => uint256) public balanceOf;
-
-function transfer(address to, uint256 amount) public {
-    balanceOf[msg.sender] -= amount;
-    balanceOf[to] += amount;
-}
-```
-
-Here is the Seismic equivalent -- an SRC20 with fully private balances:
-
-```solidity
-// Seismic SRC20 — balances shielded by default
-mapping(address => suint256) balanceOf;    // uint256 → suint256
-
-function transfer(address to, suint256 amount) public {
-    balanceOf[msg.sender] -= amount;
-    balanceOf[to] += amount;
-}
-```
-
-The changes:
-
-* `uint256` becomes `suint256`
-* The `public` visibility modifier is removed (shielded types cannot be returned from public getters)
-
-That is it. The business logic is identical. The compiler handles the rest -- routing shielded values to encrypted storage, ensuring they never appear in traces or state reads by external observers. Anyone looking at this contract's storage, transaction calldata, or execution traces sees `0x000` where the actual values should be.
+As shown on the [welcome page](../README.md), shielding a Solidity contract can be as simple as adding an `s` prefix to your types. But why does that matter?
 
 ## The transparency problem
 
@@ -46,7 +15,7 @@ Blockchains are public ledgers. Every balance, every transaction, every contract
 * **Privacy violations for end users.** When Alice sends tokens to Bob, everyone can see how much she holds, how much she sent, and build a complete transaction graph linking her activity.
 * **Business logic exposure.** Contract state is fully readable. Pricing algorithms, liquidation thresholds, and internal parameters are all public.
 
-Traditional finance operates with confidentiality by default. Blockchain flips that assumption, and it limits what you can build.
+Traditional finance operates with confidentiality by default. Public blockchains flip that assumption, and it limits what you can build.
 
 ## Why existing privacy solutions fall short
 
@@ -67,7 +36,7 @@ Seismic solves on-chain privacy with two innovations working together:
 
 ### Shielded types in the compiler
 
-Seismic extends the Solidity compiler with **shielded types**: `suint`, `sint`, `sbool`, and `saddress`. The `s` prefix marks a value as private. Under the hood, these compile to `CLOAD` and `CSTORE` opcodes (instead of the standard `SLOAD`/`SSTORE`), which route data through encrypted storage.
+Seismic extends the Solidity compiler with **shielded types**: `suint`, `sint`, `sbool`, `sbytes`, and `saddress`. The `s` prefix marks a value as shielded. Under the hood, these compile to `CLOAD` and `CSTORE` opcodes (instead of the standard `SLOAD`/`SSTORE`), which route data through shielded storage.
 
 No new language. No new programming model. Just a one-letter prefix on the types you already know.
 
@@ -81,8 +50,8 @@ Together, these two layers provide privacy at the language level and enforcement
 
 Seismic is designed so that everything around the privacy layer stays familiar:
 
-* **Same language.** Standard Solidity, with shielded types added. No new syntax beyond the `s` prefix.
+* **Same language.** Standard Solidity, with shielded types added. No new syntax beyond the `s` prefix. Existing Solidity contracts compile and deploy without modification.
 * **Same tooling.** `sforge`, `sanvil`, and `ssolc` are forks of Foundry's `forge`, `anvil`, and `solc`. Your workflow does not change.
-* **Same client libraries.** `seismic-viem` extends Viem. `seismic-react` extends React hooks. `seismic-alloy` extends Alloy for Rust.
+* **Same client libraries.** `seismic-viem` extends Viem. `seismic-react` extends Wagmi. `seismic-alloy` extends Alloy for Rust. `seismic_web3` extends web3.py for Python.
 * **Same standards.** ERC20 becomes SRC20. The interface is the same. The deployment flow is the same. The difference is that balances are private.
 * **Same deployment flow.** Write, test, deploy. The commands are `sforge build`, `sforge test`, `sforge create`. If you have deployed to Ethereum, you can deploy to Seismic.
