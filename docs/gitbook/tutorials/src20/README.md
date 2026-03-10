@@ -23,7 +23,7 @@ layout:
 
 # Build a Private SRC-20 Token
 
-In this tutorial, you will build a fully functional private ERC20 token -- an SRC20 -- where balances, transfer amounts, and allowances are all shielded from external observers. Anyone watching the chain sees `0x000` instead of actual values, yet the token behaves exactly like a standard ERC20 from the user's perspective.
+In this tutorial, you will build a fully functional private ERC20 token -- an SRC20 -- where balances, transfer amounts, and allowances are all shielded from external observers. Anyone watching the chain sees `0x00...0` instead of actual values, yet the token behaves like a standard ERC20 from the user's perspective.
 
 ## What you'll build
 
@@ -31,7 +31,7 @@ By the end of this tutorial you will have:
 
 * An SRC20 smart contract with shielded balances, transfers, and allowances
 * Encrypted transfer events that only the sender and recipient can decrypt
-* A signed-read pattern that lets users check their own balance without revealing it
+* A signed-read pattern that lets users check their own balance without anyone else knowing it
 * Compliance-ready access control through Intelligence Contracts
 * A React frontend that connects everything end-to-end
 

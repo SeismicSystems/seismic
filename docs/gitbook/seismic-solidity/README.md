@@ -20,7 +20,7 @@ The primary difference between them and their vanilla counterparts is that they'
 
 There are special considerations unique to each individual type. These are covered in the next three sections. For now, we'll develop a general understanding of `stype` that applies to all its component types.
 
-Here's the mental model you should have for shielded contracts. Whenever a tx is broadcasted by a user, it goes through the same submission, execution, and storage phases as a tx in a regular blockchain. The only difference is that when you look at the tx at these different stages- whether it's as a calldata payload during submission, a trace during execution, or as leaves in the MPT tree during storage- any bytes that represent `stype` variables are replaced with `0x000`.
+Here's the mental model you should have for shielded contracts. Whenever a tx is broadcasted by a user, it goes through the same submission, execution, and storage phases as a tx in a regular blockchain. The only difference is that when you look at the tx at these different stages- whether it's as a calldata payload during submission, a trace during execution, or as leaves in the MPT tree during storage- any bytes that represent `stype` variables are replaced with `0x00...0`.
 
 Let's step through a concrete example. We'll follow the lifecycle of a `transfer()` tx for an [`ERC20`](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) variant. This variant shields user balances and transfer amounts:
 
@@ -33,13 +33,13 @@ function transfer(address to, suint256 amount) public {  // shielded transfer am
 }
 ```
 
-<figure><img src="../../.gitbook/assets/1 (1).png" alt=""><figcaption><p>Observers see 0x000 in place of stype variables during transaction submission, execution, and storage.</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/stype-tx-lifecycle.png" alt=""><figcaption><p>Observers see 0x00...0 in place of stype variables during transaction submission, execution, and storage.</p></figcaption></figure>
 
 Shielding user balances is done by changing the values of the `balanceOf` array to `suint256`. Shielding transfer amounts is done by changing the `amount` parameter in `transfer()` to `suint256`. Now we can see what happens at every stage of the tx lifecycle:
 
-1. Submit. The tx is sitting in the mempool. You know that you're sending 12 tokens to your friend. Observers can look at the calldata and figure out that your friend is the recipient, but will see `0x000` instead of the number 12.
-2. Execute. The tx is processed by a full node, and its trace is open. You know that 12 tokens were removed from your balance and 12 were added to your friend's. Observers know that the same number that was deducted from your balance was added to your friend's, but they see `0x000` instead of the number 12.
-3. Store. The effects of the tx are applied to the state tree of all full nodes. You know that your new balance goes down by 12, to 200. You know that your friend's balance went up by 12, but you only see `0x000` for what its final state is. Observers know that your new balance is down the same amount that your friend's new balance is up, but they see `0x000` for both balances.
+1. Submit. The tx is sitting in the mempool. You know that you're sending 12 tokens to your friend. Observers can look at the calldata and figure out that your friend is the recipient, but will see `0x00...0` instead of the number 12.
+2. Execute. The tx is processed by a full node, and its trace is open. You know that 12 tokens were removed from your balance and 12 were added to your friend's. Observers know that the same number that was deducted from your balance was added to your friend's, but they see `0x00...0` instead of the number 12.
+3. Store. The effects of the tx are applied to the state tree of all full nodes. You know that your new balance goes down by 12, to 200. You know that your friend's balance went up by 12, but you only see `0x00...0` for what its final state is. Observers know that your new balance is down the same amount that your friend's new balance is up, but they see `0x00...0` for both balances.
 
 {% hint style="info" %}
 Seismic currently shields a lot more than just the bytes representing `stype` variables, so the above model is more granular than you technically need to be. However, this will soon stop being the case. You should not fit your contracts to this temporary discrepancy.

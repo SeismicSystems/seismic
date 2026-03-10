@@ -173,9 +173,7 @@ const token = getShieldedContract({
 });
 
 // Grant compliance role
-await token.write.grantRole([COMPLIANCE_ROLE, complianceOfficerAddress], {
-  gas: 100000n,
-});
+await token.write.grantRole([COMPLIANCE_ROLE, complianceOfficerAddress]);
 ```
 
 ### Compliance officer reading a balance

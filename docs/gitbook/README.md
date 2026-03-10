@@ -37,7 +37,7 @@ function transfer(address to, suint256 amount) public {  // uint256 → suint256
 }
 ```
 
-The `s` prefix tells the Seismic compiler to shield the underlying value. Observers see `0x000` instead of actual balances and amounts. Everything else — the Solidity syntax, the EVM execution model, the deployment flow — stays exactly the same.
+The `s` prefix tells the Seismic compiler to shield the underlying value. Observers see `0x00...0` instead of actual balances and amounts. Everything else — the Solidity syntax, the EVM execution model, the deployment flow — stays exactly the same.
 
 ---
 

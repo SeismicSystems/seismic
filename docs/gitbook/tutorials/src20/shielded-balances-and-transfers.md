@@ -19,7 +19,7 @@ At the storage level, this is where Seismic's **FlaggedStorage** comes in. Each 
 
 * `eth_getStorageAt` calls for these slots will fail. External observers cannot read the raw storage.
 * Only `CLOAD` can access private slots. The standard `SLOAD` opcode cannot reach them.
-* Anyone inspecting the state trie, transaction traces, or block data sees `0x000` in place of the actual balance.
+* Anyone inspecting the state trie, transaction traces, or block data sees `0x00...0` in place of the actual balance.
 
 The developer does not interact with FlaggedStorage directly. The type annotation handles everything.
 
@@ -39,10 +39,10 @@ function transfer(address to, suint256 amount) public returns (bool) {
 
 ### What happens at each stage
 
-1. **Calldata submission** -- The user sends a Seismic transaction (type `0x4A`). The `amount` parameter is encrypted before it leaves their machine. Observers watching the mempool see `0x000` in place of the amount.
+1. **Calldata submission** -- The user sends a Seismic transaction (type `0x4A`). The `amount` parameter is encrypted before it leaves their machine. Observers watching the mempool see `0x00...0` in place of the amount.
 2. **Execution inside the TEE** -- The Seismic node, running inside Intel TDX, decrypts the calldata. The `require` check runs against the shielded balance. The subtraction and addition execute normally. All intermediate values involving `suint256` are shielded in the trace.
 3. **Storage update** -- The new balances are written via `CSTORE`. Both the sender's and recipient's balance slots have `is_private = true`.
-4. **Observer view** -- Anyone querying the contract or reading the block sees `0x000` for the amount, the sender's balance, and the recipient's balance.
+4. **Observer view** -- Anyone querying the contract or reading the block sees `0x00...0` for the amount, the sender's balance, and the recipient's balance.
 
 Comparisons (`>=`) and arithmetic (`-=`, `+=`) work the same on `suint256` as on `uint256`. Solidity 0.8+ overflow checks also work, so if a user tries to transfer more than their balance, the transaction reverts as expected.
 
@@ -107,7 +107,7 @@ If you want even the total supply to be private, you can change it to `suint256`
 suint256 totalSupply;
 ```
 
-But keep in mind that `suint256` state variables cannot be `public`, so you would need to provide a signed-read function for anyone authorized to view it.
+But keep in mind that `suint256` state variables cannot be `public`, so you would need to provide a view function that determines who can view it via [signed reads](signed-reads-for-balance-checking.md).
 
 ### Constructor minting
 
@@ -221,7 +221,6 @@ function test_RevertWhen_InsufficientAllowance() public {
 Build and run from your contracts directory:
 
 ```bash
-sforge build
 sforge test
 ```
 

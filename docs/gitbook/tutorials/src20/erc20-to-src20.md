@@ -5,7 +5,7 @@ icon: right-left
 
 # ERC20 to SRC20: What Changes
 
-This chapter puts a standard ERC20 and its SRC20 counterpart side by side so you can see exactly how little changes. The core insight: privacy on Seismic is a type-level change, not an architectural one. _Estimated time: \~10 minutes._
+This chapter puts a standard ERC20 and its SRC20 counterpart side by side so you can see exactly how little changes. To get privacy on Seismic, just change the types. _Estimated time: \~10 minutes._
 
 ## The standard ERC20
 
@@ -144,7 +144,7 @@ The same change applies to the allowance mapping. The nested mapping's value typ
 + function transfer(address to, suint256 amount) public returns (bool) {
 ```
 
-The `amount` parameter changes to `suint256`. When a user calls this function through a Seismic transaction (type `0x4A`), the amount is encrypted in the calldata before it leaves their machine. During execution inside the TEE, the amount is decrypted and used normally. Observers watching the mempool or block data see `0x000` in place of the amount.
+The `amount` parameter changes to `suint256`. When a user calls this function through a Seismic transaction (type `0x4A`), the amount is encrypted in the calldata before it leaves their machine. During execution inside the TEE, the amount is decrypted and used normally. Observers watching the mempool or block data see `0x00...0` in place of the amount.
 
 The same change applies to `approve` and `transferFrom`.
 
