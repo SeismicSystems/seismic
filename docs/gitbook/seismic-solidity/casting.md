@@ -61,22 +61,27 @@ uint256 publicValue = uint256(shieldedValue);
 
 This is sometimes necessary (e.g., returning a value from a view function or interfacing with a non-shielded contract), but you should be deliberate about when and why you do it.
 
-## Casting `saddress` to `payable`
+## Casting `saddress` to Payable
 
-To cast an `saddress` to a `payable` address, use the following pattern:
+`saddress payable` is a valid type, but it does not unlock any extra operations — `.transfer()`, `.send()`, and `.balance` are all blocked on shielded addresses regardless of payability. The `payable` marker exists for type-system consistency (e.g., contracts with `receive() payable` convert to `saddress payable`), not for sending ETH.
+
+To actually send ETH to a shielded address, you must unshield it first:
 
 ```solidity
-address payable pay = payable(address(someSaddressValue));
+address payable exposed = payable(address(someSaddressValue));
+exposed.transfer(1 ether);
 ```
 
-You can also go in the other direction:
+{% hint style="warning" %}
+**Privacy consideration:** Unshielding to `address payable` exposes the address in the transaction trace.
+{% endhint %}
+
+You can also convert in the other direction:
 
 ```solidity
 address payable pay = /* ... */;
 saddress shielded = saddress(address(pay));
 ```
-
-`saddress payable` is also a valid type. You can use it directly when you need a shielded address that can receive ETH. Note that sending ETH to an `saddress payable` still requires unshielding to a regular `address payable` first, which will expose the address.
 
 ## Size Casting Between Shielded Integers
 
