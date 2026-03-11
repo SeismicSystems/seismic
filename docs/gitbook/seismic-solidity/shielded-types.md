@@ -98,3 +98,15 @@ saddress[] private recipients;   // dynamic — shielded length
 {% hint style="warning" %}
 Even with dynamic shielded arrays, an upper bound on the length may be visible to observers monitoring gas costs, since gas usage scales with array operations.
 {% endhint %}
+
+## Shielded Mappings
+
+Mappings can have shielded values but **keys cannot be shielded types**. The standard `mapping` syntax applies.
+
+```solidity
+mapping(address => suint256) private balances;    // valid
+mapping(uint256 => sbool) private flags;          // valid
+mapping(address => saddress) private recipients;  // valid
+
+mapping(saddress => uint256) private lookup;      // INVALID — shielded key
+```
