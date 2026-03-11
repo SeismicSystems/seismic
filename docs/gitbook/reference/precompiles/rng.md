@@ -4,7 +4,7 @@ icon: dice
 
 # RNG (`0x64`)
 
-Securely generate random bytes inside the TEE. The randomness is derived from TEE-internal entropy combined with optional personalization data, ensuring that the output is unpredictable to all parties -- including the node operator.
+Synchronous random number generation inside the TEE. The randomness is derived from TEE-internal entropy combined with optional personalization data, ensuring that the output is unpredictable to all parties — including the node operator.
 
 ## Input
 
@@ -21,21 +21,24 @@ Raw bytes in the following layout:
 | ------------ | ------- | ----------------------------------------------- |
 | random bytes | `bytes` | Securely generated random bytes of the requested length |
 
-{% hint style="info" %}
-**Built-in helpers.** Seismic Solidity provides built-in functions that call this precompile and automatically cast the result to the appropriate shielded type:
+## Built-in helpers
 
-* **Shielded integers:** `sync_rng8()` → `suint8`, `sync_rng16()` → `suint16`, `sync_rng32()` → `suint32`, `sync_rng64()` → `suint64`, `sync_rng128()` → `suint128`, `sync_rng256()` → `suint256`
-* **Shielded fixed bytes:** `sync_rng_b1()` → `sbytes1`, `sync_rng_b2()` → `sbytes2`, ... `sync_rng_b32()` → `sbytes32`
+Seismic Solidity provides built-in functions that call this precompile and automatically cast the result to the appropriate shielded type. If you use these, you don't need to deal with the raw precompile interface or manual casting.
 
-If you use these helpers, you don't need to deal with the raw precompile interface or manual casting. See the [examples below](#without-personalization).
-{% endhint %}
+**Shielded integers:**
+
+* `sync_rng8()` → `suint8`
+* `sync_rng16()` → `suint16`
+* `sync_rng32()` → `suint32`
+* `sync_rng64()` → `suint64`
+* `sync_rng96()` → `suint96`
+* `sync_rng128()` → `suint128`
+* `sync_rng256()` → `suint256`
+
+**Shielded fixed bytes:** `sync_rng_b1()` → `sbytes1`, ... `sync_rng_b32()` → `sbytes32`
 
 {% hint style="warning" %}
-**A note on proposer bias.** The RNG precompile produces randomness that is a deterministic function of the enclave's secret key, the transaction hash, remaining gas, and any personalization bytes you provide. In theory, a block proposer could simulate RNG outputs for candidate transactions and selectively include, exclude, or reorder them to influence randomness-dependent outcomes.
-
-In practice, this is largely mitigated by Seismic's TEE setup — proposers are restricted in what they can observe and do. This is something we've thought about extensively, and we believe synchronous RNG is safe for most use cases. That said, if your application has especially high-stakes randomness requirements (e.g. large-pot lotteries, leader elections), consider using an asynchronous commit-reveal scheme where entropy is committed before the block in which it is consumed. Seismic does not provide this out of the box today.
-
-See also: [Footguns — RNG proposer bias](../../seismic-solidity/footguns.md#rng-proposer-bias).
+**Proposer bias.** A block proposer could theoretically simulate RNG outputs and selectively order transactions to influence outcomes. Seismic's TEE setup largely mitigates this, but high-stakes applications should consider commit-reveal schemes. See [Footguns — RNG Proposer Bias](../../seismic-solidity/footguns.md#rng-proposer-bias) for details.
 {% endhint %}
 
 ## Use cases
@@ -43,15 +46,15 @@ See also: [Footguns — RNG proposer bias](../../seismic-solidity/footguns.md#rn
 * Shuffling hidden card decks or secret orderings
 * Generating nonces for on-chain cryptographic operations
 
-## Without personalization
+## Examples
 
-Seismic Solidity provides built-in helper functions to call the synchronous RNG precompile without personalization bytes: `sync_rng8()`, `sync_rng16()`, `sync_rng32()`, `sync_rng64()`, `sync_rng128()`, `sync_rng256()`, and `sync_rng_b1()` through `sync_rng_b32()`. These return the corresponding shielded type (`suint8`, `suint256`, `sbytes1`, etc.).
+### Without personalization
 
 ```solidity
 suint256 random = sync_rng256();
 ```
 
-## With personalization
+### With personalization
 
 To pass personalization bytes, call the precompile directly at `0x64`:
 
@@ -60,7 +63,6 @@ function getRandomBytesWithPersonalization(
     uint32 numBytes,
     bytes memory pers
 ) internal view returns (bytes memory) {
-    // Without personalization, use abi.encodePacked(numBytes) instead
     (bool success, bytes memory result) = address(0x64).staticcall(
         abi.encodePacked(numBytes, pers)
     );

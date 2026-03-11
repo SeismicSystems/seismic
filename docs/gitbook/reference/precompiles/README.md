@@ -14,14 +14,14 @@ All precompiles expect **raw concatenated bytes** as input, not ABI-encoded data
 
 These are the precompiles Seismic adds:
 
-| Address | Name            | Purpose                                                    |
-| ------- | --------------- | ---------------------------------------------------------- |
-| `0x64`  | [RNG](rng.md)             | Securely generate random bytes inside the TEE              |
-| `0x65`  | [ECDH](ecdh.md)            | Derive an AES key from a private key and a public key      |
-| `0x66`  | [AES-GCM Encrypt](aes-gcm-encrypt.md) | Encrypt data with AES-256-GCM authenticated encryption     |
-| `0x67`  | [AES-GCM Decrypt](aes-gcm-decrypt.md) | Decrypt data with AES-256-GCM authenticated encryption     |
-| `0x68`  | [HKDF](hkdf.md)            | Derive a 32-byte key from input key material               |
-| `0x69`  | [secp256k1 Sign](secp256k1-sign.md)  | Sign a message hash with a secp256k1 private key           |
+| Name            | Address                    | Purpose                                                |
+| --------------- | -------------------------- | ------------------------------------------------------ |
+| RNG             | [`0x64`](rng.md)           | Securely generate random bytes inside the TEE          |
+| ECDH            | [`0x65`](ecdh.md)          | Derive an AES key from a private key and a public key  |
+| AES-GCM Encrypt | [`0x66`](aes-gcm-encrypt.md) | Encrypt data with AES-256-GCM authenticated encryption |
+| AES-GCM Decrypt | [`0x67`](aes-gcm-decrypt.md) | Decrypt data with AES-256-GCM authenticated encryption |
+| HKDF            | [`0x68`](hkdf.md)          | Derive a 32-byte key from input key material           |
+| secp256k1 Sign  | [`0x69`](secp256k1-sign.md) | Sign a message hash with a secp256k1 private key       |
 
 ## Common pattern: Encrypted events
 
@@ -32,7 +32,7 @@ A frequent use of the precompiles is encrypting event data so that only the inte
 sbytes32 aesKey = sbytes32(ecdh(contractPrivKey, recipientCompressedPubKey));
 
 // 2. Generate a random nonce
-uint96 nonce = uint96(sync_rng128());
+uint96 nonce = uint96(sync_rng96());
 
 // 3. Encrypt the sensitive data
 bytes memory encrypted = aes_gcm_encrypt(aesKey, nonce, plaintext);

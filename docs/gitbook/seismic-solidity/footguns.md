@@ -154,7 +154,7 @@ suint256 constant MY_VALUE = suint256(1);
 
 ### RNG Proposer Bias
 
-**The problem:** The [RNG precompile](../reference/precompiles/rng.md) produces randomness that is deterministic given the enclave's secret key, the transaction hash, remaining gas, and personalization bytes. In theory, a block proposer could simulate RNG outputs and selectively include, exclude, or reorder transactions to influence outcomes.
+**The problem:** The [synchronous RNG precompile](../reference/precompiles/rng.md) produces randomness that is deterministic given the enclave's secret key, the transaction hash, remaining gas, and personalization bytes. In theory, a block proposer could simulate RNG outputs and selectively include, exclude, or reorder transactions to influence outcomes.
 
 ```solidity
 // In theory, a proposer could simulate this output and decide
