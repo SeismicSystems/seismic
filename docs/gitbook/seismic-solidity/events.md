@@ -1,5 +1,5 @@
 ---
-icon: blog
+icon: tower-broadcast
 metaLinks:
   alternates:
     - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/core/events
