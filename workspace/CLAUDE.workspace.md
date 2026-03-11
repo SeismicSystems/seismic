@@ -16,7 +16,7 @@ See [seismic/docs/glossary.md](../docs/glossary.md) for full definitions. Quick 
 
 ## Docs
 
-Detailed docs live in the [seismic](../) monorepo:
+Detailed docs live in the [seismic](https://github.com/SeismicSystems/seismic) monorepo:
 
 - [seismic/docs/architecture.md](../docs/architecture.md) — diagrams: Seismic node, RPC/EVM/storage interactions, tries + SeismicTx
 - [seismic/docs/glossary.md](../docs/glossary.md) — key concepts: FlaggedStorage, TxSeismic, Mercury Spec, SeismicHost
