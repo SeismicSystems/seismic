@@ -59,7 +59,7 @@ The encryption flow:
 4. The encrypted transaction is broadcast to the network.
 5. Inside the TEE, the node decrypts the calldata, executes the transaction, and writes results to shielded storage.
 
-At no point is the plaintext calldata visible outside the TEE -- not in the mempool, not in block data, not in transaction traces. For a deeper dive, see [The Seismic Transaction](../reference/seismic-transaction.md).
+At no point is the plaintext calldata visible outside the TEE -- not in the mempool, not in block data, not in transaction traces. For a deeper dive, see [The Seismic Transaction](../reference/seismic-transaction/README.md).
 
 ## Shielded storage (FlaggedStorage)
 
