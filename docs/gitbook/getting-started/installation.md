@@ -11,8 +11,8 @@ icon: globe-pointer
 
 Before you begin, make sure your machine meets the following requirements:
 
-* x84\_64 or arm64 architecture
-* MacOS, Ubuntu, or Windows
+* x86\_64 or arm64 architecture
+* MacOS, Ubuntu, or Windows (other Linux distros may work but are not officially tested)
 
 ***
 
@@ -32,14 +32,14 @@ curl https://sh.rustup.rs -sSf | sh
 curl -L \
      -H "Accept: application/vnd.github.v3.raw" \
      "https://api.github.com/repos/SeismicSystems/seismic-foundry/contents/sfoundryup/install?ref=seismic" | bash
-source ~/.zshenv  # or ~/.bashrc or ~/.zshrc
+source ~/.zshenv  # or ~/.bashrc, depending on your shell
 ```
 
 3. Install `sforge`, `sanvil`, `ssolc`. Expect this to take between 5-20 minutes depending on your machine.
 
 ```bash
 sfoundryup
-source ~/.zshenv  # or ~/.bashrc or ~/.zshrc
+source ~/.zshenv  # or ~/.bashrc, depending on your shell
 ```
 
 4. (Optional) Remove old build artifacts in existing projects. You can ignore this step if you aren't working with existing foundry projects.
