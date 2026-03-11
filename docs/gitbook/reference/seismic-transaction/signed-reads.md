@@ -9,6 +9,6 @@
 * The response to a signed read will be encrypted to the encryption public key included in the transaction's Seismic elements. Therefore anyone who manages to intercept the response still cannot decrypt the response to the signed read.
 * Users can set the `signed_read` field in SeismicElements to `true`. We encourage this, and it is the default behaviour in our client implementations. The purpose of this is to prevent anyone who has managed to intercept this `eth_call` from sending that same payload to `eth_sendRawTransaction`, which would otherwise trigger a write transaction. When validating a transaction before it hits the pool, we check if the `signed_read` field is set to true; if it is, the transaction is rejected
   * This does not apply the other way around. Meaning, if `signed_read` is `false` (and the user wants to create a transaction), it can still be passed to `eth_call`. We think this validation is unnecessary because:
-    * For an attacked to decrypt the response to a signed read, they'd need the user's secret encryption key
+    * For an attacker to decrypt the response to a signed read, they'd need the user's secret encryption key
     * The account's transaction nonce will increment right after their Seismic transaction is included in a block, after which the read will fail
     * This also allows `eth_estimateGas` to function properly; otherwise it would not pass validation on the `signed_read` field

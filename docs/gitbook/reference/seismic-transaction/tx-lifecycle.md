@@ -47,5 +47,5 @@
 
 ## Notes
 
-* Outside of `SeismicElements` and the encrypted calldata, Seismic transactions have the same fields as legacy transactions. In particular, it uses the same gas parameters: `gasPrice` and `gasLimit`
+* Outside of `SeismicElements` and the encrypted calldata, Seismic transactions have the same fields as legacy transactions. In particular, they use the same gas parameters: `gasPrice` and `gasLimit`
 * Seismic transactions cannot be used to deploy bytecode via `Create` calls. Instead, we only allow Seismic transactions to be sent to a specific address. We did this to make metadata validation easier, and we can't see a good reason to deploy encrypted bytecode
