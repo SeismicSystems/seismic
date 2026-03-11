@@ -3,9 +3,6 @@
      secp256k1_pubkey() instead of requiring setContractKey(). -->
 ---
 icon: blog
-metaLinks:
-  alternates:
-    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/core/events
 ---
 
 # Events
