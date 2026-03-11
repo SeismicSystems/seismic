@@ -53,7 +53,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://node.seismicdev.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let encrypt_address: Address =
@@ -110,7 +110,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://node.seismicdev.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let encrypt_address: Address =
@@ -175,7 +175,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://node.seismicdev.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let decrypt_address: Address =
@@ -217,7 +217,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://node.seismicdev.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     // Bob derives the same shared secret that Alice used to encrypt

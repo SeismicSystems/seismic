@@ -12,7 +12,7 @@ This example demonstrates the full lifecycle of a shielded write: deploy a contr
 ```bash
 # Set environment variables
 export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-export RPC_URL="https://gcp-1.seismictest.net/rpc"
+export RPC_URL="https://node.seismicdev.net/rpc"
 ```
 
 `Cargo.toml`:

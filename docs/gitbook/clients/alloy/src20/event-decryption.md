@@ -59,7 +59,7 @@ sol! {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let ws_url = "wss://gcp-1.seismictest.net/ws".parse()?;
+    let ws_url = "wss://node.seismicdev.net/ws".parse()?;
     let provider = SeismicUnsignedProvider::<SeismicReth>::new_ws(ws_url).await?;
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
@@ -113,7 +113,7 @@ sol! {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://node.seismicdev.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
@@ -165,7 +165,7 @@ sol! {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://node.seismicdev.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
@@ -248,7 +248,7 @@ sol! {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let ws_url = "wss://gcp-1.seismictest.net/ws".parse()?;
+    let ws_url = "wss://node.seismicdev.net/ws".parse()?;
     let provider = SeismicUnsignedProvider::<SeismicReth>::new_ws(ws_url).await?;
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;

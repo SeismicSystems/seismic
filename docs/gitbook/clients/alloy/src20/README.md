@@ -92,7 +92,7 @@ sol! {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://node.seismicdev.net/rpc".parse()?;
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
     let token_address: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;

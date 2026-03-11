@@ -28,7 +28,7 @@ let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::from(signer);
 
 // Use it to create a provider
-let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+let url = "https://node.seismicdev.net/rpc".parse()?;
 let provider = SeismicSignedProvider::new(wallet, url).await?;
 ```
 

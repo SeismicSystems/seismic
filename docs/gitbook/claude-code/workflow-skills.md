@@ -47,7 +47,7 @@ Deploy a Seismic smart contract using sforge.
 
 4. **Choose network** — Ask which network to deploy to:
    - **Local (sanvil):** `http://127.0.0.1:8545` — start sanvil first with `sanvil`
-   - **Testnet:** `https://gcp-1.seismictest.net/rpc` — needs funded wallet from https://faucet.seismictest.net/
+   - **Devnet:** `https://node-2.seismicdev.net/rpc` — needs funded wallet from https://faucet-2.seismicdev.net/
 
 5. **Deploy** — Run the deployment:
 
@@ -66,7 +66,7 @@ Deploy a Seismic smart contract using sforge.
        --broadcast
    ```
 
-6. **Verify** — Confirm the contract address in the output. Check it on the explorer if deploying to devnet: https://seismic-testnet.socialscan.io/
+6. **Verify** — Confirm the contract address in the output. Check it on the explorer if deploying to devnet: https://explorer-2.seismicdev.net/
 
 7. **Update project** — Add the deployed contract address to the project's configuration or constants file.
 ````
@@ -114,7 +114,7 @@ Systematic checklist for debugging a failed or unexpected shielded transaction.
    - Use a signed read through the contract's getter function
    - Verify the getter has proper access control (`require(msg.sender == ...)`)
 
-8. **Check the explorer** — For devnet transactions: https://seismic-testnet.socialscan.io/
+8. **Check the explorer** — For devnet transactions: https://explorer-2.seismicdev.net/
    - Shielded data will appear as zeros in traces (this is expected)
 
 ## Common Error Patterns

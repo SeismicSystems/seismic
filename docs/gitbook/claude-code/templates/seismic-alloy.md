@@ -67,7 +67,7 @@ use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::from(signer);
-let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+let url = "https://node-2.seismicdev.net/rpc".parse()?;
 
 let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 ```
@@ -77,7 +77,7 @@ let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 ```rust
 use seismic_alloy::prelude::*;
 
-let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+let url = "https://node-2.seismicdev.net/rpc".parse()?;
 let provider = sreth_unsigned_provider(url);
 ```
 
@@ -158,11 +158,11 @@ You do not need to manually encrypt calldata or set Seismic-specific transaction
 
 | Network        | Chain ID | RPC URL                             | Network type     |
 | -------------- | -------- | ----------------------------------- | ---------------- |
-| Testnet         | 5124     | `https://gcp-1.seismictest.net/rpc` | `SeismicReth`    |
-| Testnet (WS)    | 5124     | `wss://gcp-1.seismictest.net/ws`    | `SeismicReth`    |
+| Devnet         | 5124     | `https://node-2.seismicdev.net/rpc` | `SeismicReth`    |
+| Devnet (WS)    | 5124     | `wss://node-2.seismicdev.net/ws`    | `SeismicReth`    |
 | Local (sanvil) | 31337    | `http://127.0.0.1:8545`             | `SeismicFoundry` |
 
-Faucet: https://faucet.seismictest.net/
+Faucet: https://faucet-2.seismicdev.net/
 
 ## Links
 

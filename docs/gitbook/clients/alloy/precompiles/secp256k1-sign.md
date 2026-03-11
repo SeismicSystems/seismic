@@ -60,7 +60,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://node.seismicdev.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let sign_address: Address =
@@ -105,7 +105,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://node.seismicdev.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let sign_address: Address =
@@ -153,7 +153,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://node.seismicdev.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let sign_address: Address =
@@ -202,7 +202,7 @@ use serde_json::json;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://node.seismicdev.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let sign_address: Address =

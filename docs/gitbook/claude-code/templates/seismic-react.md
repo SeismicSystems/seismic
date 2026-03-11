@@ -184,11 +184,11 @@ function App() {
 
 | Network        | Chain ID | RPC URL                             |
 | -------------- | -------- | ----------------------------------- |
-| Testnet         | 5124     | `https://gcp-1.seismictest.net/rpc` |
-| Testnet (WS)    | 5124     | `wss://gcp-1.seismictest.net/ws`    |
+| Devnet         | 5124     | `https://node-2.seismicdev.net/rpc` |
+| Devnet (WS)    | 5124     | `wss://node-2.seismicdev.net/ws`    |
 | Local (sanvil) | 31337    | `http://127.0.0.1:8545`             |
 
-Faucet: https://faucet.seismictest.net/
+Faucet: https://faucet-2.seismicdev.net/
 
 ## Links
 
