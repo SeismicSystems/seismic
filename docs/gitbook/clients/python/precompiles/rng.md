@@ -104,6 +104,6 @@ Examples:
 
 ## See Also
 
-- [RNG — Precompiles Reference](../../../reference/precompiles.md#rng-0x64)
+- [RNG — Precompiles Reference](../../../reference/precompiles/rng.md)
 - [ecdh](ecdh.md)
 - [hkdf](hkdf.md)

@@ -125,7 +125,7 @@ Examples:
 
 ## See Also
 
-- [AES-GCM Encrypt — Precompiles Reference](../../../reference/precompiles.md#aes-gcm-encrypt-0x66)
+- [AES-GCM Encrypt — Precompiles Reference](../../../reference/precompiles/aes-gcm-encrypt.md)
 - [aes-gcm-decrypt](aes-gcm-decrypt.md)
 - [ecdh](ecdh.md)
 - [Bytes32](../api-reference/types/bytes32.md)
