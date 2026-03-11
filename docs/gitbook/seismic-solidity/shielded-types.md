@@ -80,4 +80,21 @@ sbytes1 b = sbytes1(0xff);
 
 ### Dynamic: sbytes
 
-Dynamic shielded bytes mirror the standard `bytes` type.
+Dynamic shielded bytes mirror the standard `bytes` type. The length is stored as shielded, so observers cannot read it directly.
+
+## Shielded Arrays
+
+Arrays of shielded types work like standard Solidity arrays. They come in two forms:
+
+- **Dynamic** (`suint256[]`, `sbool[]`, `saddress[]`, etc.) — the length is stored as shielded.
+- **Fixed-size** (`suint256[5]`, `sbool[4]`, `saddress[3]`, etc.) — the length is a compile-time constant and publicly visible.
+
+```solidity
+suint256[] private balances;     // dynamic — shielded length
+sbool[4] private flags;          // fixed — length 4 is public
+saddress[] private recipients;   // dynamic — shielded length
+```
+
+{% hint style="warning" %}
+Even with dynamic shielded arrays, an upper bound on the length may be visible to observers monitoring gas costs, since gas usage scales with array operations.
+{% endhint %}
