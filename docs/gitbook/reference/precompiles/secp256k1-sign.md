@@ -16,14 +16,14 @@ Raw bytes in the following layout (64 bytes total):
 
 | Offset    | Field        | Type      | Description                             |
 | --------- | ------------ | --------- | --------------------------------------- |
-| `[0:32]`  | private key  | `bytes32` | The secp256k1 private key (32 bytes)    |
-| `[32:64]` | message hash | `bytes32` | The 32-byte hash of the message to sign |
+| `[0:32]`  | private key  | 32 bytes | secp256k1 private key    |
+| `[32:64]` | message hash | 32 bytes | Hash of the message to sign |
 
 ## Output
 
 | Bytes     | Type           | Description                                  |
 | --------- | -------------- | -------------------------------------------- |
-| signature | `bytes memory` | 65 bytes — the signature in (r, s, v) format |
+| signature | 65 bytes | Signature in (r, s, v) format |
 
 ## Use cases
 
@@ -31,15 +31,19 @@ Raw bytes in the following layout (64 bytes total):
 * Building contracts that can act as signers (e.g., smart-contract wallets)
 * Creating signed messages for cross-chain verification
 
-## Built-in helper
+## Examples
 
-Seismic Solidity provides `secp256k1_sign(sbytes32 secretKey, bytes32 messageHash)` which returns `bytes memory` (65 bytes: r, s, v). The secret key is shielded.
+### Built-in helper
+
+```solidity
+function secp256k1_sign(sbytes32 secretKey, bytes32 messageHash) view returns (bytes memory);
+```
 
 ```solidity
 bytes memory signature = secp256k1_sign(mySecretKey, msgHash);
 ```
 
-## Manual usage
+### Manual usage
 
 ```solidity
 function signMessage(

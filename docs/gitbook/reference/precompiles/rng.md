@@ -14,16 +14,16 @@ Synchronous random number generation inside the TEE. The randomness is derived f
 
 Raw bytes in the following layout:
 
-| Offset  | Field              | Type     | Description                                              |
-| ------- | ------------------ | -------- | -------------------------------------------------------- |
-| `[0:4]` | output length      | `uint32` | Number of random bytes to generate (big-endian)          |
-| `[4:]`  | personalization    | `bytes`  | Optional personalization data to influence the RNG output |
+| Offset  | Field           | Type              | Description                                |
+| ------- | --------------- | ----------------- | ------------------------------------------ |
+| `[0:4]` | output length   | 4 bytes (uint32)  | Number of random bytes to generate         |
+| `[4:]`  | personalization | arbitrary bytes   | Optional data to influence the RNG output  |
 
 ## Output
 
 | Bytes        | Type    | Description                                     |
 | ------------ | ------- | ----------------------------------------------- |
-| random bytes | `bytes` | Securely generated random bytes of the requested length |
+| random bytes | bytes | Random bytes of the requested length |
 
 ## Built-in helpers
 
