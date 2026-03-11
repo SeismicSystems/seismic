@@ -16,10 +16,10 @@ suint256 a = suint256(10);
 suint256 b = suint256(3);
 
 // == EXAMPLES
-a > b  // true
-a | b  // 11
-a << 2  // 40
-a % b  // 1
+a > b   // sbool(true)
+a | b   // suint256(11)
+a << 2  // suint256(40)
+a % b   // suint256(1)
 ```
 
 ### sint - Shielded Signed Integer
@@ -29,9 +29,9 @@ sint256 a = sint256(-10);
 sint256 b = sint256(3);
 
 // == EXAMPLES
-a < b   // true
-a + b   // -7
-a * b   // -30
+a < b   // sbool(true)
+a + b   // sint256(-7)
+a * b   // sint256(-30)
 ```
 
 ## sbool - Shielded Boolean
@@ -45,8 +45,8 @@ sbool a = sbool(true);
 sbool b = sbool(false);
 
 // == EXAMPLES
-a && b  // false
-!b  // true
+a && b  // sbool(false)
+!b      // sbool(true)
 ```
 
 ## saddress - Shielded Address
@@ -58,7 +58,7 @@ saddress a = saddress(0x123);
 saddress b = saddress(0x456);
 
 // == VALID EXAMPLES
-a == b  // false
+a == b  // sbool(false)
 b.code
 b.codehash
 
