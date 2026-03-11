@@ -1,3 +1,6 @@
+<!-- TODO: Once secp256k1_pubkey precompile lands (seismic-revm#207, seismic-solidity#225),
+     update the PrivateToken example to generate its keypair on-chain with rng256() +
+     secp256k1_pubkey() instead of requiring setContractKey(). -->
 ---
 icon: blog
 metaLinks:
@@ -25,77 +28,93 @@ Although native encrypted events are not yet supported, you can achieve private 
 
 Here is the general flow:
 
-1. **Generate a shared secret** between the sender and the intended recipient using the ECDH precompile at address `0x65`.
-2. **Derive an encryption key** from the shared secret using the HKDF precompile at address `0x68`.
-3. **Encrypt the event data** using the AES-GCM Encrypt precompile at address `0x66`.
+1. **Generate a shared secret** between the sender and the intended recipient using the [ECDH precompile](../reference/precompiles.md#ecdh-0x65) at address `0x65`.
+2. **Derive an encryption key** from the shared secret using the [HKDF precompile](../reference/precompiles.md#hkdf-0x68) at address `0x68`.
+3. **Encrypt the event data** using the [AES-GCM Encrypt precompile](../reference/precompiles.md#aes-gcm-encrypt-0x66) at address `0x66`.
 4. **Emit a regular event** containing the encrypted bytes. Since the event parameter is `bytes` (not a shielded type), this compiles and works normally.
-5. **Recipient decrypts** the data using the AES-GCM Decrypt precompile at address `0x67`, either off-chain or on-chain if needed.
+5. **Recipient decrypts** the data using the [AES-GCM Decrypt precompile](../reference/precompiles.md#aes-gcm-decrypt-0x67) at address `0x67`, either off-chain or on-chain if needed.
 
 ### Precompile Reference
 
 | Precompile      | Address | Purpose                           |
 | --------------- | ------- | --------------------------------- |
-| ECDH            | `0x65`  | Shared secret generation          |
-| AES-GCM Encrypt | `0x66`  | Encrypt data with AES-GCM         |
-| AES-GCM Decrypt | `0x67`  | Decrypt data with AES-GCM         |
-| HKDF            | `0x68`  | Key derivation from shared secret |
+| ECDH            | [`0x65`](../reference/precompiles.md#ecdh-0x65)  | Shared secret generation          |
+| AES-GCM Encrypt | [`0x66`](../reference/precompiles.md#aes-gcm-encrypt-0x66)  | Encrypt data with AES-GCM         |
+| AES-GCM Decrypt | [`0x67`](../reference/precompiles.md#aes-gcm-decrypt-0x67)  | Decrypt data with AES-GCM         |
+| HKDF            | [`0x68`](../reference/precompiles.md#hkdf-0x68)  | Key derivation from shared secret |
 
 ## Code Example
 
-Below is a complete pattern showing how to emit encrypted event data for a private token transfer. The recipient can later decrypt the amount off-chain using their private key.
+Below is a minimal private token showing how to emit encrypted transfer events. The contract holds a keypair; users register their public keys so the contract can encrypt event data that only the recipient can read.
+
+For a full implementation, see the [SRC20: Private Token](../tutorials/src20/encrypted-events.md) tutorial.
 
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 contract PrivateToken {
+    address public owner;
     mapping(address => suint256) private balances;
+    mapping(address => bytes) public publicKeys;
 
-    // Event with encrypted data -- uses regular `bytes`, not shielded types
-    event EncryptedTransfer(
-        address indexed from,
-        address indexed to,
-        bytes encryptedAmount
-    );
+    sbytes32 private contractPrivateKey;
+    bytes public contractPublicKey;
+
+    event Transfer(address indexed from, address indexed to, bytes encryptedAmount);
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    // Owner sets the contract keypair via a Seismic transaction (type 0x4A)
+    // so the private key is encrypted in calldata and never exposed.
+    function setContractKey(sbytes32 _privateKey, bytes memory _publicKey) external {
+        require(msg.sender == owner, "Only owner");
+        require(bytes32(contractPrivateKey) == bytes32(0), "Already set");
+        contractPrivateKey = _privateKey;
+        contractPublicKey = _publicKey;
+    }
+
+    function registerPublicKey(bytes memory pubKey) external {
+        publicKeys[msg.sender] = pubKey;
+    }
 
     function transfer(address to, suint256 amount) public {
+        require(bytes32(contractPrivateKey) != bytes32(0), "Contract key not set");
         balances[msg.sender] -= amount;
         balances[to] += amount;
 
-        // Step 1: Generate shared secret via ECDH (0x65)
-        // The sender's private key and recipient's public key produce
-        // a shared secret that only both parties can derive.
-        bytes memory sharedSecret;
-        // ... call precompile 0x65 with sender privkey + recipient pubkey
+        bytes memory recipientPubKey = publicKeys[to];
+        if (recipientPubKey.length > 0) {
+            // 1. Shared secret via ECDH
+            bytes32 sharedSecret = ecdh(contractPrivateKey, recipientPubKey);
 
-        // Step 2: Derive encryption key via HKDF (0x68)
-        bytes memory encryptionKey;
-        // ... call precompile 0x68 with sharedSecret
+            // 2. Derive encryption key via HKDF
+            sbytes32 encKey = sbytes32(hkdf(abi.encodePacked(sharedSecret)));
 
-        // Step 3: Encrypt the amount via AES-GCM Encrypt (0x66)
-        bytes memory encrypted;
-        // ... call precompile 0x66 with encryptionKey and plaintext amount
+            // 3. Encrypt the amount via AES-GCM
+            uint96 nonce = uint96(bytes12(keccak256(abi.encodePacked(msg.sender, to, block.number))));
+            bytes memory encrypted = aes_gcm_encrypt(encKey, nonce, abi.encode(uint256(amount)));
 
-        // Step 4: Emit a regular event with the encrypted bytes
-        emit EncryptedTransfer(msg.sender, to, encrypted);
+            // 4. Emit with encrypted bytes
+            emit Transfer(msg.sender, to, encrypted);
+        }
     }
 }
 ```
 
-{% hint style="info" %}
-The recipient reconstructs the shared secret off-chain using their own private key and the sender's public key (ECDH is symmetric). They then derive the same encryption key via HKDF and decrypt the event data using AES-GCM Decrypt (`0x67`).
-{% endhint %}
+The built-in helpers `ecdh()`, `hkdf()`, and `aes_gcm_encrypt()` are compiler-provided globals — no imports needed. See the [Precompiles reference](../reference/precompiles.md) for details on each.
 
 ### Decryption (Off-Chain)
 
-The recipient can decrypt the event data by:
+The recipient reconstructs the shared secret off-chain using their own private key and the contract's public key (ECDH is symmetric). They then derive the same encryption key via HKDF and decrypt the event data using AES-GCM Decrypt.
 
-1. Listening for `EncryptedTransfer` events addressed to them.
-2. Deriving the shared secret using ECDH with their private key and the sender's public key.
-3. Deriving the encryption key using HKDF.
-4. Decrypting the `encryptedAmount` field using AES-GCM Decrypt.
+The client libraries provide built-in helpers for this:
 
-This can also be done on-chain if another contract needs access to the decrypted value.
+<!-- TODO: add Alloy (Rust) link once docs/gitbook/clients/alloy/src20/event-decryption.md is finalized -->
+- [**Python**](../clients/python/src20/event-watching/README.md) — `watch_src20_events_with_key` and `SRC20EventWatcher`
+- [**TypeScript (viem)**](../clients/typescript/viem/shielded-public-client.md) — `watchSRC20EventsWithKey()` action
 
 ## What Not to Do
 
@@ -119,4 +138,4 @@ Native encrypted events are planned for a future version of Seismic. This will a
 
 ## Key Takeaway
 
-Privacy in events is achievable today -- it just requires explicit encryption via the AES-GCM and ECDH precompiles. Encrypt sensitive data before emitting it, and ensure only the intended recipient has the keys to decrypt. When native encrypted events ship, migrating will be straightforward: replace the manual encryption logic with direct shielded type emission.
+Privacy in events is achievable today -- it just requires explicit encryption via the aforementioned precompiles. Encrypt sensitive data before emitting it, and ensure only the intended recipient has the keys to decrypt. When native encrypted events ship, migrating will be straightforward: replace the manual encryption logic with direct shielded type emission.
