@@ -21,7 +21,7 @@ Detailed docs live in the [seismic](seismic/) monorepo:
 - [seismic/docs/architecture.md](seismic/docs/architecture.md) — diagrams: Seismic node, RPC/EVM/storage interactions, tries + SeismicTx
 - [seismic/docs/glossary.md](seismic/docs/glossary.md) — key concepts: FlaggedStorage, TxSeismic, Mercury Spec, SeismicHost
 - [seismic/docs/language-and-vm.md](seismic/docs/language-and-vm.md) — Mercury EVM spec: shielded types, CLOAD/CSTORE, FlaggedStorage, arrays, casting
-- [seismic/docs/repos.md](seismic/docs/repos.md) — all repos, fork management, dependency flow
+- [seismic/docs/gitbook/reference/repos.md](seismic/docs/gitbook/reference/repos.md) — all repos, fork management, dependency flow
 
 When working in a specific repo, also check that repo's README and CLAUDE.md, as well as anything under that repo's `docs/seismic` directory.
 
