@@ -120,7 +120,7 @@ function getBalance(address account) external view returns (suint256) {
 ```
 
 {% hint style="info" %}
-Callers must use a **signed read** to call getter functions that check `msg.sender`. A standard `eth_call` zeros out the `from` field on Seismic, so `msg.sender` would be `address(0)`. Client libraries like `seismic-viem` handle signed reads automatically. See [Signed Reads](../reference/seismic-transaction.md#signed-reads) for details.
+Callers must use a **signed read** to call getter functions that check `msg.sender`. A standard `eth_call` zeros out the `from` field on Seismic, so `msg.sender` would be `address(0)`. Client libraries like `seismic-viem` handle signed reads automatically. See [Signed Reads](../reference/seismic-transaction/signed-reads.md) for details.
 {% endhint %}
 
 ---

@@ -96,6 +96,7 @@ Examples:
 
 ## See Also
 
+- [HKDF — Precompiles Reference](../../../reference/precompiles.md#hkdf-0x68)
 - [ecdh](ecdh.md)
 - [aes-gcm-encrypt](aes-gcm-encrypt.md)
 - [rng](rng.md)

@@ -77,7 +77,7 @@ You just ran shielded contract tests locally. See the [full quickstart](getting-
 | Learn about shielded types           | [Shielded Types](seismic-solidity/shielded-types.md)                  |
 | Integrate a frontend                 | [Client Libraries](clients/README.md)                                 |
 | Deploy to testnet         | [Migrating from Ethereum](networks/migrating-from-ethereum.md)        |
-| Understand the transaction lifecycle | [Seismic Transaction](reference/seismic-transaction.md)               |
+| Understand the transaction lifecycle | [Seismic Transaction](reference/seismic-transaction/README.md)               |
 | Run a node                           | [Node Operator FAQ](reference/node-operator-faq.md)                   |
 
 ---

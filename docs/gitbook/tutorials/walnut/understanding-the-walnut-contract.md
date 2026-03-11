@@ -50,7 +50,7 @@ This function allows a player to shake the walnut `_numShakes` number of times. 
 
 ### look ( )
 
-This function allows contributors to the current round to view the `number` inside the walnut. Since it returns a shielded type, you should use a [signed read](../../reference/seismic-transaction.md#signed-reads) so the contract can identify the caller.
+This function allows contributors to the current round to view the `number` inside the walnut. Since it returns a shielded type, you should use a [signed read](../../reference/seismic-transaction/signed-reads.md) so the contract can identify the caller.
 
 **What happens:**
 

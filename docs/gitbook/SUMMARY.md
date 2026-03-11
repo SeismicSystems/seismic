@@ -226,7 +226,9 @@
 
 ## Reference
 
-* [The Seismic Transaction](reference/seismic-transaction.md)
+* [The Seismic Transaction](reference/seismic-transaction/README.md)
+  * [Tx Lifecycle](reference/seismic-transaction/tx-lifecycle.md)
+  * [Signed Reads](reference/seismic-transaction/signed-reads.md)
 * [Opcodes](reference/opcodes.md)
 * [Precompiles](reference/precompiles/README.md)
   * [RNG](reference/precompiles/rng.md)

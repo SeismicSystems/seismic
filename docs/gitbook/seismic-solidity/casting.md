@@ -129,7 +129,7 @@ function getBalance() external view returns (uint256) {
 ```
 
 {% hint style="info" %}
-Returning an unshielded value from a view function makes it visible to the caller. If the caller should only see their own data, use access control and [signed reads](../reference/seismic-transaction.md#signed-reads) to ensure only authorized users can query it.
+Returning an unshielded value from a view function makes it visible to the caller. If the caller should only see their own data, use access control and [signed reads](../reference/seismic-transaction/signed-reads.md) to ensure only authorized users can query it.
 {% endhint %}
 
 ### Interfacing with non-shielded contracts

@@ -63,6 +63,6 @@ The node rejects transactions in these cases:
 
 ## Related
 
-* [The Seismic Transaction](../seismic-transaction.md) — transaction type specification
-* [The Seismic Transaction](../seismic-transaction.md) — end-to-end transaction flow
+* [The Seismic Transaction](../seismic-transaction/README.md) — transaction type specification
+* [The Seismic Transaction](../seismic-transaction/README.md) — end-to-end transaction flow
 * [Shielded Writes](../../clients/typescript/viem/shielded-writes.md) — sending transactions with seismic-viem
