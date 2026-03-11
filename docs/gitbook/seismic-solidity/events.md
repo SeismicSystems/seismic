@@ -1,9 +1,10 @@
+---
+icon: tower-broadcast
+---
+
 <!-- TODO: Once secp256k1_pubkey precompile lands (seismic-revm#207, seismic-solidity#225),
      update the PrivateToken example to generate its keypair on-chain with rng256() +
      secp256k1_pubkey() instead of requiring setContractKey(). -->
----
-icon: blog
----
 
 # Events
 
