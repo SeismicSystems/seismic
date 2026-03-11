@@ -122,7 +122,7 @@ Fixed cost: `3000`.
 
 ## See Also
 
-- [secp256k1 Sign — Precompiles Reference](../../../reference/precompiles.md#secp256k1-sign-0x69)
+- [secp256k1 Sign — Precompiles Reference](../../../reference/precompiles/secp256k1-sign.md)
 - [PrivateKey](../api-reference/types/private-key.md)
 - [EIP-191](https://eips.ethereum.org/EIPS/eip-191)
 - [ecdh](ecdh.md)

@@ -220,9 +220,9 @@
     * [Signed Read Pattern](clients/alloy/examples/signed-read-pattern.md)
     * [Contract Deployment](clients/alloy/examples/contract-deployment.md)
 
-## Networks & Deployment
+## Networks
 
-* [Migrating from Ethereum](networks/migrating-from-ethereum.md)
+* [Testnet](networks/testnet.md)
 
 ## Reference
 
@@ -230,7 +230,18 @@
   * [Tx Lifecycle](reference/seismic-transaction/tx-lifecycle.md)
   * [Signed Reads](reference/seismic-transaction/signed-reads.md)
 * [Opcodes](reference/opcodes.md)
-* [Precompiles](reference/precompiles.md)
+* [Precompiles](reference/precompiles/README.md)
+  * [RNG](reference/precompiles/rng.md)
+  * [ECDH](reference/precompiles/ecdh.md)
+  * [AES-GCM Encrypt](reference/precompiles/aes-gcm-encrypt.md)
+  * [AES-GCM Decrypt](reference/precompiles/aes-gcm-decrypt.md)
+  * [HKDF](reference/precompiles/hkdf.md)
+  * [secp256k1 Sign](reference/precompiles/secp256k1-sign.md)
 * [RPC Methods](reference/rpc-methods/README.md)
+  * [seismic\_getTeePublicKey](reference/rpc-methods/seismic-get-tee-public-key.md)
+  * [eth\_call](reference/rpc-methods/eth-call.md)
+  * [eth\_sendRawTransaction](reference/rpc-methods/eth-send-raw-transaction.md)
+  * [eth\_getStorageAt](reference/rpc-methods/eth-get-storage-at.md)
+* [Migrating from Ethereum](reference/migrating-from-ethereum.md)
 * [Repos](reference/repos.md)
 * [Node Operator FAQ](reference/node-operator-faq.md)

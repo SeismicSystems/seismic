@@ -4,9 +4,9 @@ icon: hard-drive
 
 # eth\_getStorageAt
 
-Returns the value at a given storage position for an address. On Seismic, this method **fails with an error** if the requested storage slot contains shielded (private) data.
+Returns the value at a given storage position for an address. On Seismic, this method **returns zero** for shielded (private) storage slots — as if the slot were uninitialized.
 
-This is a deliberate security measure — shielded storage values are encrypted and flagged with `is_private = true` in the state trie. Exposing them via RPC would defeat the purpose of confidential storage.
+This is a deliberate security measure — shielded storage values are flagged with `is_private = true` in the state trie. Rather than exposing the encrypted value or returning an error, the node returns the same response as an empty slot.
 
 ## Try It
 
@@ -59,10 +59,7 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "error": {
-    "code": -32000,
-    "message": "storage slot is private"
-  }
+  "result": "0x0000000000000000000000000000000000000000000000000000000000000000"
 }
 ```
 

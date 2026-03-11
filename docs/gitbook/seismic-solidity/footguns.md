@@ -151,3 +151,21 @@ suint256 constant MY_VALUE = suint256(1);
 ```
 
 **What to do instead:** Use a regular `private` shielded variable initialized in the constructor or via a setter function called through a Seismic transaction.
+
+### RNG Proposer Bias
+
+**The problem:** The [RNG precompile](../reference/precompiles/rng.md) produces randomness that is deterministic given the enclave's secret key, the transaction hash, remaining gas, and personalization bytes. In theory, a block proposer could simulate RNG outputs and selectively include, exclude, or reorder transactions to influence outcomes.
+
+```solidity
+// In theory, a proposer could simulate this output and decide
+// whether to include the transaction based on the result.
+function drawWinner() external {
+    suint256 rand = rng256();
+    uint256 winnerIndex = uint256(rand) % participants.length;
+    winner = participants[winnerIndex];
+}
+```
+
+**Why this matters:** Seismic's TEE setup largely mitigates this — proposers are restricted in what they can observe and do, and we believe synchronous RNG is safe for most use cases. This is something we've thought about extensively. However, for applications with especially high-stakes randomness requirements, it's worth being aware of the theoretical attack surface.
+
+**What to do instead:** For the most sensitive randomness use cases (large-pot lotteries, leader elections), consider using an asynchronous commit-reveal scheme where entropy is committed before the block in which it is consumed. Seismic does not provide this out of the box today. For the vast majority of use cases, the synchronous RNG precompile is appropriate.

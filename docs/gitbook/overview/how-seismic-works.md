@@ -111,12 +111,12 @@ Seismic adds six precompiled contracts to the EVM, giving smart contracts access
 
 | Address | Name            | Purpose                                                                                     |
 | ------- | --------------- | ------------------------------------------------------------------------------------------- |
-| `0x64`  | [RNG](../reference/precompiles.md#rng-0x64)             | Securely generate a random number                                                           |
-| `0x65`  | [ECDH](../reference/precompiles.md#ecdh-0x65)            | Elliptic Curve Diffie-Hellman -- derive a shared secret from a public key and a private key |
-| `0x66`  | [AES-GCM Encrypt](../reference/precompiles.md#aes-gcm-encrypt-0x66) | Encrypt data with AES-GCM                                                                   |
-| `0x67`  | [AES-GCM Decrypt](../reference/precompiles.md#aes-gcm-decrypt-0x67) | Decrypt data with AES-GCM                                                                   |
-| `0x68`  | [HKDF](../reference/precompiles.md#hkdf-0x68)            | Derive cryptographic keys from a parent key                                                 |
-| `0x69`  | [secp256k1 Sign](../reference/precompiles.md#secp256k1-sign-0x69)  | Sign a message with a secret key                                                            |
+| `0x64`  | [RNG](../reference/precompiles/rng.md)             | Securely generate a random number                                                           |
+| `0x65`  | [ECDH](../reference/precompiles/ecdh.md)            | Elliptic Curve Diffie-Hellman -- derive a shared secret from a public key and a private key |
+| `0x66`  | [AES-GCM Encrypt](../reference/precompiles/aes-gcm-encrypt.md) | Encrypt data with AES-GCM                                                                   |
+| `0x67`  | [AES-GCM Decrypt](../reference/precompiles/aes-gcm-decrypt.md) | Decrypt data with AES-GCM                                                                   |
+| `0x68`  | [HKDF](../reference/precompiles/hkdf.md)            | Derive cryptographic keys from a parent key                                                 |
+| `0x69`  | [secp256k1 Sign](../reference/precompiles/secp256k1-sign.md)  | Sign a message with a secret key                                                            |
 
 These precompiles enable contracts to perform on-chain encryption, key derivation, and random number generation without relying on external oracles or off-chain computation.
 
@@ -141,7 +141,7 @@ All three components are designed so that private data is only ever accessible i
 The Seismic node is a fork of [reth](https://github.com/paradigmxyz/reth) (the Rust Ethereum execution client). It handles:
 
 * **RPC**: Accepts incoming transactions and read requests. Serves responses to clients, redacting shielded data from public queries.
-* **EVM execution**: Runs a modified EVM that supports `CLOAD`/`CSTORE` opcodes and the six Seismic [precompiles](../reference/precompiles.md). This is built on a forked version of `revm`.
+* **EVM execution**: Runs a modified EVM that supports `CLOAD`/`CSTORE` opcodes and the six Seismic [precompiles](../reference/precompiles/README.md). This is built on a forked version of `revm`.
 * **State management**: Maintains the world state using FlaggedStorage, where each storage slot is tagged as public or private.
 * **Transaction pool**: Receives both standard Ethereum transactions and Seismic transactions. Encrypted calldata in Seismic transactions is decrypted inside the TEE before execution.
 

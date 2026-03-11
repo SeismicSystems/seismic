@@ -1,3 +1,7 @@
+---
+icon: code-branch
+---
+
 # Repos
 
 This document describes how the Seismic repos are organized.

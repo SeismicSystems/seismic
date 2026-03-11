@@ -19,9 +19,7 @@ Executes a message call without creating a transaction on the blockchain. On Sei
 
 ### [eth\_getStorageAt](eth-get-storage-at.md)
 
-Returns the value at a given storage position for an address. On Seismic, this method **fails with an error** if the requested storage slot contains shielded (private) data.
-
-This is a deliberate security measure — shielded storage values are encrypted and flagged with `is_private = true` in the state trie. Exposing them via RPC would defeat the purpose of confidential storage.
+Returns the value at a given storage position for an address. On Seismic, this method **returns zero** for shielded (private) storage slots — as if the slot were uninitialized.
 
 ### [eth\_sendRawTransaction](eth-send-raw-transaction.md)
 
