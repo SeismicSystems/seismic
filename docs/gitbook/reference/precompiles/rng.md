@@ -6,6 +6,10 @@ icon: dice
 
 Synchronous random number generation inside the TEE. The randomness is derived from TEE-internal entropy combined with optional personalization data, ensuring that the output is unpredictable to all parties — including the node operator.
 
+{% hint style="warning" %}
+**Proposer bias.** A block proposer could theoretically simulate RNG outputs and selectively order transactions to influence outcomes. Seismic's TEE setup largely mitigates this, but high-stakes applications should consider commit-reveal schemes. See [Footguns — RNG Proposer Bias](../../seismic-solidity/footguns.md#rng-proposer-bias) for details.
+{% endhint %}
+
 ## Input
 
 Raw bytes in the following layout:
@@ -35,11 +39,11 @@ Seismic Solidity provides built-in functions that call this precompile and autom
 * `sync_rng128()` → `suint128`
 * `sync_rng256()` → `suint256`
 
-**Shielded fixed bytes:** `sync_rng_b1()` → `sbytes1`, ... `sync_rng_b32()` → `sbytes32`
+**Shielded fixed bytes:**
 
-{% hint style="warning" %}
-**Proposer bias.** A block proposer could theoretically simulate RNG outputs and selectively order transactions to influence outcomes. Seismic's TEE setup largely mitigates this, but high-stakes applications should consider commit-reveal schemes. See [Footguns — RNG Proposer Bias](../../seismic-solidity/footguns.md#rng-proposer-bias) for details.
-{% endhint %}
+* `sync_rng_b1()` → `sbytes1`
+* ...
+* `sync_rng_b32()` → `sbytes32`
 
 ## Use cases
 
@@ -63,6 +67,7 @@ function getRandomBytesWithPersonalization(
     uint32 numBytes,
     bytes memory pers
 ) internal view returns (bytes memory) {
+    // Without personalization, use abi.encodePacked(numBytes) instead
     (bool success, bytes memory result) = address(0x64).staticcall(
         abi.encodePacked(numBytes, pers)
     );
