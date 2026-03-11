@@ -38,14 +38,14 @@ The transaction with type `0x4a` allows users to encrypt their calldata. These o
 
 ### Precompiles
 
-All standard Ethereum precompiles are still available. Seismic added 6 new [precompiles](../reference/precompiles.md) to our EVM:
+All standard Ethereum precompiles are still available. Seismic added 6 new [precompiles](../reference/precompiles/README.md) to our EVM:
 
-- [**RNG `0x64`**](../reference/precompiles.md#rng-0x64) — securely generate a random number
-- [**ECDH `0x65`**](../reference/precompiles.md#ecdh-0x65) — Elliptic Curve Diffie-Hellman, for generating a shared secret given a public key and secret key
-- [**AES-GCM Encrypt `0x66`**](../reference/precompiles.md#aes-gcm-encrypt-0x66) — encrypt data with AES-GCM
-- [**AES-GCM Decrypt `0x67`**](../reference/precompiles.md#aes-gcm-decrypt-0x67) — decrypt data with AES-GCM
-- [**HKDF `0x68`**](../reference/precompiles.md#hkdf-0x68) — derive cryptographic keys from a parent key
-- [**secp256k1 Sign `0x69`**](../reference/precompiles.md#secp256k1-sign-0x69) — sign a message given a secret key
+- [**RNG `0x64`**](../reference/precompiles/rng.md) — securely generate a random number
+- [**ECDH `0x65`**](../reference/precompiles/ecdh.md) — Elliptic Curve Diffie-Hellman, for generating a shared secret given a public key and secret key
+- [**AES-GCM Encrypt `0x66`**](../reference/precompiles/aes-gcm-encrypt.md) — encrypt data with AES-GCM
+- [**AES-GCM Decrypt `0x67`**](../reference/precompiles/aes-gcm-decrypt.md) — decrypt data with AES-GCM
+- [**HKDF `0x68`**](../reference/precompiles/hkdf.md) — derive cryptographic keys from a parent key
+- [**secp256k1 Sign `0x69`**](../reference/precompiles/secp256k1-sign.md) — sign a message given a secret key
 
 ### Staking
 

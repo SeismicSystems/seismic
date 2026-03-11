@@ -26,20 +26,20 @@ Although native encrypted events are not yet supported, you can achieve private 
 
 Here is the general flow:
 
-1. **Generate a shared secret** between the sender and the intended recipient using the [ECDH precompile](../reference/precompiles.md#ecdh-0x65) at address `0x65`.
-2. **Derive an encryption key** from the shared secret using the [HKDF precompile](../reference/precompiles.md#hkdf-0x68) at address `0x68`.
-3. **Encrypt the event data** using the [AES-GCM Encrypt precompile](../reference/precompiles.md#aes-gcm-encrypt-0x66) at address `0x66`.
+1. **Generate a shared secret** between the sender and the intended recipient using the [ECDH precompile](../reference/precompiles/ecdh.md) at address `0x65`.
+2. **Derive an encryption key** from the shared secret using the [HKDF precompile](../reference/precompiles/hkdf.md) at address `0x68`.
+3. **Encrypt the event data** using the [AES-GCM Encrypt precompile](../reference/precompiles/aes-gcm-encrypt.md) at address `0x66`.
 4. **Emit a regular event** containing the encrypted bytes. Since the event parameter is `bytes` (not a shielded type), this compiles and works normally.
-5. **Recipient decrypts** the data using the [AES-GCM Decrypt precompile](../reference/precompiles.md#aes-gcm-decrypt-0x67) at address `0x67`, either off-chain or on-chain if needed.
+5. **Recipient decrypts** the data using the [AES-GCM Decrypt precompile](../reference/precompiles/aes-gcm-decrypt.md) at address `0x67`, either off-chain or on-chain if needed.
 
 ### Precompile Reference
 
 | Precompile      | Address | Purpose                           |
 | --------------- | ------- | --------------------------------- |
-| ECDH            | [`0x65`](../reference/precompiles.md#ecdh-0x65)  | Shared secret generation          |
-| AES-GCM Encrypt | [`0x66`](../reference/precompiles.md#aes-gcm-encrypt-0x66)  | Encrypt data with AES-GCM         |
-| AES-GCM Decrypt | [`0x67`](../reference/precompiles.md#aes-gcm-decrypt-0x67)  | Decrypt data with AES-GCM         |
-| HKDF            | [`0x68`](../reference/precompiles.md#hkdf-0x68)  | Key derivation from shared secret |
+| ECDH            | [`0x65`](../reference/precompiles/ecdh.md)  | Shared secret generation          |
+| AES-GCM Encrypt | [`0x66`](../reference/precompiles/aes-gcm-encrypt.md)  | Encrypt data with AES-GCM         |
+| AES-GCM Decrypt | [`0x67`](../reference/precompiles/aes-gcm-decrypt.md)  | Decrypt data with AES-GCM         |
+| HKDF            | [`0x68`](../reference/precompiles/hkdf.md)  | Key derivation from shared secret |
 
 ## Code Example
 
@@ -102,7 +102,7 @@ contract PrivateToken {
 }
 ```
 
-The built-in helpers `ecdh()`, `hkdf()`, and `aes_gcm_encrypt()` are compiler-provided globals — no imports needed. See the [Precompiles reference](../reference/precompiles.md) for details on each.
+The built-in helpers `ecdh()`, `hkdf()`, and `aes_gcm_encrypt()` are compiler-provided globals — no imports needed. See the [Precompiles reference](../reference/precompiles/README.md) for details on each.
 
 ### Decryption (Off-Chain)
 
