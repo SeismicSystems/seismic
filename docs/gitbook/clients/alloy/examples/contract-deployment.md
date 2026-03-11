@@ -15,8 +15,8 @@ This example demonstrates the full contract lifecycle: compile a contract (with 
 
 # Set environment variables
 export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-export RPC_URL="https://node.seismicdev.net/rpc"
-export WS_URL="wss://node.seismicdev.net/ws"
+export RPC_URL="https://gcp-1.seismictest.net/rpc"
+export WS_URL="wss://gcp-1.seismictest.net/ws"
 ```
 
 `Cargo.toml`:

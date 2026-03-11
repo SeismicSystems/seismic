@@ -55,7 +55,7 @@ use alloy_signer_local::PrivateKeySigner;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
@@ -76,7 +76,7 @@ use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::from(signer);
-let url = "https://node.seismicdev.net/rpc".parse()?;
+let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
 let provider = sreth_signed_provider(wallet, url).await?;
 ```
@@ -88,7 +88,7 @@ For read-only access without a private key:
 ```rust
 use seismic_prelude::foundry::*;
 
-let url = "https://node.seismicdev.net/rpc".parse()?;
+let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 let provider = sreth_unsigned_provider(url);
 
 let block = provider.get_block_number().await?;

@@ -98,7 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set up provider
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
     let contract_address: Address = "0x1234...".parse()?;
@@ -176,7 +176,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set up signed provider (required for signed reads)
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
     let contract_address: Address = "0x1234...".parse()?;
