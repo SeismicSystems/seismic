@@ -1,0 +1,37 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "workspace/**"
+      - "README.md"
+      - "CLAUDE.md"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "workspace/**"
+      - "README.md"
+      - "CLAUDE.md"
+
+jobs:
+  gitbook-links:
+    name: GitBook broken links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: "--offline --root-dir docs/gitbook --no-progress 'docs/gitbook/**/*.md'"
+          fail: true
+
+  repo-links:
+    name: Repo docs broken links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: "--offline --no-progress 'docs/*.md' 'workspace/*.md' 'README.md' 'CLAUDE.md'"
+          fail: true
