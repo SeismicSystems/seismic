@@ -1,8 +1,5 @@
 ---
 icon: database
-metaLinks:
-  alternates:
-    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/appendix/storage
 ---
 
 # Storage

@@ -1,8 +1,5 @@
 ---
 icon: tower-broadcast
-metaLinks:
-  alternates:
-    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/core/events
 ---
 
 <!-- TODO: Once secp256k1_pubkey precompile lands (seismic-revm#207, seismic-solidity#225),

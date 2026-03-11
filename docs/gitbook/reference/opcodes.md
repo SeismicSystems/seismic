@@ -1,8 +1,5 @@
 ---
 icon: wave-sine
-metaLinks:
-  alternates:
-    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/appendix/opcodes
 ---
 
 # Opcodes
