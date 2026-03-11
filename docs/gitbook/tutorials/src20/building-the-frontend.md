@@ -186,7 +186,7 @@ The user sees a standard wallet confirmation prompt. The privacy happens automat
 
 If your contract uses encrypted events (from the [Encrypted Events](encrypted-events.md) chapter), you can listen for them and decrypt the amounts off-chain:
 
-Decrypt events client-side using the ECDH shared secret and AES-GCM decryption. See the [seismic-viem precompiles documentation](../../clients/typescript/viem/precompiles/README.md) for the cryptographic primitives.
+Decrypt events client-side using the ECDH shared secret and AES-GCM decryption. See the [seismic-viem precompiles documentation](../../clients/typescript/viem/precompiles.md) for the cryptographic primitives.
 
 ## Complete example
 
