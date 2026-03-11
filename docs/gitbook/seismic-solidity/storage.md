@@ -99,7 +99,7 @@ In the standard EVM, certain storage operations can have variable gas costs (e.g
 By making gas costs constant, Seismic prevents this class of information leakage. No matter what value is being stored or loaded, the gas cost is the same.
 
 {% hint style="warning" %}
-While `CLOAD` and `CSTORE` themselves have constant gas cost, other operations on shielded values (such as loops, conditionals, and exponentiation) can still leak information through gas. See [Be Mindful of Gas-Based Information Leakage](best-practices-and-gotchas.md#2.-be-mindful-of-gas-based-information-leakage) for details.
+While `CLOAD` and `CSTORE` themselves have constant gas cost, other operations on shielded values (such as loops, conditionals, and exponentiation) can still leak information through gas. See [Be Mindful of Gas-Based Information Leakage](best-practices.md#be-mindful-of-gas-based-information-leakage) for details.
 {% endhint %}
 
 ## Manual Slot Packing

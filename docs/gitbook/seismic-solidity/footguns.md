@@ -1,0 +1,153 @@
+---
+icon: triangle-exclamation
+---
+
+# Footguns
+
+Shielded types protect values at rest and in transit, but careless usage patterns can leak information through side channels. This page covers the most common information leak vectors when working with shielded types.
+
+### Conditional Execution
+
+**The problem:** Using an `sbool` in a conditional branch leaks information through the execution trace and gas consumption. Observers can tell which branch was taken by examining the gas used or the operations performed.
+
+```solidity
+// BAD: Leaks the value of `isVIP` via gas difference
+sbool isVIP = /* ... */;
+if (isVIP) {
+    discount = suint256(50);
+} else {
+    // extra work only in the else branch — gas difference reveals which path ran
+    suint256 tmp = suint256(0);
+    for (uint256 i = 0; i < 10; i++) {
+        tmp = tmp + suint256(1);
+    }
+    discount = tmp;
+}
+```
+
+**Why it leaks:** The EVM execution trace shows which opcodes were executed. If the `if` branch runs different code (or a different amount of code) than the `else` branch, observers can determine which branch was taken, revealing the value of the shielded boolean.
+
+**What to do instead:** Ensure both branches execute the same operations with the same gas cost. A ternary where both arms are simple assignments of the same type is safe — the EVM does the same work for both paths.
+
+```solidity
+// BETTER: Both arms are identical operations (single assignment), same gas either way
+discount = isVIP ? suint256(50) : suint256(0);
+```
+
+### Literals
+
+**The problem:** Assigning literal values to shielded types embeds those values directly in the contract bytecode, which is publicly visible.
+
+```solidity
+// The literal `42` is visible in bytecode
+suint256 shielded = suint256(42);
+```
+
+**What to do instead:** Be aware that literals are embedded in contract bytecode and are publicly visible. If the initial value is sensitive, introduce it via encrypted calldata instead of hardcoding it.
+
+### Dynamic Loops
+
+**The problem:** Using a shielded value as a loop bound leaks the value through gas consumption. Each iteration costs gas, so the total gas used reveals how many times the loop executed.
+
+```solidity
+// BAD: Leaks the value of `shieldedCount` via gas
+suint256 shieldedCount = /* ... */;
+for (uint256 i = 0; i < uint256(shieldedCount); i++) {
+    // Each iteration is visible in gas cost
+}
+```
+
+**Why it leaks:** Gas is publicly visible. If a loop runs 5 times vs. 100 times, the gas difference is observable. This reveals the shielded loop bound.
+
+**What to do instead:** Use a fixed-size loop with a known maximum, and perform no-op iterations when the actual count is smaller. The no-op path must cost the same gas as the real-work path — otherwise an observer can count how many iterations did real work by comparing per-iteration gas costs.
+
+```solidity
+// BETTER: Fixed-size loop with constant iteration count
+uint256 constant MAX_ITERATIONS = 100;
+for (uint256 i = 0; i < MAX_ITERATIONS; i++) {
+    // Use a shielded condition to decide whether to actually do work.
+    // IMPORTANT: Both the "real work" and "no-op" paths must use
+    // the same gas -- e.g., write to the same slots, do the same
+    // number of arithmetic ops, etc.
+}
+```
+
+### Public Getters and Return Types
+
+**The problem:** Declaring a shielded variable as `public` will not compile. Solidity automatically generates a public getter for `public` state variables, which would return the shielded value -- violating the rule that shielded types cannot be returned from `public` or `external` functions.
+
+```solidity
+// Will NOT compile
+suint256 public secretBalance;
+
+// Will NOT compile
+function getSecret() external view returns (suint256) {
+    return secretBalance;
+}
+```
+
+**What to do instead:** Declare shielded variables as `private` or `internal`. If you need to expose the value, unshield it explicitly with a cast, and use access control to limit who can read it.
+
+```solidity
+suint256 private secretValue;
+
+function getSecretValue() external view returns (uint256) {
+    require(msg.sender == 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266, "Not authorized");
+    return uint256(secretValue);
+}
+```
+
+### Unencrypted Calldata
+
+**The problem:** There is currently nothing enforcing that functions with shielded parameters are called via a Seismic transaction (type `0x4A`). You can call a function that accepts `suint256` with a regular transaction, and the shielded parameter values will be visible in plaintext in the transaction's input data. Likewise, you can use a Seismic transaction to call a function with no shielded inputs — the encryption is unnecessary but harmless.
+
+```solidity
+// This function accepts shielded input, but nothing prevents calling it
+// with a regular (non-Seismic) transaction — which would leak `amount`.
+function deposit(suint256 amount) external {
+    balances[msg.sender] += amount;
+}
+```
+
+**What to do instead:** If a function has any shielded inputs, always call it via a Seismic transaction. This is the caller's responsibility — the contract cannot currently enforce it. We plan to tighten this up in the future so the runtime rejects non-Seismic calls to functions with shielded parameters.
+
+### Exponentiation
+
+**The problem:** The `**` operator has a gas cost that scales with the value of the exponent. If the exponent is a shielded value, the gas cost reveals the exponent.
+
+```solidity
+// BAD: Gas cost reveals the value of `shieldedExp`
+suint256 base = suint256(2);
+suint256 shieldedExp = /* ... */;
+suint256 result = base ** shieldedExp;  // Gas cost leaks shieldedExp
+```
+
+**Why it leaks:** The EVM's modular exponentiation implementation uses more gas for larger exponents. An observer monitoring gas consumption can estimate the exponent value.
+
+**What to do instead:** Avoid using shielded values as exponents entirely. If you need exponentiation with a private exponent, consider alternative algorithms and make sure you think carefully about their gas consumption profile.
+
+### Enums
+
+**The problem:** Enum types have a small, known range of possible values. If you convert an enum to a shielded type, the limited range makes it easy to guess the shielded value — an observer only needs to try a handful of possibilities.
+
+```solidity
+enum Status { Active, Inactive, Suspended }
+// Only 3 possible values (0, 1, 2) — shielding provides little protection
+suint256 shieldedStatus = suint256(uint256(Status.Active));
+```
+
+**What to do instead:** Consider whether the limited range of possible values undermines the privacy guarantee. Shielding an enum with 3 members is not meaningfully private.
+
+### `immutable` and `constant` Shielded Variables
+
+Shielded types **cannot** be declared as `immutable` or `constant`. The compiler will reject both with an error. Constants are embedded in bytecode (publicly visible), and immutables are stored in bytecode after construction — neither is compatible with the confidential storage model.
+
+```solidity
+// Will NOT compile — compiler error
+suint256 immutable SECRET = suint256(42);
+
+// Will NOT compile — compiler error
+suint256 constant MY_VALUE = suint256(1);
+```
+
+**What to do instead:** Use a regular `private` shielded variable initialized in the constructor or via a setter function called through a Seismic transaction.

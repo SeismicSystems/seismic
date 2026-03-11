@@ -40,7 +40,7 @@ a * b   // sint256(-30)
 
 All comparisons and operators for `sbool` function identically to `bool`.
 
-We recommend reading the point on [conditional execution](best-practices-and-gotchas.md#1.-conditional-execution) prior to using `sbool` since it's easy to accidentally leak information with this type.
+We recommend reading the point on [conditional execution](footguns.md#conditional-execution) prior to using `sbool` since it's easy to accidentally leak information with this type.
 
 ```
 sbool a = sbool(true);
@@ -89,5 +89,5 @@ Dynamic shielded bytes mirror the standard `bytes` type. The length is stored as
 {% hint style="warning" %}
 Using shielded literals (e.g. `suint256(42)`) in your contract will produce a compiler warning. These literal values are embedded directly in the contract bytecode, which is publicly visible — so the initial value is leaked at deployment time.
 
-This is fine for values meant to be public initially and then evolve through private state changes. But if the literal itself is sensitive, do not hardcode it. See [Best Practices & Gotchas](best-practices-and-gotchas.md) for more detail.
+This is fine for values meant to be public initially and then evolve through private state changes. But if the literal itself is sensitive, do not hardcode it. See [Footguns](footguns.md#literals) for more detail.
 {% endhint %}
