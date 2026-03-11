@@ -33,7 +33,7 @@ function transfer(address to, suint256 amount) public {  // shielded transfer am
 }
 ```
 
-<figure><img src="../../.gitbook/assets/stype-tx-lifecycle.png" alt=""><figcaption><p>Observers see 0x00...0 in place of stype variables during transaction submission, execution, and storage.</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/stype-tx-lifecycle.png" alt=""><figcaption><p>Observers see 0x00...0 in place of stype variables during transaction submission, execution, and storage.</p></figcaption></figure>
 
 Shielding user balances is done by changing the values of the `balanceOf` array to `suint256`. Shielding transfer amounts is done by changing the `amount` parameter in `transfer()` to `suint256`. Now we can see what happens at every stage of the tx lifecycle:
 
