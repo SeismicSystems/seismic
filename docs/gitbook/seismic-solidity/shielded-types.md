@@ -5,9 +5,11 @@ icon: explosion
 
 # Shielded Types
 
-## suint / sint - Shielded Unsigned Integer / Shielded Integer
+## Shielded Integers
 
-All comparisons and operators for `suint` / `sint` are functionally identical to `uint` / `int`.
+All comparisons and operators for shielded integers are functionally identical to their unshielded counterparts.
+
+### suint - Shielded Unsigned Integer
 
 ```
 suint256 a = suint256(10);
@@ -18,6 +20,18 @@ a > b  // true
 a | b  // 11
 a << 2  // 40
 a % b  // 1
+```
+
+### sint - Shielded Signed Integer
+
+```
+sint256 a = sint256(-10);
+sint256 b = sint256(3);
+
+// == EXAMPLES
+a < b   // true
+a + b   // -7
+a * b   // -30
 ```
 
 ## sbool - Shielded Boolean
