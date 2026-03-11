@@ -46,14 +46,9 @@ Detailed storage projections will be published after mainnet launch.
 
 <details>
 
-<summary>How do I run a node?</summary>
+<summary>How do I run a testnet node?</summary>
 
-There are instructions to deploy a node in our [deploy](https://github.com/SeismicSystems/deploy) repo. There are two steps:
-
-1. Build (optional): you can build the image yourself using our Python scripts in the deploy repo. Alternatively we will be hosting images that we've built, along with the measurements generated. When we do this, you can download the image from the releases page of that repo. The basic command is: `python3 -m yocto.cli --build --logs`
-2. Deploy: once you have an image, you can deploy it to Azure using our Python tooling. The basic command is: `python3 -m yocto.genesis_deploy -a 20251017221200 -n 1`
-
-Soon we will publish more detailed documentation on our Python tooling, which will allow you to customize the deploy.
+See the [deploy](https://github.com/SeismicSystems/deploy) repo for current instructions. Note that the deployment process is actively changing — we plan to publish detailed documentation once it has stabilized.
 
 </details>
 
@@ -63,7 +58,7 @@ Soon we will publish more detailed documentation on our Python tooling, which wi
 
 <summary>What cloud hosting does Seismic use?</summary>
 
-Seismic uses Azure's Confidential Computing with Intel TDX to run our nodes. We are also planning to support bare metal TDX as well.
+Seismic runs nodes inside Intel TDX confidential VMs on Azure or Google Cloud. We plan to support bare metal TDX as well.
 
 </details>
 
@@ -71,12 +66,23 @@ Seismic uses Azure's Confidential Computing with Intel TDX to run our nodes. We 
 
 <summary>What are the recommended specs?</summary>
 
+**General requirements:**
+
 - CPU: 4+ vCPUs
-- Memory: 16+GB RAM
-- Storage: 1TB
-- Azure Confidential virtual machines (TDX) with secure boot & TPM enabled
-  - Example instance: EC4es v5
-- Security: Confidential VM with secure boot and vTPM (NonPersistedTPM)
+- Memory: 16+ GB RAM
+- Storage: 100 GB+ (hyperdisk or SSD recommended)
+
+**GCP (Google Cloud):**
+
+- Machine type: `c4-standard-4-lssd` (4 vCPUs, 15 GB RAM, local SSD)
+- Disk: 100 GB hyperdisk-balanced (3600 IOPS, 290 MB/s throughput)
+- OS: Ubuntu 24.04 LTS
+- Shielded VM with vTPM and integrity monitoring enabled
+
+**Azure:**
+
+- Instance: EC4es v5
+- Confidential VM with secure boot and vTPM (NonPersistedTPM)
 - SKU: `standard_lrs` with `ConfidentialVM_NonPersistedTPM` security type
 
 </details>

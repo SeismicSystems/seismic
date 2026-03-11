@@ -4,7 +4,7 @@ icon: satellite-dish
 
 # RPC Methods
 
-Seismic nodes expose a JSON-RPC API that is almost entirely compatible with standard Ethereum RPC. You can use the same tools (curl, cast, ethers.js, viem) with the same methods you already know.
+Seismic nodes expose a JSON-RPC API that is almost entirely compatible with standard Ethereum RPC. You can use the same tools (curl, cast, ethers.js, viem) with the same methods you already know. For full Seismic support (encrypted calldata, signed reads, shielded types), use [`scast`](../../getting-started/development-toolkit.md) (part of the seismic-foundry toolset) or [`seismic-viem`](../../clients/typescript/viem/).
 
 This section documents the methods most relevant to Seismic developers — including Seismic-specific methods and standard Ethereum methods that behave differently on Seismic.
 
@@ -22,33 +22,12 @@ These standard Ethereum methods work on Seismic but have important behavioral di
 | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | [`eth_call`](eth-call.md)                               | Zeroes the `from` field on unsigned calls to prevent caller-dependent behavior leaks. Supports signed reads via Seismic tx type `0x4A` |
 | [`eth_sendRawTransaction`](eth-send-raw-transaction.md) | Accepts Seismic transaction type `0x4A` with encrypted calldata and `SeismicElements` metadata                                         |
-| [`eth_getStorageAt`](eth-get-storage-at.md)             | Fails with an error if the requested storage slot holds shielded (private) data                                                        |
+| [`eth_getStorageAt`](eth-get-storage-at.md)             | Returns zero for shielded (private) storage slots, as if the slot were uninitialized                                                   |
 
-## Standard Ethereum Methods
+## Blocked Tracing Endpoints
 
-These methods work identically to their Ethereum counterparts:
-
-| Method                                              | Description                    |
-| --------------------------------------------------- | ------------------------------ |
-| `net_version` | Returns the current network ID |
-
-All other standard Ethereum RPC methods (`eth_blockNumber`, `eth_getBalance`, `eth_chainId`, etc.) work identically to Ethereum and are fully supported.
-
-## RPC Endpoints
-
-| Network | URL                                 |
-| ------- | ----------------------------------- |
-| Testnet | `https://gcp-0.seismictest.net/rpc` |
-| Devnet  | `https://node-2.seismicdev.net/rpc` |
-
-## Quick Test
-
-```bash
-curl -X POST https://gcp-0.seismictest.net/rpc \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}'
-```
+All tracing and debug endpoints (`debug_traceTransaction`, `debug_traceCall`, `trace_transaction`, `trace_block`, etc.) are blocked on Seismic. Execution traces would reveal shielded values — opcodes, memory, and stack contents could expose private data that contracts are designed to protect.
 
 {% hint style="info" %}
-Seismic supports almost every RPC endpoint available in [Reth](https://reth.rs/). Only tracing endpoints are modified (shielded data is removed from traces). See [Differences from Ethereum](../../overview/differences-from-ethereum.md#rpc-compatibility) for details.
+Seismic supports almost every other RPC endpoint available in [Reth](https://reth.rs/). See [Differences from Ethereum](../../overview/differences-from-ethereum.md#rpc-compatibility) for details.
 {% endhint %}
