@@ -65,7 +65,7 @@ We use mise to manage our dev environment, including dependency version manageme
 ### Docs
 
 If working with any specific fork/repo, make sure to read that repo's README and CLAUDE.md for specific context. This repo's docs are meant to provide the big picture and cross-cutting concepts that apply across all repos:
-- **[Architecture](docs/architecture.md)** — high-level diagrams of how the components fit together
+- **[Architecture](docs/nonexistent.md)** — high-level diagrams of how the components fit together
 - **[Glossary](docs/glossary.md)** — key Seismic concepts: FlaggedStorage, TxSeismic, Mercury Spec, SeismicHost
 - **[Language & VM](docs/language-and-vm.md)** — Mercury EVM spec: shielded types, CLOAD/CSTORE, FlaggedStorage
 - **[Repos](docs/gitbook/reference/repos.md)** — stack diagram, repos dependency chain, how changes flow
