@@ -4,7 +4,7 @@ This document describes how the Seismic repos are organized.
 
 ## Stack Overview
 
-![](../assets/repos.png)
+![](../.gitbook/assets/repos.png)
 
 ## Repositories
 

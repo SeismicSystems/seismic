@@ -175,7 +175,7 @@ Plus two original repos:
 * [**seismic-enclave**](https://github.com/SeismicSystems/enclave): ECDH + AES-GCM crypto for transaction encryption/decryption.
 * [**seismic-alloy**](https://github.com/SeismicSystems/seismic-alloy): Rust SDK with TxSeismic type and encryption-aware providers.
 
-<!-- TODO: add back repos link once docs/repos.md is moved to gitbook -->
+For the full list and dependency flow, see [Repos](../reference/repos.md).
 
 ### Summit (consensus)
 

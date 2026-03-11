@@ -230,4 +230,5 @@
 * [Opcodes](reference/opcodes.md)
 * [Precompiles](reference/precompiles.md)
 * [RPC Methods](reference/rpc-methods/README.md)
+* [Repos](reference/repos.md)
 * [Node Operator FAQ](reference/node-operator-faq.md)
