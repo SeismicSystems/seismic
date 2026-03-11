@@ -112,5 +112,6 @@ total_gas = 1000 + ceil(len(ciphertext) / 16) * 30
 
 ## See Also
 
+- [AES-GCM Decrypt — Precompiles Reference](../../../reference/precompiles.md#aes-gcm-decrypt-0x67)
 - [aes-gcm-encrypt](aes-gcm-encrypt.md)
 - [ecdh](ecdh.md)
