@@ -26,26 +26,25 @@ When you declare a shielded variable (e.g., `suint256`), the compiler generates 
 
 The FlaggedStorage model enforces strict separation between public and confidential data:
 
-| Operation                 | Result                    |
-| ------------------------- | ------------------------- |
-| `SLOAD` on a public slot  | Returns the value         |
-| `SLOAD` on a private slot | Reverts                   |
-| `CLOAD` on a private slot | Returns the value         |
-| `CLOAD` on a public slot  | Returns the value         |
-| `SSTORE` to a slot        | Marks the slot as public  |
-| `CSTORE` to a slot        | Marks the slot as private |
+| Operation                          | Result                                  |
+| ---------------------------------- | --------------------------------------- |
+| `SLOAD` on a public slot           | Returns the value                       |
+| `SLOAD` on a private slot          | Reverts                                 |
+| `CLOAD` on a private slot          | Returns the value                       |
+| `CLOAD` on a public slot           | Returns the value                       |
+| `SSTORE` to a public slot          | Marks the slot as public                |
+| `SSTORE` to a private slot         | Reverts                                 |
+| `CSTORE` to a private slot         | Marks the slot as private               |
+| `CSTORE` to a zero-value public slot | Claims the slot as private            |
+| `CSTORE` to a non-zero public slot | Reverts                                 |
 
 This means that if an external contract or observer uses `SLOAD` to read a shielded storage slot, the operation will revert. `CLOAD` can access both private and public slots — the compiler generates `CLOAD` for all shielded type access.
-
-{% hint style="info" %}
-Storage slots are not permanently fixed as public or private. The flag is set by the most recent store operation. However, mixing public and private writes to the same slot is strongly discouraged and should only be done via inline assembly with extreme care.
-{% endhint %}
 
 ## Whole Slot Consumption
 
 Shielded types consume an **entire 32-byte storage slot**, regardless of their actual size. A `suint64`, which only needs 8 bytes, still occupies a full slot.
 
-This is a deliberate design choice. In standard Solidity, the compiler packs multiple small variables into a single slot to save gas. With shielded types, packing is not done because a storage slot must be entirely private or entirely public. Mixing shielded and unshielded data in the same slot would break the confidentiality model.
+This is a deliberate design choice. In standard Solidity, the compiler packs multiple small variables into a single slot to save gas. With shielded types, packing is not done for two reasons: a storage slot must be entirely private or entirely public (mixing would break the confidentiality model), and packing would leak the size of the shielded value (see [Gas Considerations](#gas-considerations) below).
 
 ### Storage Layout Comparison
 
@@ -91,12 +90,6 @@ contract ShieldedStorage {
 
 This means shielded contracts consume more storage slots than their unshielded equivalents. Plan your contract's storage layout accordingly.
 
-## `saddress` Storage
-
-An `saddress` requires **32 bytes** of storage, not the 20 bytes used by a regular `address`. This is because shielded types always consume a full 32-byte slot, and the address value is stored in its entirety within that slot.
-
-Keep this in mind when estimating storage costs for contracts that use `saddress` extensively.
-
 ## Gas Considerations
 
 `CLOAD` and `CSTORE` have a **constant gas cost** regardless of the value being read or written. This is a critical privacy property.
@@ -106,7 +99,7 @@ In the standard EVM, certain storage operations can have variable gas costs (e.g
 By making gas costs constant, Seismic prevents this class of information leakage. No matter what value is being stored or loaded, the gas cost is the same.
 
 {% hint style="warning" %}
-While `CLOAD` and `CSTORE` themselves have constant gas cost, other operations on shielded values (such as loops, conditionals, and exponentiation) can still leak information through gas. See [Best Practices & Gotchas](best-practices-and-gotchas.md) for details.
+While `CLOAD` and `CSTORE` themselves have constant gas cost, other operations on shielded values (such as loops, conditionals, and exponentiation) can still leak information through gas. See [Be Mindful of Gas-Based Information Leakage](best-practices.md#be-mindful-of-gas-based-information-leakage) for details.
 {% endhint %}
 
 ## Manual Slot Packing
@@ -120,16 +113,35 @@ When using inline assembly for slot packing:
 * The compiler cannot verify the correctness of your assembly-level storage operations.
 
 ```solidity
-// Advanced: Manual slot packing with inline assembly
-// WARNING: Only do this if you fully understand the implications.
-// Ensure all packed values are shielded and belong in confidential storage.
+contract ManualSlotPacking {
+    // Use a deterministic slot derived from a namespace string to avoid collisions.
+    // keccak256("ManualSlotPacking.packed") = a fixed slot number.
 
-// Example: Pack two suint128 values into a single confidential slot
-function packTwo(suint128 a, suint128 b) internal {
-    assembly {
-        let packed := or(shl(128, a), and(b, 0xffffffffffffffffffffffffffffffff))
-        // Use CSTORE to write to confidential storage
-        // Slot number chosen carefully to avoid collisions
+    function _packedSlot() internal pure returns (uint256 s) {
+        assembly {
+            s := keccak256(0, 0)  // placeholder, we use a constant below
+        }
+        // Use a constant derived from a namespace to avoid storage collisions.
+        s = uint256(keccak256("ManualSlotPacking.packed"));
+    }
+
+    function packTwo(suint128 a, suint128 b) public {
+        uint256 slot = _packedSlot();
+        assembly {
+            let packed := or(shl(128, a), and(b, 0xffffffffffffffffffffffffffffffff))
+            cstore(slot, packed)
+        }
+    }
+
+    function unpackTwo() public view returns (uint128, uint128) {
+        uint256 slot = _packedSlot();
+        uint256 packed;
+        assembly {
+            packed := cload(slot)
+        }
+        uint128 a = uint128(packed >> 128);
+        uint128 b = uint128(packed);
+        return (a, b);
     }
 }
 ```

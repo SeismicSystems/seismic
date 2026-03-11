@@ -1,57 +1,41 @@
 ---
 description: Using stype variables in arrays and maps
 icon: delicious
-metaLinks:
-  alternates:
-    - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/core/collections
 ---
 
 # Collections
 
-All `stype` variables can be stored in Solidity collections, much like their unshielded counterparts. They behave normally (as outlined in [Basics](shielded-types.md)) when used as values in these collections. It's when they're used as _both_ the keys and values where it gets interesting. This applies to arrays and maps in particular:
+## Shielded Arrays
 
-```
-suint256[] a;  // stype as value
-function f(suint256 idx) {
-    a[idx]  // stype as key
-    // ...
+Arrays of shielded types work like standard Solidity arrays. Keys (indices) must be non-shielded — using a shielded type as an array index is a compiler error.
+
+They come in two forms:
+
+- **Dynamic** (`suint256[]`, `sbool[]`, `saddress[]`, etc.) — the length is stored as shielded.
+- **Fixed-size** (`suint256[5]`, `sbool[4]`, `saddress[3]`, etc.) — the length is a compile-time constant and publicly visible.
+
+```solidity
+suint256[] private balances;     // dynamic — shielded length
+sbool[4] private flags;          // fixed — length 4 is public
+
+function example(uint256 i) public {
+    balances[i] = suint256(100);   // valid — uint256 index
+    flags[0] = sbool(true);        // valid — literal index
 }
-
-// ==========
-
-mapping(saddress => suint256) m;  // stype as key and value
-function d(suint256 k) {
-    m[k]
-}
 ```
 
-What's special here is that you can hold on to `a[idx]` and `m[k]` without observers knowing which values in the collection they refer to. You can read from these references:
+{% hint style="warning" %}
+Even with dynamic shielded arrays, an upper bound on the length may be visible to observers monitoring gas costs, since gas usage scales with array operations.
+{% endhint %}
 
-```
-sbool b = a[idx] < 10;
-suint256 s = m[k] + 10;
-```
+## Shielded Mappings
 
-You can write to these references:
+Mappings can have shielded values but **keys cannot be shielded types**. Using a shielded type as a mapping key is a compiler error. The standard `mapping` syntax applies.
 
-```
-a[idx] *= 3;
-m[k] += a[idx];
-```
+```solidity
+mapping(address => suint256) private balances;    // valid
+mapping(uint256 => sbool) private flags;          // valid
+mapping(address => saddress) private recipients;  // valid
 
-Observers for any of these operations will not know which elements were read from / written to.
-
-<figure><img src="../../.gitbook/assets/shielded-collection-access.png" alt=""><figcaption><p>Using an <code>stype</code> as the key and value to a collection shields which element you're using.</p></figcaption></figure>
-
-In the previous section, we only knew how to shield what was happening for certain elements. Now, we know how to shield which elements are being modified in the first place.
-
-We can take the ERC20 variant discussed in the [Basics](shielded-types.md) section and extend it further to shielded balances, transfer amounts, _and now_ _recipients_.
-
-```
-mapping(saddress => suint256) private balanceOf;  // key is now saddress
-
-function transfer(saddress to, suint256 amount) public {  // recipient now saddress
-    balanceOf[saddress(msg.sender)] -= amount;
-    balanceOf[to] += amount;
-}
+mapping(saddress => uint256) private lookup;      // INVALID — shielded key
 ```

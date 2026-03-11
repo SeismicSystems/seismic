@@ -48,7 +48,8 @@
 * [Events](seismic-solidity/events.md)
 * [Storage](seismic-solidity/storage.md)
 * [Casting](seismic-solidity/casting.md)
-* [Best Practices & Gotchas](seismic-solidity/best-practices-and-gotchas.md)
+* [Best Practices](seismic-solidity/best-practices.md)
+* [Footguns](seismic-solidity/footguns.md)
 
 ## Clients
 

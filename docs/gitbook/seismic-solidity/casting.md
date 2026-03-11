@@ -29,6 +29,9 @@ saddress shieldedAddr = saddress(addr);    // OK
 
 int256 signed = -42;
 sint256 shieldedSigned = sint256(signed);  // OK
+
+bytes32 hash = keccak256("secret");
+sbytes32 shieldedHash = sbytes32(hash);    // OK
 ```
 
 ## Shielding Values (Unshielded to Shielded)
@@ -137,14 +140,13 @@ When calling a contract that expects unshielded types, cast at the call boundary
 suint256 private amount;
 
 function sendToExternal(address externalContract) external {
-    uint256 unshielded = uint256(amount);
-    IExternalContract(externalContract).deposit(unshielded);
+    IExternalContract(externalContract).deposit(uint256(amount));
 }
 ```
 
 ### Shielding input from encrypted calldata
 
-The most private way to introduce a value is through encrypted calldata, where the value is never visible in plaintext on-chain:
+The only way to introduce a value that is private from the start is through encrypted calldata, where the value is never visible in plaintext on-chain:
 
 ```solidity
 // The `amount` parameter arrives encrypted via a Seismic transaction (0x4A)

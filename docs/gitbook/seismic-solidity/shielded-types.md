@@ -5,6 +5,8 @@ icon: explosion
 
 # Shielded Types
 
+Operations on shielded types return shielded types. For example, comparing two `suint256` values produces an `sbool`, not a `bool`. Arithmetic on `sint256` returns `sint256`, and so on.
+
 ## Shielded Integers
 
 All comparisons and operators for shielded integers are functionally identical to their unshielded counterparts.
@@ -38,7 +40,7 @@ a * b   // sint256(-30)
 
 All comparisons and operators for `sbool` function identically to `bool`.
 
-We recommend reading the point on conditional execution in [Best Practices & Gotchas](best-practices-and-gotchas.md) prior to using `sbool` since it's easy to accidentally leak information with this type.
+We recommend reading the point on [conditional execution](footguns.md#conditional-execution) prior to using `sbool` since it's easy to accidentally leak information with this type.
 
 ```
 sbool a = sbool(true);
@@ -51,7 +53,7 @@ a && b  // sbool(false)
 
 ## saddress - Shielded Address
 
-An `saddress` variable supports `code` and `codehash` members only. Members like `call`, `delegatecall`, `staticcall`, `balance`, and `transfer` are not available — you must cast to `address` first. `saddress payable` is a valid type (see [Casting](casting.md)).
+An `saddress` variable supports `code` and `codehash` members only. Members like `call`, `delegatecall`, `staticcall`, `balance`, and `transfer` are not available — you must cast to `address` first.
 
 ```
 saddress a = saddress(0x123);
@@ -71,7 +73,7 @@ a.call("")  // must cast to address first
 
 ### Fixed-size: sbytes1 through sbytes32
 
-Fixed-size shielded bytes mirror the standard `bytes1`–`bytes32` types. All comparisons and operators work identically to their unshielded counterparts.
+Fixed-size shielded bytes mirror the standard `bytes1`–`bytes32` types.
 
 ```
 sbytes32 a = sbytes32(0xabcd);
@@ -80,33 +82,12 @@ sbytes1 b = sbytes1(0xff);
 
 ### Dynamic: sbytes
 
-Dynamic shielded bytes mirror the standard `bytes` type. The length is stored as shielded, so observers cannot read it directly.
+Dynamic shielded bytes mirror the standard `bytes` type. The length is stored as shielded — like [dynamic shielded arrays](collections.md#shielded-arrays), observers cannot read it directly but may infer an upper bound from gas costs.
 
-## Shielded Arrays
-
-Arrays of shielded types work like standard Solidity arrays. They come in two forms:
-
-- **Dynamic** (`suint256[]`, `sbool[]`, `saddress[]`, etc.) — the length is stored as shielded.
-- **Fixed-size** (`suint256[5]`, `sbool[4]`, `saddress[3]`, etc.) — the length is a compile-time constant and publicly visible.
-
-```solidity
-suint256[] private balances;     // dynamic — shielded length
-sbool[4] private flags;          // fixed — length 4 is public
-saddress[] private recipients;   // dynamic — shielded length
-```
+## Shielded Literals
 
 {% hint style="warning" %}
-Even with dynamic shielded arrays, an upper bound on the length may be visible to observers monitoring gas costs, since gas usage scales with array operations.
+Using shielded literals (e.g. `suint256(42)`) in your contract will produce a compiler warning. These literal values are embedded directly in the contract bytecode, which is publicly visible — so the initial value is leaked at deployment time.
+
+This is fine for values meant to be public initially and then evolve through private state changes. But if the literal itself is sensitive, do not hardcode it. See [Footguns](footguns.md#literals) for more detail.
 {% endhint %}
-
-## Shielded Mappings
-
-Mappings can have shielded values but **keys cannot be shielded types**. The standard `mapping` syntax applies.
-
-```solidity
-mapping(address => suint256) private balances;    // valid
-mapping(uint256 => sbool) private flags;          // valid
-mapping(address => saddress) private recipients;  // valid
-
-mapping(saddress => uint256) private lookup;      // INVALID — shielded key
-```
