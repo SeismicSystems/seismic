@@ -220,9 +220,9 @@
     * [Signed Read Pattern](clients/alloy/examples/signed-read-pattern.md)
     * [Contract Deployment](clients/alloy/examples/contract-deployment.md)
 
-## Networks & Deployment
+## Networks
 
-* [Migrating from Ethereum](networks/migrating-from-ethereum.md)
+* [Testnet](networks/testnet.md)
 
 ## Reference
 
@@ -242,5 +242,6 @@
   * [eth\_call](reference/rpc-methods/eth-call.md)
   * [eth\_sendRawTransaction](reference/rpc-methods/eth-send-raw-transaction.md)
   * [eth\_getStorageAt](reference/rpc-methods/eth-get-storage-at.md)
+* [Migrating from Ethereum](reference/migrating-from-ethereum.md)
 * [Repos](reference/repos.md)
 * [Node Operator FAQ](reference/node-operator-faq.md)

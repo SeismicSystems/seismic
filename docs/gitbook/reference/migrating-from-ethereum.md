@@ -120,7 +120,7 @@ function getBalance(address account) external view returns (suint256) {
 ```
 
 {% hint style="info" %}
-Callers must use a **signed read** to call getter functions that check `msg.sender`. A standard `eth_call` zeros out the `from` field on Seismic, so `msg.sender` would be `address(0)`. Client libraries like `seismic-viem` handle signed reads automatically. See [Signed Reads](../reference/seismic-transaction/signed-reads.md) for details.
+Callers must use a **signed read** to call getter functions that check `msg.sender`. A standard `eth_call` zeros out the `from` field on Seismic, so `msg.sender` would be `address(0)`. Client libraries like `seismic-viem` handle signed reads automatically. See [Signed Reads](seismic-transaction/signed-reads.md) for details.
 {% endhint %}
 
 ---
@@ -199,11 +199,11 @@ All standard Foundry testing patterns (fuzz testing, forking, cheatcodes) work w
 
 Deploy to the Seismic network using the same flow you would use for Ethereum, just with a different RPC URL and the Seismic tools.
 
-**Deploy to devnet:**
+**Deploy to testnet:**
 
 ```bash
 sforge create src/MyContract.sol:MyContract \
-    --rpc-url https://node-2.seismicdev.net/rpc \
+    --rpc-url https://gcp-1.seismictest.net/rpc \
     --private-key $PRIVATE_KEY
 ```
 
@@ -211,16 +211,18 @@ sforge create src/MyContract.sol:MyContract \
 
 ```bash
 sforge script script/Deploy.s.sol \
-    --rpc-url https://node-2.seismicdev.net/rpc \
+    --rpc-url https://gcp-1.seismictest.net/rpc \
     --private-key $PRIVATE_KEY \
     --broadcast
 ```
 
-For network details (RPC URLs, chain IDs, faucets), see the [Installation](../getting-started/installation.md) guide.
+For network details (RPC URLs, chain IDs, faucets), see the [Testnet](../networks/testnet.md) page.
 
 ---
 
 ## Common pitfalls
+
+For a comprehensive list of information leak vectors when working with shielded types, see [Footguns](../seismic-solidity/footguns.md).
 
 ### Forgetting to use Seismic transactions for shielded writes
 

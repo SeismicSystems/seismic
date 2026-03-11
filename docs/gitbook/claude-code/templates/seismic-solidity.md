@@ -157,7 +157,7 @@ Faucet: https://faucet-2.seismicdev.net/
 
 - [Shielded Types](https://docs.seismic.systems/seismic-solidity/shielded-types/)
 - [Precompiles Reference](https://docs.seismic.systems/reference/precompiles)
-- [Migrating from Ethereum](https://docs.seismic.systems/networks/migrating-from-ethereum)
+- [Migrating from Ethereum](https://docs.seismic.systems/reference/migrating-from-ethereum)
 - [GitHub: seismic-foundry](https://github.com/SeismicSystems/seismic-foundry)
 ````
 

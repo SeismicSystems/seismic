@@ -76,7 +76,7 @@ You just ran shielded contract tests locally. See the [full quickstart](getting-
 | Build a shielded ERC20 token          | [SRC20 Tutorial](tutorials/src20/README.md)                           |
 | Learn about shielded types           | [Shielded Types](seismic-solidity/shielded-types.md)                  |
 | Integrate a frontend                 | [Client Libraries](clients/README.md)                                 |
-| Deploy to testnet         | [Migrating from Ethereum](networks/migrating-from-ethereum.md)        |
+| Deploy to testnet         | [Migrating from Ethereum](reference/migrating-from-ethereum.md)        |
 | Understand the transaction lifecycle | [Seismic Transaction](reference/seismic-transaction/README.md)               |
 | Run a node                           | [Node Operator FAQ](reference/node-operator-faq.md)                   |
 
