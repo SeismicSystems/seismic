@@ -43,7 +43,7 @@ import {
   createShieldedWalletClient,
   createShieldedPublicClient,
   getShieldedContract,
-  seismicDevnet, // Chain definition (chainId: 5124)
+  seismicTestnet, // Chain definition (chainId: 5124)
 } from "seismic-viem";
 ```
 
@@ -52,12 +52,12 @@ import {
 ### Create a shielded wallet client
 
 ```typescript
-import { createShieldedWalletClient, seismicDevnet } from "seismic-viem";
+import { createShieldedWalletClient, seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 
 const walletClient = await createShieldedWalletClient({
-  chain: seismicDevnet,
-  transport: http("https://node-2.seismicdev.net/rpc"),
+  chain: seismicTestnet,
+  transport: http("https://gcp-1.seismictest.net/rpc"),
   privateKey: "0xYOUR_PRIVATE_KEY",
 });
 ```
@@ -65,12 +65,12 @@ const walletClient = await createShieldedWalletClient({
 ### Create a shielded public client (read-only)
 
 ```typescript
-import { createShieldedPublicClient, seismicDevnet } from "seismic-viem";
+import { createShieldedPublicClient, seismicTestnet } from "seismic-viem";
 import { http } from "viem";
 
 const publicClient = await createShieldedPublicClient({
-  chain: seismicDevnet,
-  transport: http("https://node-2.seismicdev.net/rpc"),
+  chain: seismicTestnet,
+  transport: http("https://gcp-1.seismictest.net/rpc"),
 });
 ```
 
@@ -109,8 +109,8 @@ import { createPublicClient, http } from "viem";
 
 // Use a standard viem public client for receipt watching
 const publicClient = createPublicClient({
-  chain: seismicDevnet,
-  transport: http("https://node-2.seismicdev.net/rpc"),
+  chain: seismicTestnet,
+  transport: http("https://gcp-1.seismictest.net/rpc"),
 });
 
 const receipt = await publicClient.waitForTransactionReceipt({ hash });
@@ -128,11 +128,11 @@ const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
 | Network        | Chain ID | RPC URL                             | Chain export    |
 | -------------- | -------- | ----------------------------------- | --------------- |
-| Devnet         | 5124     | `https://node-2.seismicdev.net/rpc` | `seismicDevnet` |
-| Devnet (WS)    | 5124     | `wss://node-2.seismicdev.net/ws`    | `seismicDevnet` |
+| Testnet         | 5124     | `https://gcp-1.seismictest.net/rpc` | `seismicTestnet` |
+| Testnet (WS)    | 5124     | `wss://gcp-1.seismictest.net/ws`    | `seismicTestnet` |
 | Local (sanvil) | 31337    | `http://127.0.0.1:8545`             | —               |
 
-Faucet: https://faucet-2.seismicdev.net/
+Faucet: https://faucet.seismictest.net/
 
 ## Links
 

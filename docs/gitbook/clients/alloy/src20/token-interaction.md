@@ -52,7 +52,7 @@ use alloy_rpc_types_eth::TransactionRequest;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
@@ -117,7 +117,7 @@ use alloy_signer_local::PrivateKeySigner;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
@@ -163,7 +163,7 @@ use alloy_signer_local::PrivateKeySigner;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
@@ -204,7 +204,7 @@ use alloy_signer_local::PrivateKeySigner;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
@@ -246,7 +246,7 @@ use alloy_signer_local::PrivateKeySigner;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;

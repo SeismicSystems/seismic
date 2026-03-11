@@ -152,11 +152,11 @@ The wallet client automatically handles encryption. On creation, it fetches the 
 
 | Network        | Chain ID | Chain config      | RPC URL                             |
 | -------------- | -------- | ----------------- | ----------------------------------- |
-| Devnet         | 5124     | `SEISMIC_TESTNET` | `https://node-2.seismicdev.net/rpc` |
-| Devnet (WS)    | 5124     | `SEISMIC_TESTNET` | `wss://node-2.seismicdev.net/ws`    |
+| Testnet         | 5124     | `SEISMIC_TESTNET` | `https://gcp-1.seismictest.net/rpc` |
+| Testnet (WS)    | 5124     | `SEISMIC_TESTNET` | `wss://gcp-1.seismictest.net/ws`    |
 | Local (sanvil) | 31337    | `SANVIL`          | `http://127.0.0.1:8545`             |
 
-Faucet: https://faucet-2.seismicdev.net/
+Faucet: https://faucet.seismictest.net/
 
 ## Links
 
