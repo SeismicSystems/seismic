@@ -2,7 +2,7 @@
      update the PrivateToken example to generate its keypair on-chain with rng256() +
      secp256k1_pubkey() instead of requiring setContractKey(). -->
 ---
-icon: blog
+icon: tower-broadcast
 metaLinks:
   alternates:
     - https://app.gitbook.com/s/hkB2uNxma1rxIgBfHgAT/core/events
