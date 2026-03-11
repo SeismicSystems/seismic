@@ -5,11 +5,39 @@ icon: explosion
 
 # Shielded Types
 
+## suint / sint - Shielded Unsigned Integer / Shielded Integer
+
+All comparisons and operators for `suint` / `sint` are functionally identical to `uint` / `int`.
+
+```
+suint256 a = suint256(10);
+suint256 b = suint256(3);
+
+// == EXAMPLES
+a > b  // true
+a | b  // 11
+a << 2  // 40
+a % b  // 1
+```
+
+## sbool - Shielded Boolean
+
+All comparisons and operators for `sbool` function identically to `bool`.
+
+We recommend reading the point on conditional execution in [Best Practices & Gotchas](best-practices-and-gotchas.md) prior to using `sbool` since it's easy to accidentally leak information with this type.
+
+```
+sbool a = sbool(true);
+sbool b = sbool(false);
+
+// == EXAMPLES
+a && b  // false
+!b  // true
+```
+
 ## saddress - Shielded Address
 
 An `saddress` variable supports `code` and `codehash` members only. Members like `call`, `delegatecall`, `staticcall`, `balance`, and `transfer` are not available — you must cast to `address` first. `saddress payable` is a valid type (see [Casting](casting.md)).
-
-The universal casting rules and restrictions described in [Basics](shielded-types.md) apply.
 
 ```
 saddress a = saddress(0x123);
@@ -25,32 +53,17 @@ a.balance   // must cast to address first
 a.call("")  // must cast to address first
 ```
 
-### sboolean - Shielded Boolean
+## sbytes - Shielded Bytes
 
-All comparisons and operators for `sbool` function identically to `bool`. The universal casting rules and restrictions described in [Basics](shielded-types.md) apply.
+### Fixed-size: sbytes1 through sbytes32
 
-We recommend reading the point on conditional execution in [Best Practices & Gotchas](best-practices-and-gotchas.md) prior to using `sbool` since it's easy to accidentally leak information with this type.
-
-```
-sbool a = sbool(true)
-sbool b = sbool(false)
-
-// == EXAMPLES
-a && b  // false
-!b  // true
-```
-
-### suint / sint - Shielded Unsigned Integer / Shielded Integer
-
-All comparisons and operators for `suint` / `sint` are functionally identical to `uint` / `int`. The universal casting rules and restrictions described in [Basics](shielded-types.md) apply.
+Fixed-size shielded bytes mirror the standard `bytes1`–`bytes32` types. All comparisons and operators work identically to their unshielded counterparts.
 
 ```
-suint256 a = suint256(10)
-suint256 b = suint256(3)
-
-// == EXAMPLES
-a > b  // true
-a | b  // 11
-a << 2  // 40
-a % b  // 1
+sbytes32 a = sbytes32(0xabcd);
+sbytes1 b = sbytes1(0xff);
 ```
+
+### Dynamic: sbytes
+
+Dynamic shielded bytes mirror the standard `bytes` type.
