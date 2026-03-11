@@ -40,7 +40,7 @@ a * b   // sint256(-30)
 
 All comparisons and operators for `sbool` function identically to `bool`.
 
-We recommend reading the point on [conditional execution](nonexistent.md#conditional-execution) prior to using `sbool` since it's easy to accidentally leak information with this type.
+We recommend reading the point on [conditional execution](footguns.md#conditional-execution) prior to using `sbool` since it's easy to accidentally leak information with this type.
 
 ```
 sbool a = sbool(true);
