@@ -5,18 +5,60 @@ icon: explosion
 
 # Shielded Types
 
+## Shielded Integers
+
+All comparisons and operators for shielded integers are functionally identical to their unshielded counterparts.
+
+### suint - Shielded Unsigned Integer
+
+```
+suint256 a = suint256(10);
+suint256 b = suint256(3);
+
+// == EXAMPLES
+a > b   // sbool(true)
+a | b   // suint256(11)
+a << 2  // suint256(40)
+a % b   // suint256(1)
+```
+
+### sint - Shielded Signed Integer
+
+```
+sint256 a = sint256(-10);
+sint256 b = sint256(3);
+
+// == EXAMPLES
+a < b   // sbool(true)
+a + b   // sint256(-7)
+a * b   // sint256(-30)
+```
+
+## sbool - Shielded Boolean
+
+All comparisons and operators for `sbool` function identically to `bool`.
+
+We recommend reading the point on conditional execution in [Best Practices & Gotchas](best-practices-and-gotchas.md) prior to using `sbool` since it's easy to accidentally leak information with this type.
+
+```
+sbool a = sbool(true);
+sbool b = sbool(false);
+
+// == EXAMPLES
+a && b  // sbool(false)
+!b      // sbool(true)
+```
+
 ## saddress - Shielded Address
 
 An `saddress` variable supports `code` and `codehash` members only. Members like `call`, `delegatecall`, `staticcall`, `balance`, and `transfer` are not available — you must cast to `address` first. `saddress payable` is a valid type (see [Casting](casting.md)).
-
-The universal casting rules and restrictions described in [Basics](shielded-types.md) apply.
 
 ```
 saddress a = saddress(0x123);
 saddress b = saddress(0x456);
 
 // == VALID EXAMPLES
-a == b  // false
+a == b  // sbool(false)
 b.code
 b.codehash
 
@@ -25,32 +67,46 @@ a.balance   // must cast to address first
 a.call("")  // must cast to address first
 ```
 
-### sboolean - Shielded Boolean
+## sbytes - Shielded Bytes
 
-All comparisons and operators for `sbool` function identically to `bool`. The universal casting rules and restrictions described in [Basics](shielded-types.md) apply.
+### Fixed-size: sbytes1 through sbytes32
 
-We recommend reading the point on conditional execution in [Best Practices & Gotchas](best-practices-and-gotchas.md) prior to using `sbool` since it's easy to accidentally leak information with this type.
-
-```
-sbool a = sbool(true)
-sbool b = sbool(false)
-
-// == EXAMPLES
-a && b  // false
-!b  // true
-```
-
-### suint / sint - Shielded Unsigned Integer / Shielded Integer
-
-All comparisons and operators for `suint` / `sint` are functionally identical to `uint` / `int`. The universal casting rules and restrictions described in [Basics](shielded-types.md) apply.
+Fixed-size shielded bytes mirror the standard `bytes1`–`bytes32` types. All comparisons and operators work identically to their unshielded counterparts.
 
 ```
-suint256 a = suint256(10)
-suint256 b = suint256(3)
+sbytes32 a = sbytes32(0xabcd);
+sbytes1 b = sbytes1(0xff);
+```
 
-// == EXAMPLES
-a > b  // true
-a | b  // 11
-a << 2  // 40
-a % b  // 1
+### Dynamic: sbytes
+
+Dynamic shielded bytes mirror the standard `bytes` type. The length is stored as shielded, so observers cannot read it directly.
+
+## Shielded Arrays
+
+Arrays of shielded types work like standard Solidity arrays. They come in two forms:
+
+- **Dynamic** (`suint256[]`, `sbool[]`, `saddress[]`, etc.) — the length is stored as shielded.
+- **Fixed-size** (`suint256[5]`, `sbool[4]`, `saddress[3]`, etc.) — the length is a compile-time constant and publicly visible.
+
+```solidity
+suint256[] private balances;     // dynamic — shielded length
+sbool[4] private flags;          // fixed — length 4 is public
+saddress[] private recipients;   // dynamic — shielded length
+```
+
+{% hint style="warning" %}
+Even with dynamic shielded arrays, an upper bound on the length may be visible to observers monitoring gas costs, since gas usage scales with array operations.
+{% endhint %}
+
+## Shielded Mappings
+
+Mappings can have shielded values but **keys cannot be shielded types**. The standard `mapping` syntax applies.
+
+```solidity
+mapping(address => suint256) private balances;    // valid
+mapping(uint256 => sbool) private flags;          // valid
+mapping(address => saddress) private recipients;  // valid
+
+mapping(saddress => uint256) private lookup;      // INVALID — shielded key
 ```

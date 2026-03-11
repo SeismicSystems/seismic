@@ -173,7 +173,7 @@ A lot stays the same, which is the point:
 * **Transfer logic** -- The subtraction, addition, and require checks are identical. Arithmetic operations on `suint256` work the same as on `uint256`.
 * **Overflow protection** -- Solidity 0.8+ overflow checks work with shielded types.
 * **Function signatures** -- The function names and return types are unchanged. The contract is still recognizable as an ERC20.
-* **Address parameters** -- The `to`, `from`, and `spender` parameters remain regular `address` types. You could shield these with `saddress` if you wanted to hide the participants, but for a standard token that is usually not needed.
+* **Address parameters** -- The `to`, `from`, and `spender` parameters remain regular `address` types. Mapping keys cannot be shielded types, so these must stay as `address`.
 * **totalSupply** -- This stays as a regular `uint256`. The total supply is public information. Individual balances are private, but the aggregate is visible.
 
 ## What you lose (and how to get it back)
