@@ -66,7 +66,7 @@ use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::from(signer);
-let url = "https://node.seismicdev.net/rpc".parse()?;
+let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
 // Fillers are set up automatically
 let provider = sreth_signed_provider(wallet, url).await?;

@@ -58,7 +58,7 @@ pub fn new_http(url: reqwest::Url) -> Self
 ```rust
 use seismic_prelude::foundry::*;
 
-let url = "https://node.seismicdev.net/rpc".parse()?;
+let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 let provider = SeismicUnsignedProvider::<SeismicReth>::new_http(url);
 
 let block_number = provider.get_block_number().await?;
@@ -81,7 +81,7 @@ pub async fn new_ws(url: reqwest::Url) -> TransportResult<Self>
 
 | Parameter | Type           | Required | Description                                                              |
 | --------- | -------------- | -------- | ------------------------------------------------------------------------ |
-| `url`     | `reqwest::Url` | Yes      | WebSocket URL of the Seismic node (e.g., `wss://node.seismicdev.net/ws`) |
+| `url`     | `reqwest::Url` | Yes      | WebSocket URL of the Seismic node (e.g., `wss://gcp-1.seismictest.net/ws`) |
 
 #### Returns
 
@@ -94,7 +94,7 @@ pub async fn new_ws(url: reqwest::Url) -> TransportResult<Self>
 ```rust
 use seismic_prelude::foundry::*;
 
-let url = "wss://node.seismicdev.net/ws".parse()?;
+let url = "wss://gcp-1.seismictest.net/ws".parse()?;
 let provider = SeismicUnsignedProvider::<SeismicReth>::new_ws(url).await?;
 
 let block_number = provider.get_block_number().await?;
@@ -120,7 +120,7 @@ For Seismic devnet, testnet, or mainnet.
 ```rust
 use seismic_prelude::foundry::*;
 
-let url = "https://node.seismicdev.net/rpc".parse()?;
+let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 let provider = sreth_unsigned_provider(url);
 ```
 
@@ -254,7 +254,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let block_number = provider.get_block_number().await?;
@@ -275,7 +275,7 @@ use alloy_primitives::address;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let addr = address!("0x1234567890abcdef1234567890abcdef12345678");
@@ -293,7 +293,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let tee_pubkey = provider.get_tee_pubkey().await?;
@@ -313,7 +313,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "wss://node.seismicdev.net/ws".parse()?;
+    let url = "wss://gcp-1.seismictest.net/ws".parse()?;
     let provider = SeismicUnsignedProvider::<SeismicReth>::new_ws(url).await?;
 
     let block_number = provider.get_block_number().await?;

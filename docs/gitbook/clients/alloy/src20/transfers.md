@@ -47,7 +47,7 @@ The simplest pattern: transfer tokens directly from your wallet to a recipient.
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
@@ -87,7 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Owner's provider
     let owner_signer: PrivateKeySigner = "0xOWNER_PRIVATE_KEY".parse()?;
     let owner_wallet = SeismicWallet::from(owner_signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let owner_provider =
         SeismicSignedProvider::<SeismicReth>::new(owner_wallet, url).await?;
 
@@ -123,7 +123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Spender's provider
     let spender_signer: PrivateKeySigner = "0xSPENDER_PRIVATE_KEY".parse()?;
     let spender_wallet = SeismicWallet::from(spender_signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let spender_provider =
         SeismicSignedProvider::<SeismicReth>::new(spender_wallet, url).await?;
 
@@ -162,7 +162,7 @@ Always verify sufficient balance before sending a transfer to avoid wasted gas:
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
@@ -218,7 +218,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Setup owner and spender providers
     let owner_signer: PrivateKeySigner = "0xOWNER_PRIVATE_KEY".parse()?;
     let owner_wallet = SeismicWallet::from(owner_signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let owner_provider =
         SeismicSignedProvider::<SeismicReth>::new(owner_wallet, url.clone()).await?;
 
@@ -291,7 +291,7 @@ Send tokens to multiple recipients in sequence:
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;

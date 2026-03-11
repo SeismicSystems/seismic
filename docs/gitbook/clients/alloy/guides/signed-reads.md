@@ -50,7 +50,7 @@ use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::from(signer);
-let url: reqwest::Url = "https://node.seismicdev.net/rpc".parse()?;
+let url: reqwest::Url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
 let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 ```

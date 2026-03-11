@@ -37,7 +37,7 @@ use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::from(signer);
-let url = "https://node.seismicdev.net/rpc".parse()?;
+let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
 // Full-featured provider
 let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
@@ -48,13 +48,13 @@ let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 ```rust
 use seismic_prelude::foundry::*;
 
-let url = "https://node.seismicdev.net/rpc".parse()?;
+let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
 // Read-only provider (HTTP)
 let provider = sreth_unsigned_provider(url);
 
 // Read-only provider (WebSocket)
-let ws_url = "wss://node.seismicdev.net/ws".parse()?;
+let ws_url = "wss://gcp-1.seismictest.net/ws".parse()?;
 let provider = SeismicUnsignedProvider::<SeismicReth>::new_ws(ws_url).await?;
 ```
 

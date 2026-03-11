@@ -105,7 +105,7 @@ function WriteWithTracking() {
         Increment
       </button>
       {hash && (
-        <a href={`https://explorer.seismicdev.net/tx/${hash}`} target="_blank" rel="noreferrer">
+        <a href={`https://seismic-testnet.socialscan.io/tx/${hash}`} target="_blank" rel="noreferrer">
           View on explorer
         </a>
       )}

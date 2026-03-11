@@ -65,7 +65,7 @@ rustup update stable
 
 # Set environment variables
 export PRIVATE_KEY="0x..."
-export RPC_URL="https://node.seismicdev.net/rpc"
+export RPC_URL="https://gcp-1.seismictest.net/rpc"
 ```
 
 And your `Cargo.toml` includes:

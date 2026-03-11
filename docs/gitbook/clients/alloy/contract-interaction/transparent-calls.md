@@ -127,7 +127,7 @@ Transparent reads do not require a private key, so you can use `SeismicUnsignedP
 use seismic_prelude::foundry::*;
 
 // No private key needed
-let url = "https://node.seismicdev.net/rpc".parse()?;
+let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 let provider = sreth_unsigned_provider(url);
 
 // Transparent read works with unsigned provider
@@ -164,7 +164,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set up signed provider
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
     // 1. Deploy contract (transparent -- Create txs cannot be seismic)

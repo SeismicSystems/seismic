@@ -12,7 +12,7 @@ The Seismic public testnet is the primary network for development and testing. I
 | Property          | Value                              |
 | ----------------- | ---------------------------------- |
 | Chain ID          | `5124`                             |
-| RPC URL           | `https://node.seismicdev.net/rpc`  |
+| RPC URL           | `https://gcp-1.seismictest.net/rpc`  |
 | Network Type      | `SeismicReth`                      |
 | Transaction Types | Legacy, EIP-1559, Seismic (`0x4A`) |
 
@@ -30,7 +30,7 @@ use alloy_signer_local::PrivateKeySigner;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
     let provider = sreth_signed_provider(wallet, url).await?;
 
@@ -52,7 +52,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let block_number = provider.get_block_number().await?;
@@ -72,7 +72,7 @@ use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::from(signer);
-let url = "https://node.seismicdev.net/rpc".parse()?;
+let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
 let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 ```
@@ -90,7 +90,7 @@ use alloy_signer_local::PrivateKeySigner;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
     let provider = sreth_signed_provider(wallet, url).await?;
 
@@ -116,7 +116,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://node.seismicdev.net/rpc".parse()?;
+    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     match provider.get_chain_id().await {
@@ -142,7 +142,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let wallet = SeismicWallet::from(signer);
 
     let rpc_url = env::var("SEISMIC_RPC_URL")
-        .unwrap_or_else(|_| "https://node.seismicdev.net/rpc".to_string());
+        .unwrap_or_else(|_| "https://gcp-1.seismictest.net/rpc".to_string());
     let url = rpc_url.parse()?;
 
     let provider = sreth_signed_provider(wallet, url).await?;
