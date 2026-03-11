@@ -8,10 +8,6 @@ Returns the value at a given storage position for an address. On Seismic, this m
 
 This is a deliberate security measure — shielded storage values are flagged with `is_private = true` in the state trie. Rather than exposing the encrypted value or returning an error, the node returns the same response as an empty slot.
 
-## Try It
-
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_getStorageAt%26embed%3Dtrue" fullWidth="false" %}
-
 ## Parameters
 
 | Index | Type     | Description                                                               |
@@ -29,7 +25,7 @@ This is a deliberate security measure — shielded storage values are flagged wi
 ## Example Request
 
 ```bash
-curl -X POST https://gcp-0.seismictest.net/rpc \
+curl -X POST https://gcp-1.seismictest.net/rpc \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -66,6 +62,19 @@ curl -X POST https://gcp-0.seismictest.net/rpc \
 {% hint style="warning" %}
 If you need to read shielded data, use a [signed read](../seismic-transaction/signed-reads.md) via `eth_call` with a Seismic transaction. The contract itself must expose a getter function for the shielded value.
 {% endhint %}
+
+## `eth_getFlaggedStorageAt` (sanvil only)
+
+In [seismic-foundry](https://github.com/SeismicSystems/seismic-foundry)'s local development node (`sanvil`), an additional method `eth_getFlaggedStorageAt` is available. It takes the same parameters as `eth_getStorageAt` but returns a `FlaggedStorage` object containing both the actual value and whether the slot is private:
+
+```json
+{
+  "value": "0x0000000000000000000000000000000000000000000000000000000000000042",
+  "is_private": true
+}
+```
+
+This is useful for debugging and testing — you can inspect shielded slot values and confirm their privacy flag. **This method does not exist in seismic-reth** — production nodes must never expose private storage values over RPC.
 
 ## Related
 

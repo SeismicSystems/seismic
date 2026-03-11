@@ -4,7 +4,7 @@ icon: satellite-dish
 
 # RPC Methods
 
-Seismic nodes expose a JSON-RPC API that is almost entirely compatible with standard Ethereum RPC. You can use the same tools (curl, cast, ethers.js, viem) with the same methods you already know. For full Seismic support (encrypted calldata, signed reads, shielded types), use [`scast`](../../getting-started/development-toolkit.md) (part of the seismic-foundry toolset) or [`seismic-viem`](../../clients/typescript/viem/).
+Seismic nodes expose a JSON-RPC API that is almost entirely compatible with standard Ethereum RPC. You can use the same tools (curl, cast, ethers.js, viem) with the same methods you already know. For full Seismic support (encrypted calldata, signed reads, shielded types), use one of our [client libraries](../../clients/README.md) or [`scast`](../../getting-started/development-toolkit.md) (part of the seismic-foundry toolset).
 
 This section documents the methods most relevant to Seismic developers — including Seismic-specific methods and standard Ethereum methods that behave differently on Seismic.
 
@@ -26,8 +26,4 @@ These standard Ethereum methods work on Seismic but have important behavioral di
 
 ## Blocked Tracing Endpoints
 
-All tracing and debug endpoints (`debug_traceTransaction`, `debug_traceCall`, `trace_transaction`, `trace_block`, etc.) are blocked on Seismic. Execution traces would reveal shielded values — opcodes, memory, and stack contents could expose private data that contracts are designed to protect.
-
-{% hint style="info" %}
-Seismic supports almost every other RPC endpoint available in [Reth](https://reth.rs/). See [Differences from Ethereum](../../overview/differences-from-ethereum.md#rpc-compatibility) for details.
-{% endhint %}
+All tracing and debug endpoints (`debug_traceTransaction`, `debug_traceCall`, `trace_transaction`, `trace_block`, etc.) are blocked on Seismic. Execution traces would reveal shielded values — opcodes, memory, and stack contents could expose private data that contracts are designed to protect. We plan to eventually support these endpoints with private data redacted from the results, but this is not available today.
