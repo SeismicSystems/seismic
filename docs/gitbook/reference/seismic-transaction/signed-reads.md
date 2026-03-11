@@ -1,3 +1,7 @@
+---
+icon: file-signature
+---
+
 # Signed Reads
 
 * The Seismic transaction has a counterpart, which we call "signed reads"
