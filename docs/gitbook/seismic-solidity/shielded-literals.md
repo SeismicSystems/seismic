@@ -30,7 +30,7 @@ The `s` suffix works with all numeric literal forms:
 suint256 a = 1_000s;         // underscores
 suint256 b = 0xDEADs;        // hex
 suint256 c = 1e5s;           // scientific notation
-sint256  d = -42s;            // unary minus
+sint256  d = -42s;           // unary minus
 ```
 
 ## Type inference
