@@ -1,12 +1,5 @@
-[env]
-# Set MISE_SFORGE_TASK to choose which sforge to use.
+# Set MISE_SFORGE_TASK env var to choose which sforge to use.
 # One of "sforge" (default), "sforge-local", or "sforge-local-patch".
-MISE_SFORGE_TASK = "sforge"
-# sforge uses /usr/local/bin/ssolc by default, which foundryup installs from the seismic branch.
-# Thus we need to point sforge to a different ssolc binary.
-FOUNDRY_SOLC = "{{env.HOME}}/.local/share/mise/installs/ssolc/tmp-audit-fixes/ssolc"
-# We need via-ir to compile the DepositContract since it runs into stack-too-deep otherwise.
-FOUNDRY_PROFILE = "via-ir"
 
 # TODO(samlaf): we skip artifacts::check in CI because it isn't deterministic.
 # Need to figure out a way to make it.
@@ -16,15 +9,15 @@ run = { tasks = ["fmt-check", "test"] }
 
 [tasks.test]
 description = "Run contract tests"
-run = "mise run $MISE_SFORGE_TASK -- test"
+run = "mise run ${MISE_SFORGE_TASK:-sforge} -- test"
 
 [tasks.fmt]
 description = "Format contracts"
-run = "mise run $MISE_SFORGE_TASK -- fmt"
+run = "mise run ${MISE_SFORGE_TASK:-sforge} -- fmt"
 
 [tasks.fmt-check]
 description = "Check contract formatting"
-run = "mise run $MISE_SFORGE_TASK -- fmt --check"
+run = "mise run ${MISE_SFORGE_TASK:-sforge} -- fmt --check"
 
 [tasks."artifacts::sync"]
 description = "Sync compiled artifacts"
@@ -44,6 +37,13 @@ git diff --exit-code artifacts/ || \
 description = "Run mise-installed sforge"
 raw = true
 usage = 'arg "[args]" var=#true help="Arguments to pass to sforge"'
+# sforge uses /usr/local/bin/ssolc by default, which foundryup installs from the seismic branch.
+# Thus we need to point sforge to a different ssolc binary.
+# foundry.toml's solc key somehow doesn't expand relative paths (~ or $HOME), so we instead inject
+# the solc via FOUNDRY_SOLC env var in mise.toml tasks.
+# TODO(samlaf): we should fix sforge to just use ssolc from the PATH, and then mise could transparently manage the ssolc version by putting the desired one early in the PATH.
+# We need via-ir to compile the DepositContract since it runs into stack-too-deep otherwise.
+env = { FOUNDRY_SOLC = "{{env.HOME}}/.local/share/mise/installs/ssolc/2ebb36d/ssolc", FOUNDRY_PROFILE = "via-ir" }
 run = "sforge ${usage_args}"
 
 [tasks.sforge-local]
@@ -51,6 +51,7 @@ description = "Run locally-built sforge (builds if needed)"
 dir = "{{config_root}}/../../seismic-foundry"
 raw = true
 usage = 'arg "[args]" var=#true help="Arguments to pass to sforge"'
+env = { FOUNDRY_SOLC = "{{env.HOME}}/.local/share/mise/installs/ssolc/2ebb36d/ssolc", FOUNDRY_PROFILE = "via-ir" }
 run = "cargo run -p forge -- ${usage_args}"
 
 [tasks.sforge-local-patch]
@@ -60,4 +61,5 @@ depends_post = ["cargo::local-patches::off"]
 dir = "{{config_root}}/../../seismic-foundry"
 raw = true
 usage = 'arg "[args]" var=#true help="Arguments to pass to sforge"'
+env = { FOUNDRY_SOLC = "{{env.HOME}}/.local/share/mise/installs/ssolc/2ebb36d/ssolc", FOUNDRY_PROFILE = "via-ir" }
 run = "cargo run -p forge -- ${usage_args}"
