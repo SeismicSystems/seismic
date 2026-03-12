@@ -41,12 +41,11 @@ source ~/.zshenv  # or ~/.bashrc
 
 ## Step 2: Decide what to shield
 
-Not everything needs to be private. Shielding adds complexity to client interactions (signed reads, encrypted events), so you should be intentional about what you protect.
+Not everything needs to be private. Shielding adds complexity to client interactions, so you should be intentional about what you protect.
 
 **Good candidates for shielding:**
 
 - User balances
-- Transaction amounts
 - Positions (in games, orderbooks, etc.)
 - Votes and ballot choices
 - Personal data (addresses, identifiers)
@@ -55,9 +54,7 @@ Not everything needs to be private. Shielding adds complexity to client interact
 
 - Total supply / aggregate counters
 - Contract metadata (name, symbol, decimals)
-- Immutable configuration
 - Admin addresses
-- Timestamps and block-related data
 
 ---
 
@@ -67,9 +64,8 @@ For every state variable you want to shield, change the type from its standard S
 
 | Standard type          | Shielded type            |
 | ---------------------- | ------------------------ |
-| `uint256`              | `suint256`               |
-| `uint128`, `uint64`... | `suint128`, `suint64`... |
-| `int256`               | `sint256`                |
+| `uint`, `uint32`...    | `suint`, `suint32`...    |
+| `int`, `int64`...      | `sint`, `sint64`...      |
 | `address`              | `saddress`               |
 | `bool`                 | `sbool`                  |
 | `bytes32`, `bytes16`...| `sbytes32`, `sbytes16`...|
@@ -84,8 +80,8 @@ uint256 public totalSupply;
 **After (Seismic):**
 
 ```solidity
-mapping(address => suint256) private balanceOf;  // shielded
-uint256 public totalSupply;                      // stays public
+mapping(address => suint256) private _balanceOf;  // shielded
+uint256 public totalSupply;                      // stays public... unless you're rugging
 ```
 
 The compiler handles the rest. Shielded types compile to `CLOAD`/`CSTORE` instead of `SLOAD`/`SSTORE`. Arithmetic, comparisons, and assignments work exactly the same way.
@@ -111,16 +107,16 @@ mapping(address => uint256) public balanceOf;
 **After (Seismic):**
 
 ```solidity
-mapping(address => suint256) private balanceOf;
+mapping(address => suint256) private _balanceOf;
 
-function getBalance(address account) external view returns (suint256) {
+function balanceOf(address account) external view returns (suint256) {
     require(msg.sender == account, "Only the owner can view their balance");
-    return balanceOf[account];
+    return _balanceOf[account];
 }
 ```
 
 {% hint style="info" %}
-Callers must use a **signed read** to call getter functions that check `msg.sender`. A standard `eth_call` zeros out the `from` field on Seismic, so `msg.sender` would be `address(0)`. Client libraries like `seismic-viem` handle signed reads automatically. See [Signed Reads](seismic-transaction/signed-reads.md) for details.
+Callers must use a **signed read** to call getter functions that check `msg.sender`. A standard `eth_call` zeros out the `from` field on Seismic, so `msg.sender` would be `address(0)`. Client libraries like [seismic-viem](../clients/typescript/viem/README.md) handle signed reads automatically. See [Signed Reads](seismic-transaction/signed-reads.md) for details.
 {% endhint %}
 
 ---
@@ -164,12 +160,12 @@ Replace your Ethereum client libraries with their Seismic equivalents:
 | ---------------- | ------------------ | ---------------------------------- |
 | `viem`           | `seismic-viem`     | `npm install seismic-viem`         |
 | `wagmi`          | `seismic-react`    | `npm install seismic-react`        |
-| `alloy` (Rust)   | `seismic-alloy`    | Add `seismic-alloy-provider` crate |
+| `alloy`          | `seismic-alloy`    | Add `seismic-alloy-provider` crate |
 | `web3.py`        | `seismic-web3`     | `pip install seismic-web3`         |
 
 Key changes in client code:
 
-- Use **shielded wallet clients** instead of standard wallet clients. These handle Seismic transaction construction (type `0x4A`) and calldata encryption automatically.
+- Use **shielded wallet clients** instead of standard wallet clients. These handle Seismic transaction construction (type `0x4A`) and calldata encryption automatically. They also support plaintext writes and reads for standard Ethereum interactions — for example, seismic-viem provides `.twrite` and `.tread` for vanilla contract calls.
 - Use **signed reads** instead of plain `eth_call` when reading shielded data that checks `msg.sender`.
 - Listen for encrypted events and decrypt them client-side using the shared secret derived from ECDH.
 
@@ -230,7 +226,7 @@ If you send a standard Ethereum transaction to a function that writes shielded d
 
 ### Using public getters on shielded types
 
-The Solidity compiler will not let you declare a `public` state variable with a shielded type. But even if you write an explicit getter that returns a shielded value, remember that callers need signed reads to access it with a valid `msg.sender`.
+The Solidity compiler will not let you declare a `public` state variable with a shielded type. If your getter validates `msg.sender` (as in the `balanceOf` example above), callers must use signed reads — otherwise `msg.sender` will be the zero address.
 
 ### Not encrypting events
 
@@ -238,7 +234,7 @@ Emitting shielded values in events requires manual encryption via the AES-GCM pr
 
 ### Mixing shielded and unshielded types carelessly
 
-Casting a shielded value to an unshielded type (e.g., `uint256(myShieldedValue)`) makes it visible in the execution trace. Only cast when you intentionally want to make a value public.
+Casting a shielded value to an unshielded type (e.g., `uint256(myShieldedValue)`) makes it visible in the execution trace. Only cast when you intentionally want to make a value public. Tracing endpoints are currently blocked on Seismic, but we plan to re-enable them with private data redacted — write your contracts as if traces are public today so you're prepared.
 
 ### Not updating the frontend
 

@@ -33,7 +33,7 @@ This document describes how the Seismic repos are organized.
 
 Every forked repo has:
 - A `seismic` branch as the default branch containing all Seismic modifications
-- `main`/`master` tracking the upstream original project
+- An upstream tracking branch (usually `main`, but notably `master` for seismic-foundry and `develop` for seismic-solidity)
 - Periodic rebases or merges from upstream to stay current
 
 To see what Seismic has changed in any repo, compare the `seismic` branch against the upstream base:
