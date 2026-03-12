@@ -53,7 +53,7 @@ Validates that shaking the Walnut increments the kernel value.
 
 ```solidity
 function test_Shake() public {
-    walnut.shake(suint256(10)); // Shake the Walnut, increasing the kernel
+    walnut.shake(10s); // Shake the Walnut, increasing the kernel
     walnut.hit(); // Decrease shell strength by 1
     walnut.hit(); // Fully crack the shell
     assertEq(walnut.look(), 10); // Kernel should be 10 after 10 shakes
@@ -71,7 +71,7 @@ function test_Reset() public {
 
     assertEq(walnut.getShellStrength(), 2); // Shell strength should reset to initial value
     walnut.hit(); // Start hitting again
-    walnut.shake(suint256(5)); // Shake the Walnut again
+    walnut.shake(5s); // Shake the Walnut again
     walnut.hit(); // Fully crack the shell again
     assertEq(walnut.look(), 5); // Kernel should reflect the shakes in the new round
 }
@@ -169,7 +169,7 @@ function test_RevertWhen_NonContributorTriesToLook() public {
     address nonContributor = address(0xabcd);
 
     walnut.hit(); // Decrease shell strength by 1
-    walnut.shake(suint256(3)); // Shake the Walnut
+    walnut.shake(3s); // Shake the Walnut
     walnut.hit(); // Fully crack the shell
 
     vm.prank(nonContributor); // Impersonate a non-contributor
@@ -198,7 +198,7 @@ function test_ContributorInRound2() public {
     walnut.hit();
 
     vm.prank(contributorRound2);
-    walnut.shake(suint256(5)); // Shake kernel 5 times
+    walnut.shake(5s); // Shake kernel 5 times
 
     vm.prank(contributorRound2);
     walnut.hit();

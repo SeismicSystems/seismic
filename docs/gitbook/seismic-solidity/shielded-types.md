@@ -14,8 +14,8 @@ All comparisons and operators for shielded integers are functionally identical t
 ### suint - Shielded Unsigned Integer
 
 ```
-suint256 a = suint256(10);
-suint256 b = suint256(3);
+suint256 a = 10s;
+suint256 b = 3s;
 
 // == EXAMPLES
 a > b   // sbool(true)
@@ -27,8 +27,8 @@ a % b   // suint256(1)
 ### sint - Shielded Signed Integer
 
 ```
-sint256 a = sint256(-10);
-sint256 b = sint256(3);
+sint256 a = -10s;
+sint256 b = 3s;
 
 // == EXAMPLES
 a < b   // sbool(true)
@@ -86,8 +86,17 @@ Dynamic shielded bytes mirror the standard `bytes` type. The length is stored as
 
 ## Shielded Literals
 
+You can create shielded integer constants with either an explicit cast or the `s` suffix:
+
+```
+suint256 a = suint256(42);   // explicit cast
+suint256 b = 42s;            // s suffix — same result
+```
+
+The `s` suffix infers the shielded type from context and works with hex, underscores, scientific notation, and unary minus. See [Shielded Literals](shielded-literals.md) for the full specification.
+
 {% hint style="warning" %}
-Using shielded literals (e.g. `suint256(42)`) in your contract will produce a compiler warning. These literal values are embedded directly in the contract bytecode, which is publicly visible — so the initial value is leaked at deployment time.
+Both forms embed the literal value in the contract bytecode, which is publicly visible — the initial value is leaked at deployment time. The compiler emits warning 9660 to remind you.
 
 This is fine for values meant to be public initially and then evolve through private state changes. But if the literal itself is sensitive, do not hardcode it. See [Footguns](footguns.md#literals) for more detail.
 {% endhint %}

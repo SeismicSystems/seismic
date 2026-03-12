@@ -34,6 +34,10 @@ bytes32 hash = keccak256("secret");
 sbytes32 shieldedHash = sbytes32(hash);    // OK
 ```
 
+{% hint style="info" %}
+For integer literals specifically, you can use the [`s` suffix](shielded-literals.md) instead of an explicit cast: `suint256 x = 42s;` is equivalent to `suint256 x = suint256(42);`. The explicit cast is still required when converting from a variable.
+{% endhint %}
+
 ## Shielding Values (Unshielded to Shielded)
 
 When you cast from an unshielded type to a shielded type, you are "shielding" the value -- moving it from the public domain into confidential storage/computation.
@@ -91,10 +95,10 @@ saddress shielded = saddress(address(pay));
 You can cast between different sizes of shielded integers, just as you can with regular Solidity integers:
 
 ```solidity
-suint128 smaller = suint128(42);
+suint128 smaller = 42s;
 suint256 larger = suint256(smaller);  // Widening: safe, no data loss
 
-suint256 big = suint256(1000);
+suint256 big = 1000s;
 suint128 small = suint128(big);       // Narrowing: may truncate
 ```
 
@@ -106,7 +110,7 @@ The same rules that apply to regular Solidity integer casting apply here:
 You can also cast between signed and unsigned shielded integers:
 
 ```solidity
-suint256 unsigned = suint256(100);
+suint256 unsigned = 100s;
 sint256 signed = sint256(unsigned);   // Reinterprets the bits
 ```
 

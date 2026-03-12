@@ -14,12 +14,12 @@ Shielded types protect values at rest and in transit, but careless usage pattern
 // BAD: Leaks the value of `isVIP` via gas difference
 sbool isVIP = /* ... */;
 if (isVIP) {
-    discount = suint256(50);
+    discount = 50s;
 } else {
     // extra work only in the else branch — gas difference reveals which path ran
-    suint256 tmp = suint256(0);
+    suint256 tmp = 0s;
     for (uint256 i = 0; i < 10; i++) {
-        tmp = tmp + suint256(1);
+        tmp = tmp + 1s;
     }
     discount = tmp;
 }
@@ -31,19 +31,20 @@ if (isVIP) {
 
 ```solidity
 // BETTER: Both arms are identical operations (single assignment), same gas either way
-discount = isVIP ? suint256(50) : suint256(0);
+discount = isVIP ? 50s : 0s;
 ```
 
 ### Literals
 
-**The problem:** Assigning literal values to shielded types embeds those values directly in the contract bytecode, which is publicly visible.
+**The problem:** Assigning literal values to shielded types — whether via explicit cast or the [`s` suffix](shielded-literals.md) — embeds those values directly in the contract bytecode, which is publicly visible.
 
 ```solidity
-// The literal `42` is visible in bytecode
-suint256 shielded = suint256(42);
+// Both forms embed `42` in bytecode
+suint256 a = suint256(42);
+suint256 b = 42s;
 ```
 
-**What to do instead:** Be aware that literals are embedded in contract bytecode and are publicly visible. If the initial value is sensitive, introduce it via encrypted calldata instead of hardcoding it.
+**What to do instead:** Be aware that literals are embedded in contract bytecode and are publicly visible. The compiler emits warning 9660 for all shielded literals to remind you. If the initial value is sensitive, introduce it via encrypted calldata instead of hardcoding it.
 
 ### Dynamic Loops
 
@@ -138,7 +139,7 @@ function deposit(suint256 amount) external {
 
 ```solidity
 // BAD: Gas cost reveals the value of `shieldedExp`
-suint256 base = suint256(2);
+suint256 base = 2s;
 suint256 shieldedExp = /* ... */;
 suint256 result = base ** shieldedExp;  // Gas cost leaks shieldedExp
 ```
@@ -165,10 +166,10 @@ Shielded types **cannot** be declared as `immutable` or `constant`. The compiler
 
 ```solidity
 // Will NOT compile — compiler error
-suint256 immutable SECRET = suint256(42);
+suint256 immutable SECRET = 42s;
 
 // Will NOT compile — compiler error
-suint256 constant MY_VALUE = suint256(1);
+suint256 constant MY_VALUE = 1s;
 ```
 
 **What to do instead:** Use a regular `private` shielded variable initialized in the constructor or via a setter function called through a Seismic transaction.

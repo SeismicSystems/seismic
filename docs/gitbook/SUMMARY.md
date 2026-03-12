@@ -45,9 +45,10 @@
 
 * [Shielded Types](seismic-solidity/shielded-types.md)
 * [Collections](seismic-solidity/collections.md)
+* [Casting](seismic-solidity/casting.md)
+* [Shielded Literals](seismic-solidity/shielded-literals.md)
 * [Events](seismic-solidity/events.md)
 * [Storage](seismic-solidity/storage.md)
-* [Casting](seismic-solidity/casting.md)
 * [Best Practices](seismic-solidity/best-practices.md)
 * [Footguns](seismic-solidity/footguns.md)
 
