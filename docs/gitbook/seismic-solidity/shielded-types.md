@@ -14,8 +14,8 @@ All comparisons and operators for shielded integers are functionally identical t
 ### suint - Shielded Unsigned Integer
 
 ```
-suint256 a = 10s;
-suint256 b = 3s;
+suint256 a = suint256(10);
+suint256 b = suint256(3);
 
 // == EXAMPLES
 a > b   // sbool(true)
@@ -27,8 +27,8 @@ a % b   // suint256(1)
 ### sint - Shielded Signed Integer
 
 ```
-sint256 a = -10s;
-sint256 b = 3s;
+sint256 a = sint256(-10);
+sint256 b = sint256(3);
 
 // == EXAMPLES
 a < b   // sbool(true)

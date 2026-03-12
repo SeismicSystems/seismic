@@ -19,7 +19,7 @@ suint256[] private balances;     // dynamic — shielded length
 sbool[4] private flags;          // fixed — length 4 is public
 
 function example(uint256 i) public {
-    balances[i] = 100s;            // valid — uint256 index
+    balances[i] = suint256(100);   // valid — uint256 index
     flags[0] = sbool(true);        // valid — literal index
 }
 ```

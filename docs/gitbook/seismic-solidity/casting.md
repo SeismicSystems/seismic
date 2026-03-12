@@ -95,10 +95,10 @@ saddress shielded = saddress(address(pay));
 You can cast between different sizes of shielded integers, just as you can with regular Solidity integers:
 
 ```solidity
-suint128 smaller = 42s;
+suint128 smaller = suint128(42);
 suint256 larger = suint256(smaller);  // Widening: safe, no data loss
 
-suint256 big = 1000s;
+suint256 big = suint256(1000);
 suint128 small = suint128(big);       // Narrowing: may truncate
 ```
 
@@ -110,7 +110,7 @@ The same rules that apply to regular Solidity integer casting apply here:
 You can also cast between signed and unsigned shielded integers:
 
 ```solidity
-suint256 unsigned = 100s;
+suint256 unsigned = suint256(100);
 sint256 signed = sint256(unsigned);   // Reinterprets the bits
 ```
 
