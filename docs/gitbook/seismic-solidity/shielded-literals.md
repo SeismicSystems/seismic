@@ -7,7 +7,7 @@ icon: hashtag
 The `s` suffix lets you write shielded integer constants directly, without explicit casting. The compiler infers the concrete shielded type (`suint8`, `suint256`, `sint128`, etc.) from context.
 
 ```solidity
-suint256 x = 42s;           // inferred as suint256
+suint256 x = 42s;            // inferred as suint256
 suint8 small = 7s;           // inferred as suint8
 sint256 neg = -1s;           // inferred as sint256
 ```
