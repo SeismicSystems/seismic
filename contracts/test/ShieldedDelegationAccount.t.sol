@@ -223,7 +223,7 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
     /// @notice Resets Bob's balance
     function _resetBobBalance() internal {
         vm.prank(BOB_ADDRESS);
-        uint256 bobBalance = tok.balanceOf();
+        uint256 bobBalance = tok.balance();
         assertGt(bobBalance, 0, "Bob should have some balance");
         vm.prank(BOB_ADDRESS);
         tok.transfer(ALICE_ADDRESS, suint256(bobBalance));
@@ -613,7 +613,7 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
 
         // Verify transfer
         vm.prank(BOB_ADDRESS);
-        uint256 bobBalance = tok.balanceOf();
+        uint256 bobBalance = tok.balance();
         assertEq(bobBalance, 5 * 10 ** 18, "Bob should have received 5 tokens");
     }
 
@@ -656,7 +656,7 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
 
         // Verify tokens transferred
         vm.prank(BOB_ADDRESS);
-        uint256 bobBalance = tok.balanceOf();
+        uint256 bobBalance = tok.balance();
         assertEq(bobBalance, 5 * 10 ** 18, "Bob should have received 5 tokens");
     }
 
@@ -696,7 +696,7 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
 
         // Verify Bob received the tokens
         vm.prank(BOB_ADDRESS);
-        uint256 bobBalance = tok.balanceOf();
+        uint256 bobBalance = tok.balance();
         assertEq(bobBalance, 5 * 10 ** 18, "Bob should have received 5 tokens");
     }
 
@@ -897,7 +897,7 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
 
         // Verify Bob didn't receive any tokens
         vm.prank(BOB_ADDRESS);
-        uint256 bobBalance = tok.balanceOf();
+        uint256 bobBalance = tok.balance();
         assertEq(bobBalance, 0, "Bob should not have received any tokens");
     }
 
