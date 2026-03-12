@@ -4,50 +4,34 @@ icon: flask-vial
 
 # Testnet
 
-## RPC URL
+|              |                                                                                  |
+| ------------ | -------------------------------------------------------------------------------- |
+| Chain ID     | `5124`                                                                           |
+| RPC (HTTPS)  | `https://gcp-1.seismictest.net/rpc`                                              |
+| RPC (WSS)    | `wss://gcp-1.seismictest.net/ws`                                                 |
+| Faucet       | [https://faucet.seismictest.net/](https://faucet.seismictest.net/)               |
+| Explorer     | [https://seismic-testnet.socialscan.io/](https://seismic-testnet.socialscan.io/) |
 
-| Protocol  | URL                                    |
-| --------- | -------------------------------------- |
-| HTTPS     | `https://gcp-1.seismictest.net/rpc`    |
-| WebSocket | `wss://gcp-1.seismictest.net/ws`       |
+## Quick Test
 
-## Faucet
-
-Request testnet ETH at [https://faucet.seismictest.net/](https://faucet.seismictest.net/).
-
-## Explorer
-
-Browse transactions and contracts at [https://seismic-testnet.socialscan.io/](https://seismic-testnet.socialscan.io/).
-
-## Chain ID
-
-`5124`
+```bash
+curl -X POST https://gcp-1.seismictest.net/rpc \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+```
 
 ## Client Setup
 
-### seismic-viem (TypeScript)
-
-Import the `seismicTestnet` chain and pass it to your client:
-
 ```typescript
 import { seismicTestnet } from "seismic-viem";
-import { createShieldedWalletClient } from "seismic-viem";
-import { http } from "viem";
 
-const client = await createShieldedWalletClient({
-  chain: seismicTestnet,
-  transport: http(),
-  account: myAccount,
-});
+console.log(seismicTestnet.rpcUrls.default.http[0]);
+// "https://gcp-1.seismictest.net/rpc"
 ```
 
-### seismic-web3 (Python)
-
-Import the `SEISMIC_TESTNET` network and create a client:
-
 ```python
-from seismic_web3 import SEISMIC_TESTNET, PrivateKey
+from seismic_web3 import SEISMIC_TESTNET
 
-pk = PrivateKey.from_hex("0x...")
-w3 = SEISMIC_TESTNET.wallet_client(pk)
+print(SEISMIC_TESTNET.rpc_url)
+# "https://gcp-1.seismictest.net/rpc"
 ```

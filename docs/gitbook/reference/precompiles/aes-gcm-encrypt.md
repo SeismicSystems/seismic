@@ -16,15 +16,15 @@ Raw bytes in the following layout:
 
 | Offset    | Field     | Type      | Description                      |
 | --------- | --------- | --------- | -------------------------------- |
-| `[0:32]`  | key       | `bytes32` | AES-256 key (32 bytes)           |
-| `[32:44]` | nonce     | `bytes12` | Initialization vector (12 bytes) |
-| `[44:]`   | plaintext | `bytes`   | The data to encrypt              |
+| `[0:32]`  | key       | 32 bytes        | AES-256 key              |
+| `[32:44]` | nonce     | 12 bytes        | Initialization vector    |
+| `[44:]`   | plaintext | bytes | Data to encrypt          |
 
 ## Output
 
-| Bytes                 | Type    | Description                                         |
-| --------------------- | ------- | --------------------------------------------------- |
-| ciphertext + auth tag | `bytes` | Encrypted data concatenated with authentication tag |
+| Bytes                 | Type            | Description                                         |
+| --------------------- | --------------- | --------------------------------------------------- |
+| ciphertext + auth tag | bytes | Encrypted data concatenated with authentication tag |
 
 ## Use cases
 
@@ -32,15 +32,19 @@ Raw bytes in the following layout:
 * Building encrypted storage helpers
 * Encrypting messages or data for specific recipients
 
-## Built-in helper
+## Examples
 
-Seismic Solidity provides `aes_gcm_encrypt(sbytes32 key, uint96 nonce, bytes memory plaintext)` which returns `bytes memory`. The key is shielded.
+### Built-in helper
+
+```solidity
+function aes_gcm_encrypt(sbytes32 key, uint96 nonce, bytes memory plaintext) view returns (bytes memory);
+```
 
 ```solidity
 bytes memory ciphertext = aes_gcm_encrypt(aesKey, nonce, plaintext);
 ```
 
-## Manual usage
+### Manual usage
 
 ```solidity
 function aesEncrypt(

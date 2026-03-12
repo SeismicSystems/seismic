@@ -14,16 +14,16 @@ The output is a **derived AES key**, not the raw ECDH shared secret. The precomp
 
 Raw bytes in the following layout (65 bytes total):
 
-| Offset    | Field       | Type      | Description                                |
-| --------- | ----------- | --------- | ------------------------------------------ |
-| `[0:32]`  | private key | `bytes32` | secp256k1 private key (32 bytes)           |
-| `[32:65]` | public key  | `bytes33` | Compressed secp256k1 public key (33 bytes) |
+| Offset    | Field       | Type         | Description                       |
+| --------- | ----------- | ------------ | --------------------------------- |
+| `[0:32]`  | private key | 32 bytes | secp256k1 private key           |
+| `[32:65]` | public key  | 33 bytes | Compressed secp256k1 public key |
 
 ## Output
 
 | Bytes       | Type           | Description                                  |
 | ----------- | -------------- | -------------------------------------------- |
-| derived key | `bytes memory` | 32 bytes — an AES key derived via ECDH + HKDF |
+| derived key | 32 bytes | AES key derived via ECDH + HKDF |
 
 ## Use cases
 
@@ -31,15 +31,19 @@ Raw bytes in the following layout (65 bytes total):
 * Establishing shared encryption keys for private communication channels
 * Enabling per-recipient encryption of on-chain data
 
-## Built-in helper
+## Examples
 
-Seismic Solidity provides `ecdh(sbytes32 secretKey, bytes memory publicKey)` which returns `bytes32`. The secret key is shielded and the result is automatically extracted for you.
+### Built-in helper
+
+```solidity
+function ecdh(sbytes32 secretKey, bytes memory publicKey) view returns (bytes32);
+```
 
 ```solidity
 bytes32 aesKey = ecdh(mySecretKey, recipientCompressedPubKey);
 ```
 
-## Manual usage
+### Manual usage
 
 ```solidity
 function deriveAESKey(

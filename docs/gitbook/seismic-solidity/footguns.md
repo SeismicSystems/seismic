@@ -72,7 +72,37 @@ for (uint256 i = 0; i < MAX_ITERATIONS; i++) {
 }
 ```
 
-### Public Getters and Return Types
+### Unprotected View Functions
+
+**The problem:** If you write a view function that unshields and returns private data without access control, anyone can read it. The shielded storage is meaningless if a public getter exposes the plaintext.
+
+```solidity
+// BAD: Anyone can call this and read the shielded value
+suint256 private _secretBalance;
+
+function secretBalance() external view returns (uint256) {
+    return uint256(_secretBalance);
+}
+```
+
+**Why it leaks:** The function casts the shielded value to a plain `uint256` and returns it with no restriction on who can call it. The value is returned in plaintext to the caller.
+
+**What to do instead:** Always add access control to view functions that unshield data. If the getter checks `msg.sender`, callers must use a [signed read](../reference/rpc-methods/eth-call.md#signed-calls-signed-reads) — otherwise `msg.sender` will be the zero address.
+
+```solidity
+suint256 private _secretBalance;
+
+function secretBalance() external view returns (uint256) {
+    require(msg.sender == owner, "Not authorized");
+    return uint256(_secretBalance);
+}
+```
+
+{% hint style="info" %}
+Access control doesn't have to be sender-based. Time-locked reveals, role-based access, or any other gating logic is fine — the important thing is that the function doesn't unconditionally return private data.
+{% endhint %}
+
+### Public Shielded Variables
 
 **The problem:** Declaring a shielded variable as `public` will not compile. Solidity automatically generates a public getter for `public` state variables, which would return the shielded value -- violating the rule that shielded types cannot be returned from `public` or `external` functions.
 
@@ -86,16 +116,7 @@ function getSecret() external view returns (suint256) {
 }
 ```
 
-**What to do instead:** Declare shielded variables as `private` or `internal`. If you need to expose the value, unshield it explicitly with a cast, and use access control to limit who can read it.
-
-```solidity
-suint256 private secretValue;
-
-function getSecretValue() external view returns (uint256) {
-    require(msg.sender == 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266, "Not authorized");
-    return uint256(secretValue);
-}
-```
+**What to do instead:** Declare shielded variables as `private` or `internal`. If you need to expose the value, unshield it explicitly with a cast, and use access control (see above).
 
 ### Unencrypted Calldata
 
@@ -154,7 +175,7 @@ suint256 constant MY_VALUE = suint256(1);
 
 ### RNG Proposer Bias
 
-**The problem:** The [RNG precompile](../reference/precompiles/rng.md) produces randomness that is deterministic given the enclave's secret key, the transaction hash, remaining gas, and personalization bytes. In theory, a block proposer could simulate RNG outputs and selectively include, exclude, or reorder transactions to influence outcomes.
+**The problem:** The synchronous [RNG precompile](../reference/precompiles/rng.md) produces randomness that is deterministic given the enclave's secret key, the transaction hash, remaining gas, and personalization bytes. In theory, a block proposer could simulate RNG outputs and selectively include, exclude, or reorder transactions to influence outcomes.
 
 ```solidity
 // In theory, a proposer could simulate this output and decide

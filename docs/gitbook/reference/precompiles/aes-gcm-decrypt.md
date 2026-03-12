@@ -12,15 +12,15 @@ Raw bytes in the following layout:
 
 | Offset    | Field                 | Type      | Description                                         |
 | --------- | --------------------- | --------- | --------------------------------------------------- |
-| `[0:32]`  | key                   | `bytes32` | AES-256 key (must match the key used for encryption) |
-| `[32:44]` | nonce                 | `bytes12` | Initialization vector (12 bytes)                    |
-| `[44:]`   | ciphertext + auth tag | `bytes`   | Encrypted data concatenated with authentication tag |
+| `[0:32]`  | key                   | 32 bytes        | AES-256 key (must match encryption key) |
+| `[32:44]` | nonce                 | 12 bytes        | Initialization vector                   |
+| `[44:]`   | ciphertext + auth tag | bytes | Encrypted data with authentication tag  |
 
 ## Output
 
-| Bytes     | Type    | Description    |
-| --------- | ------- | -------------- |
-| plaintext | `bytes` | Decrypted data |
+| Bytes     | Type            | Description    |
+| --------- | --------------- | -------------- |
+| plaintext | bytes | Decrypted data |
 
 ## Use cases
 
@@ -28,15 +28,19 @@ Raw bytes in the following layout:
 * Decrypting messages from other contracts or users
 * Verifying and reading encrypted event data within a contract
 
-## Built-in helper
+## Examples
 
-Seismic Solidity provides `aes_gcm_decrypt(sbytes32 key, uint96 nonce, bytes memory ciphertext)` which returns `bytes memory`. The key is shielded.
+### Built-in helper
+
+```solidity
+function aes_gcm_decrypt(sbytes32 key, uint96 nonce, bytes memory ciphertext) view returns (bytes memory);
+```
 
 ```solidity
 bytes memory plaintext = aes_gcm_decrypt(aesKey, nonce, ciphertext);
 ```
 
-## Manual usage
+### Manual usage
 
 ```solidity
 function aesDecrypt(

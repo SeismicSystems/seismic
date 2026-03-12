@@ -4,74 +4,19 @@ icon: phone-arrow-right
 
 # eth\_call
 
-Executes a message call without creating a transaction on the blockchain. On Seismic, `eth_call` has two important differences from standard Ethereum:
+Executes a message call without creating a transaction on the blockchain. On Seismic, `eth_call` behaves differently depending on whether the call is unsigned or signed.
 
-1. **`from` is zeroed on unsigned calls** — When you send an unsigned `eth_call`, the `from` field is set to `0x0000...0000`. This prevents contracts from using `msg.sender` to leak information about the caller during read operations.
-2. **Signed reads via type `0x4A`** — To make an `eth_call` that preserves your identity (so the contract can return caller-specific data like balances), you must send a [signed read](../seismic-transaction/signed-reads.md) using Seismic transaction type `0x4A`.
+## Unsigned calls
 
-## Try It
+When you send a standard unsigned `eth_call`, the `from` field is **zeroed out** (`0x0000...0000`) regardless of what you pass. This prevents contracts from using `msg.sender` to leak caller-specific information during read operations. Any contract logic that branches on the caller's address will see the zero address.
 
-{% embed url="https://codesandbox.io/embed/github/SeismicSystems/seismic/tree/gh-pages?view=preview&hidenavigation=1&initialpath=%2Frpc-terminal%2Findex.html%3Fmethod%3Deth_call%26embed%3Dtrue" %}
+## Signed calls (signed reads)
 
-## Parameters
+To make an `eth_call` that preserves your identity — so the contract can return caller-specific data like shielded balances — you send a raw signed Seismic transaction (type `0x4A`) or an EIP-712 typed data request as the call payload. This is the same format you'd send to [`eth_sendRawTransaction`](eth-send-raw-transaction.md).
 
-| Index | Type     | Description                                                               |
-| ----- | -------- | ------------------------------------------------------------------------- |
-| 1     | `object` | Transaction call object                                                   |
-| 2     | `string` | Block number (`"latest"`, `"earliest"`, `"pending"`, or hex block number) |
-
-### Transaction call object
-
-| Field      | Type     | Required | Description                               |
-| ---------- | -------- | -------- | ----------------------------------------- |
-| `from`     | `string` | No       | Sender address (zeroed on unsigned calls) |
-| `to`       | `string` | Yes      | Contract address                          |
-| `gas`      | `string` | No       | Gas limit (hex)                           |
-| `gasPrice` | `string` | No       | Gas price (hex)                           |
-| `value`    | `string` | No       | Value in wei (hex)                        |
-| `data`     | `string` | No       | Encoded function call data                |
-
-## Returns
-
-| Field  | Type     | Description                           |
-| ------ | -------- | ------------------------------------- |
-| result | `string` | Hex-encoded return data from the call |
-
-## Example Request
-
-```bash
-curl -X POST https://gcp-0.seismictest.net/rpc \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "eth_call",
-    "params": [
-      {
-        "to": "0x1234567890abcdef1234567890abcdef12345678",
-        "data": "0x70a08231000000000000000000000000000000000000000000000000000000000000dead"
-      },
-      "latest"
-    ],
-    "id": 1
-  }'
-```
-
-## Example Response
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": "0x0000000000000000000000000000000000000000000000000000000000000000"
-}
-```
-
-{% hint style="warning" %}
-If you need caller-specific data (e.g., a user's shielded balance), you must use a [signed read](../seismic-transaction/signed-reads.md). A plain `eth_call` will have `from` set to the zero address.
-{% endhint %}
+Set the `signed_read` field to `true` in the transaction's `SeismicElements` to prevent the read from being replayed as an actual transaction. See [Transaction Lifecycle](../seismic-transaction/tx-lifecycle.md) for the full flow.
 
 ## Related
 
-* [Signed Reads](../seismic-transaction/signed-reads.md) — how to make authenticated read calls
+* [Signed Reads](../seismic-transaction/signed-reads.md) — detailed signed read specification
 * [Shielded Public Client](../../clients/typescript/viem/shielded-public-client.md) — viem client that handles this automatically
-* [Differences from Ethereum](../../overview/differences-from-ethereum.md) — overview of all behavioral differences

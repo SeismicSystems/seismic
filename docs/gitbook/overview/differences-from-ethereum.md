@@ -71,4 +71,4 @@ We support almost every RPC endpoint in Reth, and have added a few more of our o
 - [`eth_call`](../reference/rpc-methods/eth-call.md) — zeroes the `from` field on unsigned calls; supports ["signed reads"](../reference/seismic-transaction/signed-reads.md) via type `0x4A`
 - [`eth_sendRawTransaction`](../reference/rpc-methods/eth-send-raw-transaction.md) — accepts Seismic transaction type `0x4A` with encrypted calldata
 - [`eth_getStorageAt`](../reference/rpc-methods/eth-get-storage-at.md) — returns zero for shielded slots, making them indistinguishable from uninitialized storage
-- Tracing endpoints are currently disabled. We plan to re-enable them with shielded data redacted from traces
+- Tracing endpoints are currently disabled. We plan to re-enable them with private data redacted from traces

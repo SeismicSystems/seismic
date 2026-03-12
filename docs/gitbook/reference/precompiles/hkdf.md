@@ -14,28 +14,32 @@ The Seismic HKDF precompile uses hardcoded parameters: salt is `None`, info is a
 
 | Field              | Type    | Description                                           |
 | ------------------ | ------- | ----------------------------------------------------- |
-| input key material | `bytes` | The source key material (e.g., raw ECDH shared point) |
+| input key material | bytes | Source key material (e.g., raw ECDH shared point) |
 
 ## Output
 
 | Bytes       | Type           | Description                       |
 | ----------- | -------------- | --------------------------------- |
-| derived key | `bytes memory` | 32 bytes of derived key material  |
+| derived key | 32 bytes | Derived key material |
 
 ## Use cases
 
 * Deriving AES encryption keys from shared secrets
 * Key derivation with domain separation
 
-## Built-in helper
+## Examples
 
-Seismic Solidity provides `hkdf(bytes memory input)` which returns `bytes32`.
+### Built-in helper
+
+```solidity
+function hkdf(bytes memory input) view returns (bytes32);
+```
 
 ```solidity
 bytes32 derivedKey = hkdf(inputKeyMaterial);
 ```
 
-## Manual usage
+### Manual usage
 
 ```solidity
 function deriveKey(bytes memory ikm) internal view returns (bytes32) {
