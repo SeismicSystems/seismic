@@ -20,7 +20,7 @@ This is a deliberate security measure — shielded storage values are flagged wi
 
 | Field  | Type     | Description                                               |
 | ------ | -------- | --------------------------------------------------------- |
-| result | `string` | Hex-encoded 32-byte storage value (only for public slots) |
+| result | hex string (32 bytes) | Storage value (only for public slots) |
 
 ## Example Request
 
@@ -60,7 +60,7 @@ curl -X POST https://gcp-1.seismictest.net/rpc \
 ```
 
 {% hint style="warning" %}
-If you need to read shielded data, use a [signed read](../seismic-transaction/signed-reads.md) via `eth_call` with a Seismic transaction. The contract itself must expose a getter function for the shielded value.
+If you need to read shielded data, use a [signed read](../seismic-transaction/signed-reads.md) via `eth_call` with a signed Seismic transaction. The contract itself must expose a getter function for the shielded value.
 {% endhint %}
 
 ## `eth_getFlaggedStorageAt` (sanvil only)

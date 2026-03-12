@@ -20,7 +20,7 @@ curl -X POST https://gcp-1.seismictest.net/rpc \
   -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```
 
-## Client Setup
+## Chain Definition
 
 ```typescript
 import { seismicTestnet } from "seismic-viem";
