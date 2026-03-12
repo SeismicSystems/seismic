@@ -8,7 +8,7 @@ Submits a signed transaction to the network. On Seismic, this endpoint is extend
 
 ## Seismic transactions (type `0x4A`)
 
-The endpoint accepts Seismic transaction type `0x4A` in addition to all standard Ethereum transaction types. Seismic transactions include encrypted calldata and `SeismicElements` metadata (encryption public key, nonce, and message version). The transaction stays encrypted in the mempool and in blocks — decryption only happens inside the TEE at execution time. See [Transaction Lifecycle](../seismic-transaction/tx-lifecycle.md) for the full flow.
+The endpoint accepts Seismic transaction type `0x4A` in addition to all standard Ethereum transaction types. Seismic transactions include encrypted calldata and `SeismicElements` metadata (e.g. encryption public key, block expiry). The transaction stays encrypted in the mempool and in blocks — decryption only happens inside the TEE at execution time. See [Transaction Lifecycle](../seismic-transaction/tx-lifecycle.md) for the full flow.
 
 ## EIP-712 typed data
 

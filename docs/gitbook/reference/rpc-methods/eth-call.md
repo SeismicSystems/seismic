@@ -8,7 +8,7 @@ Executes a message call without creating a transaction on the blockchain. On Sei
 
 ## Unsigned calls
 
-When you send a standard unsigned `eth_call`, the `from` field is **zeroed out** (`0x0000...0000`) regardless of what you pass. This prevents contracts from using `msg.sender` to leak caller-specific information during read operations. Any contract logic that branches on the caller's address will see the zero address.
+When you send a standard unsigned `eth_call`, the `from` field is **zeroed out** (`0x00...0`) regardless of what you pass. This is what makes `msg.sender`-based access control possible on Seismic — without it, anyone could set an arbitrary `from` address and bypass access checks.
 
 ## Signed calls (signed reads)
 
@@ -19,4 +19,4 @@ Set the `signed_read` field to `true` in the transaction's `SeismicElements` to 
 ## Related
 
 * [Signed Reads](../seismic-transaction/signed-reads.md) — detailed signed read specification
-* [Shielded Public Client](../../clients/typescript/viem/shielded-public-client.md) — viem client that handles this automatically
+* [Shielded Wallet Client](../../clients/typescript/viem/shielded-wallet-client.md) — viem client that handles this automatically
