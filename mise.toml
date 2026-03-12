@@ -6,10 +6,11 @@
 # TODO(samlaf): the release.yml ci is broken and doesn't move the nightly tag, so for now we manually update the commit.
 sfoundry = "nightly-08913bcc240efcb17dcee38e60adfa482b4bcd44"
 
-# Downloads this release: https://github.com/SeismicSystems/seismic-solidity/releases/tag/tmp-audit-fixes
+# Downloads this release: https://github.com/SeismicSystems/seismic-solidity/releases/tag/2ebb36d
 # This is likely not needed in most cases as compilation should be done via sforge which manages its own ssolc.
 # However, this can be useful if we want to test with a different version of ssolc than the one that sforge manages.
-ssolc = { version = "tmp-audit-fixes", bin = "ssolc" }
+# The `mise run sforge-XYZ` tasks in contracts/mise.toml inject this mise managed ssolc version.
+ssolc = { version = "2ebb36d", bin = "ssolc" }
 
 # Used by clients/ts/
 bun = "1.3.9"
