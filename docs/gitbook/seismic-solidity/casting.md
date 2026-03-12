@@ -34,6 +34,10 @@ bytes32 hash = keccak256("secret");
 sbytes32 shieldedHash = sbytes32(hash);    // OK
 ```
 
+{% hint style="info" %}
+For integer literals specifically, you can use the [`s` suffix](shielded-literals.md) instead of an explicit cast: `suint256 x = 42s;` is equivalent to `suint256 x = suint256(42);`. The explicit cast is still required when converting from a variable.
+{% endhint %}
+
 ## Shielding Values (Unshielded to Shielded)
 
 When you cast from an unshielded type to a shielded type, you are "shielding" the value -- moving it from the public domain into confidential storage/computation.

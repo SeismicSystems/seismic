@@ -153,7 +153,7 @@ contract SRC20Test is Test {
 ```solidity
 function test_Transfer() public {
     // Transfer 100 tokens from alice (deployer) to bob
-    bool success = token.transfer(bob, suint256(100e18));
+    bool success = token.transfer(bob, 100e18s);
     assertTrue(success);
 
     // Verify balances using the internal test helper
@@ -191,11 +191,11 @@ function test_RevertWhen_InsufficientBalance() public {
 ```solidity
 function test_TransferFrom() public {
     // Alice approves bob to spend 500 tokens
-    token.approve(bob, suint256(500e18));
+    token.approve(bob, 500e18s);
 
     // Bob transfers 200 tokens from alice to himself
     vm.prank(bob);
-    bool success = token.transferFrom(alice, bob, suint256(200e18));
+    bool success = token.transferFrom(alice, bob, 200e18s);
     assertTrue(success);
 
     // Verify balances

@@ -92,9 +92,9 @@ function vote(sbool inFavor) public {
 
     hasVoted[msg.sender] = sbool(true);
     if (bool(inFavor)) {
-        yesVotes += suint256(1);
+        yesVotes += 1s;
     } else {
-        noVotes += suint256(1);
+        noVotes += 1s;
     }
 }
 

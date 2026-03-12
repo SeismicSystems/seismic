@@ -19,7 +19,7 @@ Seismic adds on-chain privacy to the EVM through three layers: a modified Solidi
 The Seismic compiler (`ssolc`) is a fork of `solc` that understands shielded types. When you write:
 
 ```solidity
-suint256 balance = suint256(100);
+suint256 balance = 100s;
 ```
 
 the compiler emits `CSTORE` (opcode `0xB1`) instead of `SSTORE` to write the value, and `CLOAD` (opcode `0xB0`) instead of `SLOAD` to read it. These opcodes tell the EVM to treat the storage slot as private.

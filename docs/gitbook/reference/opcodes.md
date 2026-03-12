@@ -45,7 +45,7 @@ contract PrivateCounter {
     suint256 private count;  // shielded type → compiler uses CSTORE
 
     function increment() external {
-        count = count + suint256(1);
+        count = count + 1s;
         // Compiler generates:
         //   CLOAD  slot(count)       → read current value
         //   CSTORE slot(count), new  → write new value, slot marked is_private=true
