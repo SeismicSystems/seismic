@@ -99,15 +99,21 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuar
     {
         ShieldedStorage storage $ = _getStorage();
 
-        Key memory newKey =
-            Key({keyType: keyType, publicKey: publicKey, expiry: expiry, spendLimit: limitWei, spentWei: 0, nonce: 0});
+        Key memory newKey = Key({
+            keyType: keyType,
+            publicKey: publicKey,
+            expiry: expiry,
+            spendLimit: suint256(limitWei),
+            spentWei: suint256(0),
+            nonce: 0
+        });
 
         uint32 idx = uint32($.keys.length) + 1; // 1-based index
         $.keys.push(newKey);
         bytes32 keyHash = _generateKeyIdentifier(keyType, publicKey);
         $.keyToSessionIndex[keyHash] = idx;
 
-        emit KeyAuthorized(keyHash, newKey);
+        emit KeyAuthorized(keyHash, keyType, expiry);
         return idx;
     }
 
@@ -196,11 +202,10 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuar
                 executionData = CryptoUtils.decrypt($.aesKey, nonce, calls);
             }
 
-            uint256 totalValue = 0;
-            if (S.spendLimit != 0) {
-                totalValue = _calculateTotalSpend(executionData);
-                require(S.spentWei + totalValue <= S.spendLimit, "spend limit exceeded");
-                S.spentWei += totalValue;
+            if (S.spendLimit != type(suint256).max) {
+                uint256 totalValue = _calculateTotalSpend(executionData);
+                require(uint256(S.spentWei) + totalValue <= uint256(S.spendLimit), "spend limit exceeded");
+                S.spentWei += suint256(totalValue);
             }
 
             S.nonce++;
@@ -250,14 +255,30 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuar
     /// @notice Returns the number of keys
     /// @return The number of keys
     function keyCount() external view returns (uint256) {
-        return _getStorage().keys.length;
+        return uint256(_getStorage().keys.length);
     }
 
-    /// @notice Returns a key
-    /// @param idx The index of the key
-    /// @return The key
-    function getKey(uint32 idx) external view returns (Key memory) {
-        return _getStorage().keys[idx - 1];
+    /// @notice Returns a key with unshielded spend fields
+    /// @param idx The index of the key (1-based)
+    /// @return The key view with spend fields cast to uint256
+    function getKey(uint32 idx) external view onlySelf returns (KeyView memory) {
+        Key storage k = _getStorage().keys[idx - 1];
+        return KeyView({
+            expiry: k.expiry,
+            keyType: k.keyType,
+            publicKey: k.publicKey,
+            spendLimit: uint256(k.spendLimit),
+            spentWei: uint256(k.spentWei),
+            nonce: k.nonce
+        });
+    }
+
+    /// @notice Returns public key data without spend fields. Callable by anyone.
+    /// @param idx The index of the key (1-based)
+    /// @return The key public view (expiry, keyType, publicKey, nonce)
+    function getKeyPublic(uint32 idx) external view returns (KeyPublicView memory) {
+        Key storage k = _getStorage().keys[idx - 1];
+        return KeyPublicView({expiry: k.expiry, keyType: k.keyType, publicKey: k.publicKey, nonce: k.nonce});
     }
 
     /// @notice Returns the index of a key

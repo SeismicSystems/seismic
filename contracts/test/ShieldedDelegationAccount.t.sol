@@ -279,9 +279,10 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         uint32 keyIndex,
         bytes memory cipher,
         uint256 privateKey
-    ) internal view returns (bytes memory signature) {
+    ) internal returns (bytes memory signature) {
         uint256 keyNonce = ShieldedDelegationAccount(account).getKeyNonce(keyIndex);
-        Key memory key = ShieldedDelegationAccount(account).getKey(keyIndex);
+        vm.prank(account);
+        KeyView memory key = ShieldedDelegationAccount(account).getKey(keyIndex);
         bytes32 domainSeparator = _getDomainSeparator();
 
         // Create EIP-712 typed data hash for signing
@@ -489,14 +490,15 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
             keyType, publicKey, uint40(block.timestamp + 24 hours), 1 ether
         );
 
-        Key memory key = ShieldedDelegationAccount(ALICE_ADDRESS).getKey(keyIndex);
+        vm.prank(ALICE_ADDRESS);
+        KeyView memory key = ShieldedDelegationAccount(ALICE_ADDRESS).getKey(keyIndex);
 
         // Verify the key properties
         assertEq(uint8(key.keyType), uint8(keyType), "Key type mismatch");
         assertEq(key.publicKey, publicKey, "Session signer should match");
         assertEq(key.expiry, block.timestamp + 24 hours, "Expiry should match");
-        assertEq(key.spendLimit, 1 ether, "Limit should match");
-        assertEq(key.spentWei, 0, "Spent amount should be zero initially");
+        assertEq(uint256(key.spendLimit), 1 ether, "Limit should match");
+        assertEq(uint256(key.spentWei), 0, "Spent amount should be zero initially");
         assertEq(key.nonce, 0, "Nonce should be zero initially");
     }
 
@@ -858,6 +860,28 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         assertEq(bobBalance, 0, "Bob should not have received any tokens");
     }
 
+    /// @notice Test that spendLimit=0 means no spending allowed
+    function test_zeroSpendLimitBlocksAllSpending() public {
+        (bytes memory publicKey, uint256 privateKey) = _randomSecp256k1Key();
+
+        // Fund Alice with ETH
+        vm.deal(ALICE_ADDRESS, 10 ether);
+
+        // Grant session with 0 spend limit (no spending allowed)
+        vm.prank(ALICE_ADDRESS);
+        ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 0
+        );
+
+        uint32 keyIndex = ShieldedDelegationAccount(ALICE_ADDRESS).getKeyIndex(KeyType.Secp256k1, publicKey);
+
+        // Even a tiny ETH transfer should fail
+        bytes memory calls = _createEthTransferCall(BOB_ADDRESS, 1 wei);
+        _executeViaKeyTransparent(ALICE_ADDRESS, keyIndex, calls, privateKey, true);
+
+        assertEq(ALICE_ADDRESS.balance, 10 ether, "Alice should still have all ETH");
+    }
+
     /// @notice Test that the session spending limit is enforced
     function test_ethSessionLimit() public {
         (bytes memory publicKey, uint256 privateKey) = _randomSecp256r1Key();
@@ -995,12 +1019,12 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         // Authorize the same session key on both Alice and Bob
         vm.prank(ALICE_ADDRESS);
         uint32 aliceKeyIdx = ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
-            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 0
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), type(uint256).max
         );
 
         vm.prank(BOB_ADDRESS);
         uint32 bobKeyIdx = ShieldedDelegationAccount(BOB_ADDRESS).authorizeKey(
-            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 0
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), type(uint256).max
         );
 
         // Both at nonce 0, same key index — only the domain separator differentiates them
@@ -1043,6 +1067,80 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
 
         // Bob's ETH should be untouched
         assertEq(BOB_ADDRESS.balance, 10 ether, "Bob should not have lost any ETH");
+    }
+
+    /// @notice Test that getKey is only callable by the account itself
+    function test_getKey_onlySelf() public {
+        (bytes memory publicKey,) = _randomSecp256k1Key();
+
+        vm.prank(ALICE_ADDRESS);
+        uint32 keyIndex = ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 5 ether
+        );
+
+        // Calling getKey as Alice (self) should succeed
+        vm.prank(ALICE_ADDRESS);
+        KeyView memory key = ShieldedDelegationAccount(ALICE_ADDRESS).getKey(keyIndex);
+        assertEq(uint256(key.spendLimit), 5 ether, "spendLimit should be 5 ether");
+        assertEq(uint256(key.spentWei), 0, "spentWei should be 0");
+        assertEq(key.expiry, block.timestamp + 24 hours, "expiry mismatch");
+        assertEq(uint8(key.keyType), uint8(KeyType.Secp256k1), "keyType mismatch");
+        assertEq(key.publicKey, publicKey, "publicKey mismatch");
+        assertEq(key.nonce, 0, "nonce should be 0");
+
+        // Calling getKey as anyone else should revert
+        vm.prank(BOB_ADDRESS);
+        vm.expectRevert("only self");
+        ShieldedDelegationAccount(ALICE_ADDRESS).getKey(keyIndex);
+
+        vm.prank(RELAY_ADDRESS);
+        vm.expectRevert("only self");
+        ShieldedDelegationAccount(ALICE_ADDRESS).getKey(keyIndex);
+    }
+
+    /// @notice Test that getKeyPublic returns non-sensitive fields and is callable by anyone
+    function test_getKeyPublic() public {
+        (bytes memory publicKey,) = _randomSecp256k1Key();
+
+        vm.prank(ALICE_ADDRESS);
+        uint32 keyIndex = ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 5 ether
+        );
+
+        // Anyone can call getKeyPublic
+        KeyPublicView memory pub = ShieldedDelegationAccount(ALICE_ADDRESS).getKeyPublic(keyIndex);
+        assertEq(pub.expiry, block.timestamp + 24 hours, "expiry mismatch");
+        assertEq(uint8(pub.keyType), uint8(KeyType.Secp256k1), "keyType mismatch");
+        assertEq(pub.publicKey, publicKey, "publicKey mismatch");
+        assertEq(pub.nonce, 0, "nonce should be 0");
+
+        // Bob can also call it
+        vm.prank(BOB_ADDRESS);
+        KeyPublicView memory pub2 = ShieldedDelegationAccount(ALICE_ADDRESS).getKeyPublic(keyIndex);
+        assertEq(pub2.expiry, pub.expiry, "should return same data for any caller");
+        assertEq(pub2.publicKey, pub.publicKey, "should return same publicKey");
+    }
+
+    /// @notice Test that spendLimit=0 blocks zero-value calls that carry no ETH
+    function test_zeroSpendLimitAllowsZeroValueCalls() public {
+        (bytes memory publicKey, uint256 privateKey) = _randomSecp256k1Key();
+
+        // Grant session with 0 spend limit
+        vm.prank(ALICE_ADDRESS);
+        ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 0
+        );
+
+        uint32 keyIndex = ShieldedDelegationAccount(ALICE_ADDRESS).getKeyIndex(KeyType.Secp256k1, publicKey);
+
+        // A call with 0 ETH value (e.g. a token transfer) should succeed since totalValue = 0 <= spendLimit = 0
+        bytes memory calls = _createTokenTransferCall(BOB_ADDRESS, 1 * 10 ** 18);
+        _executeViaKeyTransparent(ALICE_ADDRESS, keyIndex, calls, privateKey, false);
+
+        // Verify the token transfer went through
+        vm.prank(BOB_ADDRESS);
+        uint256 bobBalance = tok.balance();
+        assertEq(bobBalance, 1 * 10 ** 18, "Bob should have received tokens via zero-value call");
     }
 
     function test_receiveEth() public {

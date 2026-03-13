@@ -13,6 +13,7 @@ interface IShieldedDelegationAccount {
     }
 
     /// @dev A key that can be used to authorize calls.
+    /// @dev spendLimit and spentWei use suint256 (shielded) in storage to hide authorization scope and spending activity.
     struct Key {
         /// @dev Unix timestamp at which the key expires (0 = never).
         uint40 expiry;
@@ -20,18 +21,37 @@ interface IShieldedDelegationAccount {
         KeyType keyType;
         /// @dev Public key in encoded form.
         bytes publicKey;
-        /// @dev The spend limit for the key in wei (0 = unlimited).
-        uint256 spendLimit;
+        /// @dev The spend limit for the key in wei (0 = no spending, type(uint256).max = unlimited).
+        suint256 spendLimit;
         /// @dev The amount of wei spent from the key.
-        uint256 spentWei;
+        suint256 spentWei;
         /// @dev The nonce for the key.
+        uint256 nonce;
+    }
+
+    /// @dev Full view of a key with unshielded fields, returned by getKey() (onlySelf).
+    struct KeyView {
+        uint40 expiry;
+        KeyType keyType;
+        bytes publicKey;
+        uint256 spendLimit;
+        uint256 spentWei;
+        uint256 nonce;
+    }
+
+    /// @dev Public view of a key excluding shielded spend fields, returned by getKeyPublic().
+    struct KeyPublicView {
+        uint40 expiry;
+        KeyType keyType;
+        bytes publicKey;
         uint256 nonce;
     }
 
     /// @notice Emitted when a new key is authorized
     /// @param keyHash The hash of the key
-    /// @param key The key
-    event KeyAuthorized(bytes32 keyHash, Key key);
+    /// @param keyType The type of key
+    /// @param expiry The expiry timestamp
+    event KeyAuthorized(bytes32 keyHash, KeyType keyType, uint40 expiry);
 
     /// @notice Emitted when a key is revoked
     /// @param keyHash The hash of the key
@@ -41,7 +61,7 @@ interface IShieldedDelegationAccount {
     /// @param keyType The type of key
     /// @param publicKey The public key
     /// @param expiry The timestamp when the session expires (0 = unlimited)
-    /// @param limitWei The maximum amount of wei that can be spent (0 = unlimited)
+    /// @param limitWei The maximum amount of wei that can be spent (0 = no spending, type(uint256).max = unlimited)
     /// @return idx The index of the newly created session
     function authorizeKey(KeyType keyType, bytes calldata publicKey, uint40 expiry, uint256 limitWei)
         external
@@ -79,10 +99,15 @@ interface IShieldedDelegationAccount {
     /// @return The current nonce value
     function getKeyNonce(uint32 idx) external view returns (uint256);
 
-    /// @notice Accessor for keys array
+    /// @notice Returns full key data including spend fields. Only callable by the account itself.
     /// @param idx The index of the key to access
-    /// @return key The key
-    function getKey(uint32 idx) external view returns (Key memory key);
+    /// @return key The key with unshielded spend fields
+    function getKey(uint32 idx) external view returns (KeyView memory key);
+
+    /// @notice Returns public key data (expiry, type, publicKey, nonce) without spend fields.
+    /// @param idx The index of the key to access
+    /// @return key The key without spend fields
+    function getKeyPublic(uint32 idx) external view returns (KeyPublicView memory key);
 
     /// @notice Allows EOA to still receive ETH
     receive() external payable;
