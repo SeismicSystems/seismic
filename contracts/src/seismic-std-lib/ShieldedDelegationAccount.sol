@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import "solady/utils/SignatureCheckerLib.sol";
 import "solady/utils/P256.sol";
 import "solady/utils/WebAuthn.sol";
@@ -14,7 +15,7 @@ import "seismic-std-lib/interfaces/IShieldedDelegationAccount.sol";
 /// @dev WARNING: THIS CONTRACT IS AN EXPERIMENT AND HAS NOT BEEN AUDITED
 /// @dev Credits: Inspired by https://github.com/ithacaxyz/exp-0001 by jxom (https://github.com/jxom)
 /// @dev Credits: Inspired by https://github.com/ithacaxyz/account by Tanishk Goyal (https://github.com/legion2002) and vectorized (https://github.com/vectorized)
-contract ShieldedDelegationAccount is IShieldedDelegationAccount {
+contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuardTransient {
     using ECDSA for bytes32;
 
     ////////////////////////////////////////////////////////////////////////
@@ -23,7 +24,6 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
     struct ShieldedStorage {
         suint256 aesKey;
         bool aesKeyInitialized;
-        bool executing; // reentrancy lock
         Key[] keys;
         mapping(bytes32 => uint32) keyToSessionIndex; // add 1 to the index to distinguish from 0 unset
     }
@@ -82,15 +82,6 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
     modifier onlyUninitialized() {
         require(!_getStorage().aesKeyInitialized, "AES key already initialized");
         _;
-    }
-
-    /// @notice Prevents reentrant calls to execute
-    modifier nonReentrant() {
-        ShieldedStorage storage $ = _getStorage();
-        require(!$.executing, "reentrant call");
-        $.executing = true;
-        _;
-        $.executing = false;
     }
 
     ////////////////////////////////////////////////////////////////////////
