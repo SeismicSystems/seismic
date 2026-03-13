@@ -97,27 +97,20 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
         external
         override
         onlySelf
-        returns (uint32 idx)
+        returns (uint32)
     {
         ShieldedStorage storage $ = _getStorage();
 
-        Key memory newKey = Key({
-            keyType: keyType,
-            publicKey: publicKey,
-            expiry: expiry,
-            spendLimit: limitWei,
-            spentWei: 0,
-            nonce: 0,
-            isAuthorized: true
-        });
+        Key memory newKey =
+            Key({keyType: keyType, publicKey: publicKey, expiry: expiry, spendLimit: limitWei, spentWei: 0, nonce: 0});
 
-        idx = uint32($.keys.length);
+        uint32 idx = uint32($.keys.length) + 1; // 1-based index
         $.keys.push(newKey);
         bytes32 keyHash = _generateKeyIdentifier(keyType, publicKey);
-        $.keyToSessionIndex[keyHash] = idx + 1;
+        $.keyToSessionIndex[keyHash] = idx;
 
         emit KeyAuthorized(keyHash, newKey);
-        return idx + 1;
+        return idx;
     }
 
     /// @notice Revokes a key
@@ -161,8 +154,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
     /// @return ciphertext The ciphertext of the call
     function encrypt(bytes calldata plaintext) external view override returns (uint96 nonce, bytes memory ciphertext) {
         nonce = CryptoUtils.generateRandomNonce();
-        // Regenerate nonce if it's 0 (extremely unlikely but ensures we can use 0 as sentinel)
-        while (nonce == 0) nonce = CryptoUtils.generateRandomNonce();
+        require(nonce != 0, "zero nonce"); // 0 is reserved as sentinel for plaintext mode
         ciphertext = CryptoUtils.encrypt(_getStorage().aesKey, nonce, plaintext);
         return (nonce, ciphertext);
     }

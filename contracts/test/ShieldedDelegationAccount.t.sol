@@ -150,11 +150,9 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         // Extract packed data from first slot of first key
         uint40 expiry = uint40(uint256(firstKeyData));
         uint8 keyType = uint8(uint256(firstKeyData) >> 40);
-        bool authorized = uint8(uint256(firstKeyData) >> 48) == 1;
 
         assertTrue(expiry > block.timestamp, "Key should not be expired");
         assertEq(keyType, uint8(KeyType.P256), "First key should be P256");
-        assertTrue(authorized, "Key should be authorized");
     }
 
     /// @notice Verifies the mapping storage
