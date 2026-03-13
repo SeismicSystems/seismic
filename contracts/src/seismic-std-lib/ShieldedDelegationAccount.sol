@@ -202,10 +202,10 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuar
                 executionData = CryptoUtils.decrypt($.aesKey, nonce, calls);
             }
 
-            if (uint256(S.spendLimit) != type(uint256).max) {
+            if (S.spendLimit != type(suint256).max) {
                 uint256 totalValue = _calculateTotalSpend(executionData);
                 require(uint256(S.spentWei) + totalValue <= uint256(S.spendLimit), "spend limit exceeded");
-                S.spentWei = suint256(uint256(S.spentWei) + totalValue);
+                S.spentWei += suint256(totalValue);
             }
 
             S.nonce++;
