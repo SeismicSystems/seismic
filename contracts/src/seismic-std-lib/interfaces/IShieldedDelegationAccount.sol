@@ -29,13 +29,21 @@ interface IShieldedDelegationAccount {
         uint256 nonce;
     }
 
-    /// @dev Public view of a key with unshielded fields, returned by getKey().
+    /// @dev Full view of a key with unshielded fields, returned by getKey() (onlySelf).
     struct KeyView {
         uint40 expiry;
         KeyType keyType;
         bytes publicKey;
         uint256 spendLimit;
         uint256 spentWei;
+        uint256 nonce;
+    }
+
+    /// @dev Public view of a key excluding shielded spend fields, returned by getKeyPublic().
+    struct KeyPublicView {
+        uint40 expiry;
+        KeyType keyType;
+        bytes publicKey;
         uint256 nonce;
     }
 
@@ -91,10 +99,15 @@ interface IShieldedDelegationAccount {
     /// @return The current nonce value
     function getKeyNonce(uint32 idx) external view returns (uint256);
 
-    /// @notice Accessor for keys array (returns unshielded view). Only callable by the account itself.
+    /// @notice Returns full key data including spend fields. Only callable by the account itself.
     /// @param idx The index of the key to access
     /// @return key The key with unshielded spend fields
     function getKey(uint32 idx) external view returns (KeyView memory key);
+
+    /// @notice Returns public key data (expiry, type, publicKey, nonce) without spend fields.
+    /// @param idx The index of the key to access
+    /// @return key The key without spend fields
+    function getKeyPublic(uint32 idx) external view returns (KeyPublicView memory key);
 
     /// @notice Allows EOA to still receive ETH
     receive() external payable;

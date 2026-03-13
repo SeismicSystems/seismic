@@ -273,6 +273,14 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuar
         });
     }
 
+    /// @notice Returns public key data without spend fields. Callable by anyone.
+    /// @param idx The index of the key (1-based)
+    /// @return The key public view (expiry, keyType, publicKey, nonce)
+    function getKeyPublic(uint32 idx) external view returns (KeyPublicView memory) {
+        Key storage k = _getStorage().keys[idx - 1];
+        return KeyPublicView({expiry: k.expiry, keyType: k.keyType, publicKey: k.publicKey, nonce: k.nonce});
+    }
+
     /// @notice Returns the index of a key
     /// @param keyType The type of key
     /// @param publicKey The public key
