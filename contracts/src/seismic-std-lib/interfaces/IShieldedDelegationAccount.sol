@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {P256} from "solady/utils/P256.sol";
-import {WebAuthn} from "solady/utils/WebAuthn.sol";
-
 /// @title IShieldedDelegationAccount
 /// @notice Interface for ShieldedDelegationAccount functionality
 /// @dev Defines the core session management and execution functions
@@ -75,7 +72,7 @@ interface IShieldedDelegationAccount {
     /// @param ciphertext The encrypted transaction data
     /// @param sig The session signature authorizing the execution
     /// @param idx The index of the session to use
-    function execute(uint96 nonce, bytes calldata ciphertext, bytes calldata sig, uint32 idx) external payable;
+    function execute(uint96 nonce, bytes calldata ciphertext, bytes calldata sig, uint32 idx) external;
 
     /// @notice Gets the index of a key
     /// @param keyType The type of key

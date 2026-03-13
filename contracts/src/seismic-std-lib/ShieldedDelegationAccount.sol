@@ -3,10 +3,10 @@ pragma solidity ^0.8.23;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "solady/utils/SignatureCheckerLib.sol";
-import "seismic-std-lib/utils/MultiSend.sol";
+import "solady/utils/P256.sol";
+import "solady/utils/WebAuthn.sol";
 import {CryptoUtils} from "seismic-std-lib/utils/precompiles/CryptoUtils.sol";
-import "seismic-std-lib/utils/EIP7702Utils.sol";
-import "./IShieldedDelegationAccount.sol";
+import "seismic-std-lib/interfaces/IShieldedDelegationAccount.sol";
 
 /// @title ShieldedDelegationAccount
 /// @author ameya-deshmukh and cdrappi
@@ -14,7 +14,7 @@ import "./IShieldedDelegationAccount.sol";
 /// @dev WARNING: THIS CONTRACT IS AN EXPERIMENT AND HAS NOT BEEN AUDITED
 /// @dev Credits: Inspired by https://github.com/ithacaxyz/exp-0001 by jxom (https://github.com/jxom)
 /// @dev Credits: Inspired by https://github.com/ithacaxyz/account by Tanishk Goyal (https://github.com/legion2002) and vectorized (https://github.com/vectorized)
-contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallOnly, EIP7702Utils {
+contract ShieldedDelegationAccount is IShieldedDelegationAccount {
     using ECDSA for bytes32;
 
     ////////////////////////////////////////////////////////////////////////
@@ -176,7 +176,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallO
     /// @param calls The encoded calls to execute (plaintext if nonce is 0, ciphertext otherwise)
     /// @param sig The signature of the call
     /// @param idx The index of the key to use
-    function execute(uint96 nonce, bytes calldata calls, bytes calldata sig, uint32 idx) external payable override {
+    function execute(uint96 nonce, bytes calldata calls, bytes calldata sig, uint32 idx) external override {
         ShieldedStorage storage $ = _getStorage();
         bytes memory executionData;
 
@@ -305,6 +305,89 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, MultiSendCallO
     /// @return The domain separator used for EIP-712 typed data signing
     function getDomainSeparator() public view returns (bytes32) {
         return DOMAIN_SEPARATOR;
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    // Signature Verification (inlined from EIP7702Utils)
+    ////////////////////////////////////////////////////////////////////////
+
+    /// @notice Generates a unique identifier for a session key
+    /// @param keyType The type of key (P256, WebAuthnP256, or Secp256k1)
+    /// @param publicKey The public key bytes
+    /// @return The key identifier as bytes32
+    function _generateKeyIdentifier(KeyType keyType, bytes memory publicKey) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(uint8(keyType), keccak256(publicKey)));
+    }
+
+    /// @notice Creates an EIP-712 compliant hash for signing
+    /// @param nonce The transaction nonce
+    /// @param message The message to hash
+    /// @param domainSeparator The EIP-712 domain separator
+    /// @return The EIP-712 typed data hash
+    function _hashTypedDataV4(uint256 nonce, bytes memory message, bytes32 domainSeparator)
+        internal
+        pure
+        returns (bytes32)
+    {
+        bytes32 executeTypeHash = keccak256("Execute(uint256 nonce,bytes cipher)");
+        bytes32 structHash = keccak256(abi.encode(executeTypeHash, nonce, keccak256(message)));
+        return keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+    }
+
+    /// @notice Verifies a signature based on the key type
+    /// @param keyType The type of key used for signing
+    /// @param publicKey The public key bytes
+    /// @param digest The message digest to verify
+    /// @param signature The signature bytes
+    /// @return isValid True if signature is valid, false otherwise
+    function _verifySignature(KeyType keyType, bytes memory publicKey, bytes32 digest, bytes calldata signature)
+        internal
+        view
+        returns (bool isValid)
+    {
+        if (keyType == KeyType.P256) {
+            (bytes32 r, bytes32 s) = P256.tryDecodePointCalldata(signature);
+            (bytes32 x, bytes32 y) = P256.tryDecodePoint(publicKey);
+            isValid = P256.verifySignature(digest, r, s, x, y);
+        } else if (keyType == KeyType.WebAuthnP256) {
+            (bytes32 x, bytes32 y) = P256.tryDecodePoint(publicKey);
+            isValid = WebAuthn.verify(abi.encode(digest), false, WebAuthn.tryDecodeAuth(signature), x, y);
+        } else if (keyType == KeyType.Secp256k1) {
+            isValid =
+                SignatureCheckerLib.isValidSignatureNowCalldata(abi.decode(publicKey, (address)), digest, signature);
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////
+    // MultiSend (vendored from Safe MultiSendCallOnly)
+    ////////////////////////////////////////////////////////////////////////
+
+    /// @dev Sends multiple transactions and reverts all if one fails.
+    /// @param transactions Encoded transactions. Each transaction is encoded as packed bytes of
+    ///                     operation (uint8, must be 0), to (address), value (uint256),
+    ///                     data length (uint256), data (bytes).
+    function multiSend(bytes memory transactions) internal {
+        assembly {
+            let length := mload(transactions)
+            let i := 0x20
+            for {} lt(i, length) {} {
+                let operation := shr(0xf8, mload(add(transactions, i)))
+                let to := shr(0x60, mload(add(transactions, add(i, 0x01))))
+                to := or(to, mul(iszero(to), address()))
+                let value := mload(add(transactions, add(i, 0x15)))
+                let dataLength := mload(add(transactions, add(i, 0x35)))
+                let data := add(transactions, add(i, 0x55))
+                let success := 0
+                switch operation
+                case 0 { success := call(gas(), to, value, data, dataLength, 0, 0) }
+                case 1 { revert(0, 0) }
+                if eq(success, 0) {
+                    returndatacopy(0, 0, returndatasize())
+                    revert(0, returndatasize())
+                }
+                i := add(i, add(0x55, dataLength))
+            }
+        }
     }
 
     receive() external payable {}

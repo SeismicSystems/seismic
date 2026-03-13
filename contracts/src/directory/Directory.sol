@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {CryptoUtils} from "seismic-std-lib/utils/precompiles/CryptoUtils.sol";
 
-import {IDirectory} from "./IDirectory.sol";
+import {IDirectory} from "seismic-std-lib/interfaces/IDirectory.sol";
 
 contract Directory is IDirectory {
     mapping(address => suint256) private keys;

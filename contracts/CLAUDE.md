@@ -34,10 +34,21 @@ sforge build
 sforge build --libraries lib/AesLib.sol:AesLib:0x1000000000000000000000000000000000000003
 ```
 
+### via-ir mode
+
+Some contracts (e.g., `DepositContract.sol`) hit "stack too deep" errors with the default compiler pipeline. To build everything, use `--via-ir --unsafe-via-ir`:
+
+```bash
+sforge build --via-ir --unsafe-via-ir
+sforge test --via-ir --unsafe-via-ir
+```
+
+The `foundry.toml` has `via_ir = false` by default because the via-ir pipeline is experimental in ssolc. Always pass the flags explicitly when building or testing.
+
 ### Verify
 
 ```bash
-sforge build
+sforge build --via-ir --unsafe-via-ir
 # Expected: "Compiler run successful with warnings:"
 # Warning (3805) about pre-release compiler is expected and safe to ignore.
 ```
@@ -139,7 +150,7 @@ Managed as git submodules in `lib/` plus import remappings in `foundry.toml`:
 ## Code Style
 
 - Solidity `^0.8.13` minimum (some files use `^0.8.20`)
-- `sforge fmt` is available but formatting is not strictly enforced
+- **Always run `sforge fmt` before committing/pushing.** Formatting is enforced.
 - 4-space indentation in Solidity
 - Test files use `Test.t.sol` naming convention
 - Test functions: `test_CamelCase()` for unit tests, `testFuzz_CamelCase()` for fuzz tests, `test_RevertWhen_*()` for failure cases

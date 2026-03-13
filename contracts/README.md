@@ -102,7 +102,7 @@ With Seismic, the entire workflow happens trustlessly on-chain with cryptographi
 
 ---
 
-### ShieldedDelegationAccount (`src/seismic-std-lib/session-keys/ShieldedDelegationAccount.sol`)
+### ShieldedDelegationAccount (`src/seismic-std-lib/ShieldedDelegationAccount.sol`)
 
 An experimental [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702) delegation contract that supports session keys with spend limits and encrypted transaction execution.
 

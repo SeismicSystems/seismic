@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.13;
 
-import {ISRC20} from "./interfaces/ISRC20.sol";
+import {ISRC20} from "seismic-std-lib/interfaces/ISRC20.sol";
 
 /// @notice Batch reader for SRC20 shielded balances with multiple implementation approaches.
 contract SRC20Multicall {

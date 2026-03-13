@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {IDirectory} from "../directory/IDirectory.sol";
-import {IIntelligence} from "./IIntelligence.sol";
+import {IDirectory} from "seismic-std-lib/interfaces/IDirectory.sol";
+import {IIntelligence} from "seismic-std-lib/interfaces/IIntelligence.sol";
 
 contract Intelligence is IIntelligence {
     address public constant DIRECTORY_ADDRESS = address(0x1000000000000000000000000000000000000004);
