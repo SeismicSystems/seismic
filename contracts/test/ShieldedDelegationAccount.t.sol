@@ -1028,7 +1028,6 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
 
         // Re-sign with same nonce (Bob's nonce is still 0) but using Alice's domain separator
         // This simulates the cross-account replay attack
-        bytes32 bobDomainSep = ShieldedDelegationAccount(BOB_ADDRESS).getDomainSeparator();
         uint256 bobKeyNonce = ShieldedDelegationAccount(BOB_ADDRESS).getKeyNonce(bobKeyIdx);
         assertEq(bobKeyNonce, 0, "Bob's nonce should still be 0");
 
