@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.13;
 
-import {ISRC20} from "./interfaces/ISRC20.sol";
+/// @notice Minimal interface for SRC20 signed balance reads.
+interface ISRC20 {
+    function balanceOfSigned(address owner, uint256 expiry, bytes calldata signature)
+        external
+        view
+        returns (uint256);
+}
 
 /// @notice Batch reader for SRC20 shielded balances with multiple implementation approaches.
 contract SRC20Multicall {
