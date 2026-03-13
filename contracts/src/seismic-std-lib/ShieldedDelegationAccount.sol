@@ -47,25 +47,22 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuar
     string private constant DOMAIN_VERSION = "1";
 
     ////////////////////////////////////////////////////////////////////////
-    // Immutable
+    // Domain Separator Cache
     ////////////////////////////////////////////////////////////////////////
 
-    bytes32 private immutable DOMAIN_SEPARATOR;
+    /// @dev Cached values from construction, used for fast path when called on the implementation itself
+    bytes32 private immutable _cachedDomainSeparator;
+    uint256 private immutable _cachedChainId;
+    address private immutable _cachedAddress;
 
     ////////////////////////////////////////////////////////////////////////
     // Constructor
     ////////////////////////////////////////////////////////////////////////
 
     constructor() {
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                EIP712_DOMAIN_TYPEHASH,
-                keccak256(bytes(DOMAIN_NAME)),
-                keccak256(bytes(DOMAIN_VERSION)),
-                block.chainid,
-                address(this)
-            )
-        );
+        _cachedChainId = block.chainid;
+        _cachedAddress = address(this);
+        _cachedDomainSeparator = _computeDomainSeparator();
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -189,7 +186,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuar
             require(S.expiry > block.timestamp, "key expired");
             require(idx == $.keyToSessionIndex[_generateKeyIdentifier(S.keyType, S.publicKey)], "key revoked");
 
-            bytes32 dig = _hashTypedDataV4(S.nonce, calls, DOMAIN_SEPARATOR);
+            bytes32 dig = _hashTypedDataV4(S.nonce, calls, getDomainSeparator());
             bool isValid = _verifySignature(S.keyType, S.publicKey, dig, sig);
             require(isValid, "invalid signature");
 
@@ -280,9 +277,27 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuar
     }
 
     /// @notice Returns the EIP-712 domain separator
-    /// @return The domain separator used for EIP-712 typed data signing
+    /// @dev Computed dynamically — under EIP-7702, address(this) resolves to the delegating EOA.
+    ///      Uses cached value only when both chainId and address match (direct calls on implementation).
+    /// @return The domain separator for the current account and chain
     function getDomainSeparator() public view returns (bytes32) {
-        return DOMAIN_SEPARATOR;
+        if (block.chainid == _cachedChainId && address(this) == _cachedAddress) {
+            return _cachedDomainSeparator;
+        }
+        return _computeDomainSeparator();
+    }
+
+    /// @notice Computes the EIP-712 domain separator using the current address and chain ID
+    function _computeDomainSeparator() private view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                EIP712_DOMAIN_TYPEHASH,
+                keccak256(bytes(DOMAIN_NAME)),
+                keccak256(bytes(DOMAIN_VERSION)),
+                block.chainid,
+                address(this)
+            )
+        );
     }
 
     ////////////////////////////////////////////////////////////////////////

@@ -129,18 +129,10 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
     ////////////////////////////////////////////////////////////////////////
 
     /// @notice Creates a domain separator matching the one used in the contract
-    /// @dev Used for EIP-712 signature generation
+    /// @dev Uses ALICE_ADDRESS (the delegating EOA), not the implementation address
     /// @return domainSeparator The computed domain separator
     function _getDomainSeparator() internal view returns (bytes32 domainSeparator) {
-        return keccak256(
-            abi.encode(
-                EIP712_DOMAIN_TYPEHASH,
-                keccak256(bytes(DOMAIN_NAME)),
-                keccak256(bytes(DOMAIN_VERSION)),
-                block.chainid,
-                address(acc)
-            )
-        );
+        return ShieldedDelegationAccount(ALICE_ADDRESS).getDomainSeparator();
     }
 
     /// @notice Verifies the AES key storage
@@ -943,6 +935,114 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         // Verify no ETH was transferred (entire batch reverted)
         assertEq(address(attacker).balance, 0, "Attacker should not have received ETH");
         assertEq(ALICE_ADDRESS.balance, 10 ether, "Alice should still have all her ETH");
+    }
+
+    /// @notice Test that each delegated EOA gets its own domain separator
+    /// @dev With the immutable DOMAIN_SEPARATOR bug, Alice and Bob both delegating to
+    ///      the same implementation would share a domain separator (the implementation's address).
+    ///      After the fix, getDomainSeparator() computes dynamically using address(this),
+    ///      which resolves to each EOA's own address under EIP-7702.
+    function test_domainSeparatorIsPerAccount() public {
+        // Bob also delegates to the same implementation
+        Vm.SignedDelegation memory bobDelegation = vm.signDelegation(address(acc), BOB_PK);
+        vm.broadcast(RELAY_PK);
+        vm.attachDelegation(bobDelegation);
+        vm.stopBroadcast();
+
+        // Both Alice and Bob are now delegated to the same implementation
+        bytes32 aliceDomainSep = ShieldedDelegationAccount(ALICE_ADDRESS).getDomainSeparator();
+        bytes32 bobDomainSep = ShieldedDelegationAccount(BOB_ADDRESS).getDomainSeparator();
+
+        // They MUST be different — each account should have its own domain separator
+        assertTrue(aliceDomainSep != bobDomainSep, "Domain separators must differ per account");
+
+        // Verify they match what we'd expect: domain separator with the EOA address, not the implementation
+        bytes32 expectedAlice = keccak256(
+            abi.encode(
+                EIP712_DOMAIN_TYPEHASH,
+                keccak256(bytes(DOMAIN_NAME)),
+                keccak256(bytes(DOMAIN_VERSION)),
+                block.chainid,
+                ALICE_ADDRESS
+            )
+        );
+        bytes32 expectedBob = keccak256(
+            abi.encode(
+                EIP712_DOMAIN_TYPEHASH,
+                keccak256(bytes(DOMAIN_NAME)),
+                keccak256(bytes(DOMAIN_VERSION)),
+                block.chainid,
+                BOB_ADDRESS
+            )
+        );
+        assertEq(aliceDomainSep, expectedAlice, "Alice domain separator should use her EOA address");
+        assertEq(bobDomainSep, expectedBob, "Bob domain separator should use his EOA address");
+    }
+
+    /// @notice Test that a signature for Alice's account cannot be replayed on Bob's account
+    /// @dev Both delegate to the same implementation and authorize the same session key.
+    ///      A signature created for Alice should fail on Bob because the domain separators differ.
+    function test_crossAccountReplayBlocked() public {
+        // Bob also delegates to the same implementation
+        Vm.SignedDelegation memory bobDelegation = vm.signDelegation(address(acc), BOB_PK);
+        vm.broadcast(RELAY_PK);
+        vm.attachDelegation(bobDelegation);
+        vm.stopBroadcast();
+
+        // Generate a session key
+        (bytes memory publicKey, uint256 privateKey) = _randomSecp256k1Key();
+
+        // Authorize the same session key on both Alice and Bob
+        vm.prank(ALICE_ADDRESS);
+        uint32 aliceKeyIdx = ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 0
+        );
+
+        vm.prank(BOB_ADDRESS);
+        uint32 bobKeyIdx = ShieldedDelegationAccount(BOB_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 0
+        );
+
+        // Both at nonce 0, same key index — only the domain separator differentiates them
+        assertEq(aliceKeyIdx, bobKeyIdx, "Same key index on both accounts");
+
+        // Fund both accounts
+        vm.deal(ALICE_ADDRESS, 10 ether);
+        vm.deal(BOB_ADDRESS, 10 ether);
+
+        // Create a simple ETH transfer call
+        bytes memory calls = _createEthTransferCall(address(0xDEAD), 1 ether);
+
+        // Sign for Alice's account (using Alice's domain separator)
+        uint256 keyNonce = ShieldedDelegationAccount(ALICE_ADDRESS).getKeyNonce(aliceKeyIdx);
+        bytes32 aliceDomainSep = ShieldedDelegationAccount(ALICE_ADDRESS).getDomainSeparator();
+        bytes32 structHash = keccak256(abi.encode(EXECUTE_TYPEHASH, keyNonce, keccak256(calls)));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", aliceDomainSep, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Execute on Alice — should succeed
+        vm.prank(RELAY_ADDRESS);
+        ShieldedDelegationAccount(ALICE_ADDRESS).execute(uint96(0), calls, signature, aliceKeyIdx);
+        assertEq(address(0xDEAD).balance, 1 ether, "Alice's transfer should succeed");
+
+        // Re-sign with same nonce (Bob's nonce is still 0) but using Alice's domain separator
+        // This simulates the cross-account replay attack
+        uint256 bobKeyNonce = ShieldedDelegationAccount(BOB_ADDRESS).getKeyNonce(bobKeyIdx);
+        assertEq(bobKeyNonce, 0, "Bob's nonce should still be 0");
+
+        // Create signature using Alice's domain separator (the attacker's replay)
+        bytes32 replayDigest = keccak256(abi.encodePacked("\x19\x01", aliceDomainSep, structHash));
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(privateKey, replayDigest);
+        bytes memory replaySignature = abi.encodePacked(r2, s2, v2);
+
+        // Try to execute on Bob with Alice's signature — MUST fail
+        vm.prank(RELAY_ADDRESS);
+        vm.expectRevert("invalid signature");
+        ShieldedDelegationAccount(BOB_ADDRESS).execute(uint96(0), calls, replaySignature, bobKeyIdx);
+
+        // Bob's ETH should be untouched
+        assertEq(BOB_ADDRESS.balance, 10 ether, "Bob should not have lost any ETH");
     }
 
     function test_receiveEth() public {
