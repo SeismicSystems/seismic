@@ -1,15 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.13;
 
-interface IIntelligence {
-    function encryptToProviders(bytes memory _plaintext) external returns (bytes32[] memory, bytes[] memory);
-}
-
-interface IDirectory {
-    function checkHasKey(address _addr) external view returns (bool);
-    function keyHash(address to) external view returns (bytes32);
-    function encrypt(address to, bytes memory _plaintext) external returns (bytes memory);
-}
+import {IIntelligence} from "seismic-std-lib/interfaces/IIntelligence.sol";
+import {IDirectory} from "seismic-std-lib/interfaces/IDirectory.sol";
 
 /// @notice Modern ERC20 + EIP-2612 implementation with confidential balances and transfers.
 /// @author Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC20.sol)

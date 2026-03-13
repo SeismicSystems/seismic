@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {IDirectory} from "../directory/IDirectory.sol";
+import {IDirectory} from "seismic-std-lib/interfaces/IDirectory.sol";
 
 interface IIntelligence {
     event OwnershipTransferred(address indexed owner);

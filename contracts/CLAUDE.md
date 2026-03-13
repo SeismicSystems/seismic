@@ -150,7 +150,7 @@ Managed as git submodules in `lib/` plus import remappings in `foundry.toml`:
 ## Code Style
 
 - Solidity `^0.8.13` minimum (some files use `^0.8.20`)
-- `sforge fmt` is available but formatting is not strictly enforced
+- **Always run `sforge fmt` before committing/pushing.** Formatting is enforced.
 - 4-space indentation in Solidity
 - Test files use `Test.t.sol` naming convention
 - Test functions: `test_CamelCase()` for unit tests, `testFuzz_CamelCase()` for fuzz tests, `test_RevertWhen_*()` for failure cases
