@@ -351,13 +351,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
             isValid = P256.verifySignature(digest, r, s, x, y);
         } else if (keyType == KeyType.WebAuthnP256) {
             (bytes32 x, bytes32 y) = P256.tryDecodePoint(publicKey);
-            isValid = WebAuthn.verify(
-                abi.encode(digest),
-                false,
-                WebAuthn.tryDecodeAuth(signature),
-                x,
-                y
-            );
+            isValid = WebAuthn.verify(abi.encode(digest), false, WebAuthn.tryDecodeAuth(signature), x, y);
         } else if (keyType == KeyType.Secp256k1) {
             isValid =
                 SignatureCheckerLib.isValidSignatureNowCalldata(abi.decode(publicKey, (address)), digest, signature);
