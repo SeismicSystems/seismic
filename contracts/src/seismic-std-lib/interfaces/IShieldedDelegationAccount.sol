@@ -12,17 +12,15 @@ interface IShieldedDelegationAccount {
         Secp256k1
     }
 
-    /// @dev A key that can be used to authorize call.
+    /// @dev A key that can be used to authorize calls.
     struct Key {
         /// @dev Unix timestamp at which the key expires (0 = never).
         uint40 expiry;
         /// @dev Type of key. See the {KeyType} enum.
         KeyType keyType;
-        /// @dev Whether the key is authorized.
-        bool isAuthorized;
         /// @dev Public key in encoded form.
         bytes publicKey;
-        /// @dev The spend limit for the key in ETH.
+        /// @dev The spend limit for the key in wei (0 = unlimited).
         uint256 spendLimit;
         /// @dev The amount of wei spent from the key.
         uint256 spentWei;
@@ -38,10 +36,6 @@ interface IShieldedDelegationAccount {
     /// @notice Emitted when a key is revoked
     /// @param keyHash The hash of the key
     event KeyRevoked(bytes32 keyHash);
-
-    /// @notice Emitted for debugging purposes
-    /// @param message The log message
-    event Log(string message);
 
     /// @notice Creates a new authorized session
     /// @param keyType The type of key

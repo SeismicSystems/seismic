@@ -1,10 +1,29 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
 import "seismic-std-lib/ShieldedDelegationAccount.sol";
 import "./utils/TestToken.sol";
 import {Base64} from "solady/utils/Base64.sol";
+
+/// @title ReentrantAttacker
+/// @notice Malicious contract that attempts to re-enter execute when receiving ETH
+contract ReentrantAttacker {
+    ShieldedDelegationAccount public target;
+    bool public attacked;
+
+    constructor(address payable _target) {
+        target = ShieldedDelegationAccount(_target);
+    }
+
+    receive() external payable {
+        if (!attacked) {
+            attacked = true;
+            // Attempt to re-enter execute when receiving ETH
+            target.execute(uint96(0), bytes(""), bytes(""), uint32(1));
+        }
+    }
+}
 
 /// @title ShieldedDelegationAccountTest
 /// @notice Test suite for ShieldedDelegationAccount contract
@@ -150,11 +169,9 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         // Extract packed data from first slot of first key
         uint40 expiry = uint40(uint256(firstKeyData));
         uint8 keyType = uint8(uint256(firstKeyData) >> 40);
-        bool authorized = uint8(uint256(firstKeyData) >> 48) == 1;
 
         assertTrue(expiry > block.timestamp, "Key should not be expired");
         assertEq(keyType, uint8(KeyType.P256), "First key should be P256");
-        assertTrue(authorized, "Key should be authorized");
     }
 
     /// @notice Verifies the mapping storage
@@ -700,58 +717,6 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         assertEq(bobBalance, 5 * 10 ** 18, "Bob should have received 5 tokens");
     }
 
-    /// @notice Tests the verifyAndConsumeNonce function
-    /// @param keyType The key type to verify and consume nonce
-    function _test_verifyAndConsumeNonce(KeyType keyType) internal {
-        // Get key pair based on type
-        (bytes memory publicKey, uint256 privateKey) =
-            keyType == KeyType.Secp256k1 ? _randomSecp256k1Key() : _randomSecp256r1Key();
-
-        // Authorize a key
-        vm.prank(ALICE_ADDRESS);
-        ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
-            keyType, publicKey, uint40(block.timestamp + 24 hours), 1 ether
-        );
-
-        uint32 keyIndex = ShieldedDelegationAccount(ALICE_ADDRESS).getKeyIndex(keyType, publicKey);
-
-        // Create an arbitrary message
-        bytes memory message = "Hello World";
-
-        // Get domain separator
-        bytes32 domainSeparator = ShieldedDelegationAccount(ALICE_ADDRESS).getDomainSeparator();
-
-        // Get current nonce
-        uint256 nonce = ShieldedDelegationAccount(ALICE_ADDRESS).getKeyNonce(keyIndex);
-
-        // Create signature
-        bytes32 digest = _hashTypedDataV4(nonce, message, domainSeparator);
-        bytes memory signature;
-        if (keyType == KeyType.P256) {
-            signature = _secp256r1Sig(privateKey, _generateKeyIdentifier(KeyType.P256, publicKey), false, digest);
-        } else if (keyType == KeyType.WebAuthnP256) {
-            signature = _webauthnSig(privateKey, digest);
-        } else if (keyType == KeyType.Secp256k1) {
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
-            signature = abi.encodePacked(r, s, v);
-        }
-
-        // First verification should succeed
-        vm.prank(ADMIN_ADDRESS);
-        bool success = ShieldedDelegationAccount(ALICE_ADDRESS).verifyAndConsumeNonce(keyIndex, message, signature);
-        assertTrue(success, "First verification should succeed");
-
-        // Attempt replay attack - should fail
-        vm.prank(ADMIN_ADDRESS);
-        vm.expectRevert("invalid sig");
-        ShieldedDelegationAccount(ALICE_ADDRESS).verifyAndConsumeNonce(keyIndex, message, signature);
-
-        // Verify nonce was incremented
-        assertEq(
-            ShieldedDelegationAccount(ALICE_ADDRESS).getKeyNonce(keyIndex), nonce + 1, "Nonce should be incremented"
-        );
-    }
-
     ////////////////////////////////////////////////////////////////////////
     // Test Cases
     ////////////////////////////////////////////////////////////////////////
@@ -901,16 +866,6 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         assertEq(bobBalance, 0, "Bob should not have received any tokens");
     }
 
-    /// @notice Tests the verifyAndConsumeNonce function for all key types
-    function test_verifyAndConsumeNonce_AllKeyTypes() public {
-        // P256
-        _test_verifyAndConsumeNonce(KeyType.P256);
-        // WebAuthnP256
-        _test_verifyAndConsumeNonce(KeyType.WebAuthnP256);
-        // Secp256k1
-        _test_verifyAndConsumeNonce(KeyType.Secp256k1);
-    }
-
     /// @notice Test that the session spending limit is enforced
     function test_ethSessionLimit() public {
         (bytes memory publicKey, uint256 privateKey) = _randomSecp256r1Key();
@@ -962,6 +917,32 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
             _executeViaKeyTransparent(ALICE_ADDRESS, keyIndex, calls, privateKey, true);
             assertEq(BOB_ADDRESS.balance, initialBalance + 10 ether, "No more transfers should be possible");
         }
+    }
+
+    /// @notice Test that reentrancy into execute is blocked
+    /// @dev A malicious contract receives ETH via multiSend and tries to re-enter execute.
+    ///      The nonReentrant guard should cause the inner call to revert, which reverts
+    ///      the entire multiSend batch.
+    function test_revertWhenReentrant() public {
+        // Deploy the attacker contract targeting Alice's delegated account
+        ReentrantAttacker attacker = new ReentrantAttacker(ALICE_ADDRESS);
+
+        // Fund Alice with ETH
+        vm.deal(ALICE_ADDRESS, 10 ether);
+
+        // Create a multiSend call that sends ETH to the attacker contract.
+        // When the attacker receives ETH, its receive() will try to re-enter execute.
+        bytes memory calls = _createEthTransferCall(address(attacker), 1 ether);
+
+        // Execute as owner (msg.sender == address(this) path) — the reentrant call
+        // from the attacker will hit the nonReentrant guard and revert.
+        vm.prank(ALICE_ADDRESS);
+        vm.expectRevert(); // multiSend reverts because the sub-call to attacker reverts
+        ShieldedDelegationAccount(ALICE_ADDRESS).execute(uint96(0), calls, bytes(""), 1);
+
+        // Verify no ETH was transferred (entire batch reverted)
+        assertEq(address(attacker).balance, 0, "Attacker should not have received ETH");
+        assertEq(ALICE_ADDRESS.balance, 10 ether, "Alice should still have all her ETH");
     }
 
     function test_receiveEth() public {

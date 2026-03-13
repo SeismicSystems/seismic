@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import "solady/utils/SignatureCheckerLib.sol";
 import "solady/utils/P256.sol";
 import "solady/utils/WebAuthn.sol";
@@ -14,7 +15,7 @@ import "seismic-std-lib/interfaces/IShieldedDelegationAccount.sol";
 /// @dev WARNING: THIS CONTRACT IS AN EXPERIMENT AND HAS NOT BEEN AUDITED
 /// @dev Credits: Inspired by https://github.com/ithacaxyz/exp-0001 by jxom (https://github.com/jxom)
 /// @dev Credits: Inspired by https://github.com/ithacaxyz/account by Tanishk Goyal (https://github.com/legion2002) and vectorized (https://github.com/vectorized)
-contract ShieldedDelegationAccount is IShieldedDelegationAccount {
+contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuardTransient {
     using ECDSA for bytes32;
 
     ////////////////////////////////////////////////////////////////////////
@@ -97,27 +98,20 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
         external
         override
         onlySelf
-        returns (uint32 idx)
+        returns (uint32)
     {
         ShieldedStorage storage $ = _getStorage();
 
-        Key memory newKey = Key({
-            keyType: keyType,
-            publicKey: publicKey,
-            expiry: expiry,
-            spendLimit: limitWei,
-            spentWei: 0,
-            nonce: 0,
-            isAuthorized: true
-        });
+        Key memory newKey =
+            Key({keyType: keyType, publicKey: publicKey, expiry: expiry, spendLimit: limitWei, spentWei: 0, nonce: 0});
 
-        idx = uint32($.keys.length);
+        uint32 idx = uint32($.keys.length) + 1; // 1-based index
         $.keys.push(newKey);
         bytes32 keyHash = _generateKeyIdentifier(keyType, publicKey);
-        $.keyToSessionIndex[keyHash] = idx + 1;
+        $.keyToSessionIndex[keyHash] = idx;
 
         emit KeyAuthorized(keyHash, newKey);
-        return idx + 1;
+        return idx;
     }
 
     /// @notice Revokes a key
@@ -161,8 +155,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
     /// @return ciphertext The ciphertext of the call
     function encrypt(bytes calldata plaintext) external view override returns (uint96 nonce, bytes memory ciphertext) {
         nonce = CryptoUtils.generateRandomNonce();
-        // Regenerate nonce if it's 0 (extremely unlikely but ensures we can use 0 as sentinel)
-        while (nonce == 0) nonce = CryptoUtils.generateRandomNonce();
+        require(nonce != 0, "zero nonce"); // 0 is reserved as sentinel for plaintext mode
         ciphertext = CryptoUtils.encrypt(_getStorage().aesKey, nonce, plaintext);
         return (nonce, ciphertext);
     }
@@ -176,7 +169,11 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
     /// @param calls The encoded calls to execute (plaintext if nonce is 0, ciphertext otherwise)
     /// @param sig The signature of the call
     /// @param idx The index of the key to use
-    function execute(uint96 nonce, bytes calldata calls, bytes calldata sig, uint32 idx) external override {
+    function execute(uint96 nonce, bytes calldata calls, bytes calldata sig, uint32 idx)
+        external
+        override
+        nonReentrant
+    {
         ShieldedStorage storage $ = _getStorage();
         bytes memory executionData;
 
@@ -244,25 +241,6 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
         }
         require(i == len, "Invalid MultiSend data: unexpected trailing bytes");
         return totalSpend;
-    }
-
-    /// @notice Verifies a signature and consumes the nonce
-    /// @dev This function is used to verify a signature and consume the nonce of a key
-    /// @dev This is primarily for external contracts to verify signatures and consume nonces to avoid replay attacks, for use cases like signed reads using passkeys/session keys.
-    /// @param idx The index of the key
-    /// @param message The message to verify
-    /// @param sig The signature to verify
-    /// @return valid True if the signature is valid
-    function verifyAndConsumeNonce(uint32 idx, bytes calldata message, bytes calldata sig) external returns (bool) {
-        Key storage key = _getStorage().keys[idx - 1];
-        require(key.expiry > block.timestamp, "key expired");
-        require(idx == getKeyIndex(key.keyType, key.publicKey), "key revoked");
-        bytes32 domainSeparator = getDomainSeparator();
-        bytes32 digest = _hashTypedDataV4(key.nonce, message, domainSeparator);
-        bool valid = _verifySignature(key.keyType, key.publicKey, digest, sig);
-        require(valid, "invalid sig");
-        key.nonce++;
-        return true;
     }
 
     /// @notice Returns the nonce of a key
