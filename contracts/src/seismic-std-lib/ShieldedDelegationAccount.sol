@@ -23,6 +23,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
     struct ShieldedStorage {
         suint256 aesKey;
         bool aesKeyInitialized;
+        bool executing; // reentrancy lock
         Key[] keys;
         mapping(bytes32 => uint32) keyToSessionIndex; // add 1 to the index to distinguish from 0 unset
     }
@@ -81,6 +82,15 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
     modifier onlyUninitialized() {
         require(!_getStorage().aesKeyInitialized, "AES key already initialized");
         _;
+    }
+
+    /// @notice Prevents reentrant calls to execute
+    modifier nonReentrant() {
+        ShieldedStorage storage $ = _getStorage();
+        require(!$.executing, "reentrant call");
+        $.executing = true;
+        _;
+        $.executing = false;
     }
 
     ////////////////////////////////////////////////////////////////////////
@@ -168,7 +178,11 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount {
     /// @param calls The encoded calls to execute (plaintext if nonce is 0, ciphertext otherwise)
     /// @param sig The signature of the call
     /// @param idx The index of the key to use
-    function execute(uint96 nonce, bytes calldata calls, bytes calldata sig, uint32 idx) external override {
+    function execute(uint96 nonce, bytes calldata calls, bytes calldata sig, uint32 idx)
+        external
+        override
+        nonReentrant
+    {
         ShieldedStorage storage $ = _getStorage();
         bytes memory executionData;
 
