@@ -858,6 +858,28 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         assertEq(bobBalance, 0, "Bob should not have received any tokens");
     }
 
+    /// @notice Test that spendLimit=0 means no spending allowed
+    function test_zeroSpendLimitBlocksAllSpending() public {
+        (bytes memory publicKey, uint256 privateKey) = _randomSecp256k1Key();
+
+        // Fund Alice with ETH
+        vm.deal(ALICE_ADDRESS, 10 ether);
+
+        // Grant session with 0 spend limit (no spending allowed)
+        vm.prank(ALICE_ADDRESS);
+        ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 0
+        );
+
+        uint32 keyIndex = ShieldedDelegationAccount(ALICE_ADDRESS).getKeyIndex(KeyType.Secp256k1, publicKey);
+
+        // Even a tiny ETH transfer should fail
+        bytes memory calls = _createEthTransferCall(BOB_ADDRESS, 1 wei);
+        _executeViaKeyTransparent(ALICE_ADDRESS, keyIndex, calls, privateKey, true);
+
+        assertEq(ALICE_ADDRESS.balance, 10 ether, "Alice should still have all ETH");
+    }
+
     /// @notice Test that the session spending limit is enforced
     function test_ethSessionLimit() public {
         (bytes memory publicKey, uint256 privateKey) = _randomSecp256r1Key();
@@ -995,12 +1017,12 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         // Authorize the same session key on both Alice and Bob
         vm.prank(ALICE_ADDRESS);
         uint32 aliceKeyIdx = ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
-            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 0
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), type(uint256).max
         );
 
         vm.prank(BOB_ADDRESS);
         uint32 bobKeyIdx = ShieldedDelegationAccount(BOB_ADDRESS).authorizeKey(
-            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 0
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), type(uint256).max
         );
 
         // Both at nonce 0, same key index — only the domain separator differentiates them

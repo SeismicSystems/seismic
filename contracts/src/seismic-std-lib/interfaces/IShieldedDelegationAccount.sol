@@ -20,7 +20,7 @@ interface IShieldedDelegationAccount {
         KeyType keyType;
         /// @dev Public key in encoded form.
         bytes publicKey;
-        /// @dev The spend limit for the key in wei (0 = unlimited).
+        /// @dev The spend limit for the key in wei (0 = no spending, type(uint256).max = unlimited).
         uint256 spendLimit;
         /// @dev The amount of wei spent from the key.
         uint256 spentWei;
@@ -41,7 +41,7 @@ interface IShieldedDelegationAccount {
     /// @param keyType The type of key
     /// @param publicKey The public key
     /// @param expiry The timestamp when the session expires (0 = unlimited)
-    /// @param limitWei The maximum amount of wei that can be spent (0 = unlimited)
+    /// @param limitWei The maximum amount of wei that can be spent (0 = no spending, type(uint256).max = unlimited)
     /// @return idx The index of the newly created session
     function authorizeKey(KeyType keyType, bytes calldata publicKey, uint40 expiry, uint256 limitWei)
         external
