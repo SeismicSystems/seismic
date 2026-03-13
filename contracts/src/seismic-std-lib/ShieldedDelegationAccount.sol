@@ -6,7 +6,7 @@ import "solady/utils/SignatureCheckerLib.sol";
 import "seismic-std-lib/utils/MultiSend.sol";
 import {CryptoUtils} from "seismic-std-lib/utils/precompiles/CryptoUtils.sol";
 import "seismic-std-lib/utils/EIP7702Utils.sol";
-import "./IShieldedDelegationAccount.sol";
+import "seismic-std-lib/interfaces/IShieldedDelegationAccount.sol";
 
 /// @title ShieldedDelegationAccount
 /// @author ameya-deshmukh and cdrappi
