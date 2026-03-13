@@ -279,9 +279,10 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         uint32 keyIndex,
         bytes memory cipher,
         uint256 privateKey
-    ) internal view returns (bytes memory signature) {
+    ) internal returns (bytes memory signature) {
         uint256 keyNonce = ShieldedDelegationAccount(account).getKeyNonce(keyIndex);
-        Key memory key = ShieldedDelegationAccount(account).getKey(keyIndex);
+        vm.prank(account);
+        KeyView memory key = ShieldedDelegationAccount(account).getKey(keyIndex);
         bytes32 domainSeparator = _getDomainSeparator();
 
         // Create EIP-712 typed data hash for signing
@@ -489,14 +490,15 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
             keyType, publicKey, uint40(block.timestamp + 24 hours), 1 ether
         );
 
-        Key memory key = ShieldedDelegationAccount(ALICE_ADDRESS).getKey(keyIndex);
+        vm.prank(ALICE_ADDRESS);
+        KeyView memory key = ShieldedDelegationAccount(ALICE_ADDRESS).getKey(keyIndex);
 
         // Verify the key properties
         assertEq(uint8(key.keyType), uint8(keyType), "Key type mismatch");
         assertEq(key.publicKey, publicKey, "Session signer should match");
         assertEq(key.expiry, block.timestamp + 24 hours, "Expiry should match");
-        assertEq(key.spendLimit, 1 ether, "Limit should match");
-        assertEq(key.spentWei, 0, "Spent amount should be zero initially");
+        assertEq(uint256(key.spendLimit), 1 ether, "Limit should match");
+        assertEq(uint256(key.spentWei), 0, "Spent amount should be zero initially");
         assertEq(key.nonce, 0, "Nonce should be zero initially");
     }
 
