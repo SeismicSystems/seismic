@@ -6,6 +6,25 @@ import "seismic-std-lib/ShieldedDelegationAccount.sol";
 import "./utils/TestToken.sol";
 import {Base64} from "solady/utils/Base64.sol";
 
+/// @title ReentrantAttacker
+/// @notice Malicious contract that attempts to re-enter execute when receiving ETH
+contract ReentrantAttacker {
+    ShieldedDelegationAccount public target;
+    bool public attacked;
+
+    constructor(address payable _target) {
+        target = ShieldedDelegationAccount(_target);
+    }
+
+    receive() external payable {
+        if (!attacked) {
+            attacked = true;
+            // Attempt to re-enter execute when receiving ETH
+            target.execute(uint96(0), bytes(""), bytes(""), uint32(1));
+        }
+    }
+}
+
 /// @title ShieldedDelegationAccountTest
 /// @notice Test suite for ShieldedDelegationAccount contract
 /// @dev Uses Foundry's Test contract for assertions and utilities
@@ -898,6 +917,32 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
             _executeViaKeyTransparent(ALICE_ADDRESS, keyIndex, calls, privateKey, true);
             assertEq(BOB_ADDRESS.balance, initialBalance + 10 ether, "No more transfers should be possible");
         }
+    }
+
+    /// @notice Test that reentrancy into execute is blocked
+    /// @dev A malicious contract receives ETH via multiSend and tries to re-enter execute.
+    ///      The nonReentrant guard should cause the inner call to revert, which reverts
+    ///      the entire multiSend batch.
+    function test_revertWhenReentrant() public {
+        // Deploy the attacker contract targeting Alice's delegated account
+        ReentrantAttacker attacker = new ReentrantAttacker(ALICE_ADDRESS);
+
+        // Fund Alice with ETH
+        vm.deal(ALICE_ADDRESS, 10 ether);
+
+        // Create a multiSend call that sends ETH to the attacker contract.
+        // When the attacker receives ETH, its receive() will try to re-enter execute.
+        bytes memory calls = _createEthTransferCall(address(attacker), 1 ether);
+
+        // Execute as owner (msg.sender == address(this) path) — the reentrant call
+        // from the attacker will hit the nonReentrant guard and revert.
+        vm.prank(ALICE_ADDRESS);
+        vm.expectRevert(); // multiSend reverts because the sub-call to attacker reverts
+        ShieldedDelegationAccount(ALICE_ADDRESS).execute(uint96(0), calls, bytes(""), 1);
+
+        // Verify no ETH was transferred (entire batch reverted)
+        assertEq(address(attacker).balance, 0, "Attacker should not have received ETH");
+        assertEq(ALICE_ADDRESS.balance, 10 ether, "Alice should still have all her ETH");
     }
 
     function test_receiveEth() public {
