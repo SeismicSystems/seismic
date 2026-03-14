@@ -56,6 +56,12 @@ const remapSeismicParam = (
   if (ty === 'saddress[]') {
     return { shielded: true, type: 'address[]' }
   }
+
+  // sbytes (e.g. sbytes8, sbytes32, sbytes)
+  if (ty.startsWith('sbytes')) {
+    return { shielded: true, type: ty.slice(1) }
+  }
+
   return { shielded: false, type: ty }
 }
 
