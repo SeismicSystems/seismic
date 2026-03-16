@@ -40,20 +40,18 @@ seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy", branc
 
 ## Workspace Crates
 
-The `seismic-alloy` workspace contains six crates. The `prelude` crate re-exports everything you need for most use cases:
+The `seismic-alloy` workspace contains six crates:
 
 | Crate                     | Description                                                           |
 | ------------------------- | --------------------------------------------------------------------- |
-| `seismic-alloy-consensus` | Seismic transaction types and consensus logic                         |
-| `seismic-alloy-network`   | `SeismicNetwork` trait, `SeismicReth`, `SeismicFoundry` network types |
 | `seismic-alloy-provider`  | `SeismicProviderBuilder`, filler pipeline, precompile helpers         |
+| `seismic-alloy-network`   | `SeismicNetwork` trait, `SeismicReth`, `SeismicFoundry` network types |
+| `seismic-alloy-consensus` | Seismic transaction types and consensus logic                         |
 | `seismic-alloy-rpc-types` | Seismic-specific RPC request and response types                       |
 | `seismic-alloy-genesis`   | Genesis configuration types                                           |
-| `seismic-alloy-prelude`   | Convenience re-exports from all crates                                |
+| `seismic-alloy-prelude`   | Internal re-exports for Seismic's Foundry and Reth forks (not for app development) |
 
-### Using Individual Crates
-
-If you only need specific functionality, you can depend on individual crates:
+Most applications only need `seismic-alloy-provider` and `seismic-alloy-network`:
 
 ```toml
 [dependencies]
@@ -61,21 +59,19 @@ seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-allo
 seismic-alloy-network = { git = "https://github.com/SeismicSystems/seismic-alloy" }
 ```
 
-## The Prelude
+## Recommended Imports
 
-The recommended import pattern uses the `prelude` crate, which re-exports commonly used types:
+Use explicit imports from the crates you need:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::{SeismicProviderBuilder, SeismicCallExt, SeismicProviderExt};
+use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
+use alloy_signer_local::PrivateKeySigner;
 ```
 
-This brings into scope:
-
-- `SeismicProviderBuilder`, `SeismicSignedProvider`, `SeismicUnsignedProvider`
-- `SeismicWallet`
-- `SeismicReth`, `SeismicFoundry`, `SeismicNetwork`
-- `SeismicProviderExt`, `SeismicCallExt` traits
-- Seismic transaction types and RPC types
+{% hint style="warning" %}
+The `seismic-alloy-prelude` crate (`seismic_prelude::foundry::*`, `seismic_prelude::reth::*`) is designed for Seismic's internal forks of Foundry and Reth. It re-exports Seismic types under upstream naming conventions to minimize merge conflicts. **Do not use it in application code** -- it pulls in revm internals and aliases that are confusing outside of the fork context.
+{% endhint %}
 
 ## Key Dependencies
 
