@@ -14,252 +14,186 @@ Full-featured provider with wallet integration, automatic calldata encryption, a
 1. Signs transactions with the attached wallet
 2. Populates nonce, chain ID, and Seismic-specific fields
 3. Encrypts calldata using AES-GCM with an ECDH shared secret
-4. Decrypts `seismic_call` responses using the same shared secret
+4. Decrypts `seismic_call` / `seismic_call_raw` responses using the same shared secret
 
-At creation time, the provider generates an ephemeral secp256k1 keypair, fetches the TEE public key from the node, and caches it for all subsequent operations.
+At creation time, the provider generates a provider-scoped secp256k1 keypair (the "provider keypair"), fetches the TEE public key from the node, and caches both for all subsequent operations. The provider keypair lives for the lifetime of the provider, not per-message.
 
-## Type Signature
+## Construction
+
+All signed providers are created via `SeismicProviderBuilder`:
 
 ```rust
-pub struct SeismicSignedProvider<N: SeismicNetwork> {
-    // inner provider with filler chain
-    // ephemeral_secret_key: secp256k1 secret key
-    // tee_pubkey: cached TEE public key
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
+
+let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
+let wallet = SeismicWallet::<SeismicReth>::from(signer);
+```
+
+### HTTP
+
+```rust
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http("https://testnet-1.seismictest.net/rpc".parse()?)
+    .await?;
+```
+
+### WebSocket
+
+```rust
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_ws("wss://testnet-1.seismictest.net/ws".parse()?)
+    .await?;
+```
+
+### With Pre-fetched TEE Pubkey
+
+If you already have the TEE public key, skip the initial RPC call. `connect_http_with_tee_pubkey` is synchronous; `connect_ws_with_tee_pubkey` is async because of the WS handshake.
+
+```rust
+// HTTP variant is synchronous
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http_with_tee_pubkey(url, tee_pubkey);
+```
+
+{% hint style="info" %}
+`connect_http()` and `connect_ws()` are async because they make an RPC call to `seismic_getTeePublicKey`. Use `connect_http_with_tee_pubkey()` or `connect_ws_with_tee_pubkey()` to supply a pre-fetched key and avoid this call.
+{% endhint %}
+
+### Local Development with sanvil
+
+Use `.foundry()` to select the `SeismicFoundry` network type:
+
+```rust
+use seismic_prelude::client::*;
+use seismic_alloy_network::foundry::SeismicFoundry;
+use alloy_node_bindings::Anvil;
+
+let anvil = Anvil::at("sanvil").spawn();
+let signer: PrivateKeySigner = anvil.keys()[0].clone().into();
+let wallet = SeismicWallet::<SeismicFoundry>::from(signer);
+
+let provider = SeismicProviderBuilder::new()
+    .foundry()
+    .wallet(wallet)
+    .connect_http(anvil.endpoint_url())
+    .await?;
+```
+
+## Contract Interaction
+
+The primary way to interact with contracts is via the `ShieldedCallBuilder`, which integrates with Alloy's `#[sol(rpc)]` macro. Functions with shielded parameters (e.g., `suint256`) auto-encrypt. For functions without shielded parameters, use `.seismic()` to opt in:
+
+```rust
+// SeismicCallExt and ShieldedCallExt are included in the prelude
+
+sol! {
+    #[sol(rpc)]
+    contract SeismicCounter {
+        function setNumber(suint256 newNumber) public;
+        function isOdd() public view returns (bool);
+    }
 }
+
+let contract = SeismicCounter::new(address, &provider);
+
+// Shielded read -- isOdd has no shielded params, use .seismic()
+let is_odd = contract.isOdd().seismic().call().await?;
+
+// Shielded write -- setNumber has suint256 param, auto-encrypts
+let receipt = contract
+    .setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
+    .send()
+    .await?
+    .get_receipt()
+    .await?;
+
+// Transparent read (no encryption)
+let is_odd = contract.isOdd().call().await?;
 ```
 
-The generic parameter `N` determines the network type:
+### Per-Call Overrides (ShieldedCallBuilder)
 
-- `SeismicReth` -- for Seismic devnet/testnet/mainnet
-- `SeismicFoundry` -- for local sfoundry instances
-
-## Constructors
-
-### `new()`
-
-Create a signed provider by fetching the TEE public key from the node.
+Customize encryption parameters on individual calls via `ShieldedCallBuilder` methods:
 
 ```rust
-pub async fn new(
-    wallet: impl Into<SeismicWallet<N>>,
-    url: reqwest::Url,
-) -> TransportResult<Self>
+let is_odd = contract.isOdd()
+    .seismic()
+    .expires_at(current_block + 50)
+    .recent_block_hash(block_hash)
+    .call()
+    .await?;
 ```
 
-#### Parameters
-
-| Parameter | Type                          | Required | Description                                                                                                     |
-| --------- | ----------------------------- | -------- | --------------------------------------------------------------------------------------------------------------- |
-| `wallet`  | `impl Into<SeismicWallet<N>>` | Yes      | Wallet for signing transactions. Accepts any type that converts into `SeismicWallet` (e.g., `PrivateKeySigner`) |
-| `url`     | `reqwest::Url`                | Yes      | HTTP URL of the Seismic node RPC endpoint                                                                       |
-
-#### Returns
-
-| Type                    | Description                                                                  |
-| ----------------------- | ---------------------------------------------------------------------------- |
-| `TransportResult<Self>` | The constructed provider, or a transport error if the TEE pubkey fetch fails |
-
-#### Example
-
-```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
-
-let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
-let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-
-let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
-```
+| Method                 | Description                                       |
+| ---------------------- | ------------------------------------------------- |
+| `.expires_at(block)`   | Set transaction expiration block number            |
+| `.recent_block_hash()` | Pin to a specific chain state                      |
+| `.encryption_nonce()`  | Override AEAD nonce (testing only)                 |
+| `.eip712()`            | Use EIP-712 typed data signing (browser wallets)   |
 
 {% hint style="info" %}
-`new()` is async because it makes an RPC call to `seismic_getTeePublicKey` to fetch and cache the node's TEE public key. If you already have the TEE pubkey, use `new_with_tee_pubkey()` for synchronous construction.
+`.eip712()` lives on `ShieldedCallBuilder` only. `SecurityParams` holds the first three fields (`expires_at_block`, `recent_block_hash`, `encryption_nonce`) and is applied via `.with_params(...)` on the builder or passed to the provider-level `_with` methods.
 {% endhint %}
 
-### `new_with_tee_pubkey()`
-
-Create a signed provider with a pre-fetched TEE public key (synchronous).
+For provider-level calls, use `SecurityParams` with the `_with` methods from `SignedProviderExt`:
 
 ```rust
-pub fn new_with_tee_pubkey(
-    wallet: impl Into<SeismicWallet<N>>,
-    url: reqwest::Url,
-    tee_pubkey: PublicKey,
-) -> Self
+use seismic_prelude::client::*;
+
+let result = provider.seismic_call_with(addr, MyContract::isOddCall {},
+    SecurityParams::default().expires_at(current_block + 10)
+).await?;
 ```
 
-#### Parameters
+### EIP-712 (Browser Wallet Compatibility)
 
-| Parameter    | Type                          | Required | Description                               |
-| ------------ | ----------------------------- | -------- | ----------------------------------------- |
-| `wallet`     | `impl Into<SeismicWallet<N>>` | Yes      | Wallet for signing transactions           |
-| `url`        | `reqwest::Url`                | Yes      | HTTP URL of the Seismic node RPC endpoint |
-| `tee_pubkey` | `PublicKey`                   | Yes      | Pre-fetched TEE public key (secp256k1)    |
-
-#### Returns
-
-| Type   | Description              |
-| ------ | ------------------------ |
-| `Self` | The constructed provider |
-
-#### Example
+For wallets that cannot sign custom RLP-encoded transaction types (e.g., MetaMask):
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
-
-// Fetch TEE pubkey separately (e.g., from config or another provider)
-let unsigned = sreth_unsigned_provider(url.clone());
-let tee_pubkey = unsigned.get_tee_pubkey().await?;
-
-let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
-
-// Synchronous construction with pre-fetched key
-let provider = SeismicSignedProvider::<SeismicReth>::new_with_tee_pubkey(
-    wallet,
-    url,
-    tee_pubkey,
-);
+// setNumber auto-encrypts (shielded param) -- .eip712() available on ShieldedCallBuilder
+contract.setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
+    .eip712()
+    .send()
+    .await?;
 ```
 
-## Convenience Functions
+## Low-Level Trait Methods
 
-These functions pre-fill the network generic parameter for common network types:
-
-### `sreth_signed_provider()`
+For cases where the `#[sol(rpc)]` pattern doesn't fit, use `SignedProviderExt` (for shielded operations) and `SeismicProviderExt` (for transparent operations) directly:
 
 ```rust
-pub async fn sreth_signed_provider(
-    wallet: impl Into<SeismicWallet<SeismicReth>>,
-    url: reqwest::Url,
-) -> TransportResult<SeismicSignedProvider<SeismicReth>>
+// Both traits are included in the prelude
+
+// Shielded read (high-level, ABI encodes/decodes)
+let result = provider.seismic_call(addr, MyContract::isOddCall {}).await?;
+
+// Shielded write (high-level, ABI encodes)
+let pending = provider.seismic_send(addr, MyContract::setNumberCall {
+    newNumber: alloy_primitives::aliases::SUInt(U256::from(42)),
+}).await?;
+
+// With SecurityParams overrides
+let result = provider.seismic_call_with(addr, MyContract::isOddCall {},
+    SecurityParams::default().expires_at(current_block + 10)
+).await?;
+
+// Low-level (raw bytes, no ABI decoding)
+let raw_bytes = provider.seismic_call_raw(tx.into()).await?;
+
+// Transparent operations (SeismicProviderExt -- available on all providers)
+let result = provider.transparent_call(addr, MyContract::isOddCall {}).await?;
+
+// Fetch TEE public key (SeismicProviderExt)
+let tee_pubkey = provider.get_tee_pubkey().await?;
 ```
-
-For Seismic devnet, testnet, or mainnet.
-
-```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
-
-let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
-let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-
-let provider = sreth_signed_provider(wallet, url).await?;
-```
-
-### `sfoundry_signed_provider()`
-
-```rust
-pub async fn sfoundry_signed_provider(
-    wallet: impl Into<SeismicWallet<SeismicFoundry>>,
-    url: reqwest::Url,
-) -> TransportResult<SeismicSignedProvider<SeismicFoundry>>
-```
-
-For local sfoundry development instances.
-
-```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
-
-let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
-let url = "http://localhost:8545".parse()?;
-
-let provider = sfoundry_signed_provider(wallet, url).await?;
-```
-
-## Methods
-
-`SeismicSignedProvider` implements `Deref` to the inner Alloy provider, so all standard `Provider<N>` methods are available directly. It also implements `SeismicProviderExt<N>` for Seismic-specific operations.
-
-### Via `SeismicProviderExt`
-
-#### `seismic_call()`
-
-Fill, encrypt, send, and decrypt a call request. This is the primary method for signed reads.
-
-```rust
-async fn seismic_call(&self, tx: SendableTx<N>) -> TransportResult<Bytes>
-```
-
-| Parameter | Type            | Required | Description                                                             |
-| --------- | --------------- | -------- | ----------------------------------------------------------------------- |
-| `tx`      | `SendableTx<N>` | Yes      | Transaction to send as a call. Calldata will be encrypted automatically |
-
-| Returns                  | Description                                    |
-| ------------------------ | ---------------------------------------------- |
-| `TransportResult<Bytes>` | Decrypted response bytes, or a transport error |
-
-```rust
-use seismic_prelude::foundry::*;
-use alloy_primitives::{address, bytes};
-
-let provider = sreth_signed_provider(wallet, url).await?;
-
-// Build a call request
-let tx = TransactionRequest::default()
-    .to(address!("0x1234567890abcdef1234567890abcdef12345678"))
-    .input(bytes!("0x12345678").into());
-
-// seismic_call encrypts calldata, sends, and decrypts the response
-let result = provider.seismic_call(tx.into()).await?;
-println!("Decrypted result: {result}");
-```
-
-#### `get_tee_pubkey()`
-
-Fetch the TEE public key from the node.
-
-```rust
-async fn get_tee_pubkey(&self) -> TransportResult<PublicKey>
-```
-
-| Returns                      | Description                         |
-| ---------------------------- | ----------------------------------- |
-| `TransportResult<PublicKey>` | The node's TEE secp256k1 public key |
-
-{% hint style="info" %}
-For `SeismicSignedProvider`, the TEE pubkey is fetched once at construction and cached. This method is still available but typically not needed -- the cached key is used automatically for all encryption operations.
-{% endhint %}
-
-#### `should_encrypt_input()`
-
-Check whether a transaction's calldata should be encrypted.
-
-```rust
-fn should_encrypt_input<B: TransactionBuilder<N>>(&self, tx: &B) -> bool
-```
-
-| Parameter | Type                                    | Required | Description          |
-| --------- | --------------------------------------- | -------- | -------------------- |
-| `tx`      | `&B` (where `B: TransactionBuilder<N>`) | Yes      | Transaction to check |
-
-| Returns | Description                                                     |
-| ------- | --------------------------------------------------------------- |
-| `bool`  | `true` if the transaction has calldata that should be encrypted |
-
-#### `call_conditionally_signed()`
-
-Send a call that is signed (since this is a signed provider).
-
-```rust
-async fn call_conditionally_signed(&self, tx: SendableTx<N>) -> TransportResult<Bytes>
-```
-
-| Parameter | Type            | Required | Description         |
-| --------- | --------------- | -------- | ------------------- |
-| `tx`      | `SendableTx<N>` | Yes      | Transaction to send |
-
-| Returns                  | Description    |
-| ------------------------ | -------------- |
-| `TransportResult<Bytes>` | Response bytes |
 
 ### Via Standard Alloy `Provider`
 
-All standard Alloy provider methods are available through `Deref`:
+All standard Alloy provider methods are available:
 
 ```rust
 // Block queries
@@ -280,48 +214,55 @@ let chain_id = provider.get_chain_id().await?;
 
 ## Filler Chain
 
-The signed provider assembles its filler chain in this order:
+Listed in **operational order** -- what actually happens to the transaction as it's prepared:
 
-| Order | Filler                  | Purpose                                                                                                    |
-| ----- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 1     | `WalletFiller`          | Signs the transaction with the attached wallet                                                             |
-| 2     | `NonceFiller`           | Fetches and sets the transaction nonce                                                                     |
-| 2     | `ChainIdFiller`         | Sets the chain ID from the connected node                                                                  |
-| 3     | `SeismicElementsFiller` | Populates Seismic-specific fields: encryption nonce, TEE pubkey reference, recent block hash, expiry block |
-| 4     | `SeismicGasFiller`      | Estimates and sets gas limit and gas price                                                                 |
+| Step | Filler                  | Purpose                                                                                                    |
+| ---- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 1    | `NonceFiller` + `ChainIdFiller` | Composed together; fetch and set the nonce and chain ID in parallel                                  |
+| 2    | `SeismicElementsFiller` | Populates Seismic-specific fields (encryption nonce, TEE pubkey, recent block hash, expiry) **and encrypts the calldata** |
+| 3    | `SeismicGasFiller`      | Signs the encrypted tx and calls `eth_estimateGas` against the RPC so the node can authenticate `msg.sender` |
+| 4    | `WalletFiller`          | Produces the final signature over the fully-filled transaction                                            |
 
-After all fillers run, calldata is encrypted with AES-GCM before the transaction is sent to the node.
+{% hint style="info" %}
+In source (`crates/provider/src/builder.rs`) the chain is composed `Wallet → (Nonce + ChainId) → SeismicElements → Gas`. That's the chain-composition order, not the execution order: each filler's `status()` gate decides when it fires, and `WalletFiller` only fires once everything else has run.
+{% endhint %}
 
 ## Examples
 
 ### Shielded Write
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
-use alloy_primitives::{address, U256};
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
+
+sol! {
+    #[sol(rpc)]
+    contract SeismicCounter {
+        function setNumber(suint256 newNumber) public;
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
-    let provider = sreth_signed_provider(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
-    // Build a shielded write transaction
-    // The filler pipeline automatically:
-    //   1. Populates nonce, chain_id, seismic elements
-    //   2. Encrypts the calldata
-    //   3. Signs the transaction
-    let tx = TransactionRequest::default()
-        .to(address!("0x1234567890abcdef1234567890abcdef12345678"))
-        .input(bytes!("0x60fe47b10000000000000000000000000000000000000000000000000000000000000042").into())
-        .value(U256::ZERO);
+    let contract = SeismicCounter::new(contract_address, &provider);
 
-    let pending = provider.send_transaction(tx).await?;
-    let tx_hash = pending.watch().await?;
-    println!("Transaction hash: {tx_hash}");
+    // setNumber auto-encrypts (suint256 param)
+    let receipt = contract
+        .setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
+    println!("Shielded write confirmed: {:?}", receipt.transaction_hash);
 
     Ok(())
 }
@@ -330,49 +271,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Signed Read
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
-use alloy_primitives::address;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
+
+sol! {
+    #[sol(rpc)]
+    contract SeismicCounter {
+        function isOdd() public view returns (bool);
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
-    let provider = sreth_signed_provider(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
-    // Build a read request
-    let tx = TransactionRequest::default()
-        .to(address!("0x1234567890abcdef1234567890abcdef12345678"))
-        .input(bytes!("0x3fb5c1cb").into());
+    let contract = SeismicCounter::new(contract_address, &provider);
 
-    // seismic_call: encrypts calldata, sends signed call, decrypts response
-    let result = provider.seismic_call(tx.into()).await?;
-    println!("Decrypted value: {result}");
-
-    Ok(())
-}
-```
-
-### Local Development with sfoundry
-
-```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Default sfoundry private key
-    let signer: PrivateKeySigner = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80".parse()?;
-    let wallet = SeismicWallet::from(signer);
-    let url = "http://localhost:8545".parse()?;
-
-    // Use SeismicFoundry network type for local development
-    let provider = sfoundry_signed_provider(wallet, url).await?;
-
-    let block = provider.get_block_number().await?;
-    println!("Local block: {block}");
+    // Shielded: encrypts calldata, signs, decrypts response
+    let is_odd = contract.isOdd().seismic().call().await?;
+    println!("Is odd: {is_odd}");
 
     Ok(())
 }
@@ -381,31 +305,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Pre-fetched TEE Pubkey
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url: reqwest::Url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
-    // Fetch TEE pubkey once
-    let unsigned = sreth_unsigned_provider(url.clone());
+    // Fetch TEE pubkey once via an unsigned provider
+    // Unsigned provider -- connect_http is synchronous
+    let unsigned = SeismicProviderBuilder::new().connect_http(url.clone());
     let tee_pubkey = unsigned.get_tee_pubkey().await?;
 
     // Create multiple signed providers without additional RPC calls
     let signer1: PrivateKeySigner = "0xKEY1".parse()?;
-    let provider1 = SeismicSignedProvider::<SeismicReth>::new_with_tee_pubkey(
-        SeismicWallet::from(signer1),
-        url.clone(),
-        tee_pubkey,
-    );
+    let provider1 = SeismicProviderBuilder::new()
+        .wallet(SeismicWallet::<SeismicReth>::from(signer1))
+        .connect_http_with_tee_pubkey(url.clone(), tee_pubkey);
 
     let signer2: PrivateKeySigner = "0xKEY2".parse()?;
-    let provider2 = SeismicSignedProvider::<SeismicReth>::new_with_tee_pubkey(
-        SeismicWallet::from(signer2),
-        url,
-        tee_pubkey,
-    );
+    let provider2 = SeismicProviderBuilder::new()
+        .wallet(SeismicWallet::<SeismicReth>::from(signer2))
+        .connect_http_with_tee_pubkey(url, tee_pubkey);
 
     Ok(())
 }
@@ -413,7 +334,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Construction** -- Generates an ephemeral secp256k1 keypair and fetches (or accepts) the TEE public key. Computes the ECDH shared secret between the ephemeral key and the TEE pubkey.
+1. **Construction** -- Generates a provider-scoped secp256k1 keypair (the "provider keypair") and fetches (or accepts) the TEE public key. Computes the ECDH shared secret between the provider key and the TEE pubkey.
 
 2. **Transaction building** -- The filler chain populates all transaction fields: nonce, chain ID, Seismic elements (encryption nonce, block hash, expiry), and gas.
 
@@ -421,15 +342,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 4. **Sending** -- The encrypted transaction is signed by the wallet and sent to the node.
 
-5. **Response decryption** -- For `seismic_call()` requests, the response is decrypted using the same ECDH shared secret.
+5. **Response decryption** -- For `seismic_call()` / `seismic_call_raw()` requests, the response is decrypted using the same ECDH shared secret.
 
 ## Notes
 
-- The ephemeral keypair is generated once at provider creation and reused for all operations
+- The provider keypair is generated once at provider creation and reused for all operations (it is provider-scoped, not per-message)
 - The TEE public key is cached after the initial fetch
 - All standard Alloy `Provider` methods work unchanged -- only transactions with calldata are encrypted
-- `SeismicSignedProvider` implements `Deref` to the inner provider, so you can use it anywhere a `Provider<N>` is expected
-- HTTP transport only -- WebSocket is not supported for signed providers
+- Both HTTP and WebSocket transports are supported
 
 ## See Also
 

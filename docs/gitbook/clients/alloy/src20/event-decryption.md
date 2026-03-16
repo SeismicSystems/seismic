@@ -40,13 +40,10 @@ Indexed event parameters (addresses) remain visible as log topics. Only the non-
 
 ## Subscribing to SRC20 Events
 
-Use an unsigned WebSocket provider to subscribe to events in real time:
+Use a WebSocket provider to subscribe to events in real time. Both signed and unsigned WebSocket providers are supported via `connect_ws()`:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::Address;
+use seismic_prelude::client::*;
 use alloy_rpc_types_eth::Filter;
 use futures_util::StreamExt;
 
@@ -60,7 +57,7 @@ sol! {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ws_url = "wss://testnet-1.seismictest.net/ws".parse()?;
-    let provider = SeismicUnsignedProvider::<SeismicReth>::new_ws(ws_url).await?;
+    let provider = SeismicProviderBuilder::new().connect_ws(ws_url).await?;
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
 
@@ -99,10 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Query past Transfer events using `get_logs`:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::Address;
+use seismic_prelude::client::*;
 use alloy_rpc_types_eth::Filter;
 
 sol! {
@@ -114,7 +108,8 @@ sol! {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    // Unsigned provider -- connect_http is synchronous
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
 
@@ -151,10 +146,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Use indexed topics to filter events for a specific address:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::{Address, B256};
+use seismic_prelude::client::*;
+use alloy_primitives::B256;
 use alloy_rpc_types_eth::Filter;
 
 sol! {
@@ -166,7 +159,8 @@ sol! {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    // Unsigned provider -- connect_http is synchronous
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
     let my_address: Address = "0xYOUR_ADDRESS".parse()?;
@@ -232,10 +226,8 @@ Viewing key registration and event decryption are protocol-level features. The e
 Subscribe to both Transfer and Approval events simultaneously:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::{Address, B256};
+use seismic_prelude::client::*;
+use alloy_primitives::B256;
 use alloy_rpc_types_eth::Filter;
 use futures_util::StreamExt;
 
@@ -249,7 +241,7 @@ sol! {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ws_url = "wss://testnet-1.seismictest.net/ws".parse()?;
-    let provider = SeismicUnsignedProvider::<SeismicReth>::new_ws(ws_url).await?;
+    let provider = SeismicProviderBuilder::new().connect_ws(ws_url).await?;
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
 
@@ -285,7 +277,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 - SRC20 events encrypt only the `suint256` value fields, not the indexed address parameters
 - Indexed parameters (addresses) are always visible as log topics
-- Event subscription requires a WebSocket provider (`new_ws()`)
+- Event subscription requires a WebSocket provider (`connect_ws()`). Both signed and unsigned WebSocket providers are supported.
 - Historical event queries work with HTTP providers via `get_logs()`
 - Viewing key registration is done through the Seismic Directory contract
 - Each SRC20 contract manages its own encryption context for events

@@ -43,7 +43,7 @@ Execution order matters. `SeismicGasFiller` must run after `SeismicElementsFille
 3. **SeismicElementsFiller**:
    - Fetches the TEE public key from the node (cached after first fetch)
    - Fetches the latest block number for expiration calculation
-   - Generates an encryption nonce using ECDH with the ephemeral secret key
+   - Generates an encryption nonce using ECDH with the provider secret key
    - Encrypts the calldata using AES-GCM
    - Attaches `TxSeismicElements` to the transaction request
 4. **SeismicGasFiller** estimates gas on the now-encrypted transaction
@@ -61,15 +61,18 @@ Execution order matters. `SeismicGasFiller` must run after `SeismicElementsFille
 Both fillers are automatically configured when you create a `SeismicSignedProvider`. You do not need to instantiate them manually in most cases.
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicReth>::from(signer);
 let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
 // Fillers are set up automatically
-let provider = sreth_signed_provider(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 ### Custom Configuration
@@ -77,10 +80,10 @@ let provider = sreth_signed_provider(wallet, url).await?;
 If you need to customize filler behavior, you can construct them manually:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::fillers::{SeismicElementsFiller, SeismicGasFiller};
 
 // Custom elements filler with cached TEE pubkey
-let elements_filler = SeismicElementsFiller::with_tee_pubkey_and_url(tee_pubkey);
+let elements_filler = SeismicElementsFiller::with_tee_pubkey(tee_pubkey);
 
 // Custom elements filler with signed reads enabled
 let elements_filler = SeismicElementsFiller::new()
@@ -90,8 +93,8 @@ let elements_filler = SeismicElementsFiller::new()
 let elements_filler = SeismicElementsFiller::new()
     .with_blocks_window(200);
 
-// Custom gas filler with RPC URL for deferred estimation
-let gas_filler = SeismicGasFiller::with_url(rpc_url);
+// Custom gas filler that signs the tx before eth_estimateGas
+let gas_filler = SeismicGasFiller::<SeismicReth>::new(rpc_url, wallet);
 ```
 
 ## Pages

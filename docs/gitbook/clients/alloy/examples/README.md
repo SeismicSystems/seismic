@@ -20,7 +20,7 @@ Complete, runnable code examples demonstrating common Seismic Alloy (Rust) SDK p
 | Example                                               | Description                                                                                                       |
 | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | [Shielded Write Complete](shielded-write-complete.md) | Full lifecycle: deploy a contract, send a shielded write, verify with a signed read, and inspect the receipt type |
-| [Signed Read Pattern](signed-read-pattern.md)         | Authenticated read pattern with comparison between `seismic_call()` (encrypted) and `call()` (transparent)        |
+| [Signed Read Pattern](signed-read-pattern.md)         | Authenticated read pattern with comparison between `.seismic().call()` (encrypted) and `.call()` (transparent)    |
 | [Contract Deployment](contract-deployment.md)         | Deploy and interact with a shielded contract, including compilation notes, verification, and event subscription   |
 
 ## Example Template
@@ -28,28 +28,43 @@ Complete, runnable code examples demonstrating common Seismic Alloy (Rust) SDK p
 Each example follows this structure:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
+use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
 use alloy_signer_local::PrivateKeySigner;
+use alloy_sol_types::sol;
+
+sol! {
+    #[sol(rpc)]
+    contract MyContract {
+        function myMethod(uint256 value) public;
+        function myView() public view returns (bool);
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Set up provider
     let signer: PrivateKeySigner = std::env::var("PRIVATE_KEY")?.parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
-    // 2. Build transaction
-    let tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(calldata.into())
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
-    // 3. Send and verify
-    let receipt = provider.send_transaction(tx.into()).await?
-        .get_receipt().await?;
-    assert!(receipt.status());
+    let contract = MyContract::new(contract_address, &provider);
+
+    // 2. Shielded write
+    contract.myMethod(U256::from(42))
+        .seismic()
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
+
+    // 3. Signed read
+    let result = contract.myView().seismic().call().await?;
 
     Ok(())
 }
@@ -75,6 +90,7 @@ And your `Cargo.toml` includes:
 seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
 alloy-signer-local = "1.1"
 alloy-primitives = "1.1"
+alloy-sol-types = "1.1"
 tokio = { version = "1", features = ["full"] }
 ```
 

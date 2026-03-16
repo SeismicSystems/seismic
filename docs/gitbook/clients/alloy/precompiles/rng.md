@@ -44,16 +44,23 @@ The input is the concatenation of `num_bytes` followed by the optional `personal
 ### Basic Usage
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, U256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
+    // Using convenience helpers
+    let random = precompiles::call::rng(&provider, 32, b"").await?;
+    let random_value = U256::from_be_slice(&random);
+    println!("Random value (convenience): {random_value}");
+
+    // Manual approach
     let rng_address: Address =
         "0x0000000000000000000000000000000000000064".parse()?;
 
@@ -79,15 +86,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### With Personalization
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, U256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let rng_address: Address =
         "0x0000000000000000000000000000000000000064".parse()?;
@@ -118,15 +126,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Generate Multiple Random Values
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, U256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let rng_address: Address =
         "0x0000000000000000000000000000000000000064".parse()?;
@@ -154,15 +162,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Convert to Fixed-Size Array
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let rng_address: Address =
         "0x0000000000000000000000000000000000000064".parse()?;

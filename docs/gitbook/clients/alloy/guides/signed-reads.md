@@ -5,7 +5,7 @@ icon: magnifying-glass
 
 # Signed Reads
 
-A signed read uses `seismic_call()` to build a full `TxSeismic` just like a [shielded write](shielded-write.md), but targets the `eth_call` endpoint instead of broadcasting a transaction. The node decrypts the calldata inside the TEE, executes the call, encrypts the result, and returns it. The provider then decrypts the response automatically.
+A signed read uses `.seismic().call()` (for functions without shielded params) or `.call()` directly (for functions with shielded params) to build a full `TxSeismic` just like a [shielded write](shielded-write.md), but targets the `eth_call` endpoint instead of broadcasting a transaction. The node decrypts the calldata inside the TEE, executes the call, encrypts the result, and returns it. The provider then decrypts the response automatically.
 
 ---
 
@@ -16,11 +16,11 @@ Any contract function that depends on `msg.sender` needs a signed read. A plain 
 ```rust
 // Signed read -- proves your identity to the contract
 // msg.sender = your wallet address
-let result = provider.seismic_call(SendableTx::Builder(tx.into())).await?;
+let is_odd = contract.isOdd().seismic().call().await?;
 
 // Transparent read -- msg.sender is 0x0
 // The contract does not know who is calling
-let result = provider.call(tx).await?;
+let is_odd = contract.isOdd().call().await?;
 ```
 
 A common example: a contract with a `balanceOf()` function that takes no arguments and uses `msg.sender` internally to look up the caller's balance. If you call it with a transparent read, the contract sees the zero address and returns its balance -- which is almost certainly zero.
@@ -42,97 +42,88 @@ Both the calldata you send **and** the result you get back are encrypted. An obs
 
 #### 1. Set up a signed provider
 
-Signed reads require a `SeismicSignedProvider` because the provider needs an ephemeral keypair for ECDH key derivation and response decryption.
+Signed reads require a `SeismicSignedProvider` because the provider needs a provider-scoped keypair for ECDH key derivation and response decryption.
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicReth>::from(signer);
 let url: reqwest::Url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
-let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
-#### 2. Encode the call input
+#### 2. Define the contract interface and call
 
-Use the `sol!` macro to define the interface and encode the view function:
+Use the `sol!` macro with `#[sol(rpc)]` to define the interface, then use `.seismic().call()`:
 
 ```rust
-use alloy::sol;
-use alloy::sol_types::SolCall;
-
 sol! {
-    interface ISeismicCounter {
+    #[sol(rpc)]
+    contract SeismicCounter {
         function isOdd() public view returns (bool);
     }
 }
 
-let call_input = ISeismicCounter::isOddCall {}.abi_encode();
+let contract = SeismicCounter::new(contract_address, &provider);
+
+// Encrypted call + automatic response decryption
+let is_odd = contract.isOdd().seismic().call().await?;
+println!("Is odd: {is_odd}");
 ```
 
-#### 3. Build a seismic transaction
-
-Mark the transaction as seismic with `.seismic()` so the provider knows to encrypt:
-
-```rust
-use alloy_primitives::{Bytes, TxKind};
-
-let tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-    .with_input(Bytes::from(call_input))
-    .with_kind(TxKind::Call(contract_address))
-    .into()
-    .seismic();
-```
-
-#### 4. Use `seismic_call()` instead of `call()`
-
-`seismic_call()` encrypts the request, sends a signed `eth_call`, and decrypts the response:
-
-```rust
-use alloy_provider::SendableTx;
-
-let result = provider.seismic_call(SendableTx::Builder(tx.into())).await?;
-```
+The return value is already decoded -- no manual ABI decoding needed.
 
 {% hint style="info" %}
-Use `seismic_call()` for signed reads and `send_transaction()` for shielded writes. Both encrypt calldata, but `seismic_call()` also decrypts the response and does not modify on-chain state.
+Use `.seismic().call()` for signed reads on functions without shielded params, and `.seismic().send()` or direct `.send()` for shielded writes. Both encrypt calldata, but `.call()` also decrypts the response and does not modify on-chain state. Functions with shielded parameters auto-encrypt, so `.seismic()` is not needed for those.
 {% endhint %}
 
-#### 5. Decode the decrypted response
-
-The `result` is a `Bytes` value containing the ABI-encoded return data. Decode it using the generated types:
-
-```rust
-use alloy::sol_types::SolCall;
-
-let decoded = ISeismicCounter::isOddReturn::abi_decode(&result, true)?;
-println!("Is odd: {}", decoded._0);
-```
+{% hint style="warning" %}
+Calling `.seismic()` on a function that already has shielded parameters is `#[deprecated]` and produces a compiler warning -- it's redundant because the call builder is already a `ShieldedCallBuilder`. Call `.call()` or `.send()` directly on those functions.
+{% endhint %}
 
 ---
 
 ### Signed read vs. transparent read
 
-| Aspect            | Signed Read (`seismic_call`)          | Transparent Read (`call`) |
-| ----------------- | ------------------------------------- | ------------------------- |
-| `msg.sender`      | Your wallet address                   | Zero address              |
-| Calldata          | Encrypted                             | Plaintext                 |
-| Return data       | Encrypted, then decrypted by provider | Plaintext                 |
-| Provider required | `SeismicSignedProvider`               | Any provider              |
-| Use case          | Private state, access-controlled data | Public state              |
+| Aspect            | Signed Read (`.seismic().call()`)     | Transparent Read (`.call()`) |
+| ----------------- | ------------------------------------- | ---------------------------- |
+| `msg.sender`      | Your wallet address                   | Zero address                 |
+| Calldata          | Encrypted                             | Plaintext                    |
+| Return data       | Encrypted, then decrypted by provider | Plaintext                    |
+| Provider required | `SeismicSignedProvider`               | Any provider                 |
+| Use case          | Private state, access-controlled data | Public state                 |
+
+---
+
+### Per-call security parameter overrides
+
+You can customize encryption parameters on individual calls:
+
+```rust
+let is_odd = contract.isOdd()
+    .seismic()
+    .expires_at(current_block + 50)        // Custom expiration
+    .recent_block_hash(specific_hash)       // Pin to specific chain state
+    .call()
+    .await?;
+```
 
 ---
 
 ### How the provider handles encryption
 
-Under the hood, `seismic_call()` performs the following sequence:
+Under the hood, a shielded `.call()` (via `.seismic().call()` or auto-encryption) performs the following sequence:
 
 ```
 1. Fill the transaction (nonce, chain ID, seismic elements, gas)
 2. Encrypt calldata with AES-GCM:
-   - Key = ECDH(provider ephemeral secret, TEE public key)
+   - Key = ECDH(provider secret key, TEE public key)
    - AAD = RLP-encoded TxSeismicMetadata
 3. Sign the call request with the wallet
 4. Send to node as eth_call
@@ -140,8 +131,24 @@ Under the hood, `seismic_call()` performs the following sequence:
 6. Node executes the call
 7. Node encrypts the response with the same ECDH shared secret
 8. Provider receives encrypted response
-9. Provider decrypts response with ephemeral secret key
-10. Return decrypted bytes to caller
+9. Provider decrypts response with provider secret key
+10. Return decoded result to caller
+```
+
+---
+
+### Low-level alternative
+
+If you need direct control without the `#[sol(rpc)]` call builder, use `SignedProviderExt` methods:
+
+```rust
+// SignedProviderExt is included in the prelude
+let is_odd: bool = provider.seismic_call(contract_address, SeismicCounter::isOddCall {}).await?;
+
+// With SecurityParams overrides
+let is_odd: bool = provider.seismic_call_with(contract_address, SeismicCounter::isOddCall {},
+    SecurityParams::default().expires_at(current_block + 10)
+).await?;
 ```
 
 ---
@@ -149,15 +156,12 @@ Under the hood, `seismic_call()` performs the following sequence:
 ### Complete example
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy::sol;
-use alloy::sol_types::SolCall;
-use alloy_primitives::{Bytes, TxKind};
-use alloy_provider::SendableTx;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
-    interface ISeismicCounter {
+    #[sol(rpc)]
+    contract SeismicCounter {
         function isOdd() public view returns (bool);
     }
 }
@@ -166,27 +170,20 @@ sol! {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Set up signed provider
     let signer: PrivateKeySigner = std::env::var("PRIVATE_KEY")?.parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
-    // 2. Encode the view call
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
+
+    // 2. Execute signed read
     let contract_address = std::env::var("CONTRACT_ADDRESS")?.parse()?;
-    let call_input = ISeismicCounter::isOddCall {}.abi_encode();
+    let contract = SeismicCounter::new(contract_address, &provider);
 
-    // 3. Build seismic transaction
-    let tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(call_input))
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
-
-    // 4. Execute signed read
-    let result = provider.seismic_call(SendableTx::Builder(tx.into())).await?;
-
-    // 5. Decode the decrypted response
-    let decoded = ISeismicCounter::isOddReturn::abi_decode(&result, true)?;
-    println!("Is odd: {}", decoded._0);
+    let is_odd = contract.isOdd().seismic().call().await?;
+    println!("Is odd: {is_odd}");
 
     Ok(())
 }
@@ -196,7 +193,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### When to use transparent reads instead
 
-Not every read needs encryption. Use a transparent read (`provider.call()`) when:
+Not every read needs encryption. Use a transparent read (`.call()`) when:
 
 - The function does **not** depend on `msg.sender`
 - The data is already public on-chain
@@ -204,13 +201,7 @@ Not every read needs encryption. Use a transparent read (`provider.call()`) when
 
 ```rust
 // Transparent read -- works with any provider, including unsigned
-let calldata = IMyContract::getPublicValueCall {}.abi_encode();
-let tx = seismic_foundry_tx_builder()
-    .with_input(Bytes::from(calldata))
-    .with_kind(TxKind::Call(contract_address))
-    .into();
-
-let result = provider.call(tx).await?;
+let is_odd = contract.isOdd().call().await?;
 ```
 
 ## See Also

@@ -46,24 +46,34 @@ The input is the concatenation of `key` (32 bytes) + `nonce` (12 bytes) + `ciphe
 ### Basic Usage
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
-
-    let encrypt_address: Address =
-        "0x0000000000000000000000000000000000000066".parse()?;
-    let decrypt_address: Address =
-        "0x0000000000000000000000000000000000000067".parse()?;
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let key = [0x42u8; 32];
     let nonce = [0u8; 12];
     let plaintext = b"Secret message";
+
+    // Encrypt first using convenience helper
+    let ciphertext = precompiles::call::aes_gcm_encrypt(&provider, &key, &nonce, plaintext).await?;
+
+    // Decrypt using convenience helper
+    let decrypted = precompiles::call::aes_gcm_decrypt(&provider, &key, &nonce, &ciphertext).await?;
+    assert_eq!(&decrypted[..], plaintext);
+    println!("Decrypted (convenience): {}", String::from_utf8_lossy(&decrypted));
+
+    // Manual approach
+    let encrypt_address: Address =
+        "0x0000000000000000000000000000000000000066".parse()?;
+    let decrypt_address: Address =
+        "0x0000000000000000000000000000000000000067".parse()?;
 
     // Encrypt first
     let mut encrypt_input = Vec::new();
@@ -103,15 +113,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Decrypt Multiple Messages
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let encrypt_address: Address =
         "0x0000000000000000000000000000000000000066".parse()?;
@@ -168,15 +178,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Handle Decryption Failure
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let decrypt_address: Address =
         "0x0000000000000000000000000000000000000067".parse()?;
@@ -210,15 +220,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### With ECDH-Derived Key (Bob's Side)
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     // Bob derives the same shared secret that Alice used to encrypt
     let ecdh_address: Address =

@@ -86,7 +86,7 @@ The signing flow for a Seismic transaction:
 ### Matching on Envelope Variants
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{SeismicTxEnvelope, TxSeismic};
 
 fn inspect_envelope(envelope: &SeismicTxEnvelope) {
     match envelope {
@@ -112,7 +112,7 @@ fn inspect_envelope(envelope: &SeismicTxEnvelope) {
 ### Accessing the Transaction Hash
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{SeismicTxEnvelope, TxSeismic};
 
 let envelope: SeismicTxEnvelope = /* from provider */;
 
