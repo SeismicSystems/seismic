@@ -189,7 +189,7 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuar
             multiSend(executionData);
         } else {
             Key storage S = $.keys[idx - 1];
-            require(S.expiry > block.timestamp, "key expired");
+            require(S.expiry == 0 || S.expiry > block.timestamp, "key expired");
             require(idx == $.keyToSessionIndex[_generateKeyIdentifier(S.keyType, S.publicKey)], "key revoked");
 
             bytes32 dig = _hashTypedDataV4(S.nonce, calls, getDomainSeparator());
