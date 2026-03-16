@@ -23,16 +23,19 @@ The Seismic public testnet is the primary network for development and testing. I
 Use a signed provider for sending transactions, shielded writes, and signed reads:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
-    let provider = sreth_signed_provider(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
     // Verify connection
     let block_number = provider.get_block_number().await?;
@@ -48,12 +51,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Use an unsigned provider for read-only operations that do not require a private key:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new()
+        .connect_http(url)
+        .await?;
 
     let block_number = provider.get_block_number().await?;
     println!("Testnet block: {block_number}");
@@ -62,19 +67,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### With Explicit Type Parameter
+### With Builder Pattern
 
 If you prefer to specify the network type explicitly:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicReth>::from(signer);
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
-let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 ## Examples
@@ -82,17 +90,20 @@ let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 ### Send a Shielded Transaction
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 use alloy_primitives::{address, Bytes, U256};
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
-    let provider = sreth_signed_provider(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
     // Build a Seismic transaction
     // The filler pipeline automatically handles:
@@ -112,12 +123,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Check Connection
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new()
+        .connect_http(url)
+        .await?;
 
     match provider.get_chain_id().await {
         Ok(chain_id) => println!("Connected to chain {chain_id}"),
@@ -131,7 +144,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Using Environment Variables
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 use alloy_signer_local::PrivateKeySigner;
 use std::env;
 
@@ -139,13 +152,16 @@ use std::env;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let private_key = env::var("PRIVATE_KEY")?;
     let signer: PrivateKeySigner = private_key.parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
 
     let rpc_url = env::var("SEISMIC_RPC_URL")
         .unwrap_or_else(|_| "https://gcp-1.seismictest.net/rpc".to_string());
     let url = rpc_url.parse()?;
 
-    let provider = sreth_signed_provider(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
     let block = provider.get_block_number().await?;
     println!("Block: {block}");

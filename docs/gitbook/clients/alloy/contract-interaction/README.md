@@ -9,23 +9,23 @@ Patterns for calling and transacting with smart contracts on Seismic using the R
 
 ## Overview
 
-seismic-alloy uses Alloy's `sol!` macro to define contract interfaces and transaction builders to construct calls. Unlike the Python SDK's `ShieldedContract` wrapper with `.write` / `.read` namespaces, seismic-alloy uses a builder pattern: you construct a transaction request and mark it as seismic with `.seismic()` to enable encryption, or omit it for transparent operations.
+seismic-alloy uses Alloy's `sol!` macro with `#[sol(rpc)]` to define contract interfaces and generate type-safe call builders. The `.seismic()` method on any generated call builder enables encryption for shielded operations. Omit `.seismic()` for transparent (unencrypted) operations.
 
 ### Key Concepts
 
-- **`sol!` macro** -- Define contract interfaces with Solidity syntax directly in Rust
-- **`.seismic()` builder method** -- Converts a `TransactionRequest` into a `SeismicTransactionRequest` with encryption enabled
-- **Filler pipeline** -- Encryption, nonce, gas, and chain ID are filled automatically by the provider
-- **`seismic_call()`** -- Signed read method on `SeismicSignedProvider` for encrypted `eth_call`
+- **`sol!` macro with `#[sol(rpc)]`** -- Define contract interfaces with Solidity syntax, generate call builders and deploy methods
+- **`.seismic()` call builder** -- Marks a contract call for encryption; chain with `.call()` for reads or `.send()` for writes
+- **SecurityParams** -- Per-call overrides for expiration, block hash, and encryption nonce
+- **EIP-712** -- `.seismic().eip712()` for browser wallet compatibility
 
 ## Shielded vs. Transparent Operations
 
-| Operation             | Method                                          | Encryption                  | Provider Required       | Use Case                                  |
-| --------------------- | ----------------------------------------------- | --------------------------- | ----------------------- | ----------------------------------------- |
-| **Shielded Write**    | `send_transaction(tx.into())` with `.seismic()` | Calldata encrypted          | `SeismicSignedProvider` | Privacy-preserving state changes          |
-| **Signed Read**       | `seismic_call(tx)`                              | Calldata + result encrypted | `SeismicSignedProvider` | Reading private state                     |
-| **Transparent Write** | `send_transaction(tx)` without `.seismic()`     | None                        | `SeismicSignedProvider` | Contract deployment, public state changes |
-| **Transparent Read**  | `provider.call(tx)`                             | None                        | Any provider            | Reading public state                      |
+| Operation             | Pattern                                        | Encryption                  | Provider Required       |
+| --------------------- | ---------------------------------------------- | --------------------------- | ----------------------- |
+| **Shielded Read**     | `contract.method().seismic().call().await?`     | Calldata + result encrypted | `SeismicSignedProvider` |
+| **Shielded Write**    | `contract.method().seismic().send().await?`     | Calldata encrypted          | `SeismicSignedProvider` |
+| **Transparent Read**  | `contract.method().call().await?`               | None                        | Any provider            |
+| **Transparent Write** | `contract.method().send().await?`               | None                        | `SeismicSignedProvider` |
 
 {% hint style="info" %}
 Contract deployment (Create transactions) **cannot** be seismic. Deploy your contract with a standard transaction, then interact with it using shielded calls.
@@ -33,13 +33,14 @@ Contract deployment (Create transactions) **cannot** be seismic. Deploy your con
 
 ## Defining Contract Interfaces
 
-Use Alloy's `sol!` macro to define your contract's interface. Shielded Solidity types (`suint256`, `sbool`, etc.) appear as their standard counterparts in the ABI:
+Use Alloy's `sol!` macro with `#[sol(rpc)]` to define your contract's interface. This generates type-safe call builders with `.call()` and `.send()` methods:
 
 ```rust
-use alloy::sol;
+use alloy_sol_types::sol;
 
 sol! {
-    interface ISeismicCounter {
+    #[sol(rpc)]
+    contract SeismicCounter {
         event setNumberEmit();
         event incrementEmit();
 
@@ -50,17 +51,72 @@ sol! {
 }
 ```
 
-The macro generates type-safe Rust structs for each function call (e.g., `ISeismicCounter::setNumberCall`, `ISeismicCounter::isOddCall`), which you use to encode calldata.
+To also include deployment, add the `bytecode` attribute:
+
+```rust
+sol! {
+    #[sol(rpc, bytecode = "0x60806040...")]
+    contract SeismicCounter {
+        // ...
+    }
+}
+```
+
+## Quick Example
+
+```rust
+use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
+use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
+use alloy_signer_local::PrivateKeySigner;
+use alloy_primitives::U256;
+use alloy_sol_types::sol;
+
+sol! {
+    #[sol(rpc)]
+    contract SeismicCounter {
+        function setNumber(suint256 newNumber) public;
+        function isOdd() public view returns (bool);
+    }
+}
+
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
+
+let contract = SeismicCounter::new(address, &provider);
+
+// Shielded read
+let is_odd = contract.isOdd().seismic().call().await?;
+
+// Shielded write
+contract.setNumber(U256::from(42).into())
+    .seismic()
+    .send()
+    .await?
+    .get_receipt()
+    .await?;
+
+// Transparent read (standard eth_call)
+let is_odd = contract.isOdd().call().await?;
+
+// Transparent write (standard transaction)
+contract.setNumber(U256::from(42).into())
+    .send()
+    .await?
+    .get_receipt()
+    .await?;
+```
 
 ## Quick Comparison with Python SDK
 
-| Python SDK                      | Rust SDK (seismic-alloy)                                 |
-| ------------------------------- | -------------------------------------------------------- |
-| `contract.write.setNumber(42)`  | Build tx with `.seismic()`, then `send_transaction()`    |
-| `contract.read.isOdd()`         | Build tx with `.seismic()`, then `seismic_call()`        |
-| `contract.twrite.setNumber(42)` | Build tx without `.seismic()`, then `send_transaction()` |
-| `contract.tread.isOdd()`        | Build tx without `.seismic()`, then `provider.call()`    |
-| `ShieldedContract` wrapper      | No wrapper -- use builder pattern directly               |
+| Python SDK                      | Rust SDK (seismic-alloy)                              |
+| ------------------------------- | ----------------------------------------------------- |
+| `contract.write.setNumber(42)`  | `contract.setNumber(42).seismic().send().await?`      |
+| `contract.read.isOdd()`         | `contract.isOdd().seismic().call().await?`             |
+| `contract.twrite.setNumber(42)` | `contract.setNumber(42).send().await?`                 |
+| `contract.tread.isOdd()`        | `contract.isOdd().call().await?`                       |
+| `ShieldedContract` wrapper      | No wrapper -- `.seismic()` on any call builder         |
 
 ## Navigation
 

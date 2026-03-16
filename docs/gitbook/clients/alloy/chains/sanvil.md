@@ -57,7 +57,7 @@ By default, Sanvil:
 ### Signed Provider (Full Capabilities)
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
@@ -66,10 +66,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner =
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
             .parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicFoundry>::from(signer);
     let url = "http://127.0.0.1:8545".parse()?;
 
-    let provider = sfoundry_signed_provider(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
     let block = provider.get_block_number().await?;
     println!("Local block: {block}");
@@ -81,27 +85,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Unsigned Provider (Read-Only)
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 
 let url = "http://127.0.0.1:8545".parse()?;
-let provider = sfoundry_unsigned_provider(url);
+let provider = SeismicProviderBuilder::new()
+    .foundry()
+    .connect_http(url)
+    .await?;
 
 let block = provider.get_block_number().await?;
 ```
 
-### With Explicit Type Parameter
+### With Builder Pattern
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
         .parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicFoundry>::from(signer);
 let url = "http://127.0.0.1:8545".parse()?;
 
-let provider = SeismicSignedProvider::<SeismicFoundry>::new(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .foundry()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 {% hint style="info" %}
@@ -113,7 +124,7 @@ Always use `SeismicFoundry` (not `SeismicReth`) when connecting to Sanvil. Sanvi
 ### Local Development Workflow
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
@@ -122,10 +133,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner =
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
             .parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicFoundry>::from(signer);
     let url = "http://127.0.0.1:8545".parse()?;
 
-    let provider = sfoundry_signed_provider(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
     // All standard Alloy provider methods work
     let block = provider.get_block_number().await?;
@@ -139,7 +154,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Testing with Multiple Accounts
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 use alloy_signer_local::PrivateKeySigner;
 
 // Anvil/Sanvil pre-funded test accounts
@@ -153,8 +168,12 @@ let url: reqwest::Url = "http://127.0.0.1:8545".parse()?;
 
 for key in &test_keys {
     let signer: PrivateKeySigner = key.parse()?;
-    let wallet = SeismicWallet::from(signer);
-    let provider = sfoundry_signed_provider(wallet, url.clone()).await?;
+    let wallet = SeismicWallet::<SeismicFoundry>::from(signer);
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(wallet)
+        .connect_http(url.clone())
+        .await?;
     // Use each provider for different test accounts
 }
 ```
@@ -162,7 +181,7 @@ for key in &test_keys {
 ### Integration Test Setup
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 use alloy_signer_local::PrivateKeySigner;
 
 async fn setup_test_provider()
@@ -171,9 +190,13 @@ async fn setup_test_provider()
     let signer: PrivateKeySigner =
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
             .parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicFoundry>::from(signer);
     let url = "http://127.0.0.1:8545".parse()?;
-    let provider = sfoundry_signed_provider(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
     Ok(provider)
 }
 

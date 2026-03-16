@@ -10,53 +10,89 @@ The `seismic-alloy` provider crate provides two provider types for interacting w
 - **[SeismicSignedProvider](seismic-signed-provider.md)** -- Full capabilities (shielded writes, signed reads, response decryption). Requires a wallet.
 - **[SeismicUnsignedProvider](seismic-unsigned-provider.md)** -- Read-only (public queries, block data). No wallet needed.
 
-Both providers are generic over `N: SeismicNetwork`, which determines the network-specific transaction and receipt types.
+Both are constructed using `SeismicProviderBuilder` and are generic over `N: SeismicNetwork`, which determines the network-specific transaction and receipt types.
 
 ## Provider Comparison
 
-| Capability                        | SeismicSignedProvider         | SeismicUnsignedProvider                     |
-| --------------------------------- | ----------------------------- | ------------------------------------------- |
-| **Wallet integration**            | Yes (signs transactions)      | No                                          |
-| **Shielded writes**               | Yes                           | No                                          |
-| **Signed reads (`seismic_call`)** | Yes (encrypts + decrypts)     | No response decryption                      |
-| **Public reads**                  | Yes                           | Yes                                         |
-| **Block/transaction queries**     | Yes                           | Yes                                         |
-| **TEE pubkey caching**            | Yes (fetched at creation)     | No                                          |
-| **Response decryption**           | Yes (ephemeral key + TEE key) | No                                          |
-| **Calldata encryption**           | Automatic via filler pipeline | Not applicable                              |
-| **WebSocket support**             | No (HTTP only)                | Yes (`new_ws()`)                            |
-| **Constructor**                   | `async fn new(wallet, url)`   | `fn new_http(url)` / `async fn new_ws(url)` |
+| Capability                        | SeismicSignedProvider             | SeismicUnsignedProvider           |
+| --------------------------------- | --------------------------------- | --------------------------------- |
+| **Wallet integration**            | Yes (signs transactions)          | No                                |
+| **Shielded writes**               | Yes                               | No                                |
+| **Signed reads (`seismic_call`)** | Yes (encrypts + decrypts)         | No response decryption            |
+| **Public reads**                  | Yes                               | Yes                               |
+| **Block/transaction queries**     | Yes                               | Yes                               |
+| **TEE pubkey caching**            | Yes (fetched at creation)         | No                                |
+| **Response decryption**           | Yes (ephemeral key + TEE key)     | No                                |
+| **Calldata encryption**           | Automatic via filler pipeline     | Not applicable                    |
+| **HTTP support**                  | Yes                               | Yes                               |
+| **WebSocket support**             | Yes                               | Yes                               |
 
 ## Quick Start
 
 ### Signed Provider
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
+use seismic_alloy_provider::SeismicProviderBuilder;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicReth>::from(signer);
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
-// Full-featured provider
-let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+// Full-featured provider (HTTP)
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
+
+// Full-featured provider (WebSocket)
+let ws_url = "wss://gcp-1.seismictest.net/ws".parse()?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_ws(ws_url)
+    .await?;
 ```
 
 ### Unsigned Provider
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::SeismicProviderBuilder;
 
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
 // Read-only provider (HTTP)
-let provider = sreth_unsigned_provider(url);
+let provider = SeismicProviderBuilder::new()
+    .connect_http(url)
+    .await?;
 
 // Read-only provider (WebSocket)
 let ws_url = "wss://gcp-1.seismictest.net/ws".parse()?;
-let provider = SeismicUnsignedProvider::<SeismicReth>::new_ws(ws_url).await?;
+let provider = SeismicProviderBuilder::new()
+    .connect_ws(ws_url)
+    .await?;
 ```
+
+## SeismicProviderBuilder
+
+All providers are constructed via `SeismicProviderBuilder`, which uses a typestate pattern:
+
+```
+SeismicProviderBuilder::new()
+  │
+  ├── .wallet(wallet)         → SeismicProviderBuilderWithWallet<SeismicReth>
+  │     ├── .connect_http()   → SeismicSignedProvider<SeismicReth>
+  │     └── .connect_ws()     → SeismicSignedProvider<SeismicReth>
+  │
+  ├── .foundry().wallet(w)    → SeismicProviderBuilderWithWallet<SeismicFoundry>
+  │     ├── .connect_http()   → SeismicSignedProvider<SeismicFoundry>
+  │     └── .connect_ws()     → SeismicSignedProvider<SeismicFoundry>
+  │
+  ├── .connect_http(url)      → SeismicUnsignedProvider<SeismicReth>
+  └── .connect_ws(url)        → SeismicUnsignedProvider<SeismicReth>
+```
+
+The builder defaults to `SeismicReth` as the network type. Use `.foundry()` to switch to `SeismicFoundry` for local development with sanvil.
 
 ## Filler Pipeline
 
@@ -113,50 +149,41 @@ Send to node
 The signed provider places `WalletFiller` first because the wallet must sign the fully-populated transaction. The unsigned provider does not have a wallet filler since it cannot sign transactions.
 {% endhint %}
 
-## Convenience Constructors
-
-Both provider types have convenience functions that pre-fill the network generic parameter:
-
-### Signed Providers
-
-| Function                                | Network          | Description                        |
-| --------------------------------------- | ---------------- | ---------------------------------- |
-| `sreth_signed_provider(wallet, url)`    | `SeismicReth`    | For Seismic devnet/testnet/mainnet |
-| `sfoundry_signed_provider(wallet, url)` | `SeismicFoundry` | For local sfoundry instances       |
-
-### Unsigned Providers
-
-| Function                          | Network          | Description                        |
-| --------------------------------- | ---------------- | ---------------------------------- |
-| `sreth_unsigned_provider(url)`    | `SeismicReth`    | For Seismic devnet/testnet/mainnet |
-| `sfoundry_unsigned_provider(url)` | `SeismicFoundry` | For local sfoundry instances       |
-
 ## SeismicProviderExt Trait
 
 The `SeismicProviderExt` trait extends Alloy's `Provider<N>` with Seismic-specific methods:
 
 ```rust
 pub trait SeismicProviderExt<N: SeismicNetwork>: Provider<N> {
+    // High-level contract interaction (integrates with #[sol(rpc)])
+    async fn shielded_call<C: SolCall>(&self, addr: Address, call: C) -> TransportResult<C::Return>;
+    async fn shielded_send<C: SolCall>(&self, addr: Address, call: C) -> TransportResult<PendingTransactionBuilder<N>>;
+    async fn transparent_call<C: SolCall>(&self, addr: Address, call: C) -> TransportResult<C::Return>;
+    async fn transparent_send<C: SolCall>(&self, addr: Address, call: C) -> TransportResult<PendingTransactionBuilder<N>>;
+
+    // Low-level methods
     async fn seismic_call(&self, tx: SendableTx<N>) -> TransportResult<Bytes>;
-    fn should_encrypt_input<B: TransactionBuilder<N>>(&self, tx: &B) -> bool;
+    async fn eip712_send(&self, tx: SendableTx<N>) -> TransportResult<PendingTransactionBuilder<N>>;
     async fn get_tee_pubkey(&self) -> TransportResult<PublicKey>;
-    async fn call_conditionally_signed(&self, tx: SendableTx<N>) -> TransportResult<Bytes>;
 }
 ```
 
-| Method                        | Description                                                                 |
-| ----------------------------- | --------------------------------------------------------------------------- |
-| `seismic_call()`              | Fill, encrypt, send, and decrypt an `eth_call`-style request                |
-| `should_encrypt_input()`      | Check if a transaction's calldata should be encrypted                       |
-| `get_tee_pubkey()`            | Fetch the TEE public key from the node via `seismic_getTeePublicKey`        |
-| `call_conditionally_signed()` | Send a call that is signed if the provider has a wallet, unsigned otherwise |
+| Method               | Description                                                        |
+| -------------------- | ------------------------------------------------------------------ |
+| `shielded_call()`    | Encrypted read with response decryption (requires signed provider) |
+| `shielded_send()`    | Encrypted write transaction                                        |
+| `transparent_call()` | Standard `eth_call` without encryption                             |
+| `transparent_send()` | Standard transaction without encryption                            |
+| `seismic_call()`     | Low-level encrypted call with raw bytes                            |
+| `eip712_send()`      | Send via EIP-712 typed data (for browser wallets)                  |
+| `get_tee_pubkey()`   | Fetch the TEE public key from the node                             |
 
 ## Network Types
 
 | Type             | Description                | Use With                 |
 | ---------------- | -------------------------- | ------------------------ |
 | `SeismicReth`    | Production Seismic network | Devnet, testnet, mainnet |
-| `SeismicFoundry` | Local development network  | sfoundry local nodes     |
+| `SeismicFoundry` | Local development network  | sanvil local nodes       |
 
 Both types implement `SeismicNetwork`, which extends Alloy's `Network` trait with Seismic transaction and receipt types.
 

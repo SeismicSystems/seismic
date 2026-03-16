@@ -48,24 +48,29 @@ The input is the concatenation of `secret_key` (32 bytes) followed by `public_ke
 ### Basic Usage
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::{precompiles, SeismicProviderBuilder};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
-
-    let ecdh_address: Address =
-        "0x0000000000000000000000000000000000000065".parse()?;
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     // Alice's secret key (32 bytes)
     let alice_sk: [u8; 32] = [/* your private key bytes */; 32];
 
     // Bob's compressed public key (33 bytes, starting with 0x02 or 0x03)
     let bob_pk: [u8; 33] = [/* Bob's compressed public key */; 33];
+
+    // Using convenience helpers
+    let shared_secret = precompiles::call::ecdh(&provider, &alice_sk, &bob_pk).await?;
+    println!("Shared secret (convenience): 0x{}", hex::encode(&shared_secret));
+
+    // Manual approach
+    let ecdh_address: Address =
+        "0x0000000000000000000000000000000000000065".parse()?;
 
     // Concatenate sk + pk
     let mut input_bytes = Vec::with_capacity(65);
@@ -91,15 +96,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Two-Party Key Exchange
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::SeismicProviderBuilder;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let ecdh_address: Address =
         "0x0000000000000000000000000000000000000065".parse()?;
@@ -149,15 +154,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Use with AES Encryption
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::SeismicProviderBuilder;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     // Step 1: Derive shared key via ECDH
     let ecdh_address: Address =

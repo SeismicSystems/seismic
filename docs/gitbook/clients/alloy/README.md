@@ -15,20 +15,43 @@ seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
 ## Quick Example
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
+use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
 use alloy_signer_local::PrivateKeySigner;
+use alloy_sol_types::sol;
+use alloy_primitives::U256;
+
+sol! {
+    #[sol(rpc)]
+    contract SeismicCounter {
+        function setNumber(suint256 newNumber) public;
+        function isOdd() public view returns (bool);
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
-    // All standard Alloy provider methods work
-    let block_number = provider.get_block_number().await?;
-    println!("Block number: {block_number}");
+    let contract = SeismicCounter::new(contract_address, &provider);
+
+    // Shielded read (encrypted call + response decryption)
+    let is_odd = contract.isOdd().seismic().call().await?;
+
+    // Shielded write (encrypted transaction)
+    contract.setNumber(U256::from(42).into())
+        .seismic()
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
 
     Ok(())
 }
@@ -36,10 +59,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```rust
 // Unsigned provider -- read-only (no private key needed)
-use seismic_prelude::foundry::*;
-
-let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-let provider = sreth_unsigned_provider(url);
+let provider = SeismicProviderBuilder::new()
+    .connect_http("https://gcp-1.seismictest.net/rpc".parse()?)
+    .await?;
 
 let block = provider.get_block_number().await?;
 ```
@@ -73,15 +95,18 @@ let block = provider.get_block_number().await?;
 ### By Component
 
 - **Provider types** -> [SeismicSignedProvider](provider/seismic-signed-provider.md), [SeismicUnsignedProvider](provider/seismic-unsigned-provider.md)
+- **Builder** -> `SeismicProviderBuilder::new().wallet(wallet).connect_http(url)`
 - **Encryption** -> [Encryption](provider/encryption.md)
-- **Convenience constructors** -> `sreth_signed_provider()`, `sfoundry_signed_provider()`
 
 ## Features
 
 - **Shielded Transactions** -- Encrypt calldata with TEE public key via AES-GCM
 - **Signed Reads** -- Prove identity in `eth_call` with `seismic_call()`
-- **Two Provider Types** -- `SeismicSignedProvider` (full capabilities) and `SeismicUnsignedProvider` (read-only)
-- **Automatic Encryption Pipeline** -- Filler chain handles encryption transparently
+- **`.seismic()` Call Builder** -- `contract.method().seismic().call()` / `.send()` for ergonomic shielded operations
+- **EIP-712 Support** -- `.seismic().eip712()` for browser wallet compatibility (MetaMask)
+- **SecurityParams** -- Per-call `.expires_at()`, `.recent_block_hash()`, `.encryption_nonce()` overrides
+- **Builder Pattern** -- `SeismicProviderBuilder` with typestate for signed/unsigned HTTP/WS providers
+- **Precompile Helpers** -- Encode/decode/call wrappers for Seismic's 6 custom precompiles
 - **Type 0x4A Transactions** -- Native support for Seismic transaction type
 - **Full Alloy Compatibility** -- All standard Alloy `Provider` methods work unchanged
 
@@ -93,7 +118,7 @@ The SDK extends Alloy's provider model with a filler pipeline that automatically
 seismic-alloy (workspace)
 ├── consensus    -- Seismic transaction types and consensus logic
 ├── network      -- SeismicNetwork trait, SeismicReth, SeismicFoundry
-├── provider     -- SeismicSignedProvider, SeismicUnsignedProvider, fillers
+├── provider     -- SeismicProviderBuilder, fillers, precompile helpers
 ├── rpc-types    -- Seismic-specific RPC request/response types
 ├── genesis      -- Genesis configuration types
 └── prelude      -- Convenience re-exports from all crates
@@ -115,7 +140,7 @@ The SDK defines two network configurations:
 | Network          | Type        | Description                                |
 | ---------------- | ----------- | ------------------------------------------ |
 | `SeismicReth`    | Production  | Seismic devnet/testnet/mainnet             |
-| `SeismicFoundry` | Development | Local Seismic Foundry (sfoundry) instances |
+| `SeismicFoundry` | Development | Local Seismic Foundry (sanvil) instances   |
 
 Both implement the `SeismicNetwork` trait and can be used as the generic parameter `N` in provider types.
 

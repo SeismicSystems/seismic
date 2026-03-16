@@ -46,7 +46,7 @@ The `seismic-alloy` workspace contains six crates. The `prelude` crate re-export
 | ------------------------- | --------------------------------------------------------------------- |
 | `seismic-alloy-consensus` | Seismic transaction types and consensus logic                         |
 | `seismic-alloy-network`   | `SeismicNetwork` trait, `SeismicReth`, `SeismicFoundry` network types |
-| `seismic-alloy-provider`  | `SeismicSignedProvider`, `SeismicUnsignedProvider`, filler pipeline   |
+| `seismic-alloy-provider`  | `SeismicProviderBuilder`, filler pipeline, precompile helpers         |
 | `seismic-alloy-rpc-types` | Seismic-specific RPC request and response types                       |
 | `seismic-alloy-genesis`   | Genesis configuration types                                           |
 | `seismic-alloy-prelude`   | Convenience re-exports from all crates                                |
@@ -71,11 +71,10 @@ use seismic_prelude::foundry::*;
 
 This brings into scope:
 
-- `SeismicSignedProvider`, `SeismicUnsignedProvider`
+- `SeismicProviderBuilder`, `SeismicSignedProvider`, `SeismicUnsignedProvider`
 - `SeismicWallet`
 - `SeismicReth`, `SeismicFoundry`, `SeismicNetwork`
-- `SeismicProviderExt` trait
-- Convenience functions: `sreth_signed_provider()`, `sfoundry_signed_provider()`, `sreth_unsigned_provider()`, `sfoundry_unsigned_provider()`
+- `SeismicProviderExt`, `SeismicCallExt` traits
 - Seismic transaction types and RPC types
 
 ## Key Dependencies
@@ -128,16 +127,20 @@ tokio = { version = "1", features = ["full"] }
 Write `src/main.rs`:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
+use seismic_alloy_provider::SeismicProviderBuilder;
 use alloy_signer_local::PrivateKeySigner;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
     let block_number = provider.get_block_number().await?;
     println!("Connected! Block number: {block_number}");

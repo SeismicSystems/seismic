@@ -9,22 +9,31 @@ The `seismic-alloy` SDK supports multiple Seismic networks. Each chain has a spe
 
 ## Overview
 
-Unlike the Python SDK, `seismic-alloy` does not use pre-configured chain objects. Instead, you pass the RPC URL directly to the provider constructor and select the appropriate network type (`SeismicReth` or `SeismicFoundry`). The chain ID is fetched automatically from the node.
+Unlike the Python SDK, `seismic-alloy` does not use pre-configured chain objects. Instead, you pass the RPC URL directly to the `SeismicProviderBuilder` and select the appropriate network type (`SeismicReth` or `SeismicFoundry`). The chain ID is fetched automatically from the node.
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicReth>::from(signer.clone());
 
 // Testnet
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-let provider = sreth_signed_provider(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 
 // Local (Sanvil)
+let signer2: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
+let wallet2 = SeismicWallet::<SeismicFoundry>::from(signer2);
 let url = "http://127.0.0.1:8545".parse()?;
-let provider = sfoundry_signed_provider(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .foundry()
+    .wallet(wallet2)
+    .connect_http(url)
+    .await?;
 ```
 
 ## Supported Chains
@@ -53,10 +62,12 @@ The Alloy provider automatically fetches the chain ID from the connected node vi
 - Transaction validation
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy::prelude::*;
 
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-let provider = sreth_unsigned_provider(url);
+let provider = SeismicProviderBuilder::new()
+    .connect_http(url)
+    .await?;
 
 // Chain ID is fetched from the node
 let chain_id = provider.get_chain_id().await?;

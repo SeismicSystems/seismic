@@ -61,15 +61,19 @@ Execution order matters. `SeismicGasFiller` must run after `SeismicElementsFille
 Both fillers are automatically configured when you create a `SeismicSignedProvider`. You do not need to instantiate them manually in most cases.
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_alloy_network::{SeismicReth, SeismicWallet};
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicReth>::from(signer);
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
 // Fillers are set up automatically
-let provider = sreth_signed_provider(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 ### Custom Configuration
@@ -77,7 +81,7 @@ let provider = sreth_signed_provider(wallet, url).await?;
 If you need to customize filler behavior, you can construct them manually:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::fillers::{SeismicElementsFiller, SeismicGasFiller};
 
 // Custom elements filler with cached TEE pubkey
 let elements_filler = SeismicElementsFiller::with_tee_pubkey_and_url(tee_pubkey);

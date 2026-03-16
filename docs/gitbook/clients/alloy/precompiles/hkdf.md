@@ -46,16 +46,21 @@ The input is the raw IKM bytes -- no additional encoding is needed.
 ### Basic Usage
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::{precompiles, SeismicProviderBuilder};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
+    // Using convenience helpers
+    let derived_key = precompiles::call::hkdf(&provider, b"my-input-key-material").await?;
+    println!("Derived key (convenience): 0x{}", hex::encode(&derived_key));
+
+    // Manual approach
     let hkdf_address: Address =
         "0x0000000000000000000000000000000000000068".parse()?;
 
@@ -81,15 +86,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Derive Multiple Keys by Context
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::SeismicProviderBuilder;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let hkdf_address: Address =
         "0x0000000000000000000000000000000000000068".parse()?;
@@ -124,15 +129,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Use as AES Key
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::SeismicProviderBuilder;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     // Step 1: Derive AES key via HKDF
     let hkdf_address: Address =
@@ -178,15 +183,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Derive from ECDH Output
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::SeismicProviderBuilder;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     // Step 1: Perform ECDH
     let ecdh_address: Address =
@@ -232,15 +237,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Deterministic Key Derivation
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::SeismicProviderBuilder;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let hkdf_address: Address =
         "0x0000000000000000000000000000000000000068".parse()?;

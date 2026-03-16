@@ -9,7 +9,7 @@ icon: shield-halved
 
 ### How it works
 
-When you build a transaction with `.seismic()` and send it via `send_transaction()`, the SDK:
+When you call `contract.method().seismic().send()`, the SDK:
 
 1. Fetches your nonce and the latest block hash from the node
 2. Populates `TxSeismicElements` (encryption nonce, TEE public key reference, block hash, expiry block)
@@ -27,29 +27,34 @@ The encrypted calldata is bound to the transaction context (chain ID, nonce, blo
 Shielded writes require a `SeismicSignedProvider` because you need a private key for both transaction signing and ECDH key derivation.
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
+use seismic_alloy_provider::SeismicProviderBuilder;
 use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicReth>::from(signer);
 let url: reqwest::Url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
-let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 {% hint style="info" %}
-`new()` is async because it fetches the TEE public key from the node and caches it for all subsequent encryption operations.
+`connect_http()` is async because it fetches the TEE public key from the node and caches it for all subsequent encryption operations.
 {% endhint %}
 
 #### 2. Define the contract interface
 
-Use Alloy's `sol!` macro to define your contract interface. Shielded Solidity types (`suint256`, `sbool`, etc.) map to their standard ABI counterparts for encoding:
+Use Alloy's `sol!` macro with `#[sol(rpc)]` to define your contract interface. Shielded Solidity types (`suint256`, `sbool`, etc.) map to their standard ABI counterparts for encoding:
 
 ```rust
-use alloy::sol;
+use alloy_sol_types::sol;
 
 sol! {
-    interface ISeismicCounter {
+    #[sol(rpc)]
+    contract SeismicCounter {
         function setNumber(suint256 newNumber) public;
         function increment() public;
         function isOdd() public view returns (bool);
@@ -57,43 +62,28 @@ sol! {
 }
 ```
 
-This generates type-safe Rust structs: `ISeismicCounter::setNumberCall`, `ISeismicCounter::incrementCall`, etc.
+This generates type-safe call builders with `.call()` and `.send()` methods.
 
-#### 3. Encode calldata
+#### 3. Build and send with `.seismic()`
 
-Use the generated structs and `abi_encode()` to produce calldata bytes:
+The `.seismic()` method marks a call for encryption. Chain it with `.send()` to send an encrypted transaction:
 
 ```rust
-use alloy::sol_types::SolCall;
+use seismic_alloy_provider::SeismicCallExt;
 use alloy_primitives::U256;
 
-let calldata = ISeismicCounter::setNumberCall {
-    newNumber: U256::from(42),
-}.abi_encode();
+let contract = SeismicCounter::new(contract_address, &provider);
+
+let receipt = contract
+    .setNumber(U256::from(42).into())
+    .seismic()
+    .send()
+    .await?
+    .get_receipt()
+    .await?;
 ```
 
-#### 4. Build the transaction with `.seismic()`
-
-The `.seismic()` method on a `SeismicTransactionRequest` marks it for encryption. Without `.seismic()`, the transaction is sent as a standard Ethereum type with no encryption.
-
-```rust
-use alloy_primitives::{Bytes, TxKind};
-
-let tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-    .with_input(Bytes::from(calldata))
-    .with_kind(TxKind::Call(contract_address))
-    .into()
-    .seismic();  // Marks for encryption
-```
-
-#### 5. Send and await receipt
-
-```rust
-let pending_tx = provider.send_transaction(tx.into()).await?;
-let receipt = pending_tx.get_receipt().await?;
-```
-
-#### 6. Verify success
+#### 4. Verify success
 
 ```rust
 use alloy_network::ReceiptResponse;
@@ -117,7 +107,19 @@ Every shielded transaction includes a block-hash freshness check and an expiry w
 | `expires_at_block`  | `current_block + blocks_window` | Block number after which the transaction is invalid |
 | `recent_block_hash` | Latest block hash               | Anchors the transaction to a specific chain state   |
 
-These values are set automatically by the filler pipeline. You do not need to set them manually.
+These values are set automatically by the filler pipeline. You can override them per-call:
+
+```rust
+let receipt = contract
+    .setNumber(U256::from(42).into())
+    .seismic()
+    .expires_at(current_block + 50)        // Custom expiration
+    .recent_block_hash(specific_hash)       // Pin to specific chain state
+    .send()
+    .await?
+    .get_receipt()
+    .await?;
+```
 
 ---
 
@@ -151,27 +153,17 @@ You never need to call encryption functions manually. The provider's filler pipe
 
 ### Create transactions cannot be seismic
 
-Contract deployment (`TxKind::Create`) always uses transparent transactions. The Seismic protocol does not support encrypting deployment bytecode. Deploy your contract with a standard transaction, then interact with it using shielded calls:
+Contract deployment (`TxKind::Create`) always uses transparent transactions. The Seismic protocol does not support encrypting deployment bytecode. Deploy your contract first, then interact with it using shielded calls:
 
 ```rust
-// Deployment -- no .seismic()
-let deploy_tx = seismic_foundry_tx_builder()
-    .with_input(bytecode)
-    .with_kind(TxKind::Create)
-    .into();
+// Deploy with #[sol(rpc, bytecode = "...")] generated deploy() method
+let contract = SeismicCounter::deploy(&provider).await?;
 
-let receipt = provider.send_transaction(deploy_tx).await?
-    .get_receipt().await?;
-let contract_address = receipt.contract_address.unwrap();
-
-// Interaction -- with .seismic()
-let shielded_tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-    .with_input(Bytes::from(calldata))
-    .with_kind(TxKind::Call(contract_address))
-    .into()
-    .seismic();
-
-provider.send_transaction(shielded_tx.into()).await?;
+// Now interact with shielded calls
+contract.setNumber(U256::from(42).into())
+    .seismic()
+    .send()
+    .await?;
 ```
 
 ---
@@ -183,8 +175,8 @@ Common failure modes and how to handle them:
 ```rust
 use alloy_network::ReceiptResponse;
 
-// Send the transaction
-let pending_tx = match provider.send_transaction(tx.into()).await {
+// Send the shielded transaction
+let pending_tx = match contract.setNumber(U256::from(42).into()).seismic().send().await {
     Ok(pending) => pending,
     Err(e) => {
         eprintln!("Failed to send transaction: {e}");
@@ -215,15 +207,16 @@ println!("Success! Block: {:?}", receipt.block_number());
 ### Complete example
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy::sol;
-use alloy::sol_types::SolCall;
-use alloy_primitives::{Bytes, TxKind, U256};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
+use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
 use alloy_network::ReceiptResponse;
+use alloy_primitives::U256;
+use alloy_signer_local::PrivateKeySigner;
+use alloy_sol_types::sol;
 
 sol! {
-    interface ISeismicCounter {
+    #[sol(rpc)]
+    contract SeismicCounter {
         function setNumber(suint256 newNumber) public;
     }
 }
@@ -232,28 +225,27 @@ sol! {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Set up signed provider
     let signer: PrivateKeySigner = std::env::var("PRIVATE_KEY")?.parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
-    // 2. Encode calldata
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
+
+    // 2. Shielded write
     let contract_address = std::env::var("CONTRACT_ADDRESS")?.parse()?;
-    let calldata = ISeismicCounter::setNumberCall {
-        newNumber: U256::from(42),
-    }.abi_encode();
+    let contract = SeismicCounter::new(contract_address, &provider);
 
-    // 3. Build seismic transaction
-    let tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(calldata))
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
+    let receipt = contract
+        .setNumber(U256::from(42).into())
+        .seismic()
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
 
-    // 4. Send and wait
-    let pending_tx = provider.send_transaction(tx.into()).await?;
-    let receipt = pending_tx.get_receipt().await?;
-
-    // 5. Verify
+    // 3. Verify
     assert!(receipt.status());
     println!("Shielded write confirmed: {:?}", receipt.transaction_hash);
     println!("Block: {:?}", receipt.block_number());
