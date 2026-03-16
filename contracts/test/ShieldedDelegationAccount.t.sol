@@ -860,6 +860,31 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         assertEq(bobBalance, 0, "Bob should not have received any tokens");
     }
 
+    /// @notice Test that expiry=0 means the key never expires
+    function test_zeroExpiryMeansNeverExpires() public {
+        (bytes memory publicKey, uint256 privateKey) = _randomSecp256k1Key();
+
+        // Fund Alice
+        vm.deal(ALICE_ADDRESS, 10 ether);
+
+        // Authorize a key with expiry=0 (never expires)
+        vm.prank(ALICE_ADDRESS);
+        ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(0), type(uint256).max
+        );
+
+        uint32 keyIndex = ShieldedDelegationAccount(ALICE_ADDRESS).getKeyIndex(KeyType.Secp256k1, publicKey);
+
+        // Warp far into the future
+        vm.warp(block.timestamp + 365 days * 100);
+
+        // Should still work — expiry=0 means never expires
+        bytes memory calls = _createEthTransferCall(BOB_ADDRESS, 1 ether);
+        _executeViaKeyTransparent(ALICE_ADDRESS, keyIndex, calls, privateKey, false);
+
+        assertEq(BOB_ADDRESS.balance, 1 ether, "Transfer should succeed with never-expiring key");
+    }
+
     /// @notice Test that spendLimit=0 means no spending allowed
     function test_zeroSpendLimitBlocksAllSpending() public {
         (bytes memory publicKey, uint256 privateKey) = _randomSecp256k1Key();
