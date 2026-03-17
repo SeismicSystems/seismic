@@ -16,7 +16,7 @@ Thumbs.db
 # VS Code
 .vscode/**
 !.vscode/settings.json
-!.vscode/seismic.code-workspace
+!.vscode/extensions.json
 
 # Node (future)
 node_modules/

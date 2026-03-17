@@ -1,0 +1,4 @@
+{
+    // Get vscode to use the uv venv so imports resolve. Run `make install` in clients/py/ first.
+    "python.defaultInterpreterPath": "clients/py/.venv/bin/python",
+}
