@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    // We recommend using https://marketplace.visualstudio.com/items?itemName=astral-sh.ty instead of Microsoft's Pylance lsp.
+    // We use uv for managing our python venvs, so using this extension will match the linting/typechecking that CI uses (via `make ci` under clients/py/).
+    "astral-sh.ty"
+  ],
+  "unwantedRecommendations": [
+    // We use astral's ty extension which uses uv as the LSP instead of pylance/pyright.
+    "ms-python.vscode-pylance"
+  ]
+}
