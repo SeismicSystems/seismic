@@ -113,7 +113,14 @@ export type TxSeismic = {
   recentBlockHash: Hex
   expiresAtBlock: bigint
   signedRead: boolean
-  authorizationList?: { chainId: bigint; address: `0x${string}`; nonce: bigint; yParity: number; r: `0x${string}`; s: `0x${string}` }[]
+  authorizationList?: {
+    chainId: bigint
+    address: `0x${string}`
+    nonce: bigint
+    yParity: number
+    r: `0x${string}`
+    s: `0x${string}`
+  }[]
 }
 
 export type SeismicTxSerializer = SerializeTransactionFn<
