@@ -191,3 +191,19 @@ function drawWinner() external {
 **Why this matters:** Seismic's TEE setup largely mitigates this — proposers are restricted in what they can observe and do, and we believe synchronous RNG is safe for most use cases. This is something we've thought about extensively. However, for applications with especially high-stakes randomness requirements, it's worth being aware of the theoretical attack surface.
 
 **What to do instead:** For the most sensitive randomness use cases (large-pot lotteries, leader elections), consider using an asynchronous commit-reveal scheme where entropy is committed before the block in which it is consumed. Seismic does not provide this out of the box today. For the vast majority of use cases, the synchronous RNG precompile is appropriate.
+
+### RNG Revert If Not Ideal Outcome
+
+**The problem:** A caller of a contract that uses the [RNG precompile](../reference/precompiles/rng.md) can revert their transaction if they don't like the outcome, giving them a risk-free way of interacting with your contract.
+```solidity
+// An attacker wraps the call and reverts on unfavorable outcomes,
+// making every attempt risk-free.
+function playLotteryRiskFree() external {
+    bool winner = lotteryContract.playLottery();
+    require(winner, "Better luck next time");
+}
+```
+
+**Why this matters:** You should not use RNG precompile when the caller will be able to analayze the outcome and revert to undo
+
+**What to do instead:** One example would be a poker contract where a dealer makes a call that uses RNG to shuffle the deck and set the state of it. After deck is shuffled players then can put in subsequent calls to deal from the shuffled deck but now they cannot revert to undo the state of the deck. 
