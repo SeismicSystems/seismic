@@ -57,8 +57,7 @@ By default, Sanvil:
 ### Signed Provider (Full Capabilities)
 
 ```rust
-use seismic_alloy::prelude::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -85,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Unsigned Provider (Read-Only)
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::client::*;
 
 let url = "http://127.0.0.1:8545".parse()?;
 let provider = SeismicProviderBuilder::new()
@@ -99,8 +98,7 @@ let block = provider.get_block_number().await?;
 ### With Builder Pattern
 
 ```rust
-use seismic_alloy::prelude::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
 
 let signer: PrivateKeySigner =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -124,8 +122,7 @@ Always use `SeismicFoundry` (not `SeismicReth`) when connecting to Sanvil. Sanvi
 ### Local Development Workflow
 
 ```rust
-use seismic_alloy::prelude::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -154,8 +151,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Testing with Multiple Accounts
 
 ```rust
-use seismic_alloy::prelude::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
 
 // Anvil/Sanvil pre-funded test accounts
 let test_keys = [
@@ -181,8 +177,7 @@ for key in &test_keys {
 ### Integration Test Setup
 
 ```rust
-use seismic_alloy::prelude::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
 
 async fn setup_test_provider()
     -> Result<impl std::ops::Deref, Box<dyn std::error::Error>>

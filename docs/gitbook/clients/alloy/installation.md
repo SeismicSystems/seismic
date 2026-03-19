@@ -49,7 +49,7 @@ The `seismic-alloy` workspace contains six crates:
 | `seismic-alloy-consensus` | Seismic transaction types and consensus logic                         |
 | `seismic-alloy-rpc-types` | Seismic-specific RPC request and response types                       |
 | `seismic-alloy-genesis`   | Genesis configuration types                                           |
-| `seismic-alloy-prelude`   | Internal re-exports for Seismic's Foundry and Reth forks (not for app development) |
+| `seismic-alloy-prelude`   | Convenience re-exports for application development (`seismic_prelude::client::*`) and internal forks |
 
 Most applications only need `seismic-alloy-provider` and `seismic-alloy-network`:
 
@@ -61,16 +61,23 @@ seismic-alloy-network = { git = "https://github.com/SeismicSystems/seismic-alloy
 
 ## Recommended Imports
 
-Use explicit imports from the crates you need:
+The recommended approach is to use the client prelude, which re-exports the most commonly used types and traits:
 
 ```rust
-use seismic_alloy_provider::{SeismicProviderBuilder, SeismicCallExt, SeismicProviderExt};
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
 ```
 
-{% hint style="warning" %}
-The `seismic-alloy-prelude` crate (`seismic_prelude::foundry::*`, `seismic_prelude::reth::*`) is designed for Seismic's internal forks of Foundry and Reth. It re-exports Seismic types under upstream naming conventions to minimize merge conflicts. **Do not use it in application code** -- it pulls in revm internals and aliases that are confusing outside of the fork context.
+This single import provides: `SeismicCallExt`, `ShieldedCallExt`, `SeismicProviderBuilder`, `SeismicProviderExt`, `SeismicSignedProvider`, `SeismicUnsignedProvider`, `SeismicWallet`, `sol`, `Address`, `Bytes`, `FixedBytes`, `U256`, `ReceiptResponse`, and `PrivateKeySigner`.
+
+For types not in the prelude (e.g., `SeismicReth`, `SeismicFoundry`, `Anvil`, `Filter`), add explicit imports alongside the prelude:
+
+```rust
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
+```
+
+{% hint style="info" %}
+The prelude also has `seismic_prelude::foundry::*` and `seismic_prelude::reth::*` modules designed for Seismic's internal forks of Foundry and Reth. These re-export Seismic types under upstream naming conventions to minimize merge conflicts. **Do not use them in application code** -- they pull in revm internals and aliases that are confusing outside of the fork context. Use `seismic_prelude::client::*` instead.
 {% endhint %}
 
 ## Key Dependencies
@@ -123,9 +130,8 @@ tokio = { version = "1", features = ["full"] }
 Write `src/main.rs`:
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -48,9 +48,8 @@ The `Network` implementation for `SeismicReth` defines the following associated 
 The most common way to use `SeismicReth` is via `SeismicProviderBuilder`. Since `SeismicReth` is the default network type, you do not need to specify it explicitly:
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -75,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 For read-only access without a private key:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 let provider = SeismicProviderBuilder::new()
@@ -97,8 +96,8 @@ let block = provider.get_block_number().await?;
 ### Signed Provider
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let provider = SeismicProviderBuilder::new()
     .wallet(wallet)
@@ -116,7 +115,7 @@ let provider = SeismicProviderBuilder::new()
 ### Unsigned Provider
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 
 let provider = SeismicProviderBuilder::new()
     .connect_http(url)

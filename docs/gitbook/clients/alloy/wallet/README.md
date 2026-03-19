@@ -20,9 +20,8 @@ In Alloy's architecture, a wallet is responsible for:
 ## Quick Start
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
-use seismic_alloy_network::{SeismicReth, SeismicWallet};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 // Create a wallet from a single private key
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
@@ -41,8 +40,8 @@ let provider = SeismicProviderBuilder::new()
 `SeismicWallet` supports multiple signers. This is useful when your application needs to send transactions from different accounts:
 
 ```rust
-use seismic_alloy_network::{SeismicReth, SeismicWallet};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer_a: PrivateKeySigner = "0xKEY_A".parse()?;
 let signer_b: PrivateKeySigner = "0xKEY_B".parse()?;

@@ -77,9 +77,8 @@ This restriction exists because the Seismic transaction type (`0x4A`) is designe
 In most cases, `SeismicGasFiller` is configured automatically by the provider:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
-use seismic_alloy_network::{SeismicReth, SeismicWallet};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::from(signer);

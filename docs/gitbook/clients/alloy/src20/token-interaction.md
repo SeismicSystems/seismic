@@ -12,13 +12,13 @@ Read shielded balances and write shielded state changes on SRC20 tokens using se
 SRC20 token interaction in Rust follows the same builder pattern as all seismic-alloy contract calls:
 
 - **Transparent reads** (metadata) -- Use `contract.name().call()` without `.seismic()`
-- **Signed reads** (balances, allowances) -- Use `contract.balanceOf(addr).seismic().call()` with `.seismic()`
-- **Shielded writes** (transfers, approvals) -- Use `contract.transfer(to, amount).seismic().send()` with `.seismic()`
+- **Signed reads** (balances, allowances) -- Use `contract.balanceOf(addr).seismic().call()` with `.seismic()` (no shielded params in arguments)
+- **Shielded writes** (transfers, approvals) -- Use `contract.transfer(to, amount).send()` directly (auto-encrypts because `suint256` is a shielded param)
 
 ## Defining the Interface
 
 ```rust
-use alloy::sol;
+use seismic_prelude::client::*;
 
 sol! {
     #[sol(rpc)]
@@ -45,10 +45,7 @@ sol! {
 Token metadata (name, symbol, decimals, totalSupply) is not shielded. Use a plain transparent read:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::Address;
+use seismic_prelude::client::*;
 
 sol! {
     #[sol(rpc)]
@@ -92,12 +89,8 @@ Metadata reads do not require a wallet or signed provider. An unsigned provider 
 `balanceOf()` is a shielded read. The contract uses `msg.sender` to authenticate the caller, so you must use `.seismic().call()` (a signed read) on a provider created with a wallet.
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::{Address, U256};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -137,12 +130,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Allowance reads may also be shielded depending on the contract implementation. Use a signed read to be safe:
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::{Address, U256};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -181,12 +170,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Send tokens using a shielded write. The transfer amount is encrypted in calldata:
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::{Address, U256};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -210,8 +195,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let amount = U256::from(100);
     let contract = ISRC20::new(token, &provider);
 
-    // Send shielded transaction
-    let pending_tx = contract.transfer(recipient, amount).seismic().send().await?;
+    // transfer has suint256 param -- auto-encrypts
+    let pending_tx = contract.transfer(recipient, amount).send().await?;
     let receipt = pending_tx.get_receipt().await?;
     println!("Transfer tx: {:?}", receipt.transaction_hash);
 
@@ -222,12 +207,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Approve a Spender
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::{Address, U256};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -251,8 +232,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let amount = U256::from(500);
     let contract = ISRC20::new(token, &provider);
 
-    // Send shielded approval
-    let pending_tx = contract.approve(spender, amount).seismic().send().await?;
+    // approve has suint256 param -- auto-encrypts
+    let pending_tx = contract.approve(spender, amount).send().await?;
     let receipt = pending_tx.get_receipt().await?;
     println!("Approve tx: {:?}", receipt.transaction_hash);
 
@@ -264,16 +245,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Operation                 | Method                                     | Builder         | Provider Required |
 | ------------------------- | ------------------------------------------ | --------------- | ----------------- |
-| Read name/symbol/decimals | `contract.name().call()`                   | No `.seismic()` | Any provider      |
+| Read name/symbol/decimals | `contract.name().call()`                   | No encryption   | Any provider      |
 | Read balanceOf            | `contract.balanceOf(addr).seismic().call()` | `.seismic()`    | Signed provider   |
 | Read allowance            | `contract.allowance(o, s).seismic().call()` | `.seismic()`    | Signed provider   |
-| Transfer tokens           | `contract.transfer(to, amt).seismic().send()` | `.seismic()`    | Signed provider   |
-| Approve spender           | `contract.approve(s, amt).seismic().send()` | `.seismic()`    | Signed provider   |
+| Transfer tokens           | `contract.transfer(to, amt).send()`         | Auto-encrypts   | Signed provider   |
+| Approve spender           | `contract.approve(s, amt).send()`           | Auto-encrypts   | Signed provider   |
 
 ## Notes
 
 - All shielded operations require a provider built with a wallet via `SeismicProviderBuilder`
-- The `.seismic()` builder method marks the transaction for calldata encryption
+- Functions with shielded parameters (`suint256`) like `transfer` and `approve` auto-encrypt via `ShieldedCallBuilder`
+- For functions without shielded params (like `balanceOf` and `allowance`), use `.seismic()` to opt into encryption
 - The filler pipeline automatically handles encryption nonce, TEE pubkey, and AES-GCM encryption
 - Shielded types (`suint256`) appear as their standard counterparts (`uint256`) in the ABI encoding
 

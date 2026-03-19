@@ -5,7 +5,7 @@ icon: magnifying-glass
 
 # Signed Reads
 
-A signed read uses `.seismic().call()` to build a full `TxSeismic` just like a [shielded write](shielded-write.md), but targets the `eth_call` endpoint instead of broadcasting a transaction. The node decrypts the calldata inside the TEE, executes the call, encrypts the result, and returns it. The provider then decrypts the response automatically.
+A signed read uses `.seismic().call()` (for functions without shielded params) or `.call()` directly (for functions with shielded params) to build a full `TxSeismic` just like a [shielded write](shielded-write.md), but targets the `eth_call` endpoint instead of broadcasting a transaction. The node decrypts the calldata inside the TEE, executes the call, encrypts the result, and returns it. The provider then decrypts the response automatically.
 
 ---
 
@@ -45,9 +45,8 @@ Both the calldata you send **and** the result you get back are encrypted. An obs
 Signed reads require a `SeismicSignedProvider` because the provider needs an ephemeral keypair for ECDH key derivation and response decryption.
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::from(signer);
@@ -64,9 +63,6 @@ let provider = SeismicProviderBuilder::new()
 Use the `sol!` macro with `#[sol(rpc)]` to define the interface, then use `.seismic().call()`:
 
 ```rust
-use alloy_sol_types::sol;
-use seismic_alloy_provider::SeismicCallExt;
-
 sol! {
     #[sol(rpc)]
     contract SeismicCounter {
@@ -84,7 +80,7 @@ println!("Is odd: {is_odd}");
 The return value is already decoded -- no manual ABI decoding needed.
 
 {% hint style="info" %}
-Use `.seismic().call()` for signed reads and `.seismic().send()` for shielded writes. Both encrypt calldata, but `.call()` also decrypts the response and does not modify on-chain state.
+Use `.seismic().call()` for signed reads on functions without shielded params, and `.seismic().send()` or direct `.send()` for shielded writes. Both encrypt calldata, but `.call()` also decrypts the response and does not modify on-chain state. Functions with shielded parameters auto-encrypt, so `.seismic()` is not needed for those.
 {% endhint %}
 
 ---
@@ -118,7 +114,7 @@ let is_odd = contract.isOdd()
 
 ### How the provider handles encryption
 
-Under the hood, `.seismic().call()` performs the following sequence:
+Under the hood, a shielded `.call()` (via `.seismic().call()` or auto-encryption) performs the following sequence:
 
 ```
 1. Fill the transaction (nonce, chain ID, seismic elements, gas)
@@ -142,8 +138,7 @@ Under the hood, `.seismic().call()` performs the following sequence:
 If you need direct control without the `#[sol(rpc)]` call builder, use `SeismicProviderExt` methods:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderExt;
-
+// SeismicProviderExt is included in the prelude
 let is_odd: bool = provider.shielded_call(contract_address, SeismicCounter::isOddCall {}).await?;
 ```
 
@@ -152,10 +147,8 @@ let is_odd: bool = provider.shielded_call(contract_address, SeismicCounter::isOd
 ### Complete example
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
-use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::sol;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]

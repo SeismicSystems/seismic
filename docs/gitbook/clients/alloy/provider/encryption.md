@@ -265,7 +265,7 @@ The ephemeral keypair used for ECDH is separate from the wallet's signing key. C
 ### Inspecting TEE Public Key
 
 ```rust
-use seismic_alloy_provider::{SeismicProviderBuilder, SeismicProviderExt};
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -282,11 +282,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Signed Provider with Automatic Encryption
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
-use alloy_signer_local::PrivateKeySigner;
-use alloy_primitives::U256;
-use alloy_sol_types::sol;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -313,9 +310,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let contract = SeismicCounter::new(contract_address, &provider);
 
-    // Shielded write: fillers populate fields, encrypt calldata, sign, send
+    // Shielded write: setNumber auto-encrypts (suint256 param)
     contract.setNumber(U256::from(42).into())
-        .seismic()
         .send()
         .await?
         .get_receipt()

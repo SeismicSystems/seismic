@@ -161,9 +161,8 @@ The node's TEE can reverse this process because it holds the private key corresp
 In most cases, you do not interact with `SeismicElementsFiller` directly. It is automatically included in the provider's filler pipeline:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
-use seismic_alloy_network::{SeismicReth, SeismicWallet};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::from(signer);

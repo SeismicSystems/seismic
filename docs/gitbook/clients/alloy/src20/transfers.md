@@ -9,19 +9,15 @@ Send SRC20 tokens privately using shielded transfers, approvals, and `transferFr
 
 ## Overview
 
-SRC20 transfers work similarly to ERC20 transfers, but with calldata encryption to hide amounts from observers. The provider created via `SeismicProviderBuilder` handles encryption automatically when you mark a transaction with `.seismic()`.
+SRC20 transfers work similarly to ERC20 transfers, but with calldata encryption to hide amounts from observers. Functions like `transfer`, `approve`, and `transferFrom` have shielded parameters (`suint256`), so the `sol!` macro wraps them in a `ShieldedCallBuilder` that auto-encrypts -- just call `.send()` directly.
 
 ## Prerequisites
 
 All transfer examples require a signed provider and the SRC20 interface definition:
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy::sol;
-use alloy::providers::Provider;
-use alloy_primitives::{Address, U256};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -58,8 +54,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let amount = U256::from(100);
     let contract = ISRC20::new(token, &provider);
 
-    // Build and send the shielded transfer
-    let pending_tx = contract.transfer(recipient, amount).seismic().send().await?;
+    // transfer has suint256 param -- auto-encrypts
+    let pending_tx = contract.transfer(recipient, amount).send().await?;
     let receipt = pending_tx.get_receipt().await?;
 
     println!("Transfer sent: {:?}", receipt.transaction_hash);
@@ -92,8 +88,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let approval_amount = U256::from(1000);
     let contract = ISRC20::new(token, &owner_provider);
 
-    // Approve the spender
-    let pending_tx = contract.approve(spender, approval_amount).seismic().send().await?;
+    // approve has suint256 param -- auto-encrypts
+    let pending_tx = contract.approve(spender, approval_amount).send().await?;
     let receipt = pending_tx.get_receipt().await?;
 
     println!("Approval tx: {:?}", receipt.transaction_hash);
@@ -122,8 +118,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let amount = U256::from(250);
     let contract = ISRC20::new(token, &spender_provider);
 
-    // Transfer on behalf of the owner
-    let pending_tx = contract.transferFrom(owner, recipient, amount).seismic().send().await?;
+    // transferFrom has suint256 param -- auto-encrypts
+    let pending_tx = contract.transferFrom(owner, recipient, amount).send().await?;
     let receipt = pending_tx.get_receipt().await?;
 
     println!("TransferFrom tx: {:?}", receipt.transaction_hash);
@@ -161,8 +157,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // Step 2: Execute the transfer
-    let pending_tx = contract.transfer(recipient, amount).seismic().send().await?;
+    // Step 2: Execute the transfer (auto-encrypts, suint256 param)
+    let pending_tx = contract.transfer(recipient, amount).send().await?;
     let receipt = pending_tx.get_receipt().await?;
 
     println!("Transfer successful: {:?}", receipt.transaction_hash);
@@ -202,10 +198,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let owner_contract = ISRC20::new(token, &owner_provider);
     let spender_contract = ISRC20::new(token, &spender_provider);
 
-    // Step 1: Owner approves spender for 1000 tokens
+    // Step 1: Owner approves spender for 1000 tokens (auto-encrypts, suint256 param)
     let pending = owner_contract
         .approve(spender_address, U256::from(1000))
-        .seismic()
         .send()
         .await?;
     pending.get_receipt().await?;
@@ -219,10 +214,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     println!("Current allowance: {}", allowance._0);
 
-    // Step 3: Spender transfers 250 from owner to recipient
+    // Step 3: Spender transfers 250 from owner to recipient (auto-encrypts, suint256 param)
     let pending = spender_contract
         .transferFrom(owner_address, recipient, U256::from(250))
-        .seismic()
         .send()
         .await?;
     let receipt = pending.get_receipt().await?;
@@ -257,9 +251,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (recipient, amount) in &recipients {
+        // transfer auto-encrypts (suint256 param)
         let pending_tx = contract
             .transfer(*recipient, *amount)
-            .seismic()
             .send()
             .await?;
         let receipt = pending_tx.get_receipt().await?;
@@ -276,7 +270,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Notes
 
-- All transfer amounts are encrypted via the `.seismic()` builder
+- All transfer amounts are auto-encrypted because `transfer`, `approve`, and `transferFrom` have shielded parameters (`suint256`)
 - The provider's filler pipeline handles calldata encryption automatically
 - Transaction receipts are returned as normal -- only the calldata is encrypted
 - `transferFrom` requires prior approval from the token owner

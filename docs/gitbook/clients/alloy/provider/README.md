@@ -32,9 +32,8 @@ Both are constructed using `SeismicProviderBuilder` and are generic over `N: Sei
 ### Signed Provider
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::from(signer);
@@ -57,7 +56,7 @@ let provider = SeismicProviderBuilder::new()
 ### Unsigned Provider
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 

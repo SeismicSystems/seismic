@@ -12,8 +12,7 @@ The `seismic-alloy` SDK supports multiple Seismic networks. Each chain has a spe
 Unlike the Python SDK, `seismic-alloy` does not use pre-configured chain objects. Instead, you pass the RPC URL directly to the `SeismicProviderBuilder` and select the appropriate network type (`SeismicReth` or `SeismicFoundry`). The chain ID is fetched automatically from the node.
 
 ```rust
-use seismic_alloy::prelude::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::from(signer.clone());
@@ -62,7 +61,7 @@ The Alloy provider automatically fetches the chain ID from the connected node vi
 - Transaction validation
 
 ```rust
-use seismic_alloy::prelude::*;
+use seismic_prelude::client::*;
 
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 let provider = SeismicProviderBuilder::new()

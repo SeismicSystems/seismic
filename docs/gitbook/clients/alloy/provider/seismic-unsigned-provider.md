@@ -25,7 +25,7 @@ All unsigned providers are created via `SeismicProviderBuilder` -- simply omit `
 ### HTTP
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 let provider = SeismicProviderBuilder::new().connect_http(url).await?;
@@ -37,7 +37,7 @@ println!("Block number: {block_number}");
 ### WebSocket
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 
 let url = "wss://gcp-1.seismictest.net/ws".parse()?;
 let provider = SeismicProviderBuilder::new().connect_ws(url).await?;
@@ -55,7 +55,7 @@ println!("Block number: {block_number}");
 Use `.foundry()` to select the `SeismicFoundry` network type:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 
 let url = "http://localhost:8545".parse()?;
 let provider = SeismicProviderBuilder::new()
@@ -73,7 +73,7 @@ let provider = SeismicProviderBuilder::new()
 Fetch the TEE public key from the node.
 
 ```rust
-use seismic_alloy_provider::SeismicProviderExt;
+// SeismicProviderExt is included in the prelude
 
 let tee_pubkey = provider.get_tee_pubkey().await?;
 println!("TEE public key: {tee_pubkey}");
@@ -124,7 +124,7 @@ The unsigned filler chain places `SeismicElementsFiller` first (before nonce/cha
 ### Query Block Data
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -144,7 +144,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Check Account Balance
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 use alloy_primitives::address;
 
 #[tokio::main]
@@ -163,7 +163,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Fetch TEE Public Key
 
 ```rust
-use seismic_alloy_provider::{SeismicProviderBuilder, SeismicProviderExt};
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -183,7 +183,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### WebSocket Connection
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -199,11 +199,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Limitations
 
-| Limitation                 | Details                                                 |
-| -------------------------- | ------------------------------------------------------- |
-| **No transaction signing** | Cannot send transactions -- use `SeismicSignedProvider` |
-| **No response decryption** | `seismic_call()` returns raw bytes without decryption   |
-| **No TEE pubkey caching**  | Each `get_tee_pubkey()` call makes a fresh RPC request  |
+| Limitation                    | Details                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| **No shielded call builder**  | `.seismic()` and auto-encryption are compile-time restricted to signed providers |
+| **No transaction signing**    | Cannot send transactions -- use `SeismicSignedProvider`                  |
+| **No response decryption**    | `seismic_call()` returns raw bytes without decryption                    |
+| **No TEE pubkey caching**     | Each `get_tee_pubkey()` call makes a fresh RPC request                   |
 
 ## Notes
 

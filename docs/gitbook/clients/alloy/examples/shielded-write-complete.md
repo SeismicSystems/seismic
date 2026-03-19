@@ -37,12 +37,9 @@ tokio = { version = "1", features = ["full"] }
 ## Complete Example
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 use alloy_network::ReceiptResponse;
-use alloy_primitives::U256;
-use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::sol;
 use seismic_alloy_consensus::SeismicReceiptEnvelope;
 
 sol! {
@@ -81,12 +78,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Contract deployed at: {contract_address:?}");
 
     // -------------------------------------------------------
-    // 3. Shielded write -- encrypted setNumber(42)
+    // 3. Shielded write -- setNumber has suint256 param, auto-encrypts
     // -------------------------------------------------------
     println!("Sending shielded write (setNumber(42))...");
     let write_receipt = contract
         .setNumber(U256::from(42).into())
-        .seismic()
         .send()
         .await?
         .get_receipt()
@@ -159,7 +155,7 @@ Contract deployment uses the generated `deploy()` method. Create transactions ca
 
 ### 3. Shielded write
 
-The `setNumber` call uses `.seismic().send()` which handles encoding, encryption, signing, and sending automatically. The filler pipeline encrypts the calldata before broadcast.
+The `setNumber` call has a shielded parameter (`suint256`), so the `sol!` macro wraps it in a `ShieldedCallBuilder` that auto-encrypts. Just call `.send()` directly -- no `.seismic()` needed. The filler pipeline encrypts the calldata before broadcast.
 
 ### 4. Receipt inspection
 

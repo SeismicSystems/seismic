@@ -9,7 +9,7 @@ Non-encrypted contract interactions using standard Ethereum transaction types. U
 
 ## Overview
 
-Transparent calls are standard Ethereum operations that do not use Seismic encryption. Calldata and return values are visible on-chain, just like any regular Ethereum transaction. Simply omit `.seismic()` from the call builder, and use the standard `.call()` or `.send()` methods.
+Transparent calls are standard Ethereum operations that do not use Seismic encryption. Calldata and return values are visible on-chain, just like any regular Ethereum transaction. For functions without shielded parameters, simply use `.call()` or `.send()` directly (without `.seismic()`). Note that functions with shielded parameters (e.g., `suint256`) auto-encrypt by default -- see [Shielded Calls](shielded-calls.md) for details.
 
 ## When to Use Transparent Calls
 
@@ -27,8 +27,7 @@ Transparent calls are standard Ethereum operations that do not use Seismic encry
 Contract deployment always uses transparent transactions because Create transactions cannot be seismic. Use the `#[sol(rpc, bytecode = "...")]` attribute to generate a `deploy()` method:
 
 ```rust
-use alloy_sol_types::sol;
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 
 sol! {
     #[sol(rpc, bytecode = "0x6080604052...")]
@@ -43,6 +42,7 @@ let contract = SeismicCounter::deploy(&provider).await?;
 println!("Deployed to: {:?}", contract.address());
 
 // Now interact with shielded calls
+// isOdd has no shielded params, so use .seismic() for encryption
 let is_odd = contract.isOdd().seismic().call().await?;
 ```
 
@@ -55,9 +55,6 @@ After deploying a contract transparently, you can immediately interact with it u
 A transparent write sends a standard `eth_sendTransaction` with unencrypted calldata. Use this for functions that do not handle private data.
 
 ```rust
-use alloy_sol_types::sol;
-use seismic_alloy_provider::SeismicCallExt;
-
 sol! {
     #[sol(rpc)]
     contract MyContract {
@@ -99,8 +96,6 @@ let value = contract.getPublicValue().call().await?;
 Transparent reads do not require a private key, so you can use an unsigned provider:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
-
 // No private key needed
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 let provider = SeismicProviderBuilder::new().connect_http(url).await?;
@@ -114,11 +109,8 @@ let value = contract.getPublicValue().call().await?;
 This example demonstrates the typical workflow: deploy a contract transparently, then use both shielded and transparent calls.
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
-use alloy_signer_local::PrivateKeySigner;
-use alloy_primitives::U256;
-use alloy_sol_types::sol;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc, bytecode = "0x6080604052...")]
@@ -143,9 +135,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let contract = SeismicCounter::deploy(&provider).await?;
     println!("Deployed to: {:?}", contract.address());
 
-    // 2. Shielded write (encrypted calldata)
+    // 2. Shielded write -- setNumber has a shielded param (suint256), auto-encrypts
     contract.setNumber(U256::from(42).into())
-        .seismic()
         .send()
         .await?
         .get_receipt()
@@ -159,19 +150,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## Transparent vs. Shielded: The `.seismic()` Difference
+## Transparent vs. Shielded
 
-The only API difference between transparent and shielded operations is the `.seismic()` call on the builder:
+There are two ways a call becomes shielded:
+
+1. **Auto-encryption**: Functions with shielded parameters (e.g., `suint256`) automatically return a `ShieldedCallBuilder`. Calling `.send()` or `.call()` encrypts automatically.
+2. **Manual opt-in**: For functions without shielded parameters, call `.seismic()` to convert a `SolCallBuilder` into a `ShieldedCallBuilder`.
 
 ```rust
-// Transparent: no .seismic()
+// Transparent: no shielded params, no .seismic()
 let is_odd = contract.isOdd().call().await?;
 
-// Shielded: with .seismic()
+// Shielded via .seismic(): no shielded params, but need encryption
 let is_odd = contract.isOdd().seismic().call().await?;
+
+// Shielded via auto-encryption: setNumber has suint256 param
+contract.setNumber(U256::from(42).into()).send().await?;
 ```
 
-When `.seismic()` is omitted:
+When neither auto-encryption nor `.seismic()` is used:
 
 - No `TxSeismicElements` are attached
 - No calldata encryption occurs

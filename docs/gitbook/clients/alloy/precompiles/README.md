@@ -65,7 +65,8 @@ let result = provider.call(
 ## Quick Example
 
 ```rust
-use seismic_alloy_provider::{precompiles, SeismicProviderBuilder};
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

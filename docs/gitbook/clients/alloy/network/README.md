@@ -31,8 +31,8 @@ The [`SeismicNetwork`](seismic-network-trait.md) trait is the foundation of the 
 - Extract Seismic metadata from signed envelopes
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 // SeismicReth for production (default)
 let provider = SeismicProviderBuilder::new()
@@ -67,9 +67,8 @@ Are you testing locally with sanvil?
 ### Production / Testnet
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::from(signer);
@@ -84,9 +83,8 @@ let provider = SeismicProviderBuilder::new()
 ### Local Development (Sanvil)
 
 ```rust
-use seismic_alloy_network::{foundry::SeismicFoundry, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::foundry::SeismicFoundry;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicFoundry>::from(signer);

@@ -9,7 +9,7 @@ icon: shield-halved
 
 ### How it works
 
-When you call `contract.method().seismic().send()`, the SDK:
+When you send a shielded write (either via auto-encryption for functions with shielded params, or via `.seismic().send()` for other functions), the SDK:
 
 1. Fetches your nonce and the latest block hash from the node
 2. Populates `TxSeismicElements` (encryption nonce, TEE public key reference, block hash, expiry block)
@@ -27,9 +27,8 @@ The encrypted calldata is bound to the transaction context (chain ID, nonce, blo
 Shielded writes require a `SeismicSignedProvider` because you need a private key for both transaction signing and ECDH key derivation.
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::from(signer);
@@ -50,7 +49,7 @@ let provider = SeismicProviderBuilder::new()
 Use Alloy's `sol!` macro with `#[sol(rpc)]` to define your contract interface. Shielded Solidity types (`suint256`, `sbool`, etc.) map to their standard ABI counterparts for encoding:
 
 ```rust
-use alloy_sol_types::sol;
+// sol! is included in the prelude
 
 sol! {
     #[sol(rpc)]
@@ -64,18 +63,24 @@ sol! {
 
 This generates type-safe call builders with `.call()` and `.send()` methods.
 
-#### 3. Build and send with `.seismic()`
+#### 3. Build and send
 
-The `.seismic()` method marks a call for encryption. Chain it with `.send()` to send an encrypted transaction:
+Functions with shielded parameters (like `setNumber(suint256)`) auto-encrypt -- just call `.send()` directly. For functions without shielded parameters (like `increment()`), use `.seismic().send()` to opt into encryption:
 
 ```rust
-use seismic_alloy_provider::SeismicCallExt;
-use alloy_primitives::U256;
-
 let contract = SeismicCounter::new(contract_address, &provider);
 
+// setNumber has a shielded param (suint256) -- auto-encrypts
 let receipt = contract
     .setNumber(U256::from(42).into())
+    .send()
+    .await?
+    .get_receipt()
+    .await?;
+
+// increment has no shielded params -- use .seismic() to encrypt
+let receipt = contract
+    .increment()
     .seismic()
     .send()
     .await?
@@ -86,7 +91,7 @@ let receipt = contract
 #### 4. Verify success
 
 ```rust
-use alloy_network::ReceiptResponse;
+// ReceiptResponse is included in the prelude
 
 assert!(receipt.status());
 println!("Transaction hash: {:?}", receipt.transaction_hash);
@@ -110,9 +115,9 @@ Every shielded transaction includes a block-hash freshness check and an expiry w
 These values are set automatically by the filler pipeline. You can override them per-call:
 
 ```rust
+// setNumber auto-encrypts (shielded param) -- security params available directly
 let receipt = contract
     .setNumber(U256::from(42).into())
-    .seismic()
     .expires_at(current_block + 50)        // Custom expiration
     .recent_block_hash(specific_hash)       // Pin to specific chain state
     .send()
@@ -143,10 +148,10 @@ The filler pipeline processes your transaction in this order:
    - Estimates gas limit and gas price
 ```
 
-You never call encryption functions manually. The `.seismic()` marker tells the filler pipeline to handle everything.
+You never call encryption functions manually. For functions with shielded parameters, the `ShieldedCallBuilder` handles everything automatically. For other functions, the `.seismic()` marker tells the filler pipeline to handle everything.
 
 {% hint style="info" %}
-You never need to call encryption functions manually. The provider's filler pipeline handles all cryptographic operations when you use `.seismic()`.
+You never need to call encryption functions manually. The provider's filler pipeline handles all cryptographic operations -- either automatically for functions with shielded parameters, or when you use `.seismic()`.
 {% endhint %}
 
 ---
@@ -160,8 +165,8 @@ Contract deployment (`TxKind::Create`) always uses transparent transactions. The
 let contract = SeismicCounter::deploy(&provider).await?;
 
 // Now interact with shielded calls
+// setNumber auto-encrypts (shielded param)
 contract.setNumber(U256::from(42).into())
-    .seismic()
     .send()
     .await?;
 ```
@@ -176,7 +181,8 @@ Common failure modes and how to handle them:
 use alloy_network::ReceiptResponse;
 
 // Send the shielded transaction
-let pending_tx = match contract.setNumber(U256::from(42).into()).seismic().send().await {
+// setNumber auto-encrypts (shielded param)
+let pending_tx = match contract.setNumber(U256::from(42).into()).send().await {
     Ok(pending) => pending,
     Err(e) => {
         eprintln!("Failed to send transaction: {e}");
@@ -207,12 +213,8 @@ println!("Success! Block: {:?}", receipt.block_number());
 ### Complete example
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
-use alloy_network::ReceiptResponse;
-use alloy_primitives::U256;
-use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::sol;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -233,13 +235,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect_http(url)
         .await?;
 
-    // 2. Shielded write
+    // 2. Shielded write -- setNumber auto-encrypts (shielded param)
     let contract_address = std::env::var("CONTRACT_ADDRESS")?.parse()?;
     let contract = SeismicCounter::new(contract_address, &provider);
 
     let receipt = contract
         .setNumber(U256::from(42).into())
-        .seismic()
         .send()
         .await?
         .get_receipt()

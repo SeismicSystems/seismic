@@ -9,7 +9,7 @@ Privacy-preserving contract interactions where calldata (and optionally return d
 
 ## Overview
 
-Shielded calls use the Seismic transaction type (`0x4A`) to encrypt calldata before it reaches the network. The `.seismic()` call builder handles encryption automatically -- mark a contract call as shielded and the provider encrypts it before broadcast.
+Shielded calls use the Seismic transaction type (`0x4A`) to encrypt calldata before it reaches the network. Functions with shielded parameters (e.g., `suint256`, `saddress`) auto-encrypt via `ShieldedCallBuilder` -- you can call `.send()` or `.call()` directly. For non-shielded functions that still need encryption (e.g., `isOdd()`, `increment()`), use `.seismic()` to opt in.
 
 There are two shielded operations:
 
@@ -23,7 +23,10 @@ Both require a `SeismicSignedProvider` because they need a private key for ECDH 
 Use Alloy's `sol!` macro with `#[sol(rpc)]` to define your contract interface:
 
 ```rust
-use alloy_sol_types::sol;
+use seismic_prelude::client::*;
+// The prelude includes both SeismicCallExt (adds .seismic() to SolCallBuilder)
+// and ShieldedCallExt (adds .call(), .send(), .eip712() to ShieldedCallBuilder).
+// You don't need to import them individually.
 
 sol! {
     #[sol(rpc)]
@@ -38,22 +41,18 @@ sol! {
 }
 ```
 
-This generates type-safe call builders for each function. The `#[sol(rpc)]` attribute adds `.call()` and `.send()` methods, and `SeismicCallExt` adds the `.seismic()` method.
+This generates type-safe call builders for each function. The `#[sol(rpc)]` attribute adds `.call()` and `.send()` methods. Functions with shielded parameters (like `setNumber(suint256)`) automatically return a `ShieldedCallBuilder` that encrypts on `.call()` or `.send()`. For functions without shielded parameters (like `isOdd()` and `increment()`), use `SeismicCallExt` to call `.seismic()` and opt into encryption.
 
 ## Shielded Write
 
 A shielded write sends an encrypted transaction that modifies on-chain state. The calldata is encrypted with AES-GCM using a shared secret derived from the TEE's public key.
 
 ```rust
-use seismic_alloy_provider::SeismicCallExt;
-use alloy_primitives::U256;
-
 let contract = SeismicCounter::new(contract_address, &provider);
 
-// One line: encode, encrypt, sign, send
+// setNumber has a shielded param (suint256), so it auto-encrypts -- no .seismic() needed
 let receipt = contract
     .setNumber(U256::from(42).into())
-    .seismic()
     .send()
     .await?
     .get_receipt()
@@ -65,12 +64,9 @@ println!("Transaction hash: {:?}", receipt.transaction_hash);
 ### Complete Example
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 use alloy_network::ReceiptResponse;
-use alloy_signer_local::PrivateKeySigner;
-use alloy_primitives::U256;
-use alloy_sol_types::sol;
 
 sol! {
     #[sol(rpc)]
@@ -92,9 +88,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let contract = SeismicCounter::new(contract_address, &provider);
 
+    // setNumber has a shielded param (suint256) -- auto-encrypts
     let receipt = contract
         .setNumber(U256::from(42).into())
-        .seismic()
         .send()
         .await?
         .get_receipt()
@@ -110,8 +106,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 A signed read executes an encrypted `eth_call` that proves the caller's identity to the TEE. This is required for reading private state that is access-controlled by `msg.sender`.
 
 ```rust
-use seismic_alloy_provider::SeismicCallExt;
-
 let contract = SeismicCounter::new(contract_address, &provider);
 
 // Encrypted call + automatic response decryption
@@ -122,10 +116,8 @@ println!("Is odd: {is_odd}");
 ### Complete Example
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
-use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::sol;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -159,8 +151,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Customize encryption parameters on individual calls:
 
 ```rust
-use alloy_primitives::B256;
-
 let is_odd = contract.isOdd()
     .seismic()
     .expires_at(current_block + 50)       // Custom expiration
@@ -180,14 +170,13 @@ let is_odd = contract.isOdd()
 For wallets that cannot sign custom RLP-encoded transaction types (e.g., MetaMask), use EIP-712 typed data signing:
 
 ```rust
-// EIP-712 shielded write
+// EIP-712 shielded write -- setNumber auto-encrypts (shielded param)
 contract.setNumber(U256::from(42).into())
-    .seismic()
     .eip712()
     .send()
     .await?;
 
-// EIP-712 shielded read
+// EIP-712 shielded read -- isOdd needs .seismic() (no shielded params)
 let is_odd = contract.isOdd()
     .seismic()
     .eip712()
@@ -200,7 +189,7 @@ let is_odd = contract.isOdd()
 The filler pipeline handles encryption transparently:
 
 ```
-1. You call contract.method().seismic().call() or .send()
+1. You call .call() or .send() on a ShieldedCallBuilder (auto or via .seismic())
 2. SeismicElementsFiller adds encryption_pubkey, nonce, block hash, expiry
 3. SeismicGasFiller estimates gas
 4. Provider encrypts calldata with AES-GCM:
@@ -213,26 +202,31 @@ The filler pipeline handles encryption transparently:
 ```
 
 {% hint style="info" %}
-You never need to call encryption functions manually. The provider's filler pipeline handles all cryptographic operations when you use `.seismic()`.
+You never need to call encryption functions manually. The provider's filler pipeline handles all cryptographic operations when you use `.seismic()` or when the function has shielded parameters.
 {% endhint %}
 
 ## Shielded Write vs. Signed Read
 
 | Aspect             | Shielded Write        | Signed Read          |
 | ------------------ | --------------------- | -------------------- |
-| Method             | `.seismic().send()`   | `.seismic().call()`  |
+| Method (no shielded params) | `.seismic().send()` | `.seismic().call()` |
+| Method (shielded params) | `.send()` (auto-encrypts) | `.call()` (auto-encrypts) |
 | State changes      | Yes                   | No                   |
 | Calldata encrypted | Yes                   | Yes                  |
 | Response encrypted | N/A (returns receipt) | Yes (auto-decrypted) |
 | Gas cost           | Yes                   | No (simulated)       |
 | `signed_read` flag | `false`               | `true`               |
 
+{% hint style="info" %}
+For functions with shielded parameters (e.g., `suint256`, `saddress`), the `sol!` macro automatically returns a `ShieldedCallBuilder` -- you can call `.send()` or `.call()` directly without `.seismic()`. Use `.seismic()` only for functions without shielded parameters that still need encryption.
+{% endhint %}
+
 ## Low-Level Alternative
 
 If you need direct control without the `#[sol(rpc)]` call builder pattern, use `SeismicProviderExt` methods:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderExt;
+// SeismicProviderExt is included in the prelude
 
 // Shielded read
 let is_odd: bool = provider.shielded_call(addr, SeismicCounter::isOddCall {}).await?;
@@ -247,8 +241,8 @@ let pending = provider.shielded_send(addr, SeismicCounter::setNumberCall {
 
 - **Create transactions cannot be seismic.** Contract deployment must use standard (non-seismic) transactions. Deploy first, then interact with shielded calls. See [Transparent Calls](transparent-calls.md) for deployment patterns.
 - **Signed provider required.** Both shielded writes and signed reads need a `SeismicSignedProvider`. An unsigned provider cannot perform shielded operations.
-- **Automatic response decryption.** When using `.seismic().call()`, the provider automatically decrypts the TEE's encrypted response.
-- **Shielded types in ABI.** The `sol!` macro handles shielded Solidity types (`suint256`, `sbool`, `saddress`) -- they map to their standard ABI counterparts for encoding.
+- **Automatic response decryption.** When using `.call()` on a `ShieldedCallBuilder`, the provider automatically decrypts the TEE's encrypted response.
+- **Shielded types in ABI.** The `sol!` macro handles shielded Solidity types (`suint256`, `sbool`, `saddress`) -- they map to their standard ABI counterparts for encoding. Functions with shielded types in their arguments automatically return a `ShieldedCallBuilder`, so no `.seismic()` is needed.
 
 ## See Also
 

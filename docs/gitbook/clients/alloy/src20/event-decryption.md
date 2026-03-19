@@ -43,10 +43,7 @@ Indexed event parameters (addresses) remain visible as log topics. Only the non-
 Use a WebSocket provider to subscribe to events in real time. Both signed and unsigned WebSocket providers are supported via `connect_ws()`:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::Address;
+use seismic_prelude::client::*;
 use alloy_rpc_types_eth::Filter;
 use futures_util::StreamExt;
 
@@ -99,10 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Query past Transfer events using `get_logs`:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::Address;
+use seismic_prelude::client::*;
 use alloy_rpc_types_eth::Filter;
 
 sol! {
@@ -151,10 +145,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Use indexed topics to filter events for a specific address:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::{Address, B256};
+use seismic_prelude::client::*;
+use alloy_primitives::B256;
 use alloy_rpc_types_eth::Filter;
 
 sol! {
@@ -232,10 +224,8 @@ Viewing key registration and event decryption are protocol-level features. The e
 Subscribe to both Transfer and Approval events simultaneously:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy_primitives::{Address, B256};
+use seismic_prelude::client::*;
+use alloy_primitives::B256;
 use alloy_rpc_types_eth::Filter;
 use futures_util::StreamExt;
 

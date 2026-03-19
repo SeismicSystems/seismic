@@ -28,10 +28,8 @@ Complete, runnable code examples demonstrating common Seismic Alloy (Rust) SDK p
 Each example follows this structure:
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
-use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::sol;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]

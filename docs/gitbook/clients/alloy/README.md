@@ -15,11 +15,8 @@ seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
 ## Quick Example
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
-use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::sol;
-use alloy_primitives::U256;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -46,8 +43,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let is_odd = contract.isOdd().seismic().call().await?;
 
     // Shielded write (encrypted transaction)
+    // setNumber has a shielded param (suint256), so it auto-encrypts -- no .seismic() needed
     contract.setNumber(U256::from(42).into())
-        .seismic()
         .send()
         .await?
         .get_receipt()
@@ -102,8 +99,9 @@ let block = provider.get_block_number().await?;
 
 - **Shielded Transactions** -- Encrypt calldata with TEE public key via AES-GCM
 - **Signed Reads** -- Prove identity in `eth_call` with `seismic_call()`
-- **`.seismic()` Call Builder** -- `contract.method().seismic().call()` / `.send()` for ergonomic shielded operations
-- **EIP-712 Support** -- `.seismic().eip712()` for browser wallet compatibility (MetaMask)
+- **Auto-Encryption for Shielded Params** -- Functions with shielded types (`suint256`, `saddress`, etc.) in their arguments auto-encrypt via `ShieldedCallBuilder` -- no `.seismic()` needed
+- **`.seismic()` Call Builder** -- `contract.method().seismic().call()` / `.send()` for non-shielded functions that need encryption
+- **EIP-712 Support** -- `.eip712()` on `ShieldedCallBuilder` for browser wallet compatibility (MetaMask)
 - **SecurityParams** -- Per-call `.expires_at()`, `.recent_block_hash()`, `.encryption_nonce()` overrides
 - **Builder Pattern** -- `SeismicProviderBuilder` with typestate for signed/unsigned HTTP/WS providers
 - **Precompile Helpers** -- Encode/decode/call wrappers for Seismic's 6 custom precompiles

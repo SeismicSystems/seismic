@@ -26,7 +26,7 @@ SRC20 contracts are deployed like any other contract on Seismic. The shielding i
 Define the SRC20 interface using Alloy's `sol!` macro:
 
 ```rust
-use alloy::sol;
+use seismic_prelude::client::*;
 
 sol! {
     #[sol(rpc)]
@@ -61,7 +61,7 @@ SRC20 Token Contract (on-chain, Mercury EVM)
   |     -> Contract uses msg.sender to gate access
   |
   |-- Shielded writes: transfer(), approve(), transferFrom()
-  |     -> Calldata encrypted via .seismic() builder
+  |     -> Calldata auto-encrypted (shielded params) or via .seismic() builder
   |     -> Amounts invisible to observers
   |
   |-- Encrypted events: Transfer, Approval
@@ -72,12 +72,8 @@ SRC20 Token Contract (on-chain, Mercury EVM)
 ## Quick Start
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy::sol;
-use alloy::providers::Provider;
-use alloy_primitives::{Address, U256};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -136,7 +132,7 @@ Unlike ERC20 where `balanceOf()` is a simple public read, SRC20's `balanceOf()` 
 
 ### Shielded Writes
 
-Transfers and approvals use `.seismic()` to mark the transaction for calldata encryption. The `SeismicProviderBuilder`-created provider's filler pipeline automatically handles the encryption before the transaction reaches the node.
+Transfers and approvals have shielded parameters (`suint256`), so the `sol!` macro wraps them in a `ShieldedCallBuilder` that auto-encrypts -- just call `.send()` directly. The `SeismicProviderBuilder`-created provider's filler pipeline automatically handles the encryption before the transaction reaches the node.
 
 ### Encrypted Events
 

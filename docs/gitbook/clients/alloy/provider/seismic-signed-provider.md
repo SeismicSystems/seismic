@@ -23,9 +23,8 @@ At creation time, the provider generates an ephemeral secp256k1 keypair, fetches
 All signed providers are created via `SeismicProviderBuilder`:
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::from(signer);
@@ -69,8 +68,8 @@ let provider = SeismicProviderBuilder::new()
 Use `.foundry()` to select the `SeismicFoundry` network type:
 
 ```rust
-use seismic_alloy_network::{foundry::SeismicFoundry, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
+use seismic_alloy_network::foundry::SeismicFoundry;
 use alloy_node_bindings::Anvil;
 
 let anvil = Anvil::at("sanvil").spawn();
@@ -86,11 +85,10 @@ let provider = SeismicProviderBuilder::new()
 
 ## Contract Interaction
 
-The primary way to interact with contracts is via the `.seismic()` call builder, which integrates with Alloy's `#[sol(rpc)]` macro:
+The primary way to interact with contracts is via the `ShieldedCallBuilder`, which integrates with Alloy's `#[sol(rpc)]` macro. Functions with shielded parameters (e.g., `suint256`) auto-encrypt. For functions without shielded parameters, use `.seismic()` to opt in:
 
 ```rust
-use alloy_sol_types::sol;
-use seismic_alloy_provider::SeismicCallExt;
+// SeismicCallExt and ShieldedCallExt are included in the prelude
 
 sol! {
     #[sol(rpc)]
@@ -102,21 +100,19 @@ sol! {
 
 let contract = SeismicCounter::new(address, &provider);
 
-// Shielded read (encrypted call + response decryption)
+// Shielded read -- isOdd has no shielded params, use .seismic()
 let is_odd = contract.isOdd().seismic().call().await?;
 
-// Shielded write (encrypted transaction)
+// Shielded write -- setNumber has suint256 param, auto-encrypts
 let receipt = contract
     .setNumber(U256::from(42).into())
-    .seismic()
     .send()
     .await?
     .get_receipt()
     .await?;
 
-// Transparent operations (no encryption)
+// Transparent read (no encryption)
 let is_odd = contract.isOdd().call().await?;
-let receipt = contract.setNumber(U256::from(42).into()).send().await?.get_receipt().await?;
 ```
 
 ### SecurityParams (Per-Call Overrides)
@@ -144,8 +140,8 @@ let is_odd = contract.isOdd()
 For wallets that cannot sign custom RLP-encoded transaction types (e.g., MetaMask):
 
 ```rust
+// setNumber auto-encrypts (shielded param) -- .eip712() available on ShieldedCallBuilder
 contract.setNumber(U256::from(42).into())
-    .seismic()
     .eip712()
     .send()
     .await?;
@@ -156,7 +152,7 @@ contract.setNumber(U256::from(42).into())
 For cases where the `#[sol(rpc)]` pattern doesn't fit, use `SeismicProviderExt` directly:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderExt;
+// SeismicProviderExt is included in the prelude
 
 // Shielded read
 let result = provider.shielded_call(addr, MyContract::isOddCall {}).await?;
@@ -214,11 +210,8 @@ After all fillers run, calldata is encrypted with AES-GCM before the transaction
 ### Shielded Write
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
-use alloy_signer_local::PrivateKeySigner;
-use alloy_primitives::U256;
-use alloy_sol_types::sol;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -240,9 +233,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let contract = SeismicCounter::new(contract_address, &provider);
 
+    // setNumber auto-encrypts (suint256 param)
     let receipt = contract
         .setNumber(U256::from(42).into())
-        .seismic()
         .send()
         .await?
         .get_receipt()
@@ -256,10 +249,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Signed Read
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
-use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::sol;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
     #[sol(rpc)]
@@ -292,9 +283,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Pre-fetched TEE Pubkey
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicProviderBuilder, SeismicProviderExt};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
