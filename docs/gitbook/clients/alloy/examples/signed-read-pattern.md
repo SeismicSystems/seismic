@@ -35,12 +35,9 @@ tokio = { version = "1", features = ["full"] }
 ## Complete Example
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 use alloy_network::ReceiptResponse;
-use alloy_primitives::U256;
-use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::sol;
 
 sol! {
     #[sol(rpc, bytecode = "6080604052...")]
@@ -75,9 +72,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // -------------------------------------------------------
     // 3. Write data (shielded) -- setNumber(42)
     // -------------------------------------------------------
+    // setNumber has suint256 param -- auto-encrypts
     let write_receipt = contract
         .setNumber(U256::from(42).into())
-        .seismic()
         .send()
         .await?
         .get_receipt()

@@ -9,7 +9,7 @@ Encryption metadata attached to every `TxSeismic` transaction. Contains the publ
 
 ## Overview
 
-`TxSeismicElements` carries all encryption and security parameters needed for a Seismic transaction. These fields enable ECDH key derivation, AES-GCM encryption, anti-replay protection, and transaction expiration. The filler pipeline (`SeismicElementsFiller`) populates these fields automatically when you use `.seismic()` on a transaction builder.
+`TxSeismicElements` carries all encryption and security parameters needed for a Seismic transaction. These fields enable ECDH key derivation, AES-GCM encryption, anti-replay protection, and transaction expiration. The filler pipeline (`SeismicElementsFiller`) populates these fields automatically when a `ShieldedCallBuilder` is used (either via auto-encryption for functions with shielded params, or via `.seismic()`).
 
 ## Definition
 

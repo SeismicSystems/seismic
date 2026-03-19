@@ -87,12 +87,9 @@ The compiled bytecode is in `out/SeismicCounter.sol/SeismicCounter.json`. Extrac
 Use `#[sol(rpc, bytecode = "...")]` to generate a `deploy()` method and type-safe call builders:
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 use alloy_network::ReceiptResponse;
-use alloy_primitives::U256;
-use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::sol;
 
 sol! {
     #[sol(rpc, bytecode = "6080604052...")]
@@ -134,14 +131,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Step 3: Shielded Interactions
 
-Once deployed, interact with the contract using `.seismic()`:
+Once deployed, interact with the contract using shielded calls:
 
 ```rust
-    // Shielded write -- setNumber(42)
+    // Shielded write -- setNumber has suint256 param, auto-encrypts
     println!("\nSending shielded write: setNumber(42)...");
     let write_receipt = contract
         .setNumber(U256::from(42).into())
-        .seismic()
         .send()
         .await?
         .get_receipt()
@@ -171,7 +167,7 @@ Once deployed, interact with the contract using `.seismic()`:
 Event subscription requires a WebSocket connection. Use an unsigned provider:
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 use alloy_rpc_types_eth::Filter;
 use futures_util::StreamExt;
 
@@ -217,12 +213,9 @@ Event data emitted by `emit` is public and visible on-chain. Event subscription 
 Combining all steps into one program:
 
 ```rust
-use seismic_alloy_network::{reth::SeismicReth, wallet::SeismicWallet};
-use seismic_alloy_provider::{SeismicCallExt, SeismicProviderBuilder};
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 use alloy_network::ReceiptResponse;
-use alloy_primitives::U256;
-use alloy_signer_local::PrivateKeySigner;
-use alloy_sol_types::sol;
 
 sol! {
     #[sol(rpc, bytecode = "6080604052...")]
@@ -258,16 +251,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert!(!code.is_empty());
     println!("Verified: {} bytes of runtime code", code.len());
 
-    // 4. Shielded write: setNumber(42)
+    // 4. Shielded write: setNumber auto-encrypts (suint256 param)
     contract.setNumber(U256::from(42).into())
-        .seismic()
         .send()
         .await?
         .get_receipt()
         .await?;
     println!("setNumber(42) confirmed");
 
-    // 5. Shielded write: increment()
+    // 5. Shielded write: increment needs .seismic() (no shielded params)
     contract.increment()
         .seismic()
         .send()

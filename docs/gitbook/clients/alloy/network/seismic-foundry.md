@@ -59,9 +59,8 @@ The Foundry-compatible types handle differences in how Sanvil serializes and des
 ### With SeismicProviderBuilder (Signed)
 
 ```rust
-use seismic_alloy_network::{foundry::SeismicFoundry, wallet::SeismicWallet};
-use seismic_alloy_provider::SeismicProviderBuilder;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::foundry::SeismicFoundry;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -85,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Unsigned Provider (Read-Only)
 
 ```rust
-use seismic_alloy_provider::SeismicProviderBuilder;
+use seismic_prelude::client::*;
 
 let url = "http://127.0.0.1:8545".parse()?;
 let provider = SeismicProviderBuilder::new()
@@ -142,11 +141,11 @@ let provider = SeismicProviderBuilder::new()
 
 ## Transaction Building
 
-With the new `#[sol(rpc)]` + `.seismic()` call builder pattern, you can build Seismic transactions directly from contract instances:
+With `#[sol(rpc)]`, you can build Seismic transactions directly from contract instances. Functions with shielded parameters auto-encrypt; for others, use `.seismic()`:
 
 ```rust
-use alloy_primitives::{address, U256};
-use alloy::sol;
+use seismic_prelude::client::*;
+use alloy_primitives::address;
 
 sol!(
     #[sol(rpc)]
@@ -156,6 +155,7 @@ sol!(
 );
 
 let contract = MyContract::new(contract_address, &provider);
+// setValue has no shielded params, so use .seismic() to opt into encryption
 let tx = contract.setValue(U256::from(42)).seismic();
 ```
 
