@@ -16,7 +16,7 @@ Complete guide to sending shielded transactions with encrypted calldata. Covers:
 - Setting up a signed provider
 - Defining contract interfaces with the `sol!` macro
 - Encoding calldata and building transactions
-- Marking transactions as seismic with `.seismic()`
+- Auto-encryption for functions with shielded parameters, and `.seismic()` for others
 - Sending and confirming transactions
 - Security parameters and expiration windows
 

@@ -24,7 +24,7 @@ seismic-alloy defines several transaction types that extend Alloy's standard Eth
 ## Transaction Lifecycle
 
 ```
-TransactionRequest           Build with seismic_foundry_tx_builder()
+TransactionRequest           Build with SeismicTransactionRequest::default()
        |
        v
 SeismicTransactionRequest    Mark as seismic with .seismic()
@@ -79,8 +79,6 @@ SeismicTxEnvelope (signed wrapper)
 These types are defined in `seismic-alloy-consensus` and re-exported through `seismic-alloy-prelude`:
 
 ```rust
-use seismic_prelude::foundry::*;
-// or directly:
 use seismic_alloy_consensus::{TxSeismic, TxSeismicElements, TxSeismicMetadata};
 ```
 

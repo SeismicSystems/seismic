@@ -77,15 +77,18 @@ This restriction exists because the Seismic transaction type (`0x4A`) is designe
 In most cases, `SeismicGasFiller` is configured automatically by the provider:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicReth>::from(signer);
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
 // SeismicGasFiller is set up automatically with the same URL
-let provider = sreth_signed_provider(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 ### Manual Construction
@@ -93,7 +96,7 @@ let provider = sreth_signed_provider(wallet, url).await?;
 If building a custom provider stack:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::fillers::SeismicGasFiller;
 
 let rpc_url: reqwest::Url = "https://gcp-1.seismictest.net/rpc".parse()?;
 let gas_filler = SeismicGasFiller::with_url(rpc_url);

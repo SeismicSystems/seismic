@@ -18,7 +18,7 @@ The SDK provides two concrete network implementations:
 | [`SeismicReth`](seismic-reth.md)       | Production / Testnet | Full Seismic node (reth-based). Use for devnet, testnet, and mainnet. |
 | [`SeismicFoundry`](seismic-foundry.md) | Local Development    | Sanvil (Seismic Anvil). Use for local testing with `sanvil`.          |
 
-Both implement `SeismicNetwork` and can be used as the generic parameter `N` in `SeismicSignedProvider<N>` and `SeismicUnsignedProvider<N>`.
+Both implement `SeismicNetwork` and can be used with the `SeismicProviderBuilder` to create providers.
 
 ## Core Abstraction
 
@@ -31,27 +31,35 @@ The [`SeismicNetwork`](seismic-network-trait.md) trait is the foundation of the 
 - Extract Seismic metadata from signed envelopes
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
-// SeismicReth for production
-let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+// SeismicReth for production (default)
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 
 // SeismicFoundry for local dev with Sanvil
-let provider = SeismicSignedProvider::<SeismicFoundry>::new(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .foundry()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 ## Choosing a Network Type
 
 ```
 Are you connecting to a remote Seismic node (devnet/testnet/mainnet)?
-  -> Use SeismicReth
+  -> Use SeismicProviderBuilder::new() (defaults to SeismicReth)
 
 Are you testing locally with sanvil?
-  -> Use SeismicFoundry
+  -> Use SeismicProviderBuilder::new().foundry()
 ```
 
 {% hint style="info" %}
-In most cases, you will use the convenience constructors (`sreth_signed_provider`, `sfoundry_signed_provider`) rather than specifying the network type directly. These functions select the correct network type for you.
+`SeismicProviderBuilder` defaults to `SeismicReth`. Call `.foundry()` to switch to `SeismicFoundry` for local development with Sanvil.
 {% endhint %}
 
 ## Quick Start
@@ -59,29 +67,34 @@ In most cases, you will use the convenience constructors (`sreth_signed_provider
 ### Production / Testnet
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicReth>::from(signer);
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
-// Convenience constructor (selects SeismicReth automatically)
-let provider = sreth_signed_provider(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 ### Local Development (Sanvil)
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::foundry::SeismicFoundry;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicFoundry>::from(signer);
 let url = "http://127.0.0.1:8545".parse()?;
 
-// Convenience constructor (selects SeismicFoundry automatically)
-let provider = sfoundry_signed_provider(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .foundry()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 ## Associated Types

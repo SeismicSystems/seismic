@@ -53,18 +53,16 @@ Total output: 65 bytes.
 ### Basic Usage
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
-
-    let sign_address: Address =
-        "0x0000000000000000000000000000000000000069".parse()?;
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     // Private key (32 bytes)
     let secret_key: [u8; 32] = [/* your private key */; 32];
@@ -75,6 +73,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let message_hash = keccak256(
         [prefix.as_bytes(), message.as_bytes()].concat(),
     );
+
+    // Using convenience helpers
+    let signature = precompiles::call::secp256k1_sign(&provider, &secret_key, message_hash.as_slice()).await?;
+    println!("Signature (convenience): 0x{}", hex::encode(&signature));
+
+    // Manual approach
+    let sign_address: Address =
+        "0x0000000000000000000000000000000000000069".parse()?;
 
     // Build precompile input: sk (32) + message_hash (32)
     let mut input = Vec::with_capacity(64);
@@ -98,15 +104,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Extract Signature Components
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let sign_address: Address =
         "0x0000000000000000000000000000000000000069".parse()?;
@@ -146,15 +152,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Sign Multiple Messages
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let sign_address: Address =
         "0x0000000000000000000000000000000000000069".parse()?;
@@ -194,16 +200,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Sign Structured Data
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 use serde_json::json;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let sign_address: Address =
         "0x0000000000000000000000000000000000000069".parse()?;

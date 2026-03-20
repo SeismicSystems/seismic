@@ -161,15 +161,18 @@ The node's TEE can reverse this process because it holds the private key corresp
 In most cases, you do not interact with `SeismicElementsFiller` directly. It is automatically included in the provider's filler pipeline:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicReth>::from(signer);
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
 // SeismicElementsFiller is configured automatically
-let provider = sreth_signed_provider(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 ### With Pre-Cached TEE Key
@@ -177,7 +180,7 @@ let provider = sreth_signed_provider(wallet, url).await?;
 If you already know the TEE public key (e.g., from a previous session):
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::fillers::SeismicElementsFiller;
 
 let filler = SeismicElementsFiller::with_tee_pubkey_and_url(known_tee_pubkey);
 ```
@@ -185,7 +188,7 @@ let filler = SeismicElementsFiller::with_tee_pubkey_and_url(known_tee_pubkey);
 ### With Custom Expiration Window
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::fillers::SeismicElementsFiller;
 
 let filler = SeismicElementsFiller::new()
     .with_blocks_window(200);  // Expire after 200 blocks instead of 100
@@ -194,7 +197,7 @@ let filler = SeismicElementsFiller::new()
 ### With Signed Reads
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::fillers::SeismicElementsFiller;
 
 let filler = SeismicElementsFiller::new()
     .with_signed_read(true);

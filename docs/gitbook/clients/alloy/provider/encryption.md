@@ -265,12 +265,12 @@ The ephemeral keypair used for ECDH is separate from the wallet's signing key. C
 ### Inspecting TEE Public Key
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let tee_pubkey = provider.get_tee_pubkey().await?;
     println!("TEE public key: {tee_pubkey}");
@@ -282,38 +282,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Signed Provider with Automatic Encryption
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
-use alloy_primitives::address;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
+
+sol! {
+    #[sol(rpc)]
+    contract SeismicCounter {
+        function setNumber(suint256 newNumber) public;
+        function isOdd() public view returns (bool);
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
     // Provider automatically:
     // 1. Generates ephemeral keypair
     // 2. Fetches and caches TEE pubkey
     // 3. Derives ECDH shared secret
-    let provider = sreth_signed_provider(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
-    // Transaction calldata is automatically encrypted by the filler pipeline
-    let tx = TransactionRequest::default()
-        .to(address!("0x1234567890abcdef1234567890abcdef12345678"))
-        .input(bytes!("0x60fe47b10000000000000000000000000000000000000000000000000000000000000042").into());
+    let contract = SeismicCounter::new(contract_address, &provider);
 
-    // send_transaction: fillers populate fields, encrypt calldata, sign, send
-    let pending = provider.send_transaction(tx).await?;
-    let tx_hash = pending.watch().await?;
+    // Shielded write: setNumber auto-encrypts (suint256 param)
+    contract.setNumber(U256::from(42).into())
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
 
-    // seismic_call: encrypt calldata, send, decrypt response
-    let read_tx = TransactionRequest::default()
-        .to(address!("0x1234567890abcdef1234567890abcdef12345678"))
-        .input(bytes!("0x3fb5c1cb").into());
-
-    let result = provider.seismic_call(read_tx.into()).await?;
-    println!("Decrypted result: {result}");
+    // Signed read: encrypt calldata, send, decrypt response
+    let is_odd = contract.isOdd().seismic().call().await?;
+    println!("Decrypted result: {is_odd}");
 
     Ok(())
 }

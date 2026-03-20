@@ -27,24 +27,21 @@ rust-version = "1.82"
 seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
 alloy-signer-local = "1.1"
 alloy-primitives = "1.1"
-hex-literal = "0.4"
+alloy-sol-types = "1.1"
+alloy-network = "1.1"
 tokio = { version = "1", features = ["full"] }
 ```
 
 ## Complete Example
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy::sol;
-use alloy::sol_types::SolCall;
-use alloy_primitives::{Bytes, TxKind, U256};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 use alloy_network::ReceiptResponse;
-use alloy_provider::SendableTx;
-use hex_literal::hex;
 
 sol! {
-    interface ISeismicCounter {
+    #[sol(rpc, bytecode = "6080604052...")]
+    contract SeismicCounter {
         function setNumber(suint256 newNumber) public;
         function increment() public;
         function isOdd() public view returns (bool);
@@ -57,85 +54,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Create signed provider
     // -------------------------------------------------------
     let signer: PrivateKeySigner = std::env::var("PRIVATE_KEY")?.parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
 
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
     println!("Provider ready. Block: {}", provider.get_block_number().await?);
 
     // -------------------------------------------------------
-    // 2. Deploy contract (transparent)
+    // 2. Deploy contract
     // -------------------------------------------------------
-    let deploy_bytecode = Bytes::from_static(&hex!("6080604052..."));
-
-    let deploy_tx = seismic_foundry_tx_builder()
-        .with_input(deploy_bytecode)
-        .with_kind(TxKind::Create)
-        .into();
-
-    let deploy_receipt = provider.send_transaction(deploy_tx).await?
-        .get_receipt().await?;
-    assert!(deploy_receipt.status());
-    let contract_address = deploy_receipt.contract_address.unwrap();
-    println!("Contract deployed at: {contract_address:?}");
+    let contract = SeismicCounter::deploy(&provider).await?;
+    println!("Contract deployed at: {:?}", contract.address());
 
     // -------------------------------------------------------
     // 3. Write data (shielded) -- setNumber(42)
     // -------------------------------------------------------
-    let calldata = ISeismicCounter::setNumberCall {
-        newNumber: U256::from(42),
-    }.abi_encode();
-
-    let write_tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(calldata))
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
-
-    let write_receipt = provider.send_transaction(write_tx.into()).await?
-        .get_receipt().await?;
+    // setNumber has suint256 param -- auto-encrypts
+    let write_receipt = contract
+        .setNumber(U256::from(42).into())
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
     assert!(write_receipt.status());
     println!("Shielded write confirmed (setNumber(42))");
 
     // -------------------------------------------------------
     // 4. Read it back (signed read) -- isOdd()
     // -------------------------------------------------------
-    let call_input = ISeismicCounter::isOddCall {}.abi_encode();
-
-    let signed_read_tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(call_input.clone()))
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
-
-    println!("\n--- Signed Read (seismic_call) ---");
-    let signed_result = provider.seismic_call(
-        SendableTx::Builder(signed_read_tx.into()),
-    ).await?;
-
-    let signed_decoded = ISeismicCounter::isOddReturn::abi_decode(&signed_result, true)?;
-    println!("isOdd() via signed read: {}", signed_decoded._0);
+    println!("\n--- Signed Read (.seismic().call()) ---");
+    let signed_result = contract.isOdd().seismic().call().await?;
+    println!("isOdd() via signed read: {signed_result}");
     println!("  - msg.sender = your wallet address");
     println!("  - Calldata was encrypted");
     println!("  - Response was encrypted, then decrypted by provider");
 
     // -------------------------------------------------------
-    // 5. Compare with transparent read -- provider.call()
+    // 5. Compare with transparent read -- .call()
     // -------------------------------------------------------
-    let transparent_read_tx = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(call_input))
-        .with_kind(TxKind::Call(contract_address))
-        .into();
-    // No .seismic() -- transparent read
-
-    println!("\n--- Transparent Read (call) ---");
-    let transparent_result = provider.call(transparent_read_tx).await?;
-
-    let transparent_decoded = ISeismicCounter::isOddReturn::abi_decode(
-        &transparent_result,
-        true,
-    )?;
-    println!("isOdd() via transparent read: {}", transparent_decoded._0);
+    println!("\n--- Transparent Read (.call()) ---");
+    let transparent_result = contract.isOdd().call().await?;
+    println!("isOdd() via transparent read: {transparent_result}");
     println!("  - msg.sender = 0x0 (zero address)");
     println!("  - Calldata was plaintext");
     println!("  - Response was plaintext");
@@ -144,14 +106,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 6. Show the difference
     // -------------------------------------------------------
     println!("\n--- Comparison ---");
-    println!("Signed read result:      {}", signed_decoded._0);
-    println!("Transparent read result:  {}", transparent_decoded._0);
+    println!("Signed read result:      {signed_result}");
+    println!("Transparent read result:  {transparent_result}");
 
     // For isOdd() which does not depend on msg.sender,
     // both results should be the same.
     // For functions that check msg.sender (e.g., balanceOf()),
     // the transparent read would return the zero address's data.
-    if signed_decoded._0 == transparent_decoded._0 {
+    if signed_result == transparent_result {
         println!("Results match -- isOdd() does not depend on msg.sender");
     } else {
         println!("Results differ -- the function depends on msg.sender");
@@ -167,72 +129,36 @@ The example above uses `isOdd()`, which does not depend on `msg.sender`. Both re
 
 ```rust
 sol! {
-    interface IPrivateBalance {
+    #[sol(rpc)]
+    contract PrivateBalance {
         // Uses msg.sender internally to look up caller's balance
         function balanceOf() public view returns (uint256);
     }
 }
 
-// Signed read: msg.sender = your address, returns YOUR balance
-let signed_tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-    .with_input(Bytes::from(IPrivateBalance::balanceOfCall {}.abi_encode()))
-    .with_kind(TxKind::Call(contract_address))
-    .into()
-    .seismic();
+let contract = PrivateBalance::new(contract_address, &provider);
 
-let signed_result = provider.seismic_call(
-    SendableTx::Builder(signed_tx.into()),
-).await?;
-let your_balance = IPrivateBalance::balanceOfReturn::abi_decode(&signed_result, true)?;
-println!("Your balance: {}", your_balance._0);
+// Signed read: msg.sender = your address, returns YOUR balance
+let your_balance = contract.balanceOf().seismic().call().await?;
+println!("Your balance: {your_balance}");
 // e.g., "Your balance: 1000"
 
 // Transparent read: msg.sender = 0x0, returns zero address balance
-let transparent_tx = seismic_foundry_tx_builder()
-    .with_input(Bytes::from(IPrivateBalance::balanceOfCall {}.abi_encode()))
-    .with_kind(TxKind::Call(contract_address))
-    .into();
-
-let transparent_result = provider.call(transparent_tx).await?;
-let zero_balance = IPrivateBalance::balanceOfReturn::abi_decode(&transparent_result, true)?;
-println!("Zero address balance: {}", zero_balance._0);
+let zero_balance = contract.balanceOf().call().await?;
+println!("Zero address balance: {zero_balance}");
 // e.g., "Zero address balance: 0"
 ```
 
 ## Key Differences at a Glance
 
-| Aspect             | `seismic_call()` (Signed Read)                          | `call()` (Transparent Read)        |
-| ------------------ | ------------------------------------------------------- | ---------------------------------- |
-| Method             | `provider.seismic_call(SendableTx::Builder(tx.into()))` | `provider.call(tx)`                |
-| `msg.sender`       | Your wallet address                                     | Zero address (`0x0`)               |
-| Calldata           | Encrypted with AES-GCM                                  | Plaintext                          |
-| Response           | Encrypted by TEE, decrypted by provider                 | Plaintext                          |
-| Transaction marker | `.seismic()` required                                   | No `.seismic()`                    |
-| Provider           | `SeismicSignedProvider` only                            | Any provider                       |
-| Privacy            | Full (observers see nothing)                            | None (calldata and result visible) |
-
-## Multiple Signed Reads
-
-You can execute multiple signed reads in sequence:
-
-```rust
-// Read multiple values from the same contract
-let functions: Vec<(&str, Vec<u8>)> = vec![
-    ("isOdd", ISeismicCounter::isOddCall {}.abi_encode()),
-    // Add more view functions as needed
-];
-
-for (name, calldata) in functions {
-    let tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(calldata))
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
-
-    let result = provider.seismic_call(SendableTx::Builder(tx.into())).await?;
-    println!("{name}: result = {:?}", result);
-}
-```
+| Aspect             | `.seismic().call()` (Signed Read)       | `.call()` (Transparent Read)       |
+| ------------------ | --------------------------------------- | ---------------------------------- |
+| Method             | `contract.method().seismic().call()`    | `contract.method().call()`         |
+| `msg.sender`       | Your wallet address                     | Zero address (`0x0`)               |
+| Calldata           | Encrypted with AES-GCM                  | Plaintext                          |
+| Response           | Encrypted by TEE, decrypted by provider | Plaintext                          |
+| Provider           | `SeismicSignedProvider` only            | Any provider                       |
+| Privacy            | Full (observers see nothing)            | None (calldata and result visible) |
 
 ## Expected Output
 
@@ -241,13 +167,13 @@ Provider ready. Block: 12345
 Contract deployed at: 0x5FbDB2315678afecb367f032d93F642f64180aa3
 Shielded write confirmed (setNumber(42))
 
---- Signed Read (seismic_call) ---
+--- Signed Read (.seismic().call()) ---
 isOdd() via signed read: false
   - msg.sender = your wallet address
   - Calldata was encrypted
   - Response was encrypted, then decrypted by provider
 
---- Transparent Read (call) ---
+--- Transparent Read (.call()) ---
 isOdd() via transparent read: false
   - msg.sender = 0x0 (zero address)
   - Calldata was plaintext

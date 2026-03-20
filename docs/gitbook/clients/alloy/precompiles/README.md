@@ -7,35 +7,47 @@ icon: microchip
 
 Mercury EVM ships with six cryptographic precompiles at fixed addresses. They are callable via `eth_call` from any provider connected to a Seismic node -- no encryption state or wallet is required.
 
-## Calling Pattern
+## Convenience Helpers
 
-Every precompile follows the same pattern: ABI-encode the input, build a `TransactionRequest` targeting the precompile address, and issue an `eth_call`:
+The `seismic_alloy_provider::precompiles` module provides three layers of helpers:
+
+1. **Address constants** -- `precompiles::addresses::RNG`, `precompiles::addresses::ECDH`, etc.
+2. **Encode/decode functions** -- `precompiles::encode_rng()`, `precompiles::decode_secp256k1_sign()`, etc.
+3. **Async call wrappers** -- `precompiles::call::rng()`, `precompiles::call::ecdh()`, etc.
 
 ```rust
-use alloy::providers::Provider;
-use alloy_primitives::{Address, Bytes};
-use alloy_rpc_types_eth::TransactionRequest;
+use seismic_alloy_provider::precompiles;
 
-// Precompile addresses are 0x64 through 0x69
-let precompile_address: Address =
-    "0x0000000000000000000000000000000000000064".parse().unwrap();
+// Generate 32 random bytes
+let random = precompiles::call::rng::<SeismicFoundry, _>(&provider, 32, b"my_domain").await?;
 
-// Encode input per the precompile's specification
-let input = Bytes::from(encoded_params);
+// Derive a shared AES key via ECDH
+let aes_key = precompiles::call::ecdh::<SeismicFoundry, _>(&provider, &secret_key, &pubkey).await?;
 
-// Call via eth_call
-let result = provider
-    .call(
-        &TransactionRequest::default()
-            .to(precompile_address)
-            .input(input.into()),
-    )
-    .await?;
+// AES-GCM encrypt/decrypt
+let ciphertext = precompiles::call::aes_encrypt::<SeismicFoundry, _>(&provider, &key, &nonce, plaintext).await?;
+let plaintext = precompiles::call::aes_decrypt::<SeismicFoundry, _>(&provider, &key, &nonce, &ciphertext).await?;
 ```
 
 {% hint style="info" %}
 Precompile calls are read-only `eth_call` operations. They do not require a `SeismicSignedProvider` -- an unsigned provider works fine. However, if you use a signed provider, the call will still succeed.
 {% endhint %}
+
+## Manual Calling Pattern
+
+You can also call precompiles directly by building a `TransactionRequest`:
+
+```rust
+use alloy_primitives::{address, Bytes};
+use alloy_provider::Provider;
+
+let precompile_address = address!("0x0000000000000000000000000000000000000064");
+let input = precompiles::encode_rng(32, b"my_domain");
+
+let result = provider.call(
+    SeismicTransactionRequest::default().to(precompile_address).into()
+).await?;
+```
 
 ---
 
@@ -53,33 +65,26 @@ Precompile calls are read-only `eth_call` operations. They do not require a `Sei
 ## Quick Example
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy::providers::Provider;
-use alloy_primitives::{Address, Bytes};
-use alloy_rpc_types_eth::TransactionRequest;
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
-    // RNG precompile: request 32 random bytes
-    let rng_address: Address =
-        "0x0000000000000000000000000000000000000064".parse()?;
+    // RNG: generate 32 random bytes with domain separation
+    let random = precompiles::call::rng::<SeismicReth, _>(
+        &provider, 32, b"my_domain"
+    ).await?;
+    println!("Random bytes: 0x{}", hex::encode(&random));
 
-    // Input: 4-byte big-endian num_bytes
-    let num_bytes: u32 = 32;
-    let input = Bytes::from(num_bytes.to_be_bytes().to_vec());
+    // HKDF: derive an AES-256 key
+    let key = precompiles::call::hkdf::<SeismicReth, _>(
+        &provider, b"input_key_material"
+    ).await?;
+    println!("Derived key: 0x{}", hex::encode(key));
 
-    let result = provider
-        .call(
-            &TransactionRequest::default()
-                .to(rng_address)
-                .input(input.into()),
-        )
-        .await?;
-
-    println!("Random bytes: 0x{}", hex::encode(&result));
     Ok(())
 }
 ```

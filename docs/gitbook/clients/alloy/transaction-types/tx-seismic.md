@@ -101,7 +101,7 @@ pub const TX_TYPE: u8 = 0x4A;
 In practice, you rarely construct `TxSeismic` directly. The filler pipeline builds it from a `SeismicTransactionRequest`. However, for reference:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{TxSeismic, TxSeismicElements, SeismicTransactionRequest};
 use alloy::primitives::{Bytes, U256, TxKind, Address, B256};
 
 let tx = TxSeismic {
@@ -126,7 +126,7 @@ let tx = TxSeismic {
 ### Using the Builder Pattern (Recommended)
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{TxSeismic, TxSeismicElements, SeismicTransactionRequest};
 use alloy::primitives::{U256, TxKind};
 use alloy::sol_types::SolCall;
 
@@ -141,10 +141,9 @@ let calldata = IMyContract::setValueCall {
 }.abi_encode();
 
 // Build and mark as seismic
-let tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
+let tx = SeismicTransactionRequest::default()
     .with_input(calldata.into())
     .with_kind(TxKind::Call(contract_address))
-    .into()
     .seismic();
 
 // The filler pipeline converts this into a TxSeismic internally

@@ -53,18 +53,16 @@ Total output length = `len(plaintext) + 16`.
 ### Basic Usage
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
-
-    let encrypt_address: Address =
-        "0x0000000000000000000000000000000000000066".parse()?;
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     // 32-byte AES key
     let key = [0x42u8; 32]; // Use a proper key in production
@@ -72,6 +70,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let nonce = [0u8; 12];
     // Plaintext to encrypt
     let plaintext = b"Secret message";
+
+    // Using convenience helpers
+    let ciphertext = precompiles::call::aes_gcm_encrypt(&provider, &key, &nonce, plaintext).await?;
+    println!("Ciphertext (convenience): 0x{}", hex::encode(&ciphertext));
+
+    // Manual approach
+    let encrypt_address: Address =
+        "0x0000000000000000000000000000000000000066".parse()?;
 
     let mut input = Vec::new();
     input.extend_from_slice(&key);
@@ -96,15 +102,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Encrypt with Integer Nonce
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let encrypt_address: Address =
         "0x0000000000000000000000000000000000000066".parse()?;
@@ -141,15 +147,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Encrypt-Decrypt Round Trip
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let encrypt_address: Address =
         "0x0000000000000000000000000000000000000066".parse()?;
@@ -198,15 +204,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### With ECDH-Derived Key
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     // Step 1: Derive shared key via ECDH
     let ecdh_address: Address =

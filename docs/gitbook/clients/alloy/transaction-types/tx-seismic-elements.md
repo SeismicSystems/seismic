@@ -9,7 +9,7 @@ Encryption metadata attached to every `TxSeismic` transaction. Contains the publ
 
 ## Overview
 
-`TxSeismicElements` carries all encryption and security parameters needed for a Seismic transaction. These fields enable ECDH key derivation, AES-GCM encryption, anti-replay protection, and transaction expiration. The filler pipeline (`SeismicElementsFiller`) populates these fields automatically when you use `.seismic()` on a transaction builder.
+`TxSeismicElements` carries all encryption and security parameters needed for a Seismic transaction. These fields enable ECDH key derivation, AES-GCM encryption, anti-replay protection, and transaction expiration. The filler pipeline (`SeismicElementsFiller`) populates these fields automatically when a `ShieldedCallBuilder` is used (either via auto-encryption for functions with shielded params, or via `.seismic()`).
 
 ## Definition
 
@@ -72,7 +72,7 @@ Default values are placeholders. The `SeismicElementsFiller` replaces them with 
 ### Example
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{TxSeismicElements, SeismicTransactionRequest};
 use alloy::primitives::{B256, U96};
 
 let elements = TxSeismicElements::default()
@@ -94,7 +94,7 @@ let elements = TxSeismicElements::default()
 ### Example
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{TxSeismicElements, SeismicTransactionRequest};
 
 // Generate random encryption keypair
 let keypair = TxSeismicElements::get_rand_encryption_keypair();
@@ -183,13 +183,12 @@ The filler pipeline sets this based on whether you call `send_transaction()` or 
 ### Automatic Construction (Typical)
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{TxSeismicElements, SeismicTransactionRequest};
 
 // The filler pipeline handles TxSeismicElements construction
-let tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
+let tx = SeismicTransactionRequest::default()
     .with_input(calldata.into())
     .with_kind(TxKind::Call(contract_address))
-    .into()
     .seismic();  // Elements will be filled automatically
 
 provider.send_transaction(tx.into()).await?;
@@ -198,7 +197,7 @@ provider.send_transaction(tx.into()).await?;
 ### Manual Construction (Advanced)
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{TxSeismicElements, SeismicTransactionRequest};
 use alloy::primitives::{B256, U96};
 
 let keypair = TxSeismicElements::get_rand_encryption_keypair();

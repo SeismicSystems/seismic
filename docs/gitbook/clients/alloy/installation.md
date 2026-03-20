@@ -40,20 +40,18 @@ seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy", branc
 
 ## Workspace Crates
 
-The `seismic-alloy` workspace contains six crates. The `prelude` crate re-exports everything you need for most use cases:
+The `seismic-alloy` workspace contains six crates:
 
 | Crate                     | Description                                                           |
 | ------------------------- | --------------------------------------------------------------------- |
-| `seismic-alloy-consensus` | Seismic transaction types and consensus logic                         |
+| `seismic-alloy-provider`  | `SeismicProviderBuilder`, filler pipeline, precompile helpers         |
 | `seismic-alloy-network`   | `SeismicNetwork` trait, `SeismicReth`, `SeismicFoundry` network types |
-| `seismic-alloy-provider`  | `SeismicSignedProvider`, `SeismicUnsignedProvider`, filler pipeline   |
+| `seismic-alloy-consensus` | Seismic transaction types and consensus logic                         |
 | `seismic-alloy-rpc-types` | Seismic-specific RPC request and response types                       |
 | `seismic-alloy-genesis`   | Genesis configuration types                                           |
-| `seismic-alloy-prelude`   | Convenience re-exports from all crates                                |
+| `seismic-alloy-prelude`   | Convenience re-exports for application development (`seismic_prelude::client::*`) and internal forks |
 
-### Using Individual Crates
-
-If you only need specific functionality, you can depend on individual crates:
+Most applications only need `seismic-alloy-provider` and `seismic-alloy-network`:
 
 ```toml
 [dependencies]
@@ -61,22 +59,26 @@ seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-allo
 seismic-alloy-network = { git = "https://github.com/SeismicSystems/seismic-alloy" }
 ```
 
-## The Prelude
+## Recommended Imports
 
-The recommended import pattern uses the `prelude` crate, which re-exports commonly used types:
+The recommended approach is to use the client prelude, which re-exports the most commonly used types and traits:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 ```
 
-This brings into scope:
+This single import provides: `SeismicCallExt`, `ShieldedCallExt`, `SeismicProviderBuilder`, `SeismicProviderExt`, `SeismicSignedProvider`, `SeismicUnsignedProvider`, `SeismicWallet`, `sol`, `Address`, `Bytes`, `FixedBytes`, `U256`, `ReceiptResponse`, and `PrivateKeySigner`.
 
-- `SeismicSignedProvider`, `SeismicUnsignedProvider`
-- `SeismicWallet`
-- `SeismicReth`, `SeismicFoundry`, `SeismicNetwork`
-- `SeismicProviderExt` trait
-- Convenience functions: `sreth_signed_provider()`, `sfoundry_signed_provider()`, `sreth_unsigned_provider()`, `sfoundry_unsigned_provider()`
-- Seismic transaction types and RPC types
+For types not in the prelude (e.g., `SeismicReth`, `SeismicFoundry`, `Anvil`, `Filter`), add explicit imports alongside the prelude:
+
+```rust
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
+```
+
+{% hint style="info" %}
+The prelude also has `seismic_prelude::foundry::*` and `seismic_prelude::reth::*` modules designed for Seismic's internal forks of Foundry and Reth. These re-export Seismic types under upstream naming conventions to minimize merge conflicts. **Do not use them in application code** -- they pull in revm internals and aliases that are confusing outside of the fork context. Use `seismic_prelude::client::*` instead.
+{% endhint %}
 
 ## Key Dependencies
 
@@ -128,16 +130,19 @@ tokio = { version = "1", features = ["full"] }
 Write `src/main.rs`:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
 
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
     let block_number = provider.get_block_number().await?;
     println!("Connected! Block number: {block_number}");
