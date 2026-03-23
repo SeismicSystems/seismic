@@ -4,7 +4,7 @@ icon: file-lines
 
 # Seismic-viem Primer
 
-Before proceeding to write the CLI, you need to be acquainted with some of the functions and utilities used to enable Seismic primitives (e.g. shielded reads, shielded writes etc.) through our client library, `seismic-viem`, which we will be using heavily to write the CLI. The detailed docs for `seismic-viem` can be found [here](../../clients/typescript/viem/README.md). _Estimated time: ~15 minutes_
+Before proceeding to write the CLI, you need to be acquainted with some of the functions and utilities used to enable Seismic primitives (e.g. shielded reads, shielded writes etc.) through our client library, `seismic-viem`, which we will be using heavily to write the CLI. The detailed docs for `seismic-viem` can be found [here](../../../clients/typescript/viem/README.md). _Estimated time: ~15 minutes_
 
 ### Shielded wallet client
 
