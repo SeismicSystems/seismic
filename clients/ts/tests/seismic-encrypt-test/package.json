@@ -1,0 +1,12 @@
+{
+  "name": "seismic-encrypt-test",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "transfer": "bun run src/transfer.ts"
+  },
+  "dependencies": {
+    "seismic-encrypt": "workspace:*",
+    "viem": "^2.0.0"
+  }
+}
