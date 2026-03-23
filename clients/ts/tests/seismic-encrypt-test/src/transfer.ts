@@ -1,12 +1,7 @@
-import {
-  createPublicClient,
-  encodeFunctionData,
-  http,
-  parseAbi,
-} from 'viem'
-import { privateKeyToAccount } from 'viem/accounts'
 import { encryptSeismicTx } from 'seismic-encrypt'
+import { createPublicClient, encodeFunctionData, http, parseAbi } from 'viem'
 import type { Address, Hex } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
 
 // ── Read env ────────────────────────────────────────────────────────
 
@@ -86,7 +81,7 @@ const main = async () => {
   // 4. Sign with the local account
   const signed = await account.signTransaction(
     { ...seismicTx },
-    { serializer: (_tx, sig) => serialize(sig!) },
+    { serializer: (_tx, sig) => serialize(sig!) }
   )
 
   // 5. Send via standard eth_sendRawTransaction

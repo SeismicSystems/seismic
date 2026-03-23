@@ -11,9 +11,9 @@ npm install seismic-encrypt viem
 ## Quick start
 
 ```ts
-import { createPublicClient, http, encodeFunctionData } from 'viem'
-import { privateKeyToAccount } from 'viem/accounts'
 import { encryptSeismicTx } from 'seismic-encrypt'
+import { createPublicClient, encodeFunctionData, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
 
 const RPC_URL = 'https://gcp-1.seismictest.net/rpc'
 
@@ -44,7 +44,7 @@ const { seismicTx, serialize } = await encryptSeismicTx({
 // 3. Sign and send — standard viem, nothing special
 const signed = await account.signTransaction(
   { ...seismicTx },
-  { serializer: (_tx, sig) => serialize(sig!) },
+  { serializer: (_tx, sig) => serialize(sig!) }
 )
 
 const hash = await client.sendRawTransaction({
@@ -70,27 +70,27 @@ That's it. The calldata is AES-256-GCM encrypted before it hits the network. The
 
 ### `encryptSeismicTx(params)`
 
-| Parameter | Type | Description |
-|---|---|---|
-| `tx.to` | `Address` | Destination address |
-| `tx.data` | `Hex` | Plaintext calldata to encrypt |
-| `tx.nonce` | `number` | Sender's transaction nonce |
-| `tx.gasPrice` | `bigint` | Gas price |
-| `tx.gas` | `bigint` | Gas limit |
-| `tx.chainId` | `number` | Chain ID (`5124` for Seismic testnet, `31337` for local sanvil) |
-| `tx.value` | `bigint?` | ETH value in wei (default `0`) |
-| `sender` | `Address` | Sender address (must match the signer) |
-| `rpcUrl` | `string` | Seismic node RPC URL |
-| `encryptionPrivateKey` | `Hex?` | Your own ephemeral key. One is generated per call if omitted. |
-| `blocksWindow` | `bigint?` | Blocks until the tx expires (default `100`) |
+| Parameter              | Type      | Description                                                     |
+| ---------------------- | --------- | --------------------------------------------------------------- |
+| `tx.to`                | `Address` | Destination address                                             |
+| `tx.data`              | `Hex`     | Plaintext calldata to encrypt                                   |
+| `tx.nonce`             | `number`  | Sender's transaction nonce                                      |
+| `tx.gasPrice`          | `bigint`  | Gas price                                                       |
+| `tx.gas`               | `bigint`  | Gas limit                                                       |
+| `tx.chainId`           | `number`  | Chain ID (`5124` for Seismic testnet, `31337` for local sanvil) |
+| `tx.value`             | `bigint?` | ETH value in wei (default `0`)                                  |
+| `sender`               | `Address` | Sender address (must match the signer)                          |
+| `rpcUrl`               | `string`  | Seismic node RPC URL                                            |
+| `encryptionPrivateKey` | `Hex?`    | Your own ephemeral key. One is generated per call if omitted.   |
+| `blocksWindow`         | `bigint?` | Blocks until the tx expires (default `100`)                     |
 
 Returns a `Promise<EncryptSeismicTxResult>`:
 
-| Field | Type | Description |
-|---|---|---|
-| `seismicTx` | `object` | All transaction fields with encrypted `data`, ready to sign |
-| `serialize` | `(sig: { v, r, s }) => Hex` | Takes a signature and returns final signed bytes (`0x4a` + RLP) |
-| `unsignedSerializedTx` | `Hex` | The unsigned serialized bytes (for inspection/debugging) |
+| Field                  | Type                        | Description                                                     |
+| ---------------------- | --------------------------- | --------------------------------------------------------------- |
+| `seismicTx`            | `object`                    | All transaction fields with encrypted `data`, ready to sign     |
+| `serialize`            | `(sig: { v, r, s }) => Hex` | Takes a signature and returns final signed bytes (`0x4a` + RLP) |
+| `unsignedSerializedTx` | `Hex`                       | The unsigned serialized bytes (for inspection/debugging)        |
 
 ### `serializeSeismicTx(tx, signature?)`
 

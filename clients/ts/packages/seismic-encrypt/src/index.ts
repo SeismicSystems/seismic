@@ -39,9 +39,11 @@ const randomEncryptionNonce = (): Hex => {
   return nonce
 }
 
-const toYParitySignatureArray = (
-  signature?: { v: bigint; r: Hex; s: Hex },
-): Hex[] => {
+const toYParitySignatureArray = (signature?: {
+  v: bigint
+  r: Hex
+  s: Hex
+}): Hex[] => {
   if (!signature) return []
   const { v, r, s } = signature
   const trimR = trim(r)
@@ -57,9 +59,7 @@ const toYParitySignatureArray = (
 // ── Key derivation ──────────────────────────────────────────────────
 
 const deriveAesKey = (privateKey: Hex, networkPublicKey: string): Hex => {
-  const privHex = privateKey.startsWith('0x')
-    ? privateKey.slice(2)
-    : privateKey
+  const privHex = privateKey.startsWith('0x') ? privateKey.slice(2) : privateKey
   const sharedPoint = secp256k1
     .getSharedSecret(privHex, networkPublicKey, false)
     .slice(1)
@@ -76,7 +76,7 @@ const deriveAesKey = (privateKey: Hex, networkPublicKey: string): Hex => {
     compressed,
     new Uint8Array(0),
     new TextEncoder().encode('aes-gcm key'),
-    32,
+    32
   )
   return bytesToHex(derived)
 }
@@ -120,7 +120,7 @@ const aesGcmEncrypt = async (
   key: Hex,
   nonce: Hex,
   plaintext: Hex,
-  aad: Uint8Array,
+  aad: Uint8Array
 ): Promise<Hex> => {
   if (!plaintext || plaintext === '0x') return '0x'
   const nonceBytes = hexToBytes(nonce)
@@ -128,7 +128,7 @@ const aesGcmEncrypt = async (
     throw new Error('Nonce must be 12 bytes')
   }
   const ciphertext = await gcm(hexToBytes(key), nonceBytes, aad).encrypt(
-    hexToBytes(plaintext),
+    hexToBytes(plaintext)
   )
   return bytesToHex(ciphertext)
 }
@@ -151,7 +151,7 @@ export const serializeSeismicTx = (
     signedRead: boolean
     data: Hex
   },
-  signature?: { v: bigint; r: Hex; s: Hex },
+  signature?: { v: bigint; r: Hex; s: Hex }
 ): Hex => {
   const rlpArray: Hex[] = [
     toHex(tx.chainId),
