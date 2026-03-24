@@ -54,8 +54,8 @@ contract SRC20EventsTest is Test {
         assertEq(transferLogs.length, 2);
         _assertTransferLog(transferLogs[0], sender, recipient, senderKeyHash);
         _assertTransferLog(transferLogs[1], sender, recipient, recipientKeyHash);
-        _assertEncryptedDataNonEmpty(transferLogs[0]);
-        _assertEncryptedDataNonEmpty(transferLogs[1]);
+        _assertDecryptsTo(transferLogs[0], sender, 1e18);
+        _assertDecryptsTo(transferLogs[1], recipient, 1e18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -76,7 +76,7 @@ contract SRC20EventsTest is Test {
         Vm.Log[] memory transferLogs = _getTransferLogs();
         assertEq(transferLogs.length, 2);
         _assertTransferLog(transferLogs[0], sender, recipient, senderKeyHash);
-        _assertEncryptedDataNonEmpty(transferLogs[0]);
+        _assertDecryptsTo(transferLogs[0], sender, 1e18);
         _assertTransferLog(transferLogs[1], sender, recipient, bytes32(0));
         _assertEncryptedDataEmpty(transferLogs[1]);
     }
@@ -101,7 +101,7 @@ contract SRC20EventsTest is Test {
         _assertTransferLog(transferLogs[0], sender, recipient, bytes32(0));
         _assertEncryptedDataEmpty(transferLogs[0]);
         _assertTransferLog(transferLogs[1], sender, recipient, recipientKeyHash);
-        _assertEncryptedDataNonEmpty(transferLogs[1]);
+        _assertDecryptsTo(transferLogs[1], recipient, 1e18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -145,8 +145,8 @@ contract SRC20EventsTest is Test {
         assertEq(transferLogs.length, 2);
         _assertTransferLog(transferLogs[0], sender, recipient, senderKeyHash);
         _assertTransferLog(transferLogs[1], sender, recipient, recipientKeyHash);
-        _assertEncryptedDataNonEmpty(transferLogs[0]);
-        _assertEncryptedDataNonEmpty(transferLogs[1]);
+        _assertDecryptsTo(transferLogs[0], sender, 1e18);
+        _assertDecryptsTo(transferLogs[1], recipient, 1e18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -168,7 +168,7 @@ contract SRC20EventsTest is Test {
         Vm.Log[] memory transferLogs = _getTransferLogs();
         assertEq(transferLogs.length, 2);
         _assertTransferLog(transferLogs[0], sender, recipient, senderKeyHash);
-        _assertEncryptedDataNonEmpty(transferLogs[0]);
+        _assertDecryptsTo(transferLogs[0], sender, 1e18);
         _assertTransferLog(transferLogs[1], sender, recipient, bytes32(0));
         _assertEncryptedDataEmpty(transferLogs[1]);
     }
@@ -194,7 +194,7 @@ contract SRC20EventsTest is Test {
         _assertTransferLog(transferLogs[0], sender, recipient, bytes32(0));
         _assertEncryptedDataEmpty(transferLogs[0]);
         _assertTransferLog(transferLogs[1], sender, recipient, recipientKeyHash);
-        _assertEncryptedDataNonEmpty(transferLogs[1]);
+        _assertDecryptsTo(transferLogs[1], recipient, 1e18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -234,9 +234,9 @@ contract SRC20EventsTest is Test {
         // address(0) has no key → zero hash
         _assertTransferLog(transferLogs[0], address(0), recipient, bytes32(0));
         _assertEncryptedDataEmpty(transferLogs[0]);
-        // recipient has key → encrypted
+        // recipient has key → encrypted, decryptable
         _assertTransferLog(transferLogs[1], address(0), recipient, recipientKeyHash);
-        _assertEncryptedDataNonEmpty(transferLogs[1]);
+        _assertDecryptsTo(transferLogs[1], recipient, 1e18);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -271,9 +271,9 @@ contract SRC20EventsTest is Test {
 
         Vm.Log[] memory transferLogs = _getTransferLogs();
         assertEq(transferLogs.length, 2);
-        // sender has key → encrypted
+        // sender has key → encrypted, decryptable
         _assertTransferLog(transferLogs[0], sender, address(0), senderKeyHash);
-        _assertEncryptedDataNonEmpty(transferLogs[0]);
+        _assertDecryptsTo(transferLogs[0], sender, 1e18);
         // address(0) has no key → zero hash
         _assertTransferLog(transferLogs[1], sender, address(0), bytes32(0));
         _assertEncryptedDataEmpty(transferLogs[1]);
@@ -336,9 +336,14 @@ contract SRC20EventsTest is Test {
         assertEq(log.topics[3], encryptKeyHash);
     }
 
-    function _assertEncryptedDataNonEmpty(Vm.Log memory log) internal pure {
+    function _assertDecryptsTo(Vm.Log memory log, address keyOwner, uint256 expectedAmount) internal {
         bytes memory encryptedAmount = abi.decode(log.data, (bytes));
         assertTrue(encryptedAmount.length > 0, "expected non-empty encrypted data");
+
+        vm.prank(keyOwner);
+        bytes memory decrypted = directory.decrypt(encryptedAmount);
+        uint256 amount = abi.decode(decrypted, (uint256));
+        assertEq(amount, expectedAmount, "decrypted amount does not match");
     }
 
     function _assertEncryptedDataEmpty(Vm.Log memory log) internal pure {
