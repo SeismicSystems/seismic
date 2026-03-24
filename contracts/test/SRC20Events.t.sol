@@ -4,8 +4,10 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 
 import {MockSRC20} from "./utils/MockSRC20.sol";
+import {Directory} from "../src/directory/Directory.sol";
+import {Intelligence} from "../src/intelligence/Intelligence.sol";
 import {IDirectory} from "seismic-std-lib/interfaces/IDirectory.sol";
-import {IIntelligence} from "seismic-std-lib/interfaces/IIntelligence.sol";
+import {CryptoUtils} from "seismic-std-lib/utils/precompiles/CryptoUtils.sol";
 
 /// @notice Tests that SRC20 Transfer events are emitted symmetrically
 ///         to both sender and recipient, regardless of whether each party
@@ -13,33 +15,20 @@ import {IIntelligence} from "seismic-std-lib/interfaces/IIntelligence.sol";
 contract SRC20EventsTest is Test {
     MockSRC20 token;
 
-    address constant INTELLIGENCE = 0x1000000000000000000000000000000000000005;
-    address constant DIRECTORY = 0x1000000000000000000000000000000000000004;
+    address constant INTELLIGENCE_ADDR = 0x1000000000000000000000000000000000000005;
+    address constant DIRECTORY_ADDR = 0x1000000000000000000000000000000000000004;
+
+    IDirectory directory = IDirectory(DIRECTORY_ADDR);
 
     address sender = makeAddr("sender");
     address recipient = makeAddr("recipient");
 
-    bytes32 constant SENDER_KEY_HASH = keccak256("sender_key");
-    bytes32 constant RECIPIENT_KEY_HASH = keccak256("recipient_key");
-    bytes constant SENDER_ENCRYPTED = hex"aabbccdd";
-    bytes constant RECIPIENT_ENCRYPTED = hex"eeff0011";
-
-    event Transfer(address indexed from, address indexed to, bytes32 indexed encryptKeyHash, bytes encryptedAmount);
+    bytes32 constant TRANSFER_TOPIC = keccak256("Transfer(address,address,bytes32,bytes)");
 
     function setUp() public {
-        // Place code at the precompile addresses so mockCall works
-        vm.etch(INTELLIGENCE, hex"00");
-        vm.etch(DIRECTORY, hex"00");
-
-        // Mock Intelligence.encryptToProviders to return empty arrays (no providers)
-        vm.mockCall(
-            INTELLIGENCE,
-            abi.encodeWithSelector(IIntelligence.encryptToProviders.selector),
-            abi.encode(new bytes32[](0), new bytes[](0))
-        );
-
-        // Default: any checkHasKey call returns false (covers address(0), test contract, etc.)
-        vm.mockCall(DIRECTORY, abi.encodeWithSelector(IDirectory.checkHasKey.selector), abi.encode(false));
+        // Deploy real Directory and Intelligence at their genesis addresses
+        deployCodeTo("Directory.sol", DIRECTORY_ADDR);
+        deployCodeTo("Intelligence.sol", INTELLIGENCE_ADDR);
 
         token = new MockSRC20("Token", "TKN", 18);
     }
@@ -49,20 +38,24 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_TransferEmitsEventToBothPartiesWhenBothHaveKeys() public {
-        _mockSenderHasKey(true);
-        _mockRecipientHasKey(true);
+        _registerKey(sender);
+        _registerKey(recipient);
+
+        bytes32 senderKeyHash = directory.keyHash(sender);
+        bytes32 recipientKeyHash = directory.keyHash(recipient);
 
         token.mint(sender, suint256(1e18));
 
-        // Expect sender event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, SENDER_KEY_HASH, SENDER_ENCRYPTED);
-        // Expect recipient event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, RECIPIENT_KEY_HASH, RECIPIENT_ENCRYPTED);
-
+        vm.recordLogs();
         vm.prank(sender);
         token.transfer(recipient, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        _assertTransferLog(transferLogs[0], sender, recipient, senderKeyHash);
+        _assertTransferLog(transferLogs[1], sender, recipient, recipientKeyHash);
+        _assertEncryptedDataNonEmpty(transferLogs[0]);
+        _assertEncryptedDataNonEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -70,20 +63,22 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_TransferEmitsEncryptedEventToSenderWhenOnlySenderHasKey() public {
-        _mockSenderHasKey(true);
-        _mockRecipientHasKey(false);
+        _registerKey(sender);
+
+        bytes32 senderKeyHash = directory.keyHash(sender);
 
         token.mint(sender, suint256(1e18));
 
-        // Expect sender encrypted event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, SENDER_KEY_HASH, SENDER_ENCRYPTED);
-        // Expect recipient zero-hash event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, bytes32(0), bytes(""));
-
+        vm.recordLogs();
         vm.prank(sender);
         token.transfer(recipient, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        _assertTransferLog(transferLogs[0], sender, recipient, senderKeyHash);
+        _assertEncryptedDataNonEmpty(transferLogs[0]);
+        _assertTransferLog(transferLogs[1], sender, recipient, bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -91,20 +86,22 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_TransferEmitsEncryptedEventToRecipientWhenOnlyRecipientHasKey() public {
-        _mockSenderHasKey(false);
-        _mockRecipientHasKey(true);
+        _registerKey(recipient);
+
+        bytes32 recipientKeyHash = directory.keyHash(recipient);
 
         token.mint(sender, suint256(1e18));
 
-        // Expect sender zero-hash event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, bytes32(0), bytes(""));
-        // Expect recipient encrypted event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, RECIPIENT_KEY_HASH, RECIPIENT_ENCRYPTED);
-
+        vm.recordLogs();
         vm.prank(sender);
         token.transfer(recipient, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        _assertTransferLog(transferLogs[0], sender, recipient, bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[0]);
+        _assertTransferLog(transferLogs[1], sender, recipient, recipientKeyHash);
+        _assertEncryptedDataNonEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -112,20 +109,18 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_TransferEmitsZeroHashEventsToBothPartiesWhenNeitherHasKey() public {
-        _mockSenderHasKey(false);
-        _mockRecipientHasKey(false);
-
         token.mint(sender, suint256(1e18));
 
-        // Expect sender zero-hash event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, bytes32(0), bytes(""));
-        // Expect recipient zero-hash event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, bytes32(0), bytes(""));
-
+        vm.recordLogs();
         vm.prank(sender);
         token.transfer(recipient, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        _assertTransferLog(transferLogs[0], sender, recipient, bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[0]);
+        _assertTransferLog(transferLogs[1], sender, recipient, bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -133,21 +128,25 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_TransferFromEmitsEventToBothPartiesWhenBothHaveKeys() public {
-        _mockSenderHasKey(true);
-        _mockRecipientHasKey(true);
+        _registerKey(sender);
+        _registerKey(recipient);
+
+        bytes32 senderKeyHash = directory.keyHash(sender);
+        bytes32 recipientKeyHash = directory.keyHash(recipient);
 
         token.mint(sender, suint256(1e18));
         vm.prank(sender);
         token.approve(address(this), suint256(1e18));
 
-        // Expect sender event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, SENDER_KEY_HASH, SENDER_ENCRYPTED);
-        // Expect recipient event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, RECIPIENT_KEY_HASH, RECIPIENT_ENCRYPTED);
-
+        vm.recordLogs();
         token.transferFrom(sender, recipient, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        _assertTransferLog(transferLogs[0], sender, recipient, senderKeyHash);
+        _assertTransferLog(transferLogs[1], sender, recipient, recipientKeyHash);
+        _assertEncryptedDataNonEmpty(transferLogs[0]);
+        _assertEncryptedDataNonEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -155,19 +154,23 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_TransferFromEmitsEncryptedEventToSenderWhenOnlySenderHasKey() public {
-        _mockSenderHasKey(true);
-        _mockRecipientHasKey(false);
+        _registerKey(sender);
+
+        bytes32 senderKeyHash = directory.keyHash(sender);
 
         token.mint(sender, suint256(1e18));
         vm.prank(sender);
         token.approve(address(this), suint256(1e18));
 
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, SENDER_KEY_HASH, SENDER_ENCRYPTED);
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, bytes32(0), bytes(""));
-
+        vm.recordLogs();
         token.transferFrom(sender, recipient, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        _assertTransferLog(transferLogs[0], sender, recipient, senderKeyHash);
+        _assertEncryptedDataNonEmpty(transferLogs[0]);
+        _assertTransferLog(transferLogs[1], sender, recipient, bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -175,19 +178,23 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_TransferFromEmitsEncryptedEventToRecipientWhenOnlyRecipientHasKey() public {
-        _mockSenderHasKey(false);
-        _mockRecipientHasKey(true);
+        _registerKey(recipient);
+
+        bytes32 recipientKeyHash = directory.keyHash(recipient);
 
         token.mint(sender, suint256(1e18));
         vm.prank(sender);
         token.approve(address(this), suint256(1e18));
 
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, bytes32(0), bytes(""));
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, RECIPIENT_KEY_HASH, RECIPIENT_ENCRYPTED);
-
+        vm.recordLogs();
         token.transferFrom(sender, recipient, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        _assertTransferLog(transferLogs[0], sender, recipient, bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[0]);
+        _assertTransferLog(transferLogs[1], sender, recipient, recipientKeyHash);
+        _assertEncryptedDataNonEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -195,19 +202,19 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_TransferFromEmitsZeroHashEventsToBothPartiesWhenNeitherHasKey() public {
-        _mockSenderHasKey(false);
-        _mockRecipientHasKey(false);
-
         token.mint(sender, suint256(1e18));
         vm.prank(sender);
         token.approve(address(this), suint256(1e18));
 
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, bytes32(0), bytes(""));
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, recipient, bytes32(0), bytes(""));
-
+        vm.recordLogs();
         token.transferFrom(sender, recipient, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        _assertTransferLog(transferLogs[0], sender, recipient, bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[0]);
+        _assertTransferLog(transferLogs[1], sender, recipient, bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -215,17 +222,21 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_MintEmitsEncryptedEventToRecipientWhenRecipientHasKey() public {
-        _mockHasKey(recipient, true, RECIPIENT_KEY_HASH, RECIPIENT_ENCRYPTED);
-        _mockHasKey(address(0), false, bytes32(0), bytes(""));
+        _registerKey(recipient);
 
-        // Expect sender (address(0)) zero-hash event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), recipient, bytes32(0), bytes(""));
-        // Expect recipient encrypted event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), recipient, RECIPIENT_KEY_HASH, RECIPIENT_ENCRYPTED);
+        bytes32 recipientKeyHash = directory.keyHash(recipient);
 
+        vm.recordLogs();
         token.mint(recipient, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        // address(0) has no key → zero hash
+        _assertTransferLog(transferLogs[0], address(0), recipient, bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[0]);
+        // recipient has key → encrypted
+        _assertTransferLog(transferLogs[1], address(0), recipient, recipientKeyHash);
+        _assertEncryptedDataNonEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -233,17 +244,15 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_MintEmitsZeroHashEventsWhenRecipientHasNoKey() public {
-        _mockHasKey(recipient, false, bytes32(0), bytes(""));
-        _mockHasKey(address(0), false, bytes32(0), bytes(""));
-
-        // Expect sender (address(0)) zero-hash event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), recipient, bytes32(0), bytes(""));
-        // Expect recipient zero-hash event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), recipient, bytes32(0), bytes(""));
-
+        vm.recordLogs();
         token.mint(recipient, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        _assertTransferLog(transferLogs[0], address(0), recipient, bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[0]);
+        _assertTransferLog(transferLogs[1], address(0), recipient, bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -251,19 +260,23 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_BurnEmitsEncryptedEventToSenderWhenSenderHasKey() public {
-        _mockHasKey(sender, true, SENDER_KEY_HASH, SENDER_ENCRYPTED);
-        _mockHasKey(address(0), false, bytes32(0), bytes(""));
+        _registerKey(sender);
+
+        bytes32 senderKeyHash = directory.keyHash(sender);
 
         token.mint(sender, suint256(1e18));
 
-        // Expect sender encrypted event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, address(0), SENDER_KEY_HASH, SENDER_ENCRYPTED);
-        // Expect recipient (address(0)) zero-hash event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, address(0), bytes32(0), bytes(""));
-
+        vm.recordLogs();
         token.burn(sender, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        // sender has key → encrypted
+        _assertTransferLog(transferLogs[0], sender, address(0), senderKeyHash);
+        _assertEncryptedDataNonEmpty(transferLogs[0]);
+        // address(0) has no key → zero hash
+        _assertTransferLog(transferLogs[1], sender, address(0), bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -271,46 +284,65 @@ contract SRC20EventsTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_BurnEmitsZeroHashEventsWhenSenderHasNoKey() public {
-        _mockHasKey(sender, false, bytes32(0), bytes(""));
-        _mockHasKey(address(0), false, bytes32(0), bytes(""));
-
         token.mint(sender, suint256(1e18));
 
-        // Expect sender zero-hash event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, address(0), bytes32(0), bytes(""));
-        // Expect recipient (address(0)) zero-hash event
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(sender, address(0), bytes32(0), bytes(""));
-
+        vm.recordLogs();
         token.burn(sender, suint256(1e18));
+
+        Vm.Log[] memory transferLogs = _getTransferLogs();
+        assertEq(transferLogs.length, 2);
+        _assertTransferLog(transferLogs[0], sender, address(0), bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[0]);
+        _assertTransferLog(transferLogs[1], sender, address(0), bytes32(0));
+        _assertEncryptedDataEmpty(transferLogs[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
                             HELPERS
     //////////////////////////////////////////////////////////////*/
 
-    function _mockSenderHasKey(bool hasKey) internal {
-        if (hasKey) {
-            _mockHasKey(sender, true, SENDER_KEY_HASH, SENDER_ENCRYPTED);
-        } else {
-            _mockHasKey(sender, false, bytes32(0), bytes(""));
-        }
+    function _registerKey(address user) internal {
+        suint256 key = CryptoUtils.generateRandomAESKey();
+        vm.prank(user);
+        directory.setKey(key);
     }
 
-    function _mockRecipientHasKey(bool hasKey) internal {
-        if (hasKey) {
-            _mockHasKey(recipient, true, RECIPIENT_KEY_HASH, RECIPIENT_ENCRYPTED);
-        } else {
-            _mockHasKey(recipient, false, bytes32(0), bytes(""));
+    function _getTransferLogs() internal returns (Vm.Log[] memory) {
+        Vm.Log[] memory allLogs = vm.getRecordedLogs();
+
+        // Count Transfer events
+        uint256 count = 0;
+        for (uint256 i = 0; i < allLogs.length; i++) {
+            if (allLogs[i].topics[0] == TRANSFER_TOPIC) {
+                count++;
+            }
         }
+
+        // Collect Transfer events
+        Vm.Log[] memory transferLogs = new Vm.Log[](count);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < allLogs.length; i++) {
+            if (allLogs[i].topics[0] == TRANSFER_TOPIC) {
+                transferLogs[idx++] = allLogs[i];
+            }
+        }
+
+        return transferLogs;
     }
 
-    function _mockHasKey(address addr, bool hasKey, bytes32 keyHash, bytes memory encrypted) internal {
-        vm.mockCall(DIRECTORY, abi.encodeWithSelector(IDirectory.checkHasKey.selector, addr), abi.encode(hasKey));
-        if (hasKey) {
-            vm.mockCall(DIRECTORY, abi.encodeWithSelector(IDirectory.keyHash.selector, addr), abi.encode(keyHash));
-            vm.mockCall(DIRECTORY, abi.encodeWithSelector(IDirectory.encrypt.selector, addr), abi.encode(encrypted));
-        }
+    function _assertTransferLog(Vm.Log memory log, address from, address to, bytes32 encryptKeyHash) internal pure {
+        assertEq(log.topics[1], bytes32(uint256(uint160(from))));
+        assertEq(log.topics[2], bytes32(uint256(uint160(to))));
+        assertEq(log.topics[3], encryptKeyHash);
+    }
+
+    function _assertEncryptedDataNonEmpty(Vm.Log memory log) internal pure {
+        bytes memory encryptedAmount = abi.decode(log.data, (bytes));
+        assertTrue(encryptedAmount.length > 0, "expected non-empty encrypted data");
+    }
+
+    function _assertEncryptedDataEmpty(Vm.Log memory log) internal pure {
+        bytes memory encryptedAmount = abi.decode(log.data, (bytes));
+        assertEq(encryptedAmount.length, 0, "expected empty encrypted data");
     }
 }
