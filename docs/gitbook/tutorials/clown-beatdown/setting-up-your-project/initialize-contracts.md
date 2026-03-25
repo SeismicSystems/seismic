@@ -9,10 +9,10 @@ cd packages/contracts
 2. **Initialize a project with `sforge`:**
 
 ```bash
-sforge init && rm -rf .github
+sforge init --force && rm -rf .github
 ```
 
-This command will:
+The `--force` flag is required because the directory already exists within the monorepo. This command will:
 
 - Create the contract project structure (e.g., `src/`, `test/`, `foundry.toml`).
 - Automatically install the Forge standard library (`forge-std`) as a submodule.
