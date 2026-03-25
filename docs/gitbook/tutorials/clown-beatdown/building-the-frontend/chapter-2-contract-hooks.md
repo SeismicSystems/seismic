@@ -16,7 +16,21 @@ cp packages/contracts/out/ClownBeatdown.sol/ClownBeatdown.json \
    packages/web/src/abis/contracts/ClownBeatdown.json
 ```
 
-You'll also need to add the deployed contract address and chain ID to the JSON file. The ABI file should contain `abi`, `address`, and `chainId` fields.
+You'll also need to add the deployed contract address and chain ID to the JSON file. After copying, edit the file to include `address` and `chainId` at the top level. The final structure should look like:
+
+```json
+{
+  "address": "0xYourDeployedAddress",
+  "chainId": 31337,
+  "abi": [
+    { "type": "constructor", "inputs": [...] },
+    { "type": "function", "name": "hit", ... },
+    ...
+  ]
+}
+```
+
+You can find the deployed address in `packages/contracts/broadcast/ClownBeatdown.s.sol/31337/run-latest.json` under `transactions[0].contractAddress`.
 
 ### Contract type definition
 

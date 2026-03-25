@@ -8,7 +8,7 @@ In this chapter, you'll learn to create and initialize the secrets pool — a co
 
 ### Defining the secrets pool
 
-The **secrets pool** is the collection of hidden strings that the clown carries. Using Seismic's **`sbytes`** type, each secret is shielded on-chain — encrypted and invisible to observers. A shielded **`suint256`** index determines which secret gets revealed when the clown is robbed. Open up `packages/contracts/ClownBeatdown.sol` and define the state variables:
+The **secrets pool** is the collection of hidden strings that the clown carries. Using Seismic's **`sbytes`** type, each secret is shielded on-chain — encrypted and invisible to observers. A shielded **`suint256`** index determines which secret gets revealed when the clown is robbed. Open up `packages/contracts/src/ClownBeatdown.sol` and define the state variables:
 
 ```solidity
 // SPDX-License-Identifier: MIT License
@@ -25,6 +25,8 @@ contract ClownBeatdown {
     }
 }
 ```
+
+We accept `_clownStamina` in the constructor but won't use it until Chapter 2, when we add the stamina system.
 
 ### Add the addSecret function
 

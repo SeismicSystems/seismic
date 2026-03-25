@@ -118,7 +118,7 @@ contract ClownBeatdown {
     // Tracks the number of hits per player per round.
     mapping(uint256 => mapping(address => uint256)) hitsPerRound;
 
-    // Events to log hits, shakes, and resets.
+    // Events to log hits and resets.
 
     // Event to log hits.
     event Hit(uint256 indexed round, address indexed hitter, uint256 remaining); // Logged when a hit lands.
