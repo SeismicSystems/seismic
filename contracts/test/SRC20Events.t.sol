@@ -24,6 +24,12 @@ contract SRC20EventsTest is Test {
     address recipient = makeAddr("recipient");
 
     bytes32 constant TRANSFER_TOPIC = keccak256("Transfer(address,address,bytes32,bytes)");
+    bytes32 constant APPROVAL_TOPIC = keccak256("Approval(address,address,bytes32,bytes)");
+    bytes32 constant PERMIT_TYPEHASH =
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
+    address owner = makeAddr("owner");
+    address spender = makeAddr("spender");
 
     function setUp() public {
         // Deploy real Directory and Intelligence at their genesis addresses
@@ -298,6 +304,186 @@ contract SRC20EventsTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+                    APPROVE: BOTH PARTIES HAVE KEYS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_ApproveEmitsEventToBothPartiesWhenBothHaveKeys() public {
+        _registerKey(owner);
+        _registerKey(spender);
+
+        bytes32 ownerKeyHash = directory.keyHash(owner);
+        bytes32 spenderKeyHash = directory.keyHash(spender);
+
+        vm.recordLogs();
+        vm.prank(owner);
+        token.approve(spender, suint256(1e18));
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], owner, spender, ownerKeyHash);
+        _assertApprovalLog(approvalLogs[1], owner, spender, spenderKeyHash);
+        _assertDecryptsTo(approvalLogs[0], owner, 1e18);
+        _assertDecryptsTo(approvalLogs[1], spender, 1e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    APPROVE: ONLY OWNER HAS KEY
+    //////////////////////////////////////////////////////////////*/
+
+    function test_ApproveEmitsEncryptedEventToOwnerWhenOnlyOwnerHasKey() public {
+        _registerKey(owner);
+
+        bytes32 ownerKeyHash = directory.keyHash(owner);
+
+        vm.recordLogs();
+        vm.prank(owner);
+        token.approve(spender, suint256(1e18));
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], owner, spender, ownerKeyHash);
+        _assertDecryptsTo(approvalLogs[0], owner, 1e18);
+        _assertApprovalLog(approvalLogs[1], owner, spender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[1]);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    APPROVE: ONLY SPENDER HAS KEY
+    //////////////////////////////////////////////////////////////*/
+
+    function test_ApproveEmitsEncryptedEventToSpenderWhenOnlySpenderHasKey() public {
+        _registerKey(spender);
+
+        bytes32 spenderKeyHash = directory.keyHash(spender);
+
+        vm.recordLogs();
+        vm.prank(owner);
+        token.approve(spender, suint256(1e18));
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], owner, spender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[0]);
+        _assertApprovalLog(approvalLogs[1], owner, spender, spenderKeyHash);
+        _assertDecryptsTo(approvalLogs[1], spender, 1e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    APPROVE: NEITHER PARTY HAS KEY
+    //////////////////////////////////////////////////////////////*/
+
+    function test_ApproveEmitsZeroHashEventsToBothPartiesWhenNeitherHasKey() public {
+        vm.recordLogs();
+        vm.prank(owner);
+        token.approve(spender, suint256(1e18));
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], owner, spender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[0]);
+        _assertApprovalLog(approvalLogs[1], owner, spender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[1]);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    PERMIT: BOTH PARTIES HAVE KEYS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_PermitEmitsEventToBothPartiesWhenBothHaveKeys() public {
+        (address permitOwner, uint256 privateKey) = makeAddrAndKey("permitOwner");
+        address permitSpender = makeAddr("permitSpender");
+
+        _registerKey(permitOwner);
+        _registerKey(permitSpender);
+
+        bytes32 ownerKeyHash = directory.keyHash(permitOwner);
+        bytes32 spenderKeyHash = directory.keyHash(permitSpender);
+
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(privateKey, permitOwner, permitSpender, 1e18, 0, block.timestamp);
+
+        vm.recordLogs();
+        token.permit(permitOwner, permitSpender, suint256(1e18), block.timestamp, v, r, s);
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], permitOwner, permitSpender, ownerKeyHash);
+        _assertApprovalLog(approvalLogs[1], permitOwner, permitSpender, spenderKeyHash);
+        _assertDecryptsTo(approvalLogs[0], permitOwner, 1e18);
+        _assertDecryptsTo(approvalLogs[1], permitSpender, 1e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    PERMIT: ONLY OWNER HAS KEY
+    //////////////////////////////////////////////////////////////*/
+
+    function test_PermitEmitsEncryptedEventToOwnerWhenOnlyOwnerHasKey() public {
+        (address permitOwner, uint256 privateKey) = makeAddrAndKey("permitOwner");
+        address permitSpender = makeAddr("permitSpender");
+
+        _registerKey(permitOwner);
+
+        bytes32 ownerKeyHash = directory.keyHash(permitOwner);
+
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(privateKey, permitOwner, permitSpender, 1e18, 0, block.timestamp);
+
+        vm.recordLogs();
+        token.permit(permitOwner, permitSpender, suint256(1e18), block.timestamp, v, r, s);
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], permitOwner, permitSpender, ownerKeyHash);
+        _assertDecryptsTo(approvalLogs[0], permitOwner, 1e18);
+        _assertApprovalLog(approvalLogs[1], permitOwner, permitSpender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[1]);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    PERMIT: ONLY SPENDER HAS KEY
+    //////////////////////////////////////////////////////////////*/
+
+    function test_PermitEmitsEncryptedEventToSpenderWhenOnlySpenderHasKey() public {
+        (address permitOwner, uint256 privateKey) = makeAddrAndKey("permitOwner");
+        address permitSpender = makeAddr("permitSpender");
+
+        _registerKey(permitSpender);
+
+        bytes32 spenderKeyHash = directory.keyHash(permitSpender);
+
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(privateKey, permitOwner, permitSpender, 1e18, 0, block.timestamp);
+
+        vm.recordLogs();
+        token.permit(permitOwner, permitSpender, suint256(1e18), block.timestamp, v, r, s);
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], permitOwner, permitSpender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[0]);
+        _assertApprovalLog(approvalLogs[1], permitOwner, permitSpender, spenderKeyHash);
+        _assertDecryptsTo(approvalLogs[1], permitSpender, 1e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    PERMIT: NEITHER PARTY HAS KEY
+    //////////////////////////////////////////////////////////////*/
+
+    function test_PermitEmitsZeroHashEventsToBothPartiesWhenNeitherHasKey() public {
+        (address permitOwner, uint256 privateKey) = makeAddrAndKey("permitOwner");
+        address permitSpender = makeAddr("permitSpender");
+
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(privateKey, permitOwner, permitSpender, 1e18, 0, block.timestamp);
+
+        vm.recordLogs();
+        token.permit(permitOwner, permitSpender, suint256(1e18), block.timestamp, v, r, s);
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], permitOwner, permitSpender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[0]);
+        _assertApprovalLog(approvalLogs[1], permitOwner, permitSpender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[1]);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                             HELPERS
     //////////////////////////////////////////////////////////////*/
 
@@ -330,6 +516,38 @@ contract SRC20EventsTest is Test {
         return transferLogs;
     }
 
+    function _getApprovalLogs() internal returns (Vm.Log[] memory) {
+        Vm.Log[] memory allLogs = vm.getRecordedLogs();
+
+        // Count Approval events
+        uint256 count = 0;
+        for (uint256 i = 0; i < allLogs.length; i++) {
+            if (allLogs[i].topics[0] == APPROVAL_TOPIC) {
+                count++;
+            }
+        }
+
+        // Collect Approval events
+        Vm.Log[] memory approvalLogs = new Vm.Log[](count);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < allLogs.length; i++) {
+            if (allLogs[i].topics[0] == APPROVAL_TOPIC) {
+                approvalLogs[idx++] = allLogs[i];
+            }
+        }
+
+        return approvalLogs;
+    }
+
+    function _assertApprovalLog(Vm.Log memory log, address _owner, address _spender, bytes32 encryptKeyHash)
+        internal
+        pure
+    {
+        assertEq(log.topics[1], bytes32(uint256(uint160(_owner))));
+        assertEq(log.topics[2], bytes32(uint256(uint160(_spender))));
+        assertEq(log.topics[3], encryptKeyHash);
+    }
+
     function _assertTransferLog(Vm.Log memory log, address from, address to, bytes32 encryptKeyHash) internal pure {
         assertEq(log.topics[1], bytes32(uint256(uint160(from))));
         assertEq(log.topics[2], bytes32(uint256(uint160(to))));
@@ -349,5 +567,25 @@ contract SRC20EventsTest is Test {
     function _assertEncryptedDataEmpty(Vm.Log memory log) internal pure {
         bytes memory encryptedAmount = abi.decode(log.data, (bytes));
         assertEq(encryptedAmount.length, 0, "expected empty encrypted data");
+    }
+
+    function _signPermit(
+        uint256 privateKey,
+        address _owner,
+        address _spender,
+        uint256 value,
+        uint256 nonce,
+        uint256 deadline
+    ) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+        (v, r, s) = vm.sign(
+            privateKey,
+            keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    token.DOMAIN_SEPARATOR(),
+                    keccak256(abi.encode(PERMIT_TYPEHASH, _owner, _spender, value, nonce, deadline))
+                )
+            )
+        );
     }
 }
