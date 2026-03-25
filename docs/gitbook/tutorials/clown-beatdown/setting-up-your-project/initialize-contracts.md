@@ -9,7 +9,7 @@ cd packages/contracts
 2. **Initialize a project with `sforge`:**
 
 ```bash
-sforge init --no-commit && rm -rf .github
+sforge init && rm -rf .github
 ```
 
 This command will:

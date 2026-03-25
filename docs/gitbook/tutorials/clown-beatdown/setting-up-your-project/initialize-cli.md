@@ -18,7 +18,7 @@ bun init -y
 3. Now, create an `src/` folder and move `index.ts` there.
 
 ```bash
-mkdir -p src && mv -t src index.ts
+mkdir -p src && mv index.ts src/
 ```
 
 4. Now, edit `package.json` to be the following:
@@ -33,7 +33,7 @@ mkdir -p src && mv -t src index.ts
   },
   "dependencies": {
     "dotenv": "^16.4.7",
-    "seismic-viem": "1.0.9",
+    "seismic-viem": "1.1.1",
     "viem": "^2.22.3"
   },
   "devDependencies": {

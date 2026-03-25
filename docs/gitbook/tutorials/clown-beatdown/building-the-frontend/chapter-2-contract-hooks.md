@@ -16,7 +16,21 @@ cp packages/contracts/out/ClownBeatdown.sol/ClownBeatdown.json \
    packages/web/src/abis/contracts/ClownBeatdown.json
 ```
 
-You'll also need to add the deployed contract address and chain ID to the JSON file. The ABI file should contain `abi`, `address`, and `chainId` fields.
+You'll also need to add the deployed contract address and chain ID to the JSON file. After copying, edit the file to include `address` and `chainId` at the top level. The final structure should look like:
+
+```json
+{
+  "address": "0xYourDeployedAddress",
+  "chainId": 31337,
+  "abi": [
+    { "type": "constructor", "inputs": [...] },
+    { "type": "function", "name": "hit", ... },
+    ...
+  ]
+}
+```
+
+You can find the deployed address in `packages/contracts/broadcast/ClownBeatdown.s.sol/31337/run-latest.json` under `transactions[0].contractAddress`.
 
 ### Contract type definition
 
@@ -58,8 +72,8 @@ This hook wraps the contract methods into callable functions with proper error h
 import { useCallback, useEffect, useState } from "react";
 import { useShieldedWallet } from "seismic-react";
 import {
-  ShieldedPublicClient,
-  ShieldedWalletClient,
+  type ShieldedPublicClient,
+  type ShieldedWalletClient,
   addressExplorerUrl,
   txExplorerUrl,
 } from "seismic-viem";
@@ -180,6 +194,40 @@ Notice the different contract namespaces used for each method:
 - **`appContract().tread.getClownStamina()`** — this is a **transparent read**. The `tread` namespace performs a standard `eth_call` since stamina is public state.
 
 This distinction between `twrite`, `read`, and `tread` is the key difference from a standard Ethereum dApp.
+
+### Supporting components
+
+Before building the game actions hook, create the helper components and hooks it depends on.
+
+**Explorer toast** — Create `src/components/chain/ExplorerToast.tsx`:
+
+```typescript
+import React from 'react'
+
+type ExplorerToastProps = {
+  url: string
+  text: string
+  hash: string
+}
+
+export const ExplorerToast: React.FC<ExplorerToastProps> = ({ url, text, hash }) => (
+  <a href={url} target="_blank" rel="noopener noreferrer">
+    {text}{hash.slice(0, 10)}...
+  </a>
+)
+```
+
+**Toast notifications** — Create `src/hooks/useToastNotifications.ts`:
+
+```typescript
+import { toast } from 'react-toastify'
+
+export const useToastNotifications = () => ({
+  notifySuccess: (msg: string) => toast.success(msg),
+  notifyError: (msg: string) => toast.error(msg),
+  notifyInfo: (msg: string | React.ReactElement) => toast.info(msg),
+})
+```
 
 ### useGameActions hook
 

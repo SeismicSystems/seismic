@@ -24,7 +24,7 @@ import {
   type ShieldedWalletClient,
   createShieldedWalletClient,
 } from "seismic-viem";
-import { Abi, Address, Chain, http } from "viem";
+import { Abi, Address, Chain, http, hexToString } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 import { getShieldedContractWithCheck } from "../lib/utils";
@@ -144,6 +144,7 @@ async rob(playerName: string) {
   console.log(`- Player ${playerName} reading rob()`)
   const contract = this.getPlayerContract(playerName)
   const result = await contract.read.rob() // signed read
-  console.log(`- Player ${playerName} robbed secret:`, result)
+  const decoded = hexToString(result as `0x${string}`)
+  console.log(`- Player ${playerName} robbed secret:`, decoded)
 }
 ```
