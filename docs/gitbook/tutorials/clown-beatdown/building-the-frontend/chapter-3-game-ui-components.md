@@ -11,44 +11,99 @@ In this chapter, you'll build the game interface — the clown sprite with punch
 The clown sprite changes appearance based on how many times it's been hit. Create `src/components/game/ShowClown.tsx`:
 
 ```typescript
-import { motion } from 'framer-motion'
+import { motion, useAnimation } from 'framer-motion'
+import { useEffect, useMemo } from 'react'
 
-interface ShowClownProps {
+import { Box } from '@mui/material'
+
+type ClownProps = {
   isKO: boolean
   isShakingAnimation: boolean
   isHittingAnimation: boolean
   punchCount: number
 }
 
-export default function ShowClown({
+const ShowClown: React.FC<ClownProps> = ({
   isKO,
   isShakingAnimation,
   isHittingAnimation,
   punchCount,
-}: ShowClownProps) {
-  // Select sprite based on game state
-  const getClownImage = () => {
-    if (isKO) return '/clownko.png'
-    if (punchCount >= 2) return '/clown3.png'
-    if (punchCount === 1) return '/clown2.png'
-    return '/clown1.png'
-  }
+}) => {
+  const controls = useAnimation()
+
+  useEffect(() => {
+    if (isShakingAnimation) {
+      controls.start({
+        rotate: [0, -5, 5, -5, 5, 0],
+        transition: { duration: 0.5 },
+      })
+    } else if (isHittingAnimation) {
+      controls.start({
+        scale: [1, 0.9, 1.1, 1],
+        transition: { duration: 0.3 },
+      })
+    }
+  }, [isShakingAnimation, isHittingAnimation, controls])
+
+  // Select the appropriate clown image based on punch count and KO state
+  // Using useMemo to prevent recalculating on every render
+  const clownImage = useMemo(() => {
+    // If shaking, show the shaking clown image
+    if (isShakingAnimation) {
+      return '/clown_shaking.png'
+    }
+
+    if (isKO) {
+      return '/clownko.png'
+    }
+
+    let imagePath
+    switch (punchCount) {
+      case 0:
+        imagePath = '/clown1.png'
+        break
+      case 1:
+        imagePath = '/clown2.png'
+        break
+      case 2:
+      case 3:
+        imagePath = '/clown3.png'
+        break
+      default:
+        imagePath = '/clown1.png'
+    }
+
+    return imagePath
+  }, [isKO, isShakingAnimation, punchCount])
 
   return (
-    <motion.img
-      src={getClownImage()}
-      alt="Clown"
-      animate={{
-        rotate: isShakingAnimation ? [0, -5, 5, -5, 5, 0] : 0,
-        scale: isHittingAnimation ? [1, 0.9, 1.1, 1] : 1,
+    <Box
+      sx={{
+        width: { xs: '70%', sm: '70%', md: '80%', lg: '80%', xl: '100%' },
+        height: { xs: '100%', sm: '70%', md: '80%', lg: '80%', xl: '100%' },
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
       }}
-      transition={{
-        duration: isShakingAnimation ? 0.5 : 0.3,
-      }}
-      style={{ width: '100%', maxWidth: '500px' }}
-    />
+    >
+      <div className="relative">
+        <motion.div animate={controls} className="relative">
+          <img
+            src={clownImage}
+            alt="Clown"
+            style={{
+              maxWidth: '100%',
+              height: 'auto',
+              objectFit: 'contain',
+            }}
+          />
+        </motion.div>
+      </div>
+    </Box>
   )
 }
+
+export default ShowClown
 ```
 
 The sprite progression creates visual feedback as the clown takes damage:
@@ -57,8 +112,9 @@ The sprite progression creates visual feedback as the clown takes damage:
 - **1 hit** — `clown2.png` (damaged)
 - **2–3 hits** — `clown3.png` (heavily damaged)
 - **KO** — `clownko.png` (knocked out)
+- **Shaking** — `clown_shaking.png` (mid-animation)
 
-Framer Motion handles two animations: a **shake** (rotation) when the clown gets hit, and a **scale punch** effect for impact feedback.
+Framer Motion's `useAnimation` hook controls two animations: a **shake** (rotation) when the clown gets hit, and a **scale punch** effect for impact feedback.
 
 ### ButtonContainer: Action buttons
 
@@ -67,207 +123,495 @@ The button container renders the game's action buttons — hit, rob, and reset. 
 ```typescript
 import { useState } from 'react'
 
-interface ButtonContainerProps {
-  position: 'left' | 'right' | 'mobile'
+import { Box, type SxProps, type Theme } from '@mui/material'
+
+type ButtonContainerProps = {
   clownStamina: number | null
   isHitting: boolean
-  isRobbing: boolean
   isResetting: boolean
-  onHit: () => void
-  onRob: () => void
-  onReset: () => void
+  isRobbing: boolean
+  handleHit: () => void
+  handleReset: () => void
+  handleRob: () => void
+  position?: 'left' | 'right' | 'mobile'
 }
 
-function ActionButton({
-  onClick,
-  defaultImg,
-  activeImg,
-  isActive,
-  alt,
-}: {
+type ActionButtonProps = {
   onClick: () => void
-  defaultImg: string
-  activeImg: string
-  isActive: boolean
+  active: boolean
+  src: string
   alt: string
-}) {
-  const [pressed, setPressed] = useState(false)
-
-  return (
-    <img
-      src={pressed || isActive ? activeImg : defaultImg}
-      alt={alt}
-      onClick={onClick}
-      onMouseDown={() => setPressed(true)}
-      onMouseUp={() => setTimeout(() => setPressed(false), 200)}
-      style={{
-        cursor: 'pointer',
-        width: '12rem',
-        userSelect: 'none',
-      }}
-    />
-  )
+  className: string
+  sx?: SxProps<Theme>
 }
+
+const ActionButton = ({
+  onClick,
+  active,
+  src,
+  alt,
+  className,
+  sx,
+}: ActionButtonProps) => (
+  <Box
+    onClick={onClick}
+    component="div"
+    sx={{
+      cursor: active ? 'default' : 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...sx,
+    }}
+  >
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+    />
+  </Box>
+)
 
 export default function ButtonContainer({
-  position,
   clownStamina,
   isHitting,
-  isRobbing,
   isResetting,
-  onHit,
-  onRob,
-  onReset,
+  isRobbing,
+  handleHit,
+  handleReset,
+  handleRob,
+  position = 'mobile',
 }: ButtonContainerProps) {
-  const isKO = clownStamina === 0
+  const [showRobActive, setShowRobActive] = useState(false)
+  const [showResetActive, setShowResetActive] = useState(false)
 
-  if (position === 'left' || (position === 'mobile' && !isKO)) {
-    // Rob button (left side on desktop, shown on mobile when standing)
+  const handleRobClick = () => {
+    if (!isRobbing) {
+      setShowRobActive(true)
+      setTimeout(() => {
+        setShowRobActive(false)
+        handleRob()
+      }, 200)
+    }
+  }
+
+  const handleResetClick = () => {
+    if (!isResetting) {
+      setShowResetActive(true)
+      setTimeout(() => {
+        setShowResetActive(false)
+        handleReset()
+      }, 200)
+    }
+  }
+
+  const isStanding = clownStamina !== null && clownStamina > 0
+
+  const robBtn = {
+    onClick: handleRobClick,
+    active: isRobbing,
+    src: showRobActive ? '/rob_active.png' : '/rob_btn.png',
+    alt: 'Rob',
+    className: 'look-btn',
+  }
+
+  const hitBtn = {
+    onClick: handleHit,
+    active: isHitting,
+    src: isHitting ? '/punch_active.png' : '/punch_btn.png',
+    alt: 'Punch',
+    className: 'punch-btn',
+  }
+
+  const resetBtn = {
+    onClick: handleResetClick,
+    active: isResetting,
+    src: showResetActive ? '/reset_active.png' : '/reset_btn.png',
+    alt: 'Reset',
+    className: 'reset-btn',
+  }
+
+  const rightBtn = isStanding ? hitBtn : resetBtn
+
+  if (position === 'left') {
     return (
-      <ActionButton
-        onClick={onRob}
-        defaultImg="/rob_btn.png"
-        activeImg="/rob_active.png"
-        isActive={isRobbing}
-        alt="Rob"
-      />
+      <Box
+        sx={{
+          width: { lg: '100%' },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          pr: { lg: 4, xl: 6 },
+        }}
+      >
+        <ActionButton
+          {...robBtn}
+          sx={{ width: '20rem', marginRight: 6, height: '20rem' }}
+        />
+      </Box>
     )
   }
 
-  // Right side: Hit when standing, Reset when KO
-  if (isKO) {
+  if (position === 'right') {
     return (
-      <ActionButton
-        onClick={onReset}
-        defaultImg="/reset_btn.png"
-        activeImg="/reset_active.png"
-        isActive={isResetting}
-        alt="Reset"
-      />
+      <Box
+        sx={{
+          width: { lg: '100%' },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          pl: { lg: 4, xl: 6 },
+        }}
+      >
+        <ActionButton
+          {...rightBtn}
+          sx={
+            isStanding
+              ? {
+                  marginLeft: { xs: 0, lg: 8 },
+                  height: { lg: '18rem' },
+                }
+              : { width: '20rem', marginLeft: '3rem', height: '18rem' }
+          }
+        />
+      </Box>
     )
+  }
+
+  // Mobile layout — both buttons side by side
+  const MOBILE_SIZE = {
+    xs: '12rem',
+    sm: '20rem',
+    md: '20rem',
+    lg: '30rem',
+    xl: '30rem',
   }
 
   return (
-    <ActionButton
-      onClick={onHit}
-      defaultImg="/punch_btn.png"
-      activeImg="/punch_active.png"
-      isActive={isHitting}
-      alt="Hit"
-    />
+    <Box
+      sx={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: { xs: 0, sm: 0, md: 0, lg: 70, xl: 70 },
+        marginRight: { xs: 0, sm: 4, md: 4, lg: 6, xl: 0 },
+        marginLeft: { xs: 0, sm: 4, md: 4, lg: 6, xl: 0 },
+      }}
+    >
+      <ActionButton
+        {...robBtn}
+        sx={{ height: MOBILE_SIZE, width: MOBILE_SIZE }}
+      />
+      <ActionButton
+        {...rightBtn}
+        sx={
+          isStanding
+            ? {
+                marginRight: { xs: 0, sm: 4, md: 0, lg: 0, xl: 0 },
+                height: {
+                  xs: '10rem',
+                  sm: '18rem',
+                  md: '20rem',
+                  lg: '30rem',
+                  xl: '30rem',
+                },
+                width: {
+                  xs: '12rem',
+                  sm: '14rem',
+                  md: '28rem',
+                  lg: '30rem',
+                  xl: '30rem',
+                },
+              }
+            : { height: MOBILE_SIZE, width: MOBILE_SIZE }
+        }
+      />
+    </Box>
   )
 }
 ```
 
-The button layout adapts based on the game state:
+The button layout adapts based on game state and screen size:
 
-- **Clown standing** — show Hit button (right) and Rob button (left, will revert if called)
-- **Clown KO** — show Reset button (right) and Rob button (left, now callable)
+- **Desktop** — rob button on the left, hit/reset on the right
+- **Mobile** — both buttons side by side below the clown
+- **Clown standing** — show Hit button (right)
+- **Clown KO** — show Reset button (right), Rob button now callable (left)
 
 ### ClownPuncher: Main game component
 
 This component ties everything together. Create `src/components/game/ClownPuncher.tsx`:
 
 ```typescript
-import { Box, CircularProgress, Typography } from '@mui/material'
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+
+import { useGameActions } from '@/hooks/useGameActions'
+import {
+  Backdrop,
+  Box,
+  CircularProgress,
+  Container,
+  Fade,
+  Typography,
+} from '@mui/material'
 
 import { useAuth } from '../chain/WalletConnectButton'
 import ButtonContainer from './ButtonContainer'
+import EntryScreen from './EntryScreen'
 import ShowClown from './ShowClown'
-import { useGameActions } from '@/hooks/useGameActions'
 
-export default function ClownPuncher() {
+const ClownPuncher: React.FC = () => {
   const { isAuthenticated } = useAuth()
+  const [showGame, setShowGame] = useState(false)
+  const [showSecretSplash, setShowSecretSplash] = useState(false)
+  const [showRobRefused, setShowRobRefused] = useState(false)
+  const prevRoundIdRef = useRef<number | null>(null)
   const {
     loaded,
+    currentRoundId,
     clownStamina,
     isHitting,
     isResetting,
     isRobbing,
     robResult,
     punchCount,
+    fetchGameRounds,
+    resetGameState,
     handleHit,
     handleReset,
     handleRob,
-    setRobResult,
   } = useGameActions()
 
-  if (!isAuthenticated) {
-    return <EntryScreen />
+  useEffect(() => {
+    // Only fetch data if authenticated and game is shown
+    if (isAuthenticated && showGame) {
+      fetchGameRounds()
+    }
+  }, [fetchGameRounds, isAuthenticated, showGame])
+
+  useEffect(() => {
+    // Only reset game state when first showing the game or when the round actually changes
+    if (
+      showGame &&
+      (prevRoundIdRef.current === null ||
+        (currentRoundId !== null && prevRoundIdRef.current !== currentRoundId))
+    ) {
+      console.log(
+        'Round changed from',
+        prevRoundIdRef.current,
+        'to',
+        currentRoundId,
+        '- resetting game state'
+      )
+      resetGameState()
+    }
+    // Update the ref to the current round ID
+    prevRoundIdRef.current = currentRoundId
+  }, [currentRoundId, resetGameState, showGame])
+
+  // Show splash screen when lookResult changes to a non-null value
+  useEffect(() => {
+    if (robResult !== null) {
+      setShowSecretSplash(true)
+    }
+  }, [robResult])
+
+  // If not showing the game yet, show entry screen
+  if (!showGame) {
+    return <EntryScreen onEnter={() => setShowGame(true)} />
   }
 
-  if (!loaded || clownStamina === null) {
-    return <CircularProgress />
+  const onRob = () => {
+    if (clownStamina !== null && clownStamina > 0) {
+      setShowRobRefused(true)
+      return
+    }
+    handleRob()
   }
 
-  const isKO = clownStamina === 0
+  const buttonProps = {
+    clownStamina,
+    isHitting,
+    isResetting,
+    isRobbing,
+    handleHit,
+    handleReset,
+    handleRob: onRob,
+  } as const
 
   return (
-    <Box sx={{ textAlign: 'center', position: 'relative' }}>
-      {/* Secret revealed splash */}
-      {robResult && (
-        <Box
-          onClick={() => setRobResult(null)}
-          sx={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 50,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: 'rgba(0,0,0,0.85)',
-            cursor: 'pointer',
-          }}
-        >
-          <Typography variant="h2">SECRET REVEALED!</Typography>
-          <Typography variant="h4" sx={{ mt: 2 }}>
-            {robResult}
-          </Typography>
-        </Box>
-      )}
-
-      {/* Game layout */}
+    <Container
+      sx={{
+        height: '100dvh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'start',
+        px: 4,
+      }}
+    >
       <Box
         sx={{
+          mt: { xs: 3, sm: 3, md: 5, lg: 4, xl: 10 },
+          height: {
+            xs: '30dvh',
+          },
+          mb: 2,
           display: 'flex',
-          alignItems: 'center',
           justifyContent: 'center',
-          gap: 4,
         }}
       >
-        <ButtonContainer
-          position="left"
-          clownStamina={clownStamina}
-          isHitting={isHitting}
-          isRobbing={isRobbing}
-          isResetting={isResetting}
-          onHit={handleHit}
-          onRob={handleRob}
-          onReset={handleReset}
-        />
-
-        <ShowClown
-          isKO={isKO}
-          isShakingAnimation={isHitting}
-          isHittingAnimation={isHitting}
-          punchCount={punchCount}
-        />
-
-        <ButtonContainer
-          position="right"
-          clownStamina={clownStamina}
-          isHitting={isHitting}
-          isRobbing={isRobbing}
-          isResetting={isResetting}
-          onHit={handleHit}
-          onRob={handleRob}
-          onReset={handleReset}
+        <img
+          src="/cblogo.png"
+          alt="Clown Beatdown Logo"
+          className="clown-logo"
         />
       </Box>
-    </Box>
+
+      {/* Splash Screen — secret revealed or rob refused */}
+      <Backdrop
+        sx={{
+          color: '#fff',
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        }}
+        open={(showSecretSplash && robResult !== null) || showRobRefused}
+        onClick={() => {
+          setShowSecretSplash(false)
+          setShowRobRefused(false)
+        }}
+      >
+        <Fade in={(showSecretSplash && robResult !== null) || showRobRefused}>
+          <Box
+            sx={{
+              backgroundColor: 'background.paper',
+              borderRadius: 4,
+              p: 5,
+              textAlign: 'center',
+              maxWidth: '90%',
+              boxShadow: 24,
+            }}
+          >
+            {showRobRefused ? (
+              <>
+                <Typography
+                  variant="h4"
+                  fontWeight="bold"
+                  color="white"
+                  gutterBottom
+                >
+                  NOT SO FAST!
+                </Typography>
+                <Typography variant="h6" color="white" gutterBottom>
+                  The clown isn't giving up that easily.
+                </Typography>
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{ mt: 2 }}
+                >
+                  Knock him out first!
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Typography
+                  variant="h4"
+                  fontWeight="bold"
+                  color="white"
+                  gutterBottom
+                >
+                  SECRET REVEALED!
+                </Typography>
+                <Typography
+                  variant="h1"
+                  fontWeight="bold"
+                  color="white"
+                  gutterBottom
+                >
+                  {robResult}
+                </Typography>
+              </>
+            )}
+            <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
+              (Click anywhere to close)
+            </Typography>
+          </Box>
+        </Fade>
+      </Backdrop>
+
+      {loaded ? (
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', lg: 'row' },
+            justifyContent: { lg: 'space-between' },
+            alignItems: 'center',
+            width: '100%',
+            position: 'relative',
+            height: { lg: '500px', xl: '600px' },
+            my: { xs: 0, md: 5, lg: 0, xl: 1 },
+          }}
+        >
+          {/* Desktop: left buttons */}
+          <Box sx={{ display: { xs: 'none', lg: 'flex' } }}>
+            <ButtonContainer {...buttonProps} position="left" />
+          </Box>
+
+          {/* Clown — rendered once, responsive positioning */}
+          <Box
+            className="clown-container"
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              position: { lg: 'absolute' },
+              left: { lg: '50%' },
+              transform: { lg: 'translateX(-50%)' },
+              zIndex: 2,
+              width: { lg: '50%', xl: '40%' },
+              maxHeight: { xs: '35dvh', md: '30dvh', lg: 'none' },
+            }}
+          >
+            <ShowClown
+              isKO={clownStamina === 0}
+              isShakingAnimation={false}
+              isHittingAnimation={isHitting}
+              punchCount={punchCount}
+            />
+          </Box>
+
+          {/* Desktop: right buttons */}
+          <Box sx={{ display: { xs: 'none', lg: 'flex' } }}>
+            <ButtonContainer {...buttonProps} position="right" />
+          </Box>
+
+          {/* Mobile: all buttons below clown */}
+          <Box
+            sx={{
+              display: { xs: 'flex', lg: 'none' },
+              width: '100%',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: { xs: 3, md: 5 },
+            }}
+          >
+            <ButtonContainer {...buttonProps} position="mobile" />
+          </Box>
+        </Box>
+      ) : (
+        <CircularProgress size={32} />
+      )}
+    </Container>
   )
 }
+
+export default ClownPuncher
 ```
 
 ### EntryScreen: Wallet connection
@@ -275,87 +619,226 @@ export default function ClownPuncher() {
 The entry screen prompts the user to connect their wallet before playing. Create `src/components/game/EntryScreen.tsx`:
 
 ```typescript
-import { Box, Typography } from '@mui/material'
+import React, { useEffect, useState } from 'react'
+
+import { Box, Container } from '@mui/material'
 
 import { useAuth } from '../chain/WalletConnectButton'
 
-export default function EntryScreen() {
-  const { isLoading, openConnectModal } = useAuth()
+type EntryScreenProps = {
+  onEnter: () => void
+}
+
+const EntryScreen: React.FC<EntryScreenProps> = ({ onEnter }) => {
+  const { isAuthenticated, isLoading, openConnectModal } = useAuth()
+  const [isAnimating, setIsAnimating] = useState(false)
+
+  // Automatically enter when user becomes authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      setIsAnimating(true)
+      setTimeout(() => {
+        setIsAnimating(false)
+        onEnter()
+      }, 500)
+    }
+  }, [isAuthenticated, onEnter])
+
+  const handleLogoClick = () => {
+    setIsAnimating(true)
+
+    // If not authenticated, open wallet connect modal
+    if (!isAuthenticated) {
+      setTimeout(() => {
+        setIsAnimating(false)
+        openConnectModal()
+      }, 300)
+    }
+  }
 
   return (
-    <Box
-      onClick={openConnectModal}
+    <Container
       sx={{
+        height: '100dvh',
+        width: '100dvw',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100vh',
-        cursor: 'pointer',
+        position: 'relative',
       }}
     >
-      <img src="/logo.png" alt="Clown Beatdown" style={{ maxWidth: '400px' }} />
-      <Typography variant="h5" sx={{ mt: 4 }}>
-        {isLoading ? '...Loading...' : 'CLICK TO CONNECT'}
-      </Typography>
-    </Box>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          cursor: 'pointer',
+          transform: isAnimating ? 'scale(0.95)' : 'scale(1)',
+          transition: 'transform 0.2s ease-in-out',
+        }}
+        onClick={handleLogoClick}
+      >
+        <img
+          src="/cblogo.png"
+          alt="Clown Beatdown Logo"
+          style={{ maxWidth: '100%', height: 'auto' }}
+          className="clown-image"
+        />
+        <Box
+          sx={{
+            mt: 6,
+            color: 'black',
+            fontSize: '1.25rem',
+            textAlign: 'center',
+            opacity: 0.8,
+            fontFamily: 'monospace',
+            border: '1px solid black',
+            borderRadius: '10px',
+            padding: '10px',
+            backgroundColor: 'var(--midColor)',
+          }}
+        >
+          {isLoading ? '...Loading...' : 'CLICK TO CONNECT'}
+        </Box>
+      </Box>
+    </Container>
   )
 }
+
+export default EntryScreen
 ```
 
-Clicking anywhere on the entry screen opens the RainbowKit wallet connection modal. Once authenticated, the `ClownPuncher` component takes over.
+Clicking the logo opens the RainbowKit wallet connection modal. Once authenticated, the `onEnter` callback fires and the `ClownPuncher` component takes over.
 
 ### WalletConnectButton: Auth context
 
 Create the auth context and wallet button used throughout the app. Create `src/components/chain/WalletConnectButton.tsx`:
 
 ```typescript
-import { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
+
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useConnectModal } from '@rainbow-me/rainbowkit'
 
-interface AuthContextType {
+// Create authentication context
+type AuthContextType = {
   isAuthenticated: boolean
   isLoading: boolean
-  openConnectModal: (() => void) | undefined
-  accountName: string | null
+  openConnectModal: () => void
+  accountName?: string
 }
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
-  openConnectModal: undefined,
-  accountName: null,
+  openConnectModal: () => {},
 })
 
 export const useAuth = () => useContext(AuthContext)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { address, isConnected } = useAccount()
-  const { openConnectModal } = useConnectModal()
-  const [isLoading, setIsLoading] = useState(true)
+// Wallet icon component using SVG for better quality
+const WalletIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className="w-5 h-5"
+  >
+    <path d="M2.273 5.625A4.483 4.483 0 0 1 5.25 4.5h13.5c1.141 0 2.183.425 2.977 1.125A3 3 0 0 0 18.75 3H5.25a3 3 0 0 0-2.977 2.625ZM2.273 8.625A4.483 4.483 0 0 1 5.25 7.5h13.5c1.141 0 2.183.425 2.977 1.125A3 3 0 0 0 18.75 6H5.25a3 3 0 0 0-2.977 2.625ZM5.25 9a3 3 0 0 0-3 3v6a3 3 0 0 0 3 3h13.5a3 3 0 0 0 3-3v-6a3 3 0 0 0-3-3H15a.75.75 0 0 0-.75.75 2.25 2.25 0 0 1-4.5 0A.75.75 0 0 0 9 9H5.25Z" />
+  </svg>
+)
 
-  useEffect(() => {
-    setIsLoading(false)
-  }, [address])
-
-  const accountName = address
-    ? `${address.slice(0, 6)}...${address.slice(-4)}`
-    : null
-
+const WalletButton: React.FC<
+  React.PropsWithChildren<
+    { onClick: () => void } & React.HTMLAttributes<HTMLButtonElement>
+  >
+> = ({ children, onClick, ...props }) => {
   return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated: isConnected,
-        isLoading,
-        openConnectModal,
-        accountName,
-      }}
-    >
+    <button onClick={onClick} className="" {...props}>
       {children}
-    </AuthContext.Provider>
+    </button>
   )
 }
+
+export const AuthProvider: React.FC<React.PropsWithChildren> = ({
+  children,
+}) => {
+  const { openConnectModal } = useConnectModal() || {
+    openConnectModal: () => {},
+  }
+  const { address, isConnecting, isConnected, isDisconnected } = useAccount()
+  const [authState, setAuthState] = useState<AuthContextType>({
+    isAuthenticated: false,
+    isLoading: true,
+    openConnectModal: openConnectModal || (() => {}),
+  })
+
+  useEffect(() => {
+    setAuthState({
+      isAuthenticated: isConnected,
+      isLoading: isConnecting,
+      openConnectModal: openConnectModal || (() => {}),
+      accountName: address
+        ? `${address.slice(0, 6)}...${address.slice(-4)}`
+        : undefined,
+    })
+  }, [isConnected, isConnecting, isDisconnected, address, openConnectModal])
+
+  return (
+    <AuthContext.Provider value={authState}>{children}</AuthContext.Provider>
+  )
+}
+
+const WalletConnectButton = () => {
+  return (
+    <ConnectButton.Custom>
+      {({
+        account,
+        openConnectModal,
+        chain,
+        openAccountModal,
+        openChainModal,
+        mounted,
+        authenticationStatus,
+      }) => {
+        if (!mounted || authenticationStatus === 'loading') {
+          return <></>
+        }
+        if (!account || authenticationStatus === 'unauthenticated') {
+          return (
+            <WalletButton onClick={openConnectModal}>
+              <span className="md:inline hidden">CONNECT WALLET</span>
+              <span className="md:hidden">
+                <WalletIcon />
+              </span>
+            </WalletButton>
+          )
+        }
+        if (chain?.unsupported) {
+          return (
+            <WalletButton onClick={openChainModal}>
+              <span className="md:inline hidden">Unsupported chain</span>
+              <span className="md:hidden">
+                <WalletIcon />
+              </span>
+            </WalletButton>
+          )
+        }
+        return (
+          <WalletButton onClick={openAccountModal}>
+            <span className="">
+              <WalletIcon />
+            </span>
+          </WalletButton>
+        )
+      }}
+    </ConnectButton.Custom>
+  )
+}
+
+export default WalletConnectButton
 ```
 
 ### Running the frontend
