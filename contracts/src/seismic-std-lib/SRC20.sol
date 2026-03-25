@@ -214,6 +214,16 @@ abstract contract SRC20 {
             emit Approval(owner, spender, hashes[i], encryptedData[i]);
         }
 
+        // Emit to owner if they have a registered key
+        if (directory.checkHasKey(owner)) {
+            bytes32 ownerKeyHash = directory.keyHash(owner);
+            bytes memory ownerEncrypted = directory.encrypt(owner, abi.encodePacked(uint256(amount)));
+            emit Approval(owner, spender, ownerKeyHash, ownerEncrypted);
+        } else {
+            // Emit with zero hash and empty data if owner has no key
+            emit Approval(owner, spender, bytes32(0), bytes(""));
+        }
+
         // Emit to spender if they have a registered key
         if (directory.checkHasKey(spender)) {
             bytes32 spenderKeyHash = directory.keyHash(spender);
