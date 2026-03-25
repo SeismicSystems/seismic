@@ -72,8 +72,8 @@ This hook wraps the contract methods into callable functions with proper error h
 import { useCallback, useEffect, useState } from "react";
 import { useShieldedWallet } from "seismic-react";
 import {
-  ShieldedPublicClient,
-  ShieldedWalletClient,
+  type ShieldedPublicClient,
+  type ShieldedWalletClient,
   addressExplorerUrl,
   txExplorerUrl,
 } from "seismic-viem";
@@ -194,6 +194,40 @@ Notice the different contract namespaces used for each method:
 - **`appContract().tread.getClownStamina()`** — this is a **transparent read**. The `tread` namespace performs a standard `eth_call` since stamina is public state.
 
 This distinction between `twrite`, `read`, and `tread` is the key difference from a standard Ethereum dApp.
+
+### Supporting components
+
+Before building the game actions hook, create the helper components and hooks it depends on.
+
+**Explorer toast** — Create `src/components/chain/ExplorerToast.tsx`:
+
+```typescript
+import React from 'react'
+
+type ExplorerToastProps = {
+  url: string
+  text: string
+  hash: string
+}
+
+export const ExplorerToast: React.FC<ExplorerToastProps> = ({ url, text, hash }) => (
+  <a href={url} target="_blank" rel="noopener noreferrer">
+    {text}{hash.slice(0, 10)}...
+  </a>
+)
+```
+
+**Toast notifications** — Create `src/hooks/useToastNotifications.ts`:
+
+```typescript
+import { toast } from 'react-toastify'
+
+export const useToastNotifications = () => ({
+  notifySuccess: (msg: string) => toast.success(msg),
+  notifyError: (msg: string) => toast.error(msg),
+  notifyInfo: (msg: string | React.ReactElement) => toast.info(msg),
+})
+```
 
 ### useGameActions hook
 

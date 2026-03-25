@@ -31,6 +31,12 @@ bun add seismic-react@1.1.1 seismic-viem@1.1.1 viem@^2.22.3 \
   @tailwindcss/vite tailwindcss@^4
 ```
 
+The Vite config below uses the SWC plugin for faster builds. Install it as a dev dependency:
+
+```bash
+bun add -d @vitejs/plugin-react-swc
+```
+
 ### Copy public assets
 
 Copy the `public/` folder from the [seismic-starter](https://github.com/SeismicSystems/seismic-starter) repo into `packages/web/public/`. This includes the clown sprites, button images, background, logo, and audio files used by the game UI.
@@ -88,7 +94,7 @@ import {
 } from 'seismic-react'
 import { sanvil, seismicTestnet } from 'seismic-react/rainbowkit'
 import { http } from 'viem'
-import { Config, WagmiProvider } from 'wagmi'
+import { type Config, WagmiProvider } from 'wagmi'
 
 import { AuthProvider } from '@/components/chain/WalletConnectButton'
 import Home from '@/pages/Home'
@@ -187,6 +193,56 @@ The provider stack nests four layers, each adding functionality:
 4. **ShieldedWalletProvider** — the Seismic-specific layer from `seismic-react` that derives a shielded wallet client from the connected wagmi account, enabling shielded reads and writes. It takes `config` and `options` — the options include `publicTransport`, `publicChain`, and an `onAddressChange` callback.
 
 The `onAddressChange` handler auto-funds new wallets when running on `sanvil` (local dev), so you don't need to manually send ETH to test accounts.
+
+### Supporting files
+
+Before wiring up the entry point, create the supporting modules that `main.tsx` and `App.tsx` will import.
+
+**Redux store** — Create `src/store/store.ts`:
+
+```typescript
+import { configureStore } from '@reduxjs/toolkit'
+
+export const store = configureStore({
+  reducer: {},
+})
+```
+
+**MUI theme** — Create `src/theme.ts`:
+
+```typescript
+import { createTheme } from '@mui/material/styles'
+
+const theme = createTheme({
+  palette: {
+    mode: 'dark',
+  },
+})
+
+export default theme
+```
+
+**Page components** — Create `src/pages/Home.tsx`:
+
+```typescript
+import ClownPuncher from '@/components/game/ClownPuncher'
+
+const Home = () => <ClownPuncher />
+export default Home
+```
+
+Create `src/pages/NotFound.tsx`:
+
+```typescript
+const NotFound = () => <div>404 - Page not found</div>
+export default NotFound
+```
+
+**Stylesheets** — Create `src/App.css` (empty for now) and replace `src/index.css` with:
+
+```css
+@import "tailwindcss";
+```
 
 ### Entry point: main.tsx
 

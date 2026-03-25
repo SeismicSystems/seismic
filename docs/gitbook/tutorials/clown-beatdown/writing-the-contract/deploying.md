@@ -31,17 +31,14 @@ contract ClownBeatdownScript is Script {
 
         vm.startBroadcast(deployerPrivateKey);
         clownBeatdown = new ClownBeatdown(3);
-        clownBeatdown.addSecret("The moon is made of cheese");
-        clownBeatdown.addSecret("Clowns rule the underworld");
-        clownBeatdown.addSecret("The cake is a lie");
-        clownBeatdown.addSecret("42 is the answer");
-        clownBeatdown.addSecret("Never trust a smiling clown");
         vm.stopBroadcast();
+
+        console.log("Deployed at:", address(clownBeatdown));
     }
 }
 ```
 
-This script will deploy a new instance of the ClownBeatdown contract with an initial stamina of 3 and populate it with 5 secrets.
+This script will deploy a new instance of the ClownBeatdown contract with an initial stamina of 3. We'll add secrets separately in the next step, since `addSecret` performs shielded writes that need to be sent as on-chain transactions.
 
 ### Deploying the contract
 
@@ -62,7 +59,7 @@ PRIVKEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 
 The `RPC_URL` denotes the port on which `sanvil` is running and the `PRIVKEY` is one of the standard `sanvil` testing private keys.
 
-3. Now, from `packages/contracts`, run
+3. Now, from `packages/contracts`, deploy the contract:
 
 ```bash
 source .env
@@ -71,4 +68,21 @@ sforge script script/ClownBeatdown.s.sol:ClownBeatdownScript \
     --broadcast
 ```
 
-Your contract should be up and deployed to your local Seismic node!
+The output will show the deployed contract address (e.g. `0x5FbDB2315678afecb367f032d93F642f64180aa3`).
+
+4. Add secrets to the deployed contract using `scast send`. Replace `<CONTRACT_ADDRESS>` with the address from the previous step:
+
+```bash
+scast send <CONTRACT_ADDRESS> "addSecret(string)" "The moon is made of cheese" \
+    --rpc-url $RPC_URL --private-key $PRIVKEY
+scast send <CONTRACT_ADDRESS> "addSecret(string)" "Clowns rule the underworld" \
+    --rpc-url $RPC_URL --private-key $PRIVKEY
+scast send <CONTRACT_ADDRESS> "addSecret(string)" "The cake is a lie" \
+    --rpc-url $RPC_URL --private-key $PRIVKEY
+scast send <CONTRACT_ADDRESS> "addSecret(string)" "42 is the answer" \
+    --rpc-url $RPC_URL --private-key $PRIVKEY
+scast send <CONTRACT_ADDRESS> "addSecret(string)" "Never trust a smiling clown" \
+    --rpc-url $RPC_URL --private-key $PRIVKEY
+```
+
+Your contract should be up and deployed to your local Seismic node with 5 secrets!
