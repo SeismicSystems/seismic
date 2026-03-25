@@ -185,6 +185,16 @@ abstract contract SRC20 {
             emit Transfer(from, to, hashes[i], encryptedData[i]);
         }
 
+        // Emit to sender if they have a registered key
+        if (directory.checkHasKey(from)) {
+            bytes32 senderKeyHash = directory.keyHash(from);
+            bytes memory senderEncrypted = directory.encrypt(from, abi.encodePacked(uint256(amount)));
+            emit Transfer(from, to, senderKeyHash, senderEncrypted);
+        } else {
+            // Emit with zero hash and empty data if sender has no key
+            emit Transfer(from, to, bytes32(0), bytes(""));
+        }
+
         // Emit to recipient if they have a registered key
         if (directory.checkHasKey(to)) {
             bytes32 recipientKeyHash = directory.keyHash(to);
