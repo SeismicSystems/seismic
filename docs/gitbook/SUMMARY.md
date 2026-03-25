@@ -40,6 +40,10 @@
     - [Ch 1: Constants and Utilities](tutorials/clown-beatdown/building-the-cli/chapter-1-constants-and-utilities.md)
     - [Ch 2: Core App Logic](tutorials/clown-beatdown/building-the-cli/chapter-2-core-app-logic.md)
     - [Ch 3: Bringing It All Together](tutorials/clown-beatdown/building-the-cli/chapter-3-bringing-it-all-together.md)
+  - [Building the Frontend](tutorials/clown-beatdown/building-the-frontend/README.md)
+    - [Ch 1: Project Setup and Providers](tutorials/clown-beatdown/building-the-frontend/chapter-1-project-setup-and-providers.md)
+    - [Ch 2: Contract Hooks](tutorials/clown-beatdown/building-the-frontend/chapter-2-contract-hooks.md)
+    - [Ch 3: Game UI Components](tutorials/clown-beatdown/building-the-frontend/chapter-3-game-ui-components.md)
 
 ## Seismic Solidity
 
