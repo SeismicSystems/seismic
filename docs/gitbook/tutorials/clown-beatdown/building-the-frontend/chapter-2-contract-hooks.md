@@ -16,12 +16,22 @@ cp packages/contracts/out/ClownBeatdown.sol/ClownBeatdown.json \
    packages/web/src/abis/contracts/ClownBeatdown.json
 ```
 
-You'll also need to add the deployed contract address and chain ID. Create a wrapper that exports the ABI with deployment info:
+You'll also need to add the deployed contract address and chain ID to the JSON file. The ABI file should contain `abi`, `address`, and `chainId` fields.
+
+### Contract type definition
+
+Create `src/types/contract.ts`:
 
 ```typescript
-// src/abis/contracts/ClownBeatdown.json
-// This file contains the ABI output from sforge build,
-// plus the deployed address and chainId fields
+export type ContractInterface = {
+  chainId: number;
+  abi: Array<Record<string, unknown>>;
+  methodIdentifiers: Record<string, string>;
+};
+
+export type DeployedContract = ContractInterface & {
+  address: `0x${string}`;
+};
 ```
 
 ### useContract hook
@@ -31,14 +41,11 @@ This hook creates a shielded contract instance using `seismic-react`. Create `sr
 ```typescript
 import { useShieldedContract } from "seismic-react";
 
+import * as contractJson from "@/abis/contracts/ClownBeatdown.json" with { type: "json" };
 import type { DeployedContract } from "@/types/contract";
-import ClownBeatdownABI from "@/abis/contracts/ClownBeatdown.json";
 
-const deployedContract = ClownBeatdownABI as unknown as DeployedContract;
-
-export function useAppContract() {
-  return useShieldedContract(deployedContract);
-}
+export const useAppContract = () =>
+  useShieldedContract(contractJson as DeployedContract);
 ```
 
 The `useShieldedContract` hook from `seismic-react` returns a contract instance that supports both shielded writes and signed reads — the same interface you used in the CLI with `getShieldedContract`, but integrated with React's lifecycle.
@@ -48,60 +55,129 @@ The `useShieldedContract` hook from `seismic-react` returns a contract instance 
 This hook wraps the contract methods into callable functions with proper error handling. Create `src/hooks/useContractClient.ts`:
 
 ```typescript
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useShieldedWallet } from "seismic-react";
+import {
+  ShieldedPublicClient,
+  ShieldedWalletClient,
+  addressExplorerUrl,
+  txExplorerUrl,
+} from "seismic-viem";
+import { type Hex, hexToString } from "viem";
 
 import { useAppContract } from "./useContract";
 
-export function useContractClient() {
+export const useContractClient = () => {
+  const [loaded, setLoaded] = useState(false);
   const { walletClient, publicClient } = useShieldedWallet();
   const { contract } = useAppContract();
 
-  const loaded = !!(walletClient && publicClient && contract);
+  useEffect(() => {
+    if (walletClient && publicClient && contract) {
+      setLoaded(true);
+    } else {
+      setLoaded(false);
+    }
+  }, [walletClient, publicClient, contract]);
 
-  const readClownStamina = useCallback(async (): Promise<bigint> => {
-    return (await contract!.tread.getClownStamina()) as bigint;
+  const wallet = useCallback((): ShieldedWalletClient => {
+    if (!walletClient) {
+      throw new Error("Wallet client not found");
+    }
+    return walletClient;
+  }, [walletClient]);
+
+  const pubClient = useCallback((): ShieldedPublicClient => {
+    if (!publicClient) {
+      throw new Error("Public client not found");
+    }
+    return publicClient;
+  }, [publicClient]);
+
+  const walletAddress = useCallback((): Hex => {
+    return wallet().account.address;
+  }, [wallet]);
+
+  const appContract = useCallback((): ReturnType<
+    typeof useAppContract
+  >["contract"] => {
+    if (!contract) {
+      throw new Error("Contract not found");
+    }
+    return contract;
   }, [contract]);
 
-  const hit = useCallback(async (): Promise<string> => {
-    return (await contract!.twrite.hit()) as string;
-  }, [contract]);
+  /*
+    function getClownStamina() external view returns (uint256);
+    function rob() external view returns (bytes32);
+    function hit() external;
+    function reset() external;
+  */
 
-  const reset = useCallback(async (): Promise<string> => {
-    return (await contract!.twrite.reset()) as string;
-  }, [contract]);
+  const clownStamina = useCallback(async (): Promise<bigint> => {
+    return appContract().tread.getClownStamina();
+  }, [appContract]);
 
   const rob = useCallback(async (): Promise<string> => {
-    return (await contract!.read.rob()) as string;
-  }, [contract]);
+    const result = (await appContract().read.rob()) as Hex;
+    return hexToString(result);
+  }, [appContract]);
+
+  const hit = useCallback(async (): Promise<Hex> => {
+    return appContract().twrite.hit();
+  }, [appContract]);
+
+  const reset = useCallback(async (): Promise<Hex> => {
+    return appContract().twrite.reset();
+  }, [appContract]);
+
+  const txUrl = useCallback(
+    (txHash: Hex): string | null => {
+      return txExplorerUrl({ chain: pubClient().chain, txHash });
+    },
+    [pubClient],
+  );
+
+  const addressUrl = useCallback(
+    (address: Hex): string | null => {
+      return addressExplorerUrl({ chain: pubClient().chain, address });
+    },
+    [pubClient],
+  );
 
   const waitForTransaction = useCallback(
-    async (hash: string) => {
-      return publicClient!.waitForTransactionReceipt({
-        hash: hash as `0x${string}`,
-      });
+    async (hash: Hex) => {
+      return await pubClient().waitForTransactionReceipt({ hash });
     },
-    [publicClient],
+    [pubClient],
   );
 
   return {
     loaded,
-    readClownStamina,
+    walletClient,
+    publicClient,
+    walletAddress,
+    appContract,
+    pubClient,
+    wallet,
+    clownStamina,
+    rob,
     hit,
     reset,
-    rob,
+    txUrl,
+    addressUrl,
     waitForTransaction,
   };
-}
+};
 ```
 
 ### What's happening here?
 
 Notice the different contract namespaces used for each method:
 
-- **`contract.twrite.hit()`** and **`contract.twrite.reset()`** — these are **shielded write** transactions. The `twrite` namespace sends a Seismic transaction (type 0x70) that encrypts calldata.
-- **`contract.read.rob()`** — this is a **signed read**. The `read` namespace performs a `signed_call` that proves the caller's identity to the contract, allowing `onlyContributor` to verify access.
-- **`contract.tread.getClownStamina()`** — this is a **transparent read**. The `tread` namespace performs a standard `eth_call` since stamina is public state.
+- **`appContract().twrite.hit()`** and **`appContract().twrite.reset()`** — these are **shielded write** transactions. The `twrite` namespace sends a Seismic transaction (type 0x70) that encrypts calldata.
+- **`appContract().read.rob()`** — this is a **signed read**. The `read` namespace performs a `signed_call` that proves the caller's identity to the contract, allowing `onlyContributor` to verify access. The result comes back as `Hex` and is decoded with `hexToString()`.
+- **`appContract().tread.getClownStamina()`** — this is a **transparent read**. The `tread` namespace performs a standard `eth_call` since stamina is public state.
 
 This distinction between `twrite`, `read`, and `tread` is the key difference from a standard Ethereum dApp.
 
@@ -111,92 +187,186 @@ This hook orchestrates the game logic, managing state and coordinating contract 
 
 ```typescript
 import { useCallback, useEffect, useState } from "react";
-import useSound from "use-sound";
+import React from "react";
+import { useSound } from "use-sound";
 
-import { useContractClient } from "./useContractClient";
+import { ExplorerToast } from "@/components/chain/ExplorerToast";
+import { useContractClient } from "@/hooks/useContractClient";
+import { useToastNotifications } from "@/hooks/useToastNotifications";
 
-export function useGameActions() {
-  const { loaded, readClownStamina, hit, reset, rob, waitForTransaction } =
-    useContractClient();
-
+export const useGameActions = () => {
   const [clownStamina, setClownStamina] = useState<number | null>(null);
+  const [currentRoundId] = useState<number | null>(1);
+
+  const {
+    loaded,
+    hit,
+    rob,
+    reset,
+    txUrl,
+    waitForTransaction,
+    clownStamina: readClownStamina,
+  } = useContractClient();
+
+  const { notifySuccess, notifyError, notifyInfo } = useToastNotifications();
   const [isHitting, setIsHitting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isRobbing, setIsRobbing] = useState(false);
   const [robResult, setRobResult] = useState<string | null>(null);
   const [punchCount, setPunchCount] = useState(0);
+  const [playHit] = useSound("/audio/hit_sfx.wav", { volume: 0.1 });
+  const [playReset] = useSound("/audio/reset_sfx.wav", { volume: 0.1 });
+  const [playRob] = useSound("/audio/rob_sfx.wav", { volume: 0.1 });
 
-  const [playHitSound] = useSound("/hit_sfx.wav", { volume: 0.1 });
-  const [playResetSound] = useSound("/reset_sfx.wav");
-  const [playRobSound] = useSound("/rob_sfx.wav");
-
-  // Fetch stamina on load and after actions
-  const fetchStamina = useCallback(async () => {
+  const fetchGameRounds = useCallback(() => {
     if (!loaded) return;
-    const stamina = await readClownStamina();
-    setClownStamina(Number(stamina));
+    readClownStamina()
+      .then((stamina) => {
+        setClownStamina(Number(stamina));
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("Error fetching clown stamina:", message);
+      });
   }, [loaded, readClownStamina]);
 
+  // Fetch initial state when contract is loaded
   useEffect(() => {
-    fetchStamina();
-  }, [fetchStamina]);
+    fetchGameRounds();
+  }, [fetchGameRounds]);
 
-  const handleHit = useCallback(async () => {
+  const resetGameState = useCallback(() => {
+    setRobResult(null);
+    setPunchCount(0);
+  }, [punchCount]);
+
+  const handleHit = async () => {
+    playHit();
+    if (!loaded || isHitting) return;
     setIsHitting(true);
-    try {
-      playHitSound();
-      const txHash = await hit();
-      await waitForTransaction(txHash);
-      setPunchCount((prev) => Math.min(prev + 1, 3));
-      await fetchStamina();
-    } finally {
-      setIsHitting(false);
-    }
-  }, [hit, waitForTransaction, fetchStamina, playHitSound]);
+    hit()
+      .then((hash) => {
+        const url = txUrl(hash);
+        if (url) {
+          notifyInfo(
+            React.createElement(ExplorerToast, {
+              url: url,
+              text: "Sent punch tx: ",
+              hash: hash,
+            }),
+          );
+        } else {
+          notifyInfo(`Sent punch tx: ${hash}`);
+        }
+        if (clownStamina && clownStamina > 0) {
+          setPunchCount((prev) => {
+            const newCount = Math.min(prev + 1, 3);
+            return newCount;
+          });
+        }
+        return waitForTransaction(hash);
+      })
+      .then((receipt) => {
+        if (receipt.status === "success") {
+          notifySuccess("Punch successful");
+          // Re-read stamina from contract after successful hit
+          fetchGameRounds();
+        } else {
+          notifyError("Punch failed");
+        }
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        notifyError(`Error punching clown: ${message}`);
+      })
+      .finally(() => {
+        setIsHitting(false);
+      });
+  };
 
-  const handleReset = useCallback(async () => {
+  const handleReset = async () => {
+    playReset();
+    if (!loaded || isResetting) return;
+    if (clownStamina !== 0) {
+      notifyError("Clown must be KO to reset");
+      return;
+    }
     setIsResetting(true);
-    try {
-      playResetSound();
-      const txHash = await reset();
-      await waitForTransaction(txHash);
-      setPunchCount(0);
-      setRobResult(null);
-      await fetchStamina();
-    } finally {
-      setIsResetting(false);
-    }
-  }, [reset, waitForTransaction, fetchStamina, playResetSound]);
+    reset()
+      .then((hash) => {
+        const url = txUrl(hash);
+        if (url) {
+          notifyInfo(
+            React.createElement(ExplorerToast, {
+              url: url,
+              text: "Sent reset tx: ",
+              hash: hash,
+            }),
+          );
+        } else {
+          notifyInfo(`Sent reset tx: ${hash}`);
+        }
+        setPunchCount(0);
+        return waitForTransaction(hash);
+      })
+      .then((receipt) => {
+        if (receipt.status === "success") {
+          notifySuccess("Reset successful");
+          setRobResult(null);
+          // Re-read stamina from contract after successful reset
+          fetchGameRounds();
+        } else {
+          notifyError("Reset failed");
+        }
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        notifyError(`Error resetting clown: ${message}`);
+      })
+      .finally(() => {
+        setIsResetting(false);
+      });
+  };
 
-  const handleRob = useCallback(async () => {
+  const handleRob = async () => {
+    playRob();
+    if (!loaded || isRobbing) return;
     setIsRobbing(true);
-    try {
-      playRobSound();
-      const result = await rob();
-      setRobResult(result);
-    } finally {
-      setIsRobbing(false);
-    }
-  }, [rob, playRobSound]);
+    rob()
+      .then((result) => {
+        setRobResult(result);
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        notifyError(`Error robbing clown: ${message}`);
+      })
+      .finally(() => {
+        setIsRobbing(false);
+      });
+  };
 
   return {
     loaded,
     clownStamina,
+    currentRoundId,
     isHitting,
     isResetting,
     isRobbing,
     robResult,
     punchCount,
+    fetchGameRounds,
+    resetGameState,
     handleHit,
     handleReset,
     handleRob,
-    setRobResult,
   };
-}
+};
 ```
 
 This hook manages the full game lifecycle:
 
-- **`handleHit`** — sends a shielded write, waits for the transaction receipt, increments the punch count (for sprite animation), and refetches stamina
-- **`handleReset`** — sends a shielded write to reset the clown, clears the punch count and rob result, and refetches stamina
-- **`handleRob`** — performs a signed read to decrypt and reveal a secret from the clown's pool
+- **`fetchGameRounds`** — reads the current stamina from the contract via `tread.getClownStamina()`
+- **`handleHit`** — sends a shielded write via `twrite.hit()`, shows toast notifications with explorer links, waits for the receipt, increments punch count, and refetches stamina
+- **`handleReset`** — validates the clown is KO, sends a shielded write via `twrite.reset()`, clears punch count and rob result, and refetches stamina
+- **`handleRob`** — performs a signed read via `read.rob()` to decrypt and reveal a secret from the clown's pool
+- **`resetGameState`** — clears the rob result and punch count when the round changes
