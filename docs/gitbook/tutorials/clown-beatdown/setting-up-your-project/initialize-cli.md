@@ -33,7 +33,7 @@ mkdir -p src && mv index.ts src/
   },
   "dependencies": {
     "dotenv": "^16.4.7",
-    "seismic-viem": "1.0.9",
+    "seismic-viem": "1.1.1",
     "viem": "^2.22.3"
   },
   "devDependencies": {
