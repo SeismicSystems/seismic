@@ -20,6 +20,7 @@ Open `.env` and paste the following:
 
 ```properties
 CHAIN_ID=31337
+VITE_CHAIN_ID=31337
 RPC_URL=http://127.0.0.1:8545
 ALICE_PRIVKEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 BOB_PRIVKEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
@@ -27,7 +28,8 @@ BOB_PRIVKEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
 
 **What's Happening Here?**
 
-- `CHAIN_ID=31337`: `31337` is the default chain ID for `sanvil` (your local Seismic node).
+- `CHAIN_ID=31337`: Used to locate the deployment broadcast file for the correct chain.
+- `VITE_CHAIN_ID=31337`: Used for chain selection (`sanvil` vs testnet). `31337` is the default chain ID for `sanvil` (your local Seismic node).
 - `RPC_URL=http://127.0.0.1:8545`: This is the RPC URL for interacting with the local Seismic node.
 - `ALICE_PRIVKEY` and `BOB_PRIVKEY`: These are Alice and Bob's private keys, allowing them to play the game. (These are standard test keys provided by `sanvil`)
 
