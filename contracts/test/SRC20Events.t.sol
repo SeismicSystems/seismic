@@ -25,6 +25,8 @@ contract SRC20EventsTest is Test {
 
     bytes32 constant TRANSFER_TOPIC = keccak256("Transfer(address,address,bytes32,bytes)");
     bytes32 constant APPROVAL_TOPIC = keccak256("Approval(address,address,bytes32,bytes)");
+    bytes32 constant PERMIT_TYPEHASH =
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     address owner = makeAddr("owner");
     address spender = makeAddr("spender");
@@ -384,6 +386,104 @@ contract SRC20EventsTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+                    PERMIT: BOTH PARTIES HAVE KEYS
+    //////////////////////////////////////////////////////////////*/
+
+    function test_PermitEmitsEventToBothPartiesWhenBothHaveKeys() public {
+        (address permitOwner, uint256 privateKey) = makeAddrAndKey("permitOwner");
+        address permitSpender = makeAddr("permitSpender");
+
+        _registerKey(permitOwner);
+        _registerKey(permitSpender);
+
+        bytes32 ownerKeyHash = directory.keyHash(permitOwner);
+        bytes32 spenderKeyHash = directory.keyHash(permitSpender);
+
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(privateKey, permitOwner, permitSpender, 1e18, 0, block.timestamp);
+
+        vm.recordLogs();
+        token.permit(permitOwner, permitSpender, suint256(1e18), block.timestamp, v, r, s);
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], permitOwner, permitSpender, ownerKeyHash);
+        _assertApprovalLog(approvalLogs[1], permitOwner, permitSpender, spenderKeyHash);
+        _assertDecryptsTo(approvalLogs[0], permitOwner, 1e18);
+        _assertDecryptsTo(approvalLogs[1], permitSpender, 1e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    PERMIT: ONLY OWNER HAS KEY
+    //////////////////////////////////////////////////////////////*/
+
+    function test_PermitEmitsEncryptedEventToOwnerWhenOnlyOwnerHasKey() public {
+        (address permitOwner, uint256 privateKey) = makeAddrAndKey("permitOwner");
+        address permitSpender = makeAddr("permitSpender");
+
+        _registerKey(permitOwner);
+
+        bytes32 ownerKeyHash = directory.keyHash(permitOwner);
+
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(privateKey, permitOwner, permitSpender, 1e18, 0, block.timestamp);
+
+        vm.recordLogs();
+        token.permit(permitOwner, permitSpender, suint256(1e18), block.timestamp, v, r, s);
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], permitOwner, permitSpender, ownerKeyHash);
+        _assertDecryptsTo(approvalLogs[0], permitOwner, 1e18);
+        _assertApprovalLog(approvalLogs[1], permitOwner, permitSpender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[1]);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    PERMIT: ONLY SPENDER HAS KEY
+    //////////////////////////////////////////////////////////////*/
+
+    function test_PermitEmitsEncryptedEventToSpenderWhenOnlySpenderHasKey() public {
+        (address permitOwner, uint256 privateKey) = makeAddrAndKey("permitOwner");
+        address permitSpender = makeAddr("permitSpender");
+
+        _registerKey(permitSpender);
+
+        bytes32 spenderKeyHash = directory.keyHash(permitSpender);
+
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(privateKey, permitOwner, permitSpender, 1e18, 0, block.timestamp);
+
+        vm.recordLogs();
+        token.permit(permitOwner, permitSpender, suint256(1e18), block.timestamp, v, r, s);
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], permitOwner, permitSpender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[0]);
+        _assertApprovalLog(approvalLogs[1], permitOwner, permitSpender, spenderKeyHash);
+        _assertDecryptsTo(approvalLogs[1], permitSpender, 1e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    PERMIT: NEITHER PARTY HAS KEY
+    //////////////////////////////////////////////////////////////*/
+
+    function test_PermitEmitsZeroHashEventsToBothPartiesWhenNeitherHasKey() public {
+        (address permitOwner, uint256 privateKey) = makeAddrAndKey("permitOwner");
+        address permitSpender = makeAddr("permitSpender");
+
+        (uint8 v, bytes32 r, bytes32 s) = _signPermit(privateKey, permitOwner, permitSpender, 1e18, 0, block.timestamp);
+
+        vm.recordLogs();
+        token.permit(permitOwner, permitSpender, suint256(1e18), block.timestamp, v, r, s);
+
+        Vm.Log[] memory approvalLogs = _getApprovalLogs();
+        assertEq(approvalLogs.length, 2);
+        _assertApprovalLog(approvalLogs[0], permitOwner, permitSpender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[0]);
+        _assertApprovalLog(approvalLogs[1], permitOwner, permitSpender, bytes32(0));
+        _assertEncryptedDataEmpty(approvalLogs[1]);
+    }
+
+    /*//////////////////////////////////////////////////////////////
                             HELPERS
     //////////////////////////////////////////////////////////////*/
 
@@ -467,5 +567,25 @@ contract SRC20EventsTest is Test {
     function _assertEncryptedDataEmpty(Vm.Log memory log) internal pure {
         bytes memory encryptedAmount = abi.decode(log.data, (bytes));
         assertEq(encryptedAmount.length, 0, "expected empty encrypted data");
+    }
+
+    function _signPermit(
+        uint256 privateKey,
+        address _owner,
+        address _spender,
+        uint256 value,
+        uint256 nonce,
+        uint256 deadline
+    ) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+        (v, r, s) = vm.sign(
+            privateKey,
+            keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    token.DOMAIN_SEPARATOR(),
+                    keccak256(abi.encode(PERMIT_TYPEHASH, _owner, _spender, value, nonce, deadline))
+                )
+            )
+        );
     }
 }
