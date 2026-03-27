@@ -128,11 +128,12 @@ export const buildTxSeismicMetadata = async <
   }
 
   const useTypedDataTx = inferTypedDataTx(typedDataTx, account)
-  const [nonce_, chainId, blockParams] = await Promise.all([
+  const [nonce_, chainId] = await Promise.all([
     fillNonce(client, { account, nonce }),
     client.getChainId(),
-    resolveBlockParams(),
   ])
+  // Resolve block params AFTER other RPC calls to minimize block hash staleness.
+  const blockParams = await resolveBlockParams()
 
   if (client.chain) {
     if (client.chain.id !== chainId) {
