@@ -225,6 +225,17 @@
     - [Signed Read Pattern](clients/alloy/examples/signed-read-pattern.md)
     - [Contract Deployment](clients/alloy/examples/contract-deployment.md)
 
+## Claude Code
+
+- [Overview](claude-code/README.md)
+- [Workflow Skills](claude-code/workflow-skills.md)
+- [CLAUDE.md Templates](claude-code/templates/README.md)
+  - [Seismic Solidity](claude-code/templates/seismic-solidity.md)
+  - [Seismic Viem](claude-code/templates/seismic-viem.md)
+  - [Seismic React](claude-code/templates/seismic-react.md)
+  - [Seismic Alloy (Rust)](claude-code/templates/seismic-alloy.md)
+  - [Seismic Python](claude-code/templates/seismic-python.md)
+
 ## Networks
 
 - [Testnet](networks/testnet.md)
