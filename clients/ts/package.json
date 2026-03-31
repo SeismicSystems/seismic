@@ -49,5 +49,8 @@
   },
   "dependencies": {
     "caniuse-lite": "^1.0.30001751"
+  },
+  "overrides": {
+    "axios": "1.8.3"
   }
 }
