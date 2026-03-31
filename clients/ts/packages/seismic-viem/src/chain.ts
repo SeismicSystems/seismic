@@ -113,6 +113,14 @@ export type TxSeismic = {
   recentBlockHash: Hex
   expiresAtBlock: bigint
   signedRead: boolean
+  authorizationList?: {
+    chainId: bigint
+    address: `0x${string}`
+    nonce: bigint
+    yParity: number
+    r: `0x${string}`
+    s: `0x${string}`
+  }[]
 }
 
 export type SeismicTxSerializer = SerializeTransactionFn<
@@ -138,6 +146,7 @@ export const serializeSeismicTransaction: SeismicTxSerializer = (
     recentBlockHash,
     expiresAtBlock,
     signedRead = false,
+    authorizationList,
   } = tx
 
   if (chainId === undefined) {
@@ -174,7 +183,7 @@ export const serializeSeismicTransaction: SeismicTxSerializer = (
 
   // Seismic elements are encoded FLAT (not nested) - each field is a separate RLP item
   // Note: Zero values are encoded as empty bytes (0x) to match Rust's alloy-rlp encoding
-  const rlpArray: Hex[] = [
+  const rlpArray = [
     toHex(chainId),
     nonce ? toHex(nonce) : '0x',
     gasPrice ? toHex(gasPrice) : '0x',
@@ -190,10 +199,23 @@ export const serializeSeismicTransaction: SeismicTxSerializer = (
     signedRead ? '0x01' : '0x',
     // Input field comes after seismic elements
     data ?? '0x',
+    // Authorization list: nested RLP list [[chainId, address, nonce, yParity, r, s], ...]
+    // Cast needed: viem's TransactionSerializable union sets authorizationList to undefined
+    // on most variants, collapsing the item type to never when destructured from OneOf<>.
+    ((authorizationList ?? []) as TxSeismic['authorizationList'] & []).map(
+      (auth) => [
+        auth.chainId ? toHex(auth.chainId) : '0x',
+        auth.address,
+        auth.nonce ? toHex(auth.nonce) : '0x',
+        auth.yParity ? toHex(auth.yParity) : '0x',
+        auth.r,
+        auth.s,
+      ]
+    ),
     ...toYParitySignatureArray(tx as TransactionSerializableLegacy, signature),
   ]
 
-  const rlpEncoded = toRlp(rlpArray)
+  const rlpEncoded = toRlp(rlpArray as any)
   return concatHex([toHex(SEISMIC_TX_TYPE), rlpEncoded])
 }
 

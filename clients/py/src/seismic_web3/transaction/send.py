@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from eth_keys import keys as eth_keys
+from eth_keys.main import KeyAPI as eth_keys
 from hexbytes import HexBytes
 from web3.types import RPCEndpoint
 
