@@ -5,7 +5,7 @@ icon: rocket
 
 # Contract Deployment
 
-This example demonstrates the full contract lifecycle: compile a contract (with notes on sfoundry/ssolc), deploy it transparently, verify the deployment, interact with it using shielded calls, and subscribe to events via WebSocket.
+This example demonstrates the full contract lifecycle: compile a contract (with notes on sfoundry/ssolc), deploy it, verify the deployment, interact with it using shielded calls, and subscribe to events via WebSocket.
 
 ## Prerequisites
 
@@ -32,9 +32,10 @@ rust-version = "1.82"
 seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
 alloy-signer-local = "1.1"
 alloy-primitives = "1.1"
+alloy-sol-types = "1.1"
+alloy-network = "1.1"
 alloy-rpc-types-eth = "1.1"
 futures-util = "0.3"
-hex-literal = "0.4"
 tokio = { version = "1", features = ["full"] }
 ```
 
@@ -75,28 +76,24 @@ Compile with sfoundry:
 sforge build
 ```
 
-The compiled bytecode is in `out/SeismicCounter.sol/SeismicCounter.json`. Extract the `bytecode.object` field for deployment.
+The compiled bytecode is in `out/SeismicCounter.sol/SeismicCounter.json`. Extract the `bytecode.object` field for the `#[sol(rpc, bytecode = "...")]` attribute.
 
 {% hint style="info" %}
 `ssolc` extends the standard Solidity compiler with support for shielded types (`suint256`, `sbool`, `saddress`, etc.). These types use encrypted storage (`CSTORE`/`CLOAD`) under the hood but are ABI-compatible with their standard counterparts.
 {% endhint %}
 
-## Step 2: Deploy the Contract
+## Step 2: Deploy and Interact
 
-Contract deployment always uses transparent transactions because Create transactions cannot be seismic.
+Use `#[sol(rpc, bytecode = "...")]` to generate a `deploy()` method and type-safe call builders:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy::sol;
-use alloy::sol_types::SolCall;
-use alloy_primitives::{Bytes, TxKind, U256};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 use alloy_network::ReceiptResponse;
-use alloy_provider::SendableTx;
-use hex_literal::hex;
 
 sol! {
-    interface ISeismicCounter {
+    #[sol(rpc, bytecode = "6080604052...")]
+    contract SeismicCounter {
         event setNumberEmit();
         event incrementEmit();
 
@@ -110,106 +107,67 @@ sol! {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set up provider
     let signer: PrivateKeySigner = std::env::var("PRIVATE_KEY")?.parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
-    // Deploy bytecode (paste compiled bytecode here)
-    let deploy_bytecode = Bytes::from_static(&hex!("6080604052..."));
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
-    let deploy_tx = seismic_foundry_tx_builder()
-        .with_input(deploy_bytecode)
-        .with_kind(TxKind::Create)
-        .into();
-    // No .seismic() -- deployment is always transparent
-
+    // Deploy contract (transparent -- Create txs cannot be seismic)
     println!("Deploying SeismicCounter...");
-    let deploy_pending = provider.send_transaction(deploy_tx).await?;
-    let deploy_receipt = deploy_pending.get_receipt().await?;
+    let contract = SeismicCounter::deploy(&provider).await?;
+    println!("Deployed at: {:?}", contract.address());
 
-    assert!(deploy_receipt.status(), "deployment failed");
-    let contract_address = deploy_receipt.contract_address
-        .expect("deployment should return contract address");
-    println!("Deployed at: {contract_address:?}");
-    println!("Deploy tx: {:?}", deploy_receipt.transaction_hash);
+    // Verify deployment
+    let code = provider.get_code_at(*contract.address()).await?;
+    assert!(!code.is_empty());
+    println!("Verified: {} bytes of runtime code", code.len());
 
     Ok(())
 }
 ```
 
-## Step 3: Verify Deployment
+## Step 3: Shielded Interactions
 
-After deployment, verify the contract exists at the expected address by checking the deployed bytecode:
-
-```rust
-    // Verify deployment -- check that code exists at the address
-    let code = provider.get_code_at(contract_address).await?;
-    assert!(!code.is_empty(), "no code at deployed address");
-    println!("Contract verified: {} bytes of code", code.len());
-```
-
-## Step 4: Interact with Shielded Calls
-
-Once deployed, interact with the contract using shielded writes and signed reads:
+Once deployed, interact with the contract using shielded calls:
 
 ```rust
-    // -------------------------------------------------------
-    // Shielded write -- setNumber(42)
-    // -------------------------------------------------------
-    let calldata = ISeismicCounter::setNumberCall {
-        newNumber: U256::from(42),
-    }.abi_encode();
-
-    let write_tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(calldata))
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
-
+    // Shielded write -- setNumber has suint256 param, auto-encrypts
     println!("\nSending shielded write: setNumber(42)...");
-    let write_receipt = provider.send_transaction(write_tx.into()).await?
-        .get_receipt().await?;
+    let write_receipt = contract
+        .setNumber(U256::from(42).into())
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
     assert!(write_receipt.status());
     println!("Confirmed in block {:?}", write_receipt.block_number());
 
-    // -------------------------------------------------------
     // Shielded write -- increment()
-    // -------------------------------------------------------
-    let inc_calldata = ISeismicCounter::incrementCall {}.abi_encode();
-
-    let inc_tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(inc_calldata))
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
-
     println!("Sending shielded write: increment()...");
-    let inc_receipt = provider.send_transaction(inc_tx.into()).await?
-        .get_receipt().await?;
+    let inc_receipt = contract
+        .increment()
+        .seismic()
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
     assert!(inc_receipt.status());
 
-    // -------------------------------------------------------
     // Signed read -- isOdd()
-    // -------------------------------------------------------
-    let read_input = ISeismicCounter::isOddCall {}.abi_encode();
-
-    let read_tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(read_input))
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
-
-    let result = provider.seismic_call(SendableTx::Builder(read_tx.into())).await?;
-    let decoded = ISeismicCounter::isOddReturn::abi_decode(&result, true)?;
-    println!("isOdd() = {} (43 is odd)", decoded._0);
-    assert!(decoded._0);
+    let is_odd = contract.isOdd().seismic().call().await?;
+    println!("isOdd() = {is_odd} (43 is odd)");
+    assert!(is_odd);
 ```
 
-## Step 5: Subscribe to Events (WebSocket)
+## Step 4: Subscribe to Events (WebSocket)
 
-Event subscription requires a WebSocket connection. Use `SeismicUnsignedProvider` with `new_ws()`:
+Event subscription requires a WebSocket connection. Use an unsigned provider:
 
 ```rust
+use seismic_prelude::client::*;
 use alloy_rpc_types_eth::Filter;
 use futures_util::StreamExt;
 
@@ -219,7 +177,9 @@ async fn subscribe_to_events(
     let ws_url: reqwest::Url = std::env::var("WS_URL")?.parse()?;
 
     // Create WebSocket provider (unsigned -- events are public)
-    let ws_provider = SeismicUnsignedProvider::<SeismicReth>::new_ws(ws_url).await?;
+    let ws_provider = SeismicProviderBuilder::new()
+        .connect_ws(ws_url)
+        .await?;
 
     // Create a filter for all events from this contract
     let filter = Filter::new().address(contract_address);
@@ -238,12 +198,6 @@ async fn subscribe_to_events(
         println!("  Tx hash: {:?}", log.transaction_hash);
         println!("  Topics: {:?}", log.topics());
         println!("  Data: {:?}", log.data());
-
-        // Match against known event signatures
-        if let Some(topic) = log.topics().first() {
-            // Compare with event signatures from the sol! macro
-            println!("  Topic 0: {topic:?}");
-        }
     }
 
     Ok(())
@@ -259,17 +213,13 @@ Event data emitted by `emit` is public and visible on-chain. Event subscription 
 Combining all steps into one program:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy::sol;
-use alloy::sol_types::SolCall;
-use alloy_primitives::{Bytes, TxKind, U256};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 use alloy_network::ReceiptResponse;
-use alloy_provider::SendableTx;
-use hex_literal::hex;
 
 sol! {
-    interface ISeismicCounter {
+    #[sol(rpc, bytecode = "6080604052...")]
+    contract SeismicCounter {
         event setNumberEmit();
         event incrementEmit();
 
@@ -283,65 +233,44 @@ sol! {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Set up provider
     let signer: PrivateKeySigner = std::env::var("PRIVATE_KEY")?.parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 
-    // 2. Deploy contract (transparent)
-    let deploy_bytecode = Bytes::from_static(&hex!("6080604052..."));
-    let deploy_tx = seismic_foundry_tx_builder()
-        .with_input(deploy_bytecode)
-        .with_kind(TxKind::Create)
-        .into();
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
+    // 2. Deploy contract
     println!("Deploying contract...");
-    let deploy_receipt = provider.send_transaction(deploy_tx).await?
-        .get_receipt().await?;
-    assert!(deploy_receipt.status());
-    let contract_address = deploy_receipt.contract_address.unwrap();
-    println!("Deployed at: {contract_address:?}");
+    let contract = SeismicCounter::deploy(&provider).await?;
+    println!("Deployed at: {:?}", contract.address());
 
     // 3. Verify deployment
-    let code = provider.get_code_at(contract_address).await?;
+    let code = provider.get_code_at(*contract.address()).await?;
     assert!(!code.is_empty());
     println!("Verified: {} bytes of runtime code", code.len());
 
-    // 4. Shielded write: setNumber(42)
-    let calldata = ISeismicCounter::setNumberCall {
-        newNumber: U256::from(42),
-    }.abi_encode();
-    let write_tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(calldata))
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
-    let write_receipt = provider.send_transaction(write_tx.into()).await?
-        .get_receipt().await?;
-    assert!(write_receipt.status());
+    // 4. Shielded write: setNumber auto-encrypts (suint256 param)
+    contract.setNumber(U256::from(42).into())
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
     println!("setNumber(42) confirmed");
 
-    // 5. Shielded write: increment()
-    let inc_calldata = ISeismicCounter::incrementCall {}.abi_encode();
-    let inc_tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(inc_calldata))
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
-    let inc_receipt = provider.send_transaction(inc_tx.into()).await?
-        .get_receipt().await?;
-    assert!(inc_receipt.status());
+    // 5. Shielded write: increment needs .seismic() (no shielded params)
+    contract.increment()
+        .seismic()
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
     println!("increment() confirmed");
 
     // 6. Signed read: isOdd()
-    let read_input = ISeismicCounter::isOddCall {}.abi_encode();
-    let read_tx: SeismicTransactionRequest = seismic_foundry_tx_builder()
-        .with_input(Bytes::from(read_input))
-        .with_kind(TxKind::Call(contract_address))
-        .into()
-        .seismic();
-    let result = provider.seismic_call(SendableTx::Builder(read_tx.into())).await?;
-    let decoded = ISeismicCounter::isOddReturn::abi_decode(&result, true)?;
-    println!("isOdd() = {} (expected: true, since 43 is odd)", decoded._0);
+    let is_odd = contract.isOdd().seismic().call().await?;
+    println!("isOdd() = {is_odd} (expected: true, since 43 is odd)");
 
     println!("\nContract deployment and interaction complete!");
     Ok(())
@@ -359,65 +288,6 @@ increment() confirmed
 isOdd() = true (expected: true, since 43 is odd)
 
 Contract deployment and interaction complete!
-```
-
-## Common Patterns
-
-### Deploy with Constructor Arguments
-
-If your contract has a constructor that takes arguments, append the ABI-encoded constructor arguments to the bytecode:
-
-```rust
-use alloy::sol_types::SolConstructor;
-
-sol! {
-    interface IMyContract {
-        constructor(uint256 initialValue, address owner);
-    }
-}
-
-// Encode constructor arguments
-let constructor_args = IMyContract::constructorCall {
-    initialValue: U256::from(100),
-    owner: deployer_address,
-}.abi_encode();
-
-// Append to bytecode
-let mut deploy_data = contract_bytecode.to_vec();
-deploy_data.extend_from_slice(&constructor_args);
-
-let deploy_tx = seismic_foundry_tx_builder()
-    .with_input(Bytes::from(deploy_data))
-    .with_kind(TxKind::Create)
-    .into();
-```
-
-### Multiple Contract Deployments
-
-```rust
-// Deploy multiple contracts sequentially
-let contracts = vec![
-    ("Counter", counter_bytecode),
-    ("Token", token_bytecode),
-    ("Registry", registry_bytecode),
-];
-
-let mut addresses = Vec::new();
-
-for (name, bytecode) in contracts {
-    let tx = seismic_foundry_tx_builder()
-        .with_input(bytecode)
-        .with_kind(TxKind::Create)
-        .into();
-
-    let receipt = provider.send_transaction(tx).await?
-        .get_receipt().await?;
-    assert!(receipt.status(), "{name} deployment failed");
-
-    let addr = receipt.contract_address.unwrap();
-    println!("Deployed {name} at: {addr:?}");
-    addresses.push(addr);
-}
 ```
 
 ## Next Steps

@@ -18,130 +18,53 @@ Read-only provider for public operations. No wallet or signing capabilities.
 
 For full capabilities (shielded writes, signed reads, response decryption), use [SeismicSignedProvider](seismic-signed-provider.md) instead.
 
-## Type Signature
+## Construction
+
+All unsigned providers are created via `SeismicProviderBuilder` -- simply omit `.wallet()`:
+
+### HTTP
 
 ```rust
-pub struct SeismicUnsignedProvider<N: SeismicNetwork> {
-    // inner provider with filler chain (no wallet filler)
-}
-```
-
-The generic parameter `N` determines the network type:
-
-- `SeismicReth` -- for Seismic devnet/testnet/mainnet
-- `SeismicFoundry` -- for local sfoundry instances
-
-## Constructors
-
-### `new_http()`
-
-Create an unsigned provider using HTTP transport (synchronous).
-
-```rust
-pub fn new_http(url: reqwest::Url) -> Self
-```
-
-#### Parameters
-
-| Parameter | Type           | Required | Description                               |
-| --------- | -------------- | -------- | ----------------------------------------- |
-| `url`     | `reqwest::Url` | Yes      | HTTP URL of the Seismic node RPC endpoint |
-
-#### Returns
-
-| Type   | Description                       |
-| ------ | --------------------------------- |
-| `Self` | The constructed unsigned provider |
-
-#### Example
-
-```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-let provider = SeismicUnsignedProvider::<SeismicReth>::new_http(url);
+let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
 let block_number = provider.get_block_number().await?;
 println!("Block number: {block_number}");
 ```
 
-{% hint style="info" %}
-`new_http()` is synchronous -- it does not make any RPC calls during construction. The TEE public key is not fetched or cached. This makes it suitable for quick, lightweight provider creation.
-{% endhint %}
-
-### `new_ws()`
-
-Create an unsigned provider using WebSocket transport.
+### WebSocket
 
 ```rust
-pub async fn new_ws(url: reqwest::Url) -> TransportResult<Self>
-```
-
-#### Parameters
-
-| Parameter | Type           | Required | Description                                                              |
-| --------- | -------------- | -------- | ------------------------------------------------------------------------ |
-| `url`     | `reqwest::Url` | Yes      | WebSocket URL of the Seismic node (e.g., `wss://gcp-1.seismictest.net/ws`) |
-
-#### Returns
-
-| Type                    | Description                                                                      |
-| ----------------------- | -------------------------------------------------------------------------------- |
-| `TransportResult<Self>` | The constructed provider, or a transport error if the WebSocket connection fails |
-
-#### Example
-
-```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 let url = "wss://gcp-1.seismictest.net/ws".parse()?;
-let provider = SeismicUnsignedProvider::<SeismicReth>::new_ws(url).await?;
+let provider = SeismicProviderBuilder::new().connect_ws(url).await?;
 
 let block_number = provider.get_block_number().await?;
 println!("Block number: {block_number}");
 ```
 
 {% hint style="info" %}
-`new_ws()` is async because it establishes the WebSocket connection during construction. Use WebSocket transport when you need persistent connections or event subscriptions.
+`connect_ws()` is async because it establishes the WebSocket connection during construction. Use WebSocket transport when you need persistent connections or event subscriptions.
 {% endhint %}
 
-## Convenience Functions
+### Local Development with sanvil
 
-These functions pre-fill the network generic parameter:
-
-### `sreth_unsigned_provider()`
+Use `.foundry()` to select the `SeismicFoundry` network type:
 
 ```rust
-pub fn sreth_unsigned_provider(url: reqwest::Url) -> SeismicUnsignedProvider<SeismicReth>
-```
-
-For Seismic devnet, testnet, or mainnet.
-
-```rust
-use seismic_prelude::foundry::*;
-
-let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-let provider = sreth_unsigned_provider(url);
-```
-
-### `sfoundry_unsigned_provider()`
-
-```rust
-pub fn sfoundry_unsigned_provider(url: reqwest::Url) -> SeismicUnsignedProvider<SeismicFoundry>
-```
-
-For local sfoundry development instances.
-
-```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 let url = "http://localhost:8545".parse()?;
-let provider = sfoundry_unsigned_provider(url);
+let provider = SeismicProviderBuilder::new()
+    .foundry()
+    .connect_http(url)
+    .await?;
 ```
 
 ## Methods
-
-`SeismicUnsignedProvider` implements `Deref` to the inner Alloy provider, so all standard `Provider<N>` methods are available. It also implements `SeismicProviderExt<N>`, though some methods have limited functionality compared to the signed provider.
 
 ### Via `SeismicProviderExt`
 
@@ -150,17 +73,8 @@ let provider = sfoundry_unsigned_provider(url);
 Fetch the TEE public key from the node.
 
 ```rust
-async fn get_tee_pubkey(&self) -> TransportResult<PublicKey>
-```
+// SeismicProviderExt is included in the prelude
 
-| Returns                      | Description                         |
-| ---------------------------- | ----------------------------------- |
-| `TransportResult<PublicKey>` | The node's TEE secp256k1 public key |
-
-```rust
-use seismic_prelude::foundry::*;
-
-let provider = sreth_unsigned_provider(url);
 let tee_pubkey = provider.get_tee_pubkey().await?;
 println!("TEE public key: {tee_pubkey}");
 ```
@@ -169,49 +83,9 @@ println!("TEE public key: {tee_pubkey}");
 Unlike `SeismicSignedProvider`, the unsigned provider does **not** cache the TEE pubkey. Each call to `get_tee_pubkey()` makes a fresh RPC request to `seismic_getTeePublicKey`.
 {% endhint %}
 
-#### `should_encrypt_input()`
-
-Check whether a transaction's calldata should be encrypted.
-
-```rust
-fn should_encrypt_input<B: TransactionBuilder<N>>(&self, tx: &B) -> bool
-```
-
-| Parameter | Type                                    | Required | Description          |
-| --------- | --------------------------------------- | -------- | -------------------- |
-| `tx`      | `&B` (where `B: TransactionBuilder<N>`) | Yes      | Transaction to check |
-
-| Returns | Description                                                     |
-| ------- | --------------------------------------------------------------- |
-| `bool`  | `true` if the transaction has calldata that should be encrypted |
-
-#### `seismic_call()`
-
-Send a call request. Since this is an unsigned provider, the response is **not** decrypted.
-
-```rust
-async fn seismic_call(&self, tx: SendableTx<N>) -> TransportResult<Bytes>
-```
-
-| Parameter | Type            | Required | Description                   |
-| --------- | --------------- | -------- | ----------------------------- |
-| `tx`      | `SendableTx<N>` | Yes      | Transaction to send as a call |
-
-| Returns                  | Description                        |
-| ------------------------ | ---------------------------------- |
-| `TransportResult<Bytes>` | Raw (not decrypted) response bytes |
-
-#### `call_conditionally_signed()`
-
-Send a call without signing (since this is an unsigned provider).
-
-```rust
-async fn call_conditionally_signed(&self, tx: SendableTx<N>) -> TransportResult<Bytes>
-```
-
 ### Via Standard Alloy `Provider`
 
-All standard Alloy provider methods are available through `Deref`:
+All standard Alloy provider methods are available:
 
 ```rust
 // Block queries
@@ -250,12 +124,12 @@ The unsigned filler chain places `SeismicElementsFiller` first (before nonce/cha
 ### Query Block Data
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let block_number = provider.get_block_number().await?;
     println!("Current block: {block_number}");
@@ -270,13 +144,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Check Account Balance
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 use alloy_primitives::address;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let addr = address!("0x1234567890abcdef1234567890abcdef12345678");
     let balance = provider.get_balance(addr).await?;
@@ -289,18 +163,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Fetch TEE Public Key
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://gcp-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
 
     let tee_pubkey = provider.get_tee_pubkey().await?;
     println!("TEE public key: {tee_pubkey}");
 
-    // Pass this to SeismicSignedProvider::new_with_tee_pubkey()
-    // for synchronous signed provider construction
+    // Pass this to connect_http_with_tee_pubkey() for synchronous
+    // signed provider construction
 
     Ok(())
 }
@@ -309,12 +183,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### WebSocket Connection
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "wss://gcp-1.seismictest.net/ws".parse()?;
-    let provider = SeismicUnsignedProvider::<SeismicReth>::new_ws(url).await?;
+    let provider = SeismicProviderBuilder::new().connect_ws(url).await?;
 
     let block_number = provider.get_block_number().await?;
     println!("Block (via WebSocket): {block_number}");
@@ -323,39 +197,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### Local sfoundry Development
-
-```rust
-use seismic_prelude::foundry::*;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "http://localhost:8545".parse()?;
-    let provider = sfoundry_unsigned_provider(url);
-
-    let block = provider.get_block_number().await?;
-    println!("Local sfoundry block: {block}");
-
-    Ok(())
-}
-```
-
 ## Limitations
 
-| Limitation                 | Details                                                 |
-| -------------------------- | ------------------------------------------------------- |
-| **No transaction signing** | Cannot send transactions -- use `SeismicSignedProvider` |
-| **No response decryption** | `seismic_call()` returns raw bytes without decryption   |
-| **No TEE pubkey caching**  | Each `get_tee_pubkey()` call makes a fresh RPC request  |
+| Limitation                    | Details                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| **No shielded call builder**  | `.seismic()` and auto-encryption are compile-time restricted to signed providers |
+| **No transaction signing**    | Cannot send transactions -- use `SeismicSignedProvider`                  |
+| **No response decryption**    | `seismic_call()` returns raw bytes without decryption                    |
+| **No TEE pubkey caching**     | Each `get_tee_pubkey()` call makes a fresh RPC request                   |
 
 ## Notes
 
-- `new_http()` is synchronous and makes no RPC calls at construction
-- `new_ws()` is async because it establishes the WebSocket connection
 - The unsigned provider is ideal for monitoring, indexing, and read-only applications
-- All standard Alloy `Provider` methods work unchanged via `Deref`
-- The unsigned provider is lighter weight than the signed provider (no wallet, no TEE pubkey cache)
-- The `SeismicElementsFiller` generates an ephemeral keypair on construction and encrypts calldata, so the unsigned provider does support calldata encryption
+- All standard Alloy `Provider` methods work unchanged
+- Both HTTP and WebSocket transports are supported
 
 ## See Also
 

@@ -97,7 +97,7 @@ pub struct TxLegacyFields {
 ### Building Metadata from a TxSeismic
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{TxSeismic, TxSeismicMetadata, TxSeismicElements, TxLegacyFields};
 use alloy::primitives::Address;
 
 let tx = TxSeismic { /* ... */ };
@@ -114,7 +114,7 @@ println!("AAD length: {} bytes", aad.len());
 ### Manual Construction
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{TxSeismic, TxSeismicMetadata, TxSeismicElements, TxLegacyFields};
 use alloy::primitives::{Address, U256, TxKind};
 
 let metadata = TxSeismicMetadata {
@@ -138,7 +138,7 @@ let metadata = TxSeismicMetadata {
 ### Using Metadata for Client-Side Encryption
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{TxSeismic, TxSeismicMetadata, TxSeismicElements, TxLegacyFields};
 
 let metadata = tx.tx_metadata(sender);
 
