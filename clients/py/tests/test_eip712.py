@@ -148,11 +148,11 @@ class TestTypeHashes:
         assert " ," not in TX_SEISMIC_TYPE_STR
         assert ", " not in TX_SEISMIC_TYPE_STR
 
-    def test_tx_seismic_has_13_fields(self):
-        """TxSeismic struct has exactly 13 fields."""
-        # Count commas inside the parentheses: 12 commas = 13 fields
+    def test_tx_seismic_has_14_fields(self):
+        """TxSeismic struct has exactly 14 fields."""
+        # Count commas inside the parentheses: 13 commas = 14 fields
         inner = TX_SEISMIC_TYPE_STR.split("(", 1)[1].rstrip(")")
-        assert inner.count(",") == 12
+        assert inner.count(",") == 13
 
     def test_domain_version_matches_constant(self):
         assert str(TYPED_DATA_MESSAGE_VERSION) == DOMAIN_VERSION
@@ -388,10 +388,10 @@ class TestBuildSeismicTypedData:
         assert "EIP712Domain" in td["types"]
         assert "TxSeismic" in td["types"]
 
-    def test_tx_seismic_type_has_13_fields(self):
+    def test_tx_seismic_type_has_14_fields(self):
         tx = _make_eip712_tx()
         td = build_seismic_typed_data(tx)
-        assert len(td["types"]["TxSeismic"]) == 13
+        assert len(td["types"]["TxSeismic"]) == 14
 
     def test_message_fields_match_tx(self):
         tx = _make_eip712_tx()
@@ -428,6 +428,24 @@ class TestBuildSeismicTypedData:
         )
         td = build_seismic_typed_data(tx_create)
         assert td["message"]["to"] == VERIFYING_CONTRACT
+        assert td["message"]["isCreate"] is True
+
+    def test_call_to_zero_address_is_not_create(self):
+        """A call to the zero address must NOT be treated as contract creation."""
+        tx = _make_eip712_tx()
+        tx_zero = UnsignedSeismicTx(
+            chain_id=tx.chain_id,
+            nonce=tx.nonce,
+            gas_price=tx.gas_price,
+            gas=tx.gas,
+            to=VERIFYING_CONTRACT,  # explicit call to zero address
+            value=tx.value,
+            data=tx.data,
+            seismic=tx.seismic,
+        )
+        td = build_seismic_typed_data(tx_zero)
+        assert td["message"]["to"] == VERIFYING_CONTRACT
+        assert td["message"]["isCreate"] is False
 
     def test_encryption_nonce_is_integer(self):
         tx = _make_eip712_tx()
