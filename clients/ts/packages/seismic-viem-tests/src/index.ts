@@ -34,6 +34,30 @@ export {
   testSeismicTxTrace,
 } from '@sviem-tests/tests/trace.ts'
 
+export {
+  testHasShieldedParamsDetectsShielded,
+  testHasShieldedParamsDetectsTransparent,
+  testHasShieldedParamsViewFunctions,
+  testHasShieldedParamsTransparentContract,
+  testSmartWriteShieldedParam,
+  testSmartWriteTransparentParam,
+  testSmartReadTransparentParam,
+  testSmartReadAfterSmartWrite,
+  testSwriteAlwaysShielded,
+  testSreadAlwaysShielded,
+  testSmartWalletWriteShielded,
+  testSmartWalletWriteTransparent,
+  testSmartWalletReadTransparent,
+  testSwriteContractAlwaysShielded,
+  testSreadContractAlwaysShielded,
+  testTwriteRemapsShieldedTypes,
+  testTwriteContractRemapsShieldedTypes,
+  testSmartWriteTransparentContract,
+  testSmartReadTransparentContract,
+  testSmartRoutingLifecycle,
+  testSmartWalletActionsLifecycle,
+} from '@sviem-tests/tests/smartRouting/smartRouting.ts'
+
 export { loadDotenv } from '@sviem-tests/util.ts'
 
 /**

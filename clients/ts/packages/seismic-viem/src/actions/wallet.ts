@@ -1,22 +1,38 @@
 import type {
   Abi,
+  AbiFunction,
   Account,
+  Address,
+  CallParameters,
   Chain,
   ContractFunctionArgs,
   ContractFunctionName,
+  Hex,
   ReadContractParameters,
   ReadContractReturnType,
   Transport,
   WriteContractParameters,
   WriteContractReturnType,
 } from 'viem'
+import {
+  decodeFunctionResult,
+  encodeAbiParameters,
+  getAbiItem,
+  toFunctionSelector,
+} from 'viem'
 import { readContract, writeContract } from 'viem/actions'
+import { formatAbiItem } from 'viem/utils'
 
 import { SeismicSecurityParams } from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'
+import {
+  hasShieldedParams,
+  remapSeismicAbiInputs,
+} from '@sviem/contract/abi.ts'
 import { signedReadContract } from '@sviem/contract/read.ts'
 import {
   ShieldedWriteContractDebugResult,
+  getPlaintextCalldata,
   shieldedWriteContract,
   shieldedWriteContractDebug,
 } from '@sviem/contract/write.ts'
@@ -81,6 +97,26 @@ export type ShieldedWalletActions<
     >,
     securityParams?: SeismicSecurityParams
   ) => Promise<WriteContractReturnType>
+  swriteContract: <
+    TAbi extends Abi | readonly unknown[],
+    TFunctionName extends ContractFunctionName<TAbi, 'payable' | 'nonpayable'>,
+    TArgs extends ContractFunctionArgs<
+      TAbi,
+      'payable' | 'nonpayable',
+      TFunctionName
+    >,
+    TChainOverride extends Chain | undefined = undefined,
+  >(
+    args: WriteContractParameters<
+      TAbi,
+      TFunctionName,
+      TArgs,
+      TChain,
+      TAccount,
+      TChainOverride
+    >,
+    securityParams?: SeismicSecurityParams
+  ) => Promise<WriteContractReturnType>
   twriteContract: <
     TAbi extends Abi | readonly unknown[],
     TFunctionName extends ContractFunctionName<TAbi, 'payable' | 'nonpayable'>,
@@ -121,6 +157,14 @@ export type ShieldedWalletActions<
     securityParams?: SeismicSecurityParams
   ) => Promise<ShieldedWriteContractDebugResult<TChain | undefined, TAccount>>
   readContract: <
+    TAbi extends Abi | readonly unknown[],
+    TFunctionName extends ContractFunctionName<TAbi, 'pure' | 'view'>,
+    TArgs extends ContractFunctionArgs<TAbi, 'pure' | 'view', TFunctionName>,
+  >(
+    args: ReadContractParameters<TAbi, TFunctionName, TArgs>,
+    securityParams?: SeismicSecurityParams
+  ) => Promise<ReadContractReturnType>
+  sreadContract: <
     TAbi extends Abi | readonly unknown[],
     TFunctionName extends ContractFunctionName<TAbi, 'pure' | 'view'>,
     TArgs extends ContractFunctionArgs<TAbi, 'pure' | 'view', TFunctionName>,
@@ -202,20 +246,144 @@ export const shieldedWalletActions = <
   client: ShieldedWalletClient<TTransport, TChain, TAccount>
 ): ShieldedWalletActions<TChain, TAccount> => {
   return {
-    writeContract: (args) => shieldedWriteContract(client, args as any),
-    twriteContract: (args) => writeContract(client, args as any),
+    writeContract: (args) => {
+      const writeArgs = args as unknown as {
+        abi: Abi
+        address: Address
+        functionName: string
+        args?: readonly unknown[]
+      }
+      if (hasShieldedParams(writeArgs.abi, writeArgs.functionName)) {
+        return shieldedWriteContract(
+          client as unknown as Parameters<typeof shieldedWriteContract>[0],
+          args as unknown as Parameters<typeof shieldedWriteContract>[1]
+        )
+      }
+      // No shielded params → abi is valid for viem as-is
+      return writeContract(
+        client as unknown as Parameters<typeof writeContract>[0],
+        args as unknown as Parameters<typeof writeContract>[1]
+      )
+    },
+    swriteContract: (args) =>
+      shieldedWriteContract(
+        client as unknown as Parameters<typeof shieldedWriteContract>[0],
+        args as unknown as Parameters<typeof shieldedWriteContract>[1]
+      ),
+    twriteContract: (args) => {
+      // Build calldata with correct selector from original ABI,
+      // encode params with remapped ABI, send as standard tx
+      const writeArgs = args as unknown as {
+        abi: Abi
+        address: Address
+        functionName: string
+        args: readonly unknown[]
+        gas?: bigint
+        gasPrice?: bigint
+        value?: bigint
+        nonce?: number
+      }
+      const data = getPlaintextCalldata(
+        writeArgs as unknown as Parameters<typeof getPlaintextCalldata>[0]
+      )
+      return client.sendTransaction({
+        chain: client.chain,
+        to: writeArgs.address,
+        data,
+        gas: writeArgs.gas,
+        gasPrice: writeArgs.gasPrice,
+        value: writeArgs.value,
+        nonce: writeArgs.nonce,
+      } as unknown as Parameters<typeof client.sendTransaction>[0])
+    },
     dwriteContract: (args) => {
-      const debugResult = shieldedWriteContractDebug(client, args as any)
-      return debugResult as Promise<
+      const debugResult = shieldedWriteContractDebug(
+        client as unknown as Parameters<typeof shieldedWriteContractDebug>[0],
+        args as unknown as Parameters<typeof shieldedWriteContractDebug>[1]
+      )
+      return debugResult as unknown as Promise<
         ShieldedWriteContractDebugResult<TChain | undefined, TAccount>
       >
     },
-    readContract: (args, securityParams) =>
-      signedReadContract(client, args as any, securityParams),
-    treadContract: (args) => readContract(client, args as any),
+    readContract: (args, securityParams) => {
+      const readArgs = args as unknown as {
+        abi: Abi
+        address: Address
+        functionName: string
+        args?: readonly unknown[]
+      }
+      if (hasShieldedParams(readArgs.abi as Abi, readArgs.functionName)) {
+        return signedReadContract(
+          client as unknown as Parameters<typeof signedReadContract>[0],
+          args as unknown as Parameters<typeof signedReadContract>[1],
+          securityParams
+        )
+      }
+      // No shielded params → abi is valid for viem as-is
+      return readContract(
+        client as unknown as Parameters<typeof readContract>[0],
+        args as unknown as Parameters<typeof readContract>[1]
+      )
+    },
+    sreadContract: (args, securityParams) =>
+      signedReadContract(
+        client as unknown as Parameters<typeof signedReadContract>[0],
+        args as unknown as Parameters<typeof signedReadContract>[1],
+        securityParams
+      ),
+    treadContract: (args) => {
+      // Build calldata with correct selector from original ABI
+      const readArgs = args as unknown as {
+        abi: Abi
+        address: Address
+        functionName: string
+        args?: readonly unknown[]
+      }
+      const {
+        abi,
+        functionName,
+        args: fnArgs = [],
+        address,
+        ...rest
+      } = readArgs
+      const callOptions = rest as unknown as Omit<CallParameters, 'to' | 'data'>
+      const seismicAbiItem = getAbiItem({
+        abi: abi as Abi,
+        name: functionName,
+      }) as AbiFunction
+      const selector = toFunctionSelector(formatAbiItem(seismicAbiItem))
+      const ethAbi = remapSeismicAbiInputs(seismicAbiItem)
+      const encodedParams = encodeAbiParameters(
+        ethAbi.inputs,
+        fnArgs as readonly unknown[]
+      ).slice(2)
+      const data = `${selector}${encodedParams}` as Hex
+      return client
+        .call({
+          to: address,
+          data,
+          ...callOptions,
+        } as unknown as CallParameters<TChain>)
+        .then(({ data: result }) =>
+          decodeFunctionResult({
+            abi: abi as Abi,
+            args: fnArgs as readonly unknown[],
+            functionName,
+            data: result || '0x',
+          })
+        )
+    },
     signedCall: (args, securityParams) =>
-      signedCall(client, args as any, securityParams),
+      signedCall(
+        client as unknown as Parameters<typeof signedCall>[0],
+        args as unknown as Parameters<typeof signedCall>[1],
+        securityParams
+      ),
     sendShieldedTransaction: (args, securityParams) =>
-      sendShieldedTransaction(client, args as any, securityParams),
+      sendShieldedTransaction(
+        client as unknown as Parameters<typeof sendShieldedTransaction>[0],
+        args as unknown as Parameters<typeof sendShieldedTransaction>[1],
+        securityParams
+      ),
   }
 }
