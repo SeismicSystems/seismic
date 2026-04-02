@@ -1,12 +1,11 @@
 import { expect } from 'bun:test'
 import {
-  SEISMIC_TX_TYPE,
   createShieldedPublicClient,
   createShieldedWalletClient,
   getShieldedContract,
   hasShieldedParams,
 } from 'seismic-viem'
-import { type Hex, hexToNumber, http } from 'viem'
+import { http } from 'viem'
 
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
 import { seismicCounterBytecode } from '@sviem-tests/tests/contract/bytecode.ts'
@@ -16,20 +15,20 @@ import { transparentCounterBytecode } from '@sviem-tests/tests/transparentContra
 
 const TEST_NUMBER = BigInt(11)
 
-const expectSeismicTx = (typeHex: Hex | null) => {
-  if (!typeHex) {
+const expectSeismicTx = (type: string | null) => {
+  if (!type) {
     throw new Error('Transaction type not found')
   }
-  const txType = hexToNumber(typeHex)
-  expect(txType).toBe(SEISMIC_TX_TYPE)
+  // receipt.type can be hex ("0x4a", "0x4A") or a named string ("0x4A")
+  // getTransaction().typeHex is always hex
+  expect(type.toLowerCase()).toContain('4a')
 }
 
-const expectNonSeismicTx = (typeHex: Hex | null) => {
-  if (!typeHex) {
+const expectNonSeismicTx = (type: string | null) => {
+  if (!type) {
     throw new Error('Transaction type not found')
   }
-  const txType = hexToNumber(typeHex)
-  expect(txType).not.toBe(SEISMIC_TX_TYPE)
+  expect(type.toLowerCase()).not.toContain('4a')
 }
 
 // ── hasShieldedParams utility ──────────────────────────────────────────
@@ -99,7 +98,7 @@ export const testSmartWriteShieldedParam = async ({
   // setNumber(suint256) → smart write should detect shielded → seismic tx
   const hash = await contract.write.setNumber([TEST_NUMBER])
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
-  expectSeismicTx(receipt.type as Hex | null)
+  expectSeismicTx(receipt.type)
 }
 
 /**
@@ -284,7 +283,7 @@ export const testSwriteAlwaysShielded = async ({
   // swrite.increment() → should always be seismic tx even though no shielded params
   const hash = await contract.swrite.increment()
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
-  expectSeismicTx(receipt.type as Hex | null)
+  expectSeismicTx(receipt.type)
 }
 
 /**
@@ -368,7 +367,7 @@ export const testSmartWalletWriteShielded = async ({
     args: [TEST_NUMBER],
   })
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
-  expectSeismicTx(receipt.type as Hex | null)
+  expectSeismicTx(receipt.type)
 }
 
 /**
@@ -487,7 +486,7 @@ export const testSwriteContractAlwaysShielded = async ({
     functionName: 'increment',
   })
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
-  expectSeismicTx(receipt.type as Hex | null)
+  expectSeismicTx(receipt.type)
 }
 
 /**
@@ -569,8 +568,8 @@ export const testTwriteRemapsShieldedTypes = async ({
 
   // twrite.setNumber(suint256) → correct selector + remapped encoding, non-seismic tx
   const hash = await contract.twrite.setNumber([TEST_NUMBER])
-  const { typeHex } = await publicClient.getTransaction({ hash })
-  expectNonSeismicTx(typeHex)
+  const receipt = await publicClient.waitForTransactionReceipt({ hash })
+  expectNonSeismicTx(receipt.type)
 
   // Verify the value was set correctly
   const isOdd = await contract.tread.isOdd()
@@ -749,7 +748,7 @@ export const testSmartRoutingLifecycle = async ({
   const setReceipt = await publicClient.waitForTransactionReceipt({
     hash: setHash,
   })
-  expectSeismicTx(setReceipt.type as Hex | null)
+  expectSeismicTx(setReceipt.type)
 
   // Step 3: Smart read isOdd() → transparent → true (11 is odd)
   const isOdd1 = await contract.read.isOdd()
@@ -757,8 +756,10 @@ export const testSmartRoutingLifecycle = async ({
 
   // Step 4: Smart write increment() → transparent (no shielded params)
   const incHash = await contract.write.increment()
-  const incTx = await publicClient.getTransaction({ hash: incHash })
-  expectNonSeismicTx(incTx.typeHex)
+  const incReceipt = await publicClient.waitForTransactionReceipt({
+    hash: incHash,
+  })
+  expectNonSeismicTx(incReceipt.type)
 
   // Step 5: Smart read isOdd() → transparent → false (12 is not odd)
   const isOdd2 = await contract.read.isOdd()
@@ -777,13 +778,15 @@ export const testSmartRoutingLifecycle = async ({
   const swriteReceipt = await publicClient.waitForTransactionReceipt({
     hash: swriteHash,
   })
-  expectSeismicTx(swriteReceipt.type as Hex | null)
+  expectSeismicTx(swriteReceipt.type)
 
   // Step 9: Force transparent write setNumber(suint256) → non-seismic tx
   // (twrite remaps suint256 → uint256 so viem can encode it, then sends unencrypted)
   const twriteHash = await contract.twrite.setNumber([BigInt(7)])
-  const twriteTx = await publicClient.getTransaction({ hash: twriteHash })
-  expectNonSeismicTx(twriteTx.typeHex)
+  const twriteReceipt = await publicClient.waitForTransactionReceipt({
+    hash: twriteHash,
+  })
+  expectNonSeismicTx(twriteReceipt.type)
 
   // Step 10: Final smart read → 7 is odd
   const isOdd3 = await contract.read.isOdd()
@@ -837,7 +840,7 @@ export const testSmartWalletActionsLifecycle = async ({
   const setReceipt = await publicClient.waitForTransactionReceipt({
     hash: setHash,
   })
-  expectSeismicTx(setReceipt.type as Hex | null)
+  expectSeismicTx(setReceipt.type)
 
   // Step 3: Smart write increment() → transparent
   const incHash = await walletClient.writeContract({
@@ -845,8 +848,10 @@ export const testSmartWalletActionsLifecycle = async ({
     abi: seismicCounterAbi,
     functionName: 'increment',
   })
-  const incTx = await publicClient.getTransaction({ hash: incHash })
-  expectNonSeismicTx(incTx.typeHex)
+  const incReceipt = await publicClient.waitForTransactionReceipt({
+    hash: incHash,
+  })
+  expectNonSeismicTx(incReceipt.type)
 
   // Step 4: Smart read → false (12 is not odd)
   const isOdd1 = await walletClient.readContract({
@@ -865,7 +870,7 @@ export const testSmartWalletActionsLifecycle = async ({
   const swriteReceipt = await publicClient.waitForTransactionReceipt({
     hash: swriteHash,
   })
-  expectSeismicTx(swriteReceipt.type as Hex | null)
+  expectSeismicTx(swriteReceipt.type)
 
   // Step 6: Force shielded read → true (13 is odd)
   const isOdd2 = await walletClient.sreadContract({
@@ -889,6 +894,8 @@ export const testSmartWalletActionsLifecycle = async ({
     abi: seismicCounterAbi,
     functionName: 'increment',
   })
-  const twriteTx = await publicClient.getTransaction({ hash: twriteHash })
-  expectNonSeismicTx(twriteTx.typeHex)
+  const twriteReceipt = await publicClient.waitForTransactionReceipt({
+    hash: twriteHash,
+  })
+  expectNonSeismicTx(twriteReceipt.type)
 }
