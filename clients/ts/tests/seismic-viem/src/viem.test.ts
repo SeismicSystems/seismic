@@ -208,34 +208,6 @@ describe('Seismic Transaction Encoding', async () => {
   )
 })
 
-describe('Typed Data', async () => {
-  test(
-    'client can sign a seismic typed message',
-    async () =>
-      await testSeismicCallTypedData({
-        chain,
-        account,
-        url,
-        encryptionSk: ENC_SK,
-        encryptionPubkey: ENC_PK,
-      }),
-    { timeout: TIMEOUT_MS }
-  )
-
-  test(
-    'client can sign via eth_signTypedData',
-    async () =>
-      await testSeismicTxTypedData({
-        account,
-        chain,
-        url,
-        encryptionSk: ENC_SK,
-        encryptionPubkey: ENC_PK,
-      }),
-    { timeout: TIMEOUT_MS }
-  )
-})
-
 describe('AES', async () => {
   test('generates AES key correctly', testAesKeygen)
 })
@@ -454,5 +426,36 @@ describe('Smart routing: end-to-end lifecycle', () => {
     'full lifecycle via wallet client actions with all routing modes',
     async () => await testSmartWalletActionsLifecycle({ chain, url, account }),
     { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+// Typed Data tests are placed last because they use EIP-712 messageVersion=2
+// signing which may fail on older sreth versions, and a failure here would
+// corrupt the shared account nonce for all subsequent tests.
+describe('Typed Data', async () => {
+  test(
+    'client can sign a seismic typed message',
+    async () =>
+      await testSeismicCallTypedData({
+        chain,
+        account,
+        url,
+        encryptionSk: ENC_SK,
+        encryptionPubkey: ENC_PK,
+      }),
+    { timeout: TIMEOUT_MS }
+  )
+
+  test(
+    'client can sign via eth_signTypedData',
+    async () =>
+      await testSeismicTxTypedData({
+        account,
+        chain,
+        url,
+        encryptionSk: ENC_SK,
+        encryptionPubkey: ENC_PK,
+      }),
+    { timeout: TIMEOUT_MS }
   )
 })
