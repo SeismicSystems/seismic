@@ -86,10 +86,12 @@ export type ShieldedPublicClient<
  *   - `getEncryptionPublicKey`: return only the user's encryption public key
  *   - `signedCall`: make an eth_call. The `data` parameter should already be encrypted
  *   - `sendShieldedTransaction`: send a Seismic transaction to the network. The `data` parameter should already be encrypted
- *   - `readContract`: call a contract function with a `signedRead`
- *   - `treadContract`: call a contract function with an unsigned read (from the zero address)
- *   - `writeContract`: execute a function on a contract via a Seismic transaction, encrypting the calldata
- *   - `twriteContract`: execute a function on a contract via a standard ethereum transaction
+ *   - `readContract`: smart read — auto-detects shielded params; uses signed read if shielded, transparent read otherwise
+ *   - `sreadContract`: force shielded read — always uses signed read
+ *   - `treadContract`: force transparent read — always uses unsigned read (from the zero address)
+ *   - `writeContract`: smart write — auto-detects shielded params; uses shielded write if shielded, transparent write otherwise
+ *   - `swriteContract`: force shielded write — always encrypts calldata via seismic transaction
+ *   - `twriteContract`: force transparent write — executes via standard ethereum transaction
  *   - `deposit`: deposit into the deposit contract
  *   - `watchSRC20Events`: watch SRC20 events for the connected wallet
  */

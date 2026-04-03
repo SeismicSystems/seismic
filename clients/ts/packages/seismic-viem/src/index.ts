@@ -34,7 +34,10 @@ export {
   shieldedWriteContractDebug,
   getPlaintextCalldata,
 } from '@sviem/contract/write.ts'
-export { remapSeismicAbiInputs } from '@sviem/contract/abi.ts'
+export {
+  hasShieldedParams,
+  remapSeismicAbiInputs,
+} from '@sviem/contract/abi.ts'
 
 export {
   createShieldedPublicClient,
