@@ -24,7 +24,8 @@ Public API
 
 **Contract** (``seismic_web3.contract``):
     :class:`ShieldedContract`, :class:`AsyncShieldedContract`,
-    :class:`PublicContract`, :class:`AsyncPublicContract`
+    :class:`PublicContract`, :class:`AsyncPublicContract`,
+    :func:`has_shielded_params`
 
 **Module** (``seismic_web3.module``):
     :class:`SeismicNamespace`, :class:`AsyncSeismicNamespace`,
@@ -80,6 +81,7 @@ from seismic_web3.client import (
 )
 
 # -- Contract ----------------------------------------------------------------
+from seismic_web3.contract.abi import has_shielded_params
 from seismic_web3.contract.public import (
     AsyncPublicContract,
     PublicContract,
@@ -160,6 +162,7 @@ __all__ = [
     "domain_separator",
     "eip712_signing_hash",
     "get_encryption",
+    "has_shielded_params",
     "hex_to_bytes",
     "make_seismic_testnet",
     "make_withdrawal_credentials",

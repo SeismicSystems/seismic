@@ -166,6 +166,24 @@ def _find_function(abi: list[dict[str, Any]], function_name: str) -> dict[str, A
     raise ValueError(f"Function '{function_name}' not found in ABI")
 
 
+def has_shielded_params(abi: list[dict[str, Any]], function_name: str) -> bool:
+    """Check if a function has any shielded input parameters.
+
+    Args:
+        abi: The full contract ABI (list of entries).
+        function_name: Name of the function to check.
+
+    Returns:
+        ``True`` if any input parameter is a shielded type.
+
+    Raises:
+        ValueError: If the function is not found in the ABI.
+    """
+    fn_entry = _find_function(abi, function_name)
+    remapped = remap_abi_inputs(fn_entry)
+    return any(p.get("shielded", False) for p in remapped["inputs"])
+
+
 def encode_shielded_calldata(
     abi: list[dict[str, Any]],
     function_name: str,
