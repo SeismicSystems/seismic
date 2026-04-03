@@ -1,19 +1,26 @@
 """Shielded contract interaction.
 
 Provides :class:`ShieldedContract` (sync) and
-:class:`AsyncShieldedContract` (async) wrappers with four namespaces:
+:class:`AsyncShieldedContract` (async) wrappers with seven namespaces:
 
-- ``.write``  -- encrypted calldata via ``TxSeismic``
-- ``.read``   -- encrypted calldata via signed ``eth_call``
-- ``.twrite`` -- transparent (standard ``eth_sendTransaction``)
-- ``.tread``  -- transparent (standard ``eth_call``)
+- ``.write``  -- smart: auto-detect shielded params, route to shielded or transparent write
+- ``.read``   -- smart: auto-detect shielded params, route to signed read or transparent read
+- ``.swrite`` -- force shielded: always encrypt via ``TxSeismic``
+- ``.sread``  -- force shielded: always use signed ``eth_call``
+- ``.twrite`` -- force transparent: standard ``eth_sendTransaction``
+- ``.tread``  -- force transparent: standard ``eth_call``
+- ``.dwrite`` -- debug write: like ``swrite`` but returns debug info
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from seismic_web3.contract.abi import decode_abi_output, encode_shielded_calldata
+from seismic_web3.contract.abi import (
+    decode_abi_output,
+    encode_shielded_calldata,
+    has_shielded_params,
+)
 from seismic_web3.transaction.send import (
     async_debug_send_shielded_transaction,
     async_send_shielded_transaction,
@@ -231,6 +238,118 @@ class _TransparentReadNamespace:
 
 
 # ---------------------------------------------------------------------------
+# Sync smart namespaces
+# ---------------------------------------------------------------------------
+
+
+class _SmartWriteNamespace:
+    """``contract.write.functionName(*args)`` -- auto-detect shielded params (sync)."""
+
+    def __init__(
+        self,
+        w3: Web3,
+        encryption: EncryptionState,
+        private_key: PrivateKey,
+        address: ChecksumAddress,
+        abi: list[dict[str, Any]],
+        eip712: bool = False,
+    ) -> None:
+        self._w3 = w3
+        self._encryption = encryption
+        self._private_key = private_key
+        self._address = address
+        self._abi = abi
+        self._eip712 = eip712
+
+    def __getattr__(self, fn_name: str) -> Callable[..., HexBytes]:
+        """Return a callable that routes to shielded or transparent write."""
+
+        def call(
+            *args: Any,
+            value: int = 0,
+            gas: int | None = None,
+            gas_price: int | None = None,
+            security: SeismicSecurityParams | None = None,
+        ) -> HexBytes:
+            data = encode_shielded_calldata(self._abi, fn_name, list(args))
+            if has_shielded_params(self._abi, fn_name):
+                return send_shielded_transaction(
+                    self._w3,
+                    encryption=self._encryption,
+                    private_key=self._private_key,
+                    to=self._address,
+                    data=data,
+                    value=value,
+                    gas=gas,
+                    gas_price=gas_price,
+                    security=security,
+                    eip712=self._eip712,
+                )
+            else:
+                tx: dict[str, Any] = {
+                    "to": self._address,
+                    "data": data.to_0x_hex(),
+                    "value": value,
+                }
+                if gas is not None:
+                    tx["gas"] = gas
+                if gas_price is not None:
+                    tx["gasPrice"] = gas_price
+                return self._w3.eth.send_transaction(tx)
+
+        return call
+
+
+class _SmartReadNamespace:
+    """``contract.read.functionName(*args)`` -- auto-detect shielded params (sync)."""
+
+    def __init__(
+        self,
+        w3: Web3,
+        encryption: EncryptionState,
+        private_key: PrivateKey,
+        address: ChecksumAddress,
+        abi: list[dict[str, Any]],
+        eip712: bool = False,
+    ) -> None:
+        self._w3 = w3
+        self._encryption = encryption
+        self._private_key = private_key
+        self._address = address
+        self._abi = abi
+        self._eip712 = eip712
+
+    def __getattr__(self, fn_name: str) -> Callable[..., Any]:
+        """Return a callable that routes to signed read or transparent read."""
+
+        def call(
+            *args: Any,
+            value: int = 0,
+            gas: int = 30_000_000,
+            security: SeismicSecurityParams | None = None,
+        ) -> Any:
+            data = encode_shielded_calldata(self._abi, fn_name, list(args))
+            if has_shielded_params(self._abi, fn_name):
+                raw = signed_call(
+                    self._w3,
+                    encryption=self._encryption,
+                    private_key=self._private_key,
+                    to=self._address,
+                    data=data,
+                    value=value,
+                    gas=gas,
+                    security=security,
+                    eip712=self._eip712,
+                )
+                return decode_abi_output(self._abi, fn_name, bytes(raw))
+            else:
+                raw = self._w3.eth.call({"to": self._address, "data": data})
+                return decode_abi_output(self._abi, fn_name, bytes(raw))
+
+        return call
+
+
+# ---------------------------------------------------------------------------
 # Async namespaces
 # ---------------------------------------------------------------------------
 
@@ -426,6 +545,118 @@ class _AsyncTransparentReadNamespace:
 
 
 # ---------------------------------------------------------------------------
+# Async smart namespaces
+# ---------------------------------------------------------------------------
+
+
+class _AsyncSmartWriteNamespace:
+    """``contract.write.functionName(*args)`` -- auto-detect shielded params (async)."""
+
+    def __init__(
+        self,
+        w3: AsyncWeb3,
+        encryption: EncryptionState,
+        private_key: PrivateKey,
+        address: ChecksumAddress,
+        abi: list[dict[str, Any]],
+        eip712: bool = False,
+    ) -> None:
+        self._w3 = w3
+        self._encryption = encryption
+        self._private_key = private_key
+        self._address = address
+        self._abi = abi
+        self._eip712 = eip712
+
+    def __getattr__(self, fn_name: str) -> Callable[..., Any]:
+        """Return an async callable that routes to shielded or transparent write."""
+
+        async def call(
+            *args: Any,
+            value: int = 0,
+            gas: int | None = None,
+            gas_price: int | None = None,
+            security: SeismicSecurityParams | None = None,
+        ) -> HexBytes:
+            data = encode_shielded_calldata(self._abi, fn_name, list(args))
+            if has_shielded_params(self._abi, fn_name):
+                return await async_send_shielded_transaction(
+                    self._w3,
+                    encryption=self._encryption,
+                    private_key=self._private_key,
+                    to=self._address,
+                    data=data,
+                    value=value,
+                    gas=gas,
+                    gas_price=gas_price,
+                    security=security,
+                    eip712=self._eip712,
+                )
+            else:
+                tx: dict[str, Any] = {
+                    "to": self._address,
+                    "data": data.to_0x_hex(),
+                    "value": value,
+                }
+                if gas is not None:
+                    tx["gas"] = gas
+                if gas_price is not None:
+                    tx["gasPrice"] = gas_price
+                return await self._w3.eth.send_transaction(tx)
+
+        return call
+
+
+class _AsyncSmartReadNamespace:
+    """``contract.read.functionName(*args)`` -- auto-detect shielded params (async)."""
+
+    def __init__(
+        self,
+        w3: AsyncWeb3,
+        encryption: EncryptionState,
+        private_key: PrivateKey,
+        address: ChecksumAddress,
+        abi: list[dict[str, Any]],
+        eip712: bool = False,
+    ) -> None:
+        self._w3 = w3
+        self._encryption = encryption
+        self._private_key = private_key
+        self._address = address
+        self._abi = abi
+        self._eip712 = eip712
+
+    def __getattr__(self, fn_name: str) -> Callable[..., Any]:
+        """Return an async callable that routes to signed read or transparent read."""
+
+        async def call(
+            *args: Any,
+            value: int = 0,
+            gas: int = 30_000_000,
+            security: SeismicSecurityParams | None = None,
+        ) -> Any:
+            data = encode_shielded_calldata(self._abi, fn_name, list(args))
+            if has_shielded_params(self._abi, fn_name):
+                raw = await async_signed_call(
+                    self._w3,
+                    encryption=self._encryption,
+                    private_key=self._private_key,
+                    to=self._address,
+                    data=data,
+                    value=value,
+                    gas=gas,
+                    security=security,
+                    eip712=self._eip712,
+                )
+                return decode_abi_output(self._abi, fn_name, bytes(raw))
+            else:
+                raw = await self._w3.eth.call({"to": self._address, "data": data})
+                return decode_abi_output(self._abi, fn_name, bytes(raw))
+
+        return call
+
+
+# ---------------------------------------------------------------------------
 # Contract wrappers
 # ---------------------------------------------------------------------------
 
@@ -433,13 +664,15 @@ class _AsyncTransparentReadNamespace:
 class ShieldedContract:
     """Sync contract wrapper with shielded and transparent namespaces.
 
-    Provides five namespaces for interacting with a Seismic contract:
+    Provides seven namespaces for interacting with a Seismic contract:
 
-    - ``write``  -- encrypted calldata via ``TxSeismic``
-    - ``read``   -- encrypted calldata via signed ``eth_call``
-    - ``twrite`` -- transparent (standard ``eth_sendTransaction``)
-    - ``tread``  -- transparent (standard ``eth_call``)
-    - ``dwrite`` -- debug write: like ``write`` but returns debug info
+    - ``write``  -- smart: auto-detect shielded params, route accordingly
+    - ``read``   -- smart: auto-detect shielded params, route accordingly
+    - ``swrite`` -- force shielded: always encrypt via ``TxSeismic``
+    - ``sread``  -- force shielded: always use signed ``eth_call``
+    - ``twrite`` -- force transparent (standard ``eth_sendTransaction``)
+    - ``tread``  -- force transparent (standard ``eth_call``)
+    - ``dwrite`` -- debug write: like ``swrite`` but returns debug info
 
     Example::
 
@@ -471,29 +704,37 @@ class ShieldedContract:
         self._address = address
         self._abi = abi
 
-        self.write = _ShieldedWriteNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712
+        self.write = _SmartWriteNamespace(
+            w3, encryption, private_key, address, abi, eip712=eip712,
         )
-        self.read = _ShieldedReadNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712
+        self.read = _SmartReadNamespace(
+            w3, encryption, private_key, address, abi, eip712=eip712,
+        )
+        self.swrite = _ShieldedWriteNamespace(
+            w3, encryption, private_key, address, abi, eip712=eip712,
+        )
+        self.sread = _ShieldedReadNamespace(
+            w3, encryption, private_key, address, abi, eip712=eip712,
         )
         self.twrite = _TransparentWriteNamespace(w3, address, abi)
         self.tread = _TransparentReadNamespace(w3, address, abi)
         self.dwrite = _ShieldedDebugWriteNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712
+            w3, encryption, private_key, address, abi, eip712=eip712,
         )
 
 
 class AsyncShieldedContract:
     """Async contract wrapper with shielded and transparent namespaces.
 
-    Provides five namespaces for interacting with a Seismic contract:
+    Provides seven namespaces for interacting with a Seismic contract:
 
-    - ``write``  -- encrypted calldata via ``TxSeismic`` (returns coroutine)
-    - ``read``   -- encrypted calldata via signed ``eth_call`` (returns coroutine)
-    - ``twrite`` -- transparent async ``eth_sendTransaction``
-    - ``tread``  -- transparent async ``eth_call``
-    - ``dwrite`` -- debug write: like ``write`` but returns debug info
+    - ``write``  -- smart: auto-detect shielded params, route accordingly (returns coroutine)
+    - ``read``   -- smart: auto-detect shielded params, route accordingly (returns coroutine)
+    - ``swrite`` -- force shielded: always encrypt via ``TxSeismic`` (returns coroutine)
+    - ``sread``  -- force shielded: always use signed ``eth_call`` (returns coroutine)
+    - ``twrite`` -- force transparent async ``eth_sendTransaction``
+    - ``tread``  -- force transparent async ``eth_call``
+    - ``dwrite`` -- debug write: like ``swrite`` but returns debug info
 
     Example::
 
@@ -525,14 +766,20 @@ class AsyncShieldedContract:
         self._address = address
         self._abi = abi
 
-        self.write = _AsyncShieldedWriteNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712
+        self.write = _AsyncSmartWriteNamespace(
+            w3, encryption, private_key, address, abi, eip712=eip712,
         )
-        self.read = _AsyncShieldedReadNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712
+        self.read = _AsyncSmartReadNamespace(
+            w3, encryption, private_key, address, abi, eip712=eip712,
+        )
+        self.swrite = _AsyncShieldedWriteNamespace(
+            w3, encryption, private_key, address, abi, eip712=eip712,
+        )
+        self.sread = _AsyncShieldedReadNamespace(
+            w3, encryption, private_key, address, abi, eip712=eip712,
         )
         self.twrite = _AsyncTransparentWriteNamespace(w3, address, abi)
         self.tread = _AsyncTransparentReadNamespace(w3, address, abi)
         self.dwrite = _AsyncShieldedDebugWriteNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712
+            w3, encryption, private_key, address, abi, eip712=eip712,
         )
