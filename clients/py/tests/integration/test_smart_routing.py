@@ -64,7 +64,7 @@ class TestSmartWriteRouting:
         transparent_contract: ShieldedContract,
         w3: Web3,
     ) -> None:
-        """contract.write.setNumber(42) on transparent counter -> NOT seismic tx type."""
+        """Transparent counter write uses non-seismic tx."""
         tx_hash = transparent_contract.write.setNumber(42)
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
         assert receipt["status"] == 1
@@ -76,7 +76,7 @@ class TestSmartReadRouting:
         self,
         seismic_contract: ShieldedContract,
     ) -> None:
-        """contract.read.isOdd() on seismic counter works (transparent, no shielded inputs)."""
+        """Smart read with no shielded inputs works."""
         assert seismic_contract.read.isOdd() is False
 
     def test_read_after_write(
@@ -96,7 +96,7 @@ class TestForceShielded:
         seismic_contract: ShieldedContract,
         w3: Web3,
     ) -> None:
-        """contract.swrite.increment() -> seismic tx type (even though no shielded params)."""
+        """Force shielded write is seismic tx type."""
         tx_hash = seismic_contract.swrite.increment()
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
         assert receipt["status"] == 1

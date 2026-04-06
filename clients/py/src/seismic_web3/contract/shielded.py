@@ -3,8 +3,8 @@
 Provides :class:`ShieldedContract` (sync) and
 :class:`AsyncShieldedContract` (async) wrappers with seven namespaces:
 
-- ``.write``  -- smart: auto-detect shielded params, route to shielded or transparent write
-- ``.read``   -- smart: auto-detect shielded params, route to signed read or transparent read
+- ``.write``  -- smart: auto-detect shielded params
+- ``.read``   -- smart: auto-detect shielded params
 - ``.swrite`` -- force shielded: always encrypt via ``TxSeismic``
 - ``.sread``  -- force shielded: always use signed ``eth_call``
 - ``.twrite`` -- force transparent: standard ``eth_sendTransaction``
@@ -728,8 +728,8 @@ class AsyncShieldedContract:
 
     Provides seven namespaces for interacting with a Seismic contract:
 
-    - ``write``  -- smart: auto-detect shielded params, route accordingly (returns coroutine)
-    - ``read``   -- smart: auto-detect shielded params, route accordingly (returns coroutine)
+    - ``write``  -- smart: auto-detect shielded params (coroutine)
+    - ``read``   -- smart: auto-detect shielded params (coroutine)
     - ``swrite`` -- force shielded: always encrypt via ``TxSeismic`` (returns coroutine)
     - ``sread``  -- force shielded: always use signed ``eth_call`` (returns coroutine)
     - ``twrite`` -- force transparent async ``eth_sendTransaction``

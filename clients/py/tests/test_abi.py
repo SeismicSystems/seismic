@@ -129,7 +129,8 @@ COUNTER_ABI = [
 ]
 
 
-FULL_COUNTER_ABI = COUNTER_ABI + [
+FULL_COUNTER_ABI = [
+    *COUNTER_ABI,
     {
         "type": "function",
         "name": "isOdd",
