@@ -51,9 +51,7 @@ const seismicTxTypedData = <
     nonce: tx.nonce !== undefined ? BigInt(tx.nonce) : undefined,
     gasPrice: tx.gasPrice && BigInt(tx.gasPrice),
     gasLimit: tx.gas && BigInt(tx.gas),
-    to: isCreate
-      ? '0x0000000000000000000000000000000000000000'
-      : tx.to,
+    to: isCreate ? '0x0000000000000000000000000000000000000000' : tx.to,
     isCreate,
     value: tx.value ? BigInt(tx.value) : 0n,
     input: tx.data ?? '0x',
