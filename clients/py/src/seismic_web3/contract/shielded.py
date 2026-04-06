@@ -705,21 +705,46 @@ class ShieldedContract:
         self._abi = abi
 
         self.write = _SmartWriteNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712,
+            w3,
+            encryption,
+            private_key,
+            address,
+            abi,
+            eip712=eip712,
         )
         self.read = _SmartReadNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712,
+            w3,
+            encryption,
+            private_key,
+            address,
+            abi,
+            eip712=eip712,
         )
         self.swrite = _ShieldedWriteNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712,
+            w3,
+            encryption,
+            private_key,
+            address,
+            abi,
+            eip712=eip712,
         )
         self.sread = _ShieldedReadNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712,
+            w3,
+            encryption,
+            private_key,
+            address,
+            abi,
+            eip712=eip712,
         )
         self.twrite = _TransparentWriteNamespace(w3, address, abi)
         self.tread = _TransparentReadNamespace(w3, address, abi)
         self.dwrite = _ShieldedDebugWriteNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712,
+            w3,
+            encryption,
+            private_key,
+            address,
+            abi,
+            eip712=eip712,
         )
 
 
@@ -767,19 +792,44 @@ class AsyncShieldedContract:
         self._abi = abi
 
         self.write = _AsyncSmartWriteNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712,
+            w3,
+            encryption,
+            private_key,
+            address,
+            abi,
+            eip712=eip712,
         )
         self.read = _AsyncSmartReadNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712,
+            w3,
+            encryption,
+            private_key,
+            address,
+            abi,
+            eip712=eip712,
         )
         self.swrite = _AsyncShieldedWriteNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712,
+            w3,
+            encryption,
+            private_key,
+            address,
+            abi,
+            eip712=eip712,
         )
         self.sread = _AsyncShieldedReadNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712,
+            w3,
+            encryption,
+            private_key,
+            address,
+            abi,
+            eip712=eip712,
         )
         self.twrite = _AsyncTransparentWriteNamespace(w3, address, abi)
         self.tread = _AsyncTransparentReadNamespace(w3, address, abi)
         self.dwrite = _AsyncShieldedDebugWriteNamespace(
-            w3, encryption, private_key, address, abi, eip712=eip712,
+            w3,
+            encryption,
+            private_key,
+            address,
+            abi,
+            eip712=eip712,
         )

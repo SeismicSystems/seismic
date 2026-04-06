@@ -48,12 +48,12 @@ class TestShieldedContract:
 
         contract = ShieldedContract(w3, encryption, pk, addr, COUNTER_ABI)
 
-        assert hasattr(contract, "write")   # smart
-        assert hasattr(contract, "read")    # smart
+        assert hasattr(contract, "write")  # smart
+        assert hasattr(contract, "read")  # smart
         assert hasattr(contract, "swrite")  # force shielded
-        assert hasattr(contract, "sread")   # force shielded
+        assert hasattr(contract, "sread")  # force shielded
         assert hasattr(contract, "twrite")  # force transparent
-        assert hasattr(contract, "tread")   # force transparent
+        assert hasattr(contract, "tread")  # force transparent
         assert hasattr(contract, "dwrite")  # debug
 
     def test_write_namespace_getattr_returns_callable(self):
@@ -122,12 +122,12 @@ class TestAsyncShieldedContract:
 
         contract = AsyncShieldedContract(w3, encryption, pk, addr, COUNTER_ABI)
 
-        assert hasattr(contract, "write")   # smart
-        assert hasattr(contract, "read")    # smart
+        assert hasattr(contract, "write")  # smart
+        assert hasattr(contract, "read")  # smart
         assert hasattr(contract, "swrite")  # force shielded
-        assert hasattr(contract, "sread")   # force shielded
+        assert hasattr(contract, "sread")  # force shielded
         assert hasattr(contract, "twrite")  # force transparent
-        assert hasattr(contract, "tread")   # force transparent
+        assert hasattr(contract, "tread")  # force transparent
         assert hasattr(contract, "dwrite")  # debug
 
     def test_write_namespace_getattr_returns_callable(self):

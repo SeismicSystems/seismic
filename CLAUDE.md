@@ -26,7 +26,7 @@ This is seismic's monorepo, targeting Seismic developers and contributors. It co
 ### Python
 - **Trailing commas.** When a function call or definition spans multiple lines, use trailing commas so each item ends up on its own line. Single-line calls like `func(x=1, y=2)` or definitions like `def func(x: int, y: str) -> int:` are fine without trailing commas.
 - **No `break` statements.** Extract loops that search for a value into their own function and use early `return` instead of `break`. If no match is found, raise or return a default at the end of the function.
-- **Lint before committing.** Run `uv run ruff check src/ tests/` from `clients/py/` and fix all errors before every commit. The CI runs ruff with an 88-character line limit.
+- **Lint and format before committing.** Run `uv run ruff check src/ tests/ && uv run ruff format src/ tests/` from `clients/py/` before every commit. The CI runs both `ruff check` and `ruff format --check` with an 88-character line limit.
 - **Test before committing.** When adding or modifying code, run `uv run pytest tests/` (unit tests) from `clients/py/` before committing. For integration tests, run `uv run pytest tests/integration/ -v` against a running node.
 
 ### TypeScript
