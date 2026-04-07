@@ -17,14 +17,14 @@
     "sourceMap": true,
     "composite": true,
     // baseUrl is deprecated in TS 6.0 and will be removed in TS 7.0, but Bun's runtime module
-    // resolver (separate from tsc) requires it to resolve tsconfig "paths" aliases (https://github.com/oven-sh/bun#3617).
+    // resolver (separate from tsc) requires it to resolve tsconfig "paths" aliases (oven-sh/bun#3617).
     // Without it, `bun test` fails with "Cannot find module '@sviem-tests/...'".
-    // ignoreDeprecations silences ALL TS 6.0 deprecation warnings (no per-option control),
-    // but the only one we trigger is baseUrl — it suppresses the VS Code / tsc warning.
-    // Remove both once Bun fixes #3617. If we hit TS 7.0 first (baseUrl removed from tsc),
+    // VS Code may show a deprecation warning if its bundled TS is 6.x+ — this is cosmetic;
+    // our build uses TS 5.x where baseUrl is not yet deprecated. To silence the VS Code warning,
+    // set "typescript.tsdk" to "./node_modules/typescript/lib" in .vscode/settings.json.
+    // Remove baseUrl once Bun fixes #3617. If we hit TS 7.0 first (baseUrl removed from tsc),
     // Bun will likely still honor it since it has its own resolver, but tsc/typecheck will break.
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
     "types": ["bun-types"],
     "jsx": "preserve"
   }

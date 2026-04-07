@@ -58,9 +58,13 @@
 		"rust-analyzer.rustfmt.extraArgs": [
 			"+nightly"
 		],
+		// Turn on these features so that the IDE can see the code behind these flags in seismic-alloy.
 		"rust-analyzer.cargo.features": [
 			"serde",
 			"serde-bincode-compat"
-		]
+		],
+		// Use the workspace's TS (5.x) instead of VS Code's bundled TS (6.x) to avoid
+		// spurious baseUrl deprecation warnings. See clients/ts/tsconfig.base.json.
+		"js/ts.tsdk.path": "clients/ts/node_modules/typescript/lib"
 	}
 }
