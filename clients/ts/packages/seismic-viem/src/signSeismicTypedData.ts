@@ -45,12 +45,14 @@ const seismicTxTypedData = <
     throw new Error('Seismic transactions require signedRead')
   }
 
+  const isCreate = tx.to === undefined || tx.to === null
   const message: TxSeismic = {
     chainId: tx.chainId,
     nonce: tx.nonce !== undefined ? BigInt(tx.nonce) : undefined,
     gasPrice: tx.gasPrice && BigInt(tx.gasPrice),
     gasLimit: tx.gas && BigInt(tx.gas),
-    to: tx.to,
+    to: isCreate ? '0x0000000000000000000000000000000000000000' : tx.to,
+    isCreate,
     value: tx.value ? BigInt(tx.value) : 0n,
     input: tx.data ?? '0x',
     encryptionPubkey: tx.encryptionPubkey,
@@ -75,8 +77,8 @@ const seismicTxTypedData = <
         { name: 'nonce', type: 'uint64' },
         { name: 'gasPrice', type: 'uint128' },
         { name: 'gasLimit', type: 'uint64' },
-        // if blank, we assume it's a create
         { name: 'to', type: 'address' },
+        { name: 'isCreate', type: 'bool' },
         { name: 'value', type: 'uint256' },
         // compressed secp256k1 public key (33 bytes)
         { name: 'input', type: 'bytes' },
