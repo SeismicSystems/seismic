@@ -35,24 +35,28 @@ GET http://localhost:3001/api/tokens
   "count": 2,
   "tokens": [
     {
-      "address": "0xabc...",
+      "address": "0xabc123...",
       "name": "My Private Token",
       "symbol": "MPT",
       "decimals": 18,
-      "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "owner": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
       "total_supply": "1000000000000000000000000"
     },
     {
-      "address": "0xdef...",
+      "address": "0xdef456...",
       "name": "Another Token",
       "symbol": "AT",
       "decimals": 6,
-      "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "owner": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
       "total_supply": "500000000000"
     }
   ]
 }
 ```
+
+{% hint style="info" %}
+Addresses are returned as lowercase hex, not EIP-55 checksummed.
+{% endhint %}
 
 Note that `total_supply` is always in base units (not scaled by decimals).
 
@@ -75,7 +79,7 @@ GET http://localhost:3001/api/token/0xabc...
   "name": "My Private Token",
   "symbol": "MPT",
   "decimals": 18,
-  "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "owner": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
   "total_supply": "1000000000000000000000000"
 }
 ```
