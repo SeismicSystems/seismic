@@ -1,10 +1,10 @@
 [tools]
 # Downloads the latest nightly release: https://github.com/SeismicSystems/seismic-foundry/releases/tag/nightly
-# We run a cron job that releases a new nightly version every day, so this will always be up to date.
-# Just make sure to `mise install` in the morning to get the latest version.
+# We run a cron job that releases a new nightly version once per week, so this will always be up to date.
+# Just make sure to `mise install` at least weekly to get the latest version.
 # The release tarball contains sforge, sanvil, scast, and schisel — all added to PATH.
-# TODO(samlaf): the release.yml ci is broken and doesn't move the nightly tag, so for now we manually update the commit.
-sfoundry = "nightly-08913bcc240efcb17dcee38e60adfa482b4bcd44"
+# TODO(samlaf): we might want to move to use sfoundryup now that it also downloads releases (both versioned and nightlies).
+sfoundry = "nightly"
 
 # Downloads this release: https://github.com/SeismicSystems/seismic-solidity/releases/tag/2ebb36d
 # This is likely not needed in most cases as compilation should be done via sforge which manages its own ssolc.

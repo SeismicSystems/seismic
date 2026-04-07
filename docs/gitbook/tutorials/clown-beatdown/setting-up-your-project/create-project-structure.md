@@ -1,10 +1,10 @@
-# Create project structure and monorepo workspace
+# Create project structure
 
 1. **Create the project folder and navigate into it:**
 
 ```bash
-mkdir walnut-app
-cd walnut-app
+mkdir clown-beatdown
+cd clown-beatdown
 ```
 
 2. **Create the `packages` directory with subdirectories for `contracts` and `cli`**
@@ -27,9 +27,7 @@ We remove the default `index.ts` and `tsconfig.json` files created by `bun init 
 
 ```json
 {
-  "workspaces": [
-    "packages/**"
-  ],
+  "workspaces": ["packages/**"],
   "dependencies": {},
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^5.2.1",
@@ -62,7 +60,7 @@ We remove the default `index.ts` and `tsconfig.json` files created by `bun init 
 }
 ```
 
-6. **Replace the`.gitignore` file with:**
+6. **Replace the `.gitignore` file with:**
 
 ```gitignore
 # Compiler files
