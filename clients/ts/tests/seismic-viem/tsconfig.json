@@ -13,7 +13,6 @@
       "@sviem-tests/*": ["../../packages/seismic-viem-tests/src/*"]
     },
     "composite": true,
-    "baseUrl": ".",
     "rootDir": "../..",
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   }

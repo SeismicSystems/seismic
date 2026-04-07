@@ -7,7 +7,6 @@
       "@sviem/*": ["../seismic-viem/src/*"],
       "@sreact/*": ["./src/*"]
     },
-    "baseUrl": ".",
     "rootDir": "../..",
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },

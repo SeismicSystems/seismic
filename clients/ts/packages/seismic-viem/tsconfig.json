@@ -4,10 +4,9 @@
   "exclude": ["node_modules", "dist"],
   "compilerOptions": {
     "paths": {
-      "@sviem/*": ["./*"]
+      "@sviem/*": ["./src/*"]
     },
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
-    "rootDir": ".",
-    "baseUrl": "src"
+    "rootDir": "."
   }
 }

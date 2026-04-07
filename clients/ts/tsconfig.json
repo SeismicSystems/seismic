@@ -10,7 +10,6 @@
   ],
   "exclude": ["node_modules", "dist", "packages/**/dist"],
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@docs/*": ["./docs/*"]
     }

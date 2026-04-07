@@ -12,7 +12,6 @@
       "@sviem-tests/*": ["../seismic-viem-tests/src/*"]
     },
     "composite": true,
-    "baseUrl": ".",
     "rootDir": "../..",
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "module": "ES2015",

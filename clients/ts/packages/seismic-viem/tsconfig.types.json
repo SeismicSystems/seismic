@@ -8,9 +8,8 @@
     "outDir": "./dist/_types",
     "tsBuildInfoFile": "./dist/_types/.tsbuildinfo",
     "rootDir": "./src",
-    "baseUrl": "src",
     "paths": {
-      "@sviem/*": ["./*"]
+      "@sviem/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.ts"]

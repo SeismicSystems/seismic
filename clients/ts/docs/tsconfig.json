@@ -14,12 +14,10 @@
     "esModuleInterop": true,
     "allowImportingTsExtensions": true,
     "composite": true,
-    "downlevelIteration": true,
     "resolveJsonModule": true,
     "noEmit": false,
     "declaration": true,
     "emitDeclarationOnly": true,
-    "rootDir": ".",
-    "baseUrl": "."
+    "rootDir": "."
   }
 }

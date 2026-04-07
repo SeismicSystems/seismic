@@ -11,7 +11,6 @@
     "declarationMap": true,
     "outDir": "./dist/_types",
     "tsBuildInfoFile": "./dist/_types/.tsbuildinfo",
-    "rootDir": "./src",
-    "baseUrl": "."
+    "rootDir": "./src"
   }
 }

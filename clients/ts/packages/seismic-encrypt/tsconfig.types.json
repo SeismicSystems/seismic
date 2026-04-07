@@ -7,8 +7,7 @@
     "declarationMap": true,
     "outDir": "./dist/_types",
     "tsBuildInfoFile": "./dist/_types/.tsbuildinfo",
-    "rootDir": "./src",
-    "baseUrl": "src"
+    "rootDir": "./src"
   },
   "include": ["src/**/*.ts"]
 }
