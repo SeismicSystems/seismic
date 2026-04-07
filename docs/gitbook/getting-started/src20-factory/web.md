@@ -5,7 +5,14 @@ icon: browser
 
 # Web Interface
 
-The SRC20 Factory ships a React web GUI for deploying tokens directly from a browser wallet, no CLI or code required.
+The SRC20 Factory ships a React web GUI (`packages/web`) for deploying tokens directly from a browser wallet, no CLI or code required.
+
+## Running the web app
+
+```bash
+cd packages/web
+bun dev
+```
 
 ## Deploying a token
 
@@ -19,25 +26,20 @@ The SRC20 Factory ships a React web GUI for deploying tokens directly from a bro
 Supply is entered in whole tokens. Entering `1000000` mints `1,000,000 × 10¹⁸` base units.
 {% endhint %}
 
-## Embedding in your own app
+## Building your own React frontend
 
-The web package exports a `useCreateToken` hook you can drop into any React app that already uses `seismic-react`.
+The web app's token deployment logic is built on `@seismic/src20-sdk` and `seismic-react`. You can replicate the pattern in your own app. Below is the complete hook from `packages/web/src/hooks/useCreateToken.ts` you can adapt:
 
-### useCreateToken
-
-```typescript
-import { useCreateToken } from "@seismic/src20-web";
-```
-
-#### Signature
-
-```typescript
-function useCreateToken(params: UseCreateTokenParams): UseCreateTokenReturn;
+```tsx
+import { useState } from "react";
+import { useShieldedWallet } from "seismic-react";
+import { createToken } from "@seismic/src20-sdk";
+import type { CreateTokenResult } from "@seismic/src20-sdk";
 
 interface UseCreateTokenParams {
   name: string;
   symbol: string;
-  initialSupply: string; // whole tokens as a string; converted to bigint × 10¹⁸ internally
+  initialSupply: string; // whole tokens as a string; multiplied by 10¹⁸ internally
 }
 
 interface UseCreateTokenReturn {
@@ -46,13 +48,48 @@ interface UseCreateTokenReturn {
   error: string | null;
   result: CreateTokenResult | null;
 }
+
+export function useCreateToken(
+  params: UseCreateTokenParams,
+): UseCreateTokenReturn {
+  const { walletClient } = useShieldedWallet();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<CreateTokenResult | null>(null);
+
+  const deploy = async () => {
+    if (!walletClient) {
+      setError("Wallet not connected");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const supplyBigInt =
+        BigInt(params.initialSupply || "0") * BigInt(10 ** 18);
+      const tokenResult = await createToken(walletClient, {
+        name: params.name,
+        symbol: params.symbol,
+        initialSupply: supplyBigInt,
+      });
+      setResult(tokenResult);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { deploy, isLoading, error, result };
+}
 ```
 
-#### Example
+Usage:
 
 ```tsx
-import { useCreateToken } from "@seismic/src20-web";
-
 function DeployButton() {
   const { deploy, isLoading, error, result } = useCreateToken({
     name: "My Private Token",
@@ -72,14 +109,16 @@ function DeployButton() {
 }
 ```
 
-The hook calls `createToken` from `@seismic/src20-sdk` internally and surfaces human-readable error messages for common failure modes — wallet rejection, wrong network, insufficient funds, and encryption-related errors.
-
 ## Wagmi configuration
 
-The web app is configured for MetaMask on Seismic testnet only:
+The web app uses wagmi with MetaMask on Seismic testnet:
 
 ```typescript
-const wagmiConfig = createConfig({
+import { createConfig, http } from "wagmi";
+import { injected } from "wagmi/connectors";
+import { seismicTestnet } from "seismic-viem";
+
+export const wagmiConfig = createConfig({
   chains: [seismicTestnet],
   connectors: [injected({ target: "metaMask" })],
   transports: {
