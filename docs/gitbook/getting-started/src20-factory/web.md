@@ -9,9 +9,11 @@ The SRC20 Factory ships a React web GUI (`packages/web`) for deploying tokens di
 
 ## Running the web app
 
+Clone the repo and start the dev server:
+
 ```bash
-cd packages/web
-bun dev
+bun install
+bun run dev:web
 ```
 
 ## Deploying a token
@@ -26,92 +28,9 @@ bun dev
 Supply is entered in whole tokens. Entering `1000000` mints `1,000,000 × 10¹⁸` base units.
 {% endhint %}
 
-## Building your own React frontend
-
-The web app's token deployment logic is built on `@seismic/src20-sdk` and `seismic-react`. You can replicate the pattern in your own app. Below is the complete hook from `packages/web/src/hooks/useCreateToken.ts` you can adapt:
-
-```tsx
-import { useState } from "react";
-import { useShieldedWallet } from "seismic-react";
-import { createToken } from "@seismic/src20-sdk";
-import type { CreateTokenResult } from "@seismic/src20-sdk";
-
-interface UseCreateTokenParams {
-  name: string;
-  symbol: string;
-  initialSupply: string; // whole tokens as a string; multiplied by 10¹⁸ internally
-}
-
-interface UseCreateTokenReturn {
-  deploy: () => Promise<void>;
-  isLoading: boolean;
-  error: string | null;
-  result: CreateTokenResult | null;
-}
-
-export function useCreateToken(
-  params: UseCreateTokenParams,
-): UseCreateTokenReturn {
-  const { walletClient } = useShieldedWallet();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<CreateTokenResult | null>(null);
-
-  const deploy = async () => {
-    if (!walletClient) {
-      setError("Wallet not connected");
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      const supplyBigInt =
-        BigInt(params.initialSupply || "0") * BigInt(10 ** 18);
-      const tokenResult = await createToken(walletClient, {
-        name: params.name,
-        symbol: params.symbol,
-        initialSupply: supplyBigInt,
-      });
-      setResult(tokenResult);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return { deploy, isLoading, error, result };
-}
-```
-
-Usage:
-
-```tsx
-function DeployButton() {
-  const { deploy, isLoading, error, result } = useCreateToken({
-    name: "My Private Token",
-    symbol: "MPT",
-    initialSupply: "1000000",
-  });
-
-  return (
-    <div>
-      <button onClick={deploy} disabled={isLoading}>
-        {isLoading ? "Deploying..." : "Deploy Token"}
-      </button>
-      {error && <p>Error: {error}</p>}
-      {result && <p>Token: {result.tokenAddress}</p>}
-    </div>
-  );
-}
-```
-
 ## Wagmi configuration
 
-The web app uses wagmi with MetaMask on Seismic testnet:
+The web app connects MetaMask to Seismic testnet via wagmi:
 
 ```typescript
 import { createConfig, http } from "wagmi";
