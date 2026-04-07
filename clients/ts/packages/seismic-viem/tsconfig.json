@@ -7,6 +7,7 @@
       "@sviem/*": ["./src/*"]
     },
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": ".", // required for Bun path resolution (oven-sh/bun#3617)
     "rootDir": "."
   }
 }

@@ -10,6 +10,7 @@
   ],
   "exclude": ["node_modules", "dist", "packages/**/dist"],
   "compilerOptions": {
+    "baseUrl": ".", // required for Bun path resolution (oven-sh/bun#3617)
     "paths": {
       "@docs/*": ["./docs/*"]
     }

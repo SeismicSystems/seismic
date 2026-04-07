@@ -12,6 +12,7 @@
       "@sviem-tests/*": ["../seismic-viem-tests/src/*"]
     },
     "composite": true,
+    "baseUrl": ".", // required for Bun path resolution (oven-sh/bun#3617)
     "rootDir": "../..",
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "module": "ES2015",

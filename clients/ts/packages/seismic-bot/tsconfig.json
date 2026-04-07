@@ -8,6 +8,7 @@
       "@sbot/*": ["./src/*"]
     },
     "composite": true,
+    "baseUrl": ".", // required for Bun path resolution (oven-sh/bun#3617)
     "noEmit": false,
     "declaration": true,
     "emitDeclarationOnly": true,

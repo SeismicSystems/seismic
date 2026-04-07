@@ -11,6 +11,7 @@
     "declarationMap": true,
     "outDir": "./dist/_types",
     "tsBuildInfoFile": "./dist/_types/.tsbuildinfo",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "baseUrl": "." // required for Bun path resolution (oven-sh/bun#3617)
   }
 }
