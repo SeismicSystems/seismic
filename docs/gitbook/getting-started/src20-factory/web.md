@@ -5,7 +5,16 @@ icon: browser
 
 # Web Interface
 
-The SRC20 Factory ships a React web GUI for deploying tokens directly from a browser wallet, no CLI or code required.
+The SRC20 Factory ships a React web GUI (`packages/web`) for deploying tokens directly from a browser wallet, no CLI or code required.
+
+## Running the web app
+
+Clone the repo and start the dev server:
+
+```bash
+bun install
+bun run dev:web
+```
 
 ## Deploying a token
 
@@ -19,67 +28,16 @@ The SRC20 Factory ships a React web GUI for deploying tokens directly from a bro
 Supply is entered in whole tokens. Entering `1000000` mints `1,000,000 × 10¹⁸` base units.
 {% endhint %}
 
-## Embedding in your own app
-
-The web package exports a `useCreateToken` hook you can drop into any React app that already uses `seismic-react`.
-
-### useCreateToken
-
-```typescript
-import { useCreateToken } from "@seismic/src20-web";
-```
-
-#### Signature
-
-```typescript
-function useCreateToken(params: UseCreateTokenParams): UseCreateTokenReturn;
-
-interface UseCreateTokenParams {
-  name: string;
-  symbol: string;
-  initialSupply: string; // whole tokens as a string; converted to bigint × 10¹⁸ internally
-}
-
-interface UseCreateTokenReturn {
-  deploy: () => Promise<void>;
-  isLoading: boolean;
-  error: string | null;
-  result: CreateTokenResult | null;
-}
-```
-
-#### Example
-
-```tsx
-import { useCreateToken } from "@seismic/src20-web";
-
-function DeployButton() {
-  const { deploy, isLoading, error, result } = useCreateToken({
-    name: "My Private Token",
-    symbol: "MPT",
-    initialSupply: "1000000",
-  });
-
-  return (
-    <div>
-      <button onClick={deploy} disabled={isLoading}>
-        {isLoading ? "Deploying..." : "Deploy Token"}
-      </button>
-      {error && <p>Error: {error}</p>}
-      {result && <p>Token: {result.tokenAddress}</p>}
-    </div>
-  );
-}
-```
-
-The hook calls `createToken` from `@seismic/src20-sdk` internally and surfaces human-readable error messages for common failure modes — wallet rejection, wrong network, insufficient funds, and encryption-related errors.
-
 ## Wagmi configuration
 
-The web app is configured for MetaMask on Seismic testnet only:
+The web app connects MetaMask to Seismic testnet via wagmi:
 
 ```typescript
-const wagmiConfig = createConfig({
+import { createConfig, http } from "wagmi";
+import { injected } from "wagmi/connectors";
+import { seismicTestnet } from "seismic-viem";
+
+export const wagmiConfig = createConfig({
   chains: [seismicTestnet],
   connectors: [injected({ target: "metaMask" })],
   transports: {
