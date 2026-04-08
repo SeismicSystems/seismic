@@ -7,6 +7,7 @@ from eth_hash.auto import keccak
 from seismic_web3.contract.abi import (
     decode_abi_output,
     encode_shielded_calldata,
+    has_shielded_params,
     remap_abi_inputs,
     remap_seismic_param,
 )
@@ -126,6 +127,47 @@ COUNTER_ABI = [
         "stateMutability": "nonpayable",
     },
 ]
+
+
+FULL_COUNTER_ABI = [
+    *COUNTER_ABI,
+    {
+        "type": "function",
+        "name": "isOdd",
+        "inputs": [],
+        "outputs": [{"name": "", "type": "bool"}],
+        "stateMutability": "view",
+    },
+    {
+        "type": "function",
+        "name": "getNumber",
+        "inputs": [],
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view",
+    },
+]
+
+
+class TestHasShieldedParams:
+    def test_shielded_function(self):
+        """setNumber(suint256) has shielded params."""
+        assert has_shielded_params(COUNTER_ABI, "setNumber") is True
+
+    def test_transparent_function(self):
+        """increment() has no shielded params."""
+        assert has_shielded_params(COUNTER_ABI, "increment") is False
+
+    def test_function_not_found(self):
+        with pytest.raises(ValueError, match="not found"):
+            has_shielded_params(COUNTER_ABI, "nonexistent")
+
+    def test_view_no_inputs(self):
+        """isOdd() with no inputs is not shielded."""
+        assert has_shielded_params(FULL_COUNTER_ABI, "isOdd") is False
+
+    def test_view_no_inputs_getNumber(self):
+        """getNumber() with no inputs is not shielded."""
+        assert has_shielded_params(FULL_COUNTER_ABI, "getNumber") is False
 
 
 class TestEncodeShieldedCalldata:

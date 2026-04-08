@@ -47,5 +47,31 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - run: uv sync --locked --dev
-      # TODO: run integration tests after we can setup anvil/reth in CI
       - run: uv run pytest tests/ -v --ignore=tests/integration
+
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - run: uv sync --locked --dev
+
+      - name: Download sanvil from seismic-foundry nightly
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download nightly \
+            -R SeismicSystems/seismic-foundry \
+            -p 'sfoundry_nightly_linux_amd64.tar.gz' \
+            -D /tmp
+          mkdir -p "$HOME/.seismic/bin"
+          tar xzf /tmp/sfoundry_nightly_linux_amd64.tar.gz -C "$HOME/.seismic/bin" sanvil
+          chmod +x "$HOME/.seismic/bin/sanvil"
+
+      - name: Run integration tests
+        env:
+          SANVIL_BIN: ~/.seismic/bin/sanvil
+        run: uv run pytest tests/integration/ -v
