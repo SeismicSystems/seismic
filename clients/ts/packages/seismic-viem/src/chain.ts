@@ -105,6 +105,7 @@ export type TxSeismic = {
   gasPrice?: bigint
   gasLimit?: bigint
   to?: Address | null
+  isCreate?: boolean
   value?: bigint
   input?: Hex
   encryptionPubkey: Hex

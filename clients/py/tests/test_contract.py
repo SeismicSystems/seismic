@@ -48,11 +48,13 @@ class TestShieldedContract:
 
         contract = ShieldedContract(w3, encryption, pk, addr, COUNTER_ABI)
 
-        assert hasattr(contract, "write")
-        assert hasattr(contract, "read")
-        assert hasattr(contract, "twrite")
-        assert hasattr(contract, "tread")
-        assert hasattr(contract, "dwrite")
+        assert hasattr(contract, "write")  # smart
+        assert hasattr(contract, "read")  # smart
+        assert hasattr(contract, "swrite")  # force shielded
+        assert hasattr(contract, "sread")  # force shielded
+        assert hasattr(contract, "twrite")  # force transparent
+        assert hasattr(contract, "tread")  # force transparent
+        assert hasattr(contract, "dwrite")  # debug
 
     def test_write_namespace_getattr_returns_callable(self):
         """write.setNumber should return a callable."""
@@ -74,6 +76,28 @@ class TestShieldedContract:
 
         contract = ShieldedContract(w3, encryption, pk, addr, COUNTER_ABI)
         fn = contract.read.setNumber
+        assert callable(fn)
+
+    def test_swrite_namespace_getattr_returns_callable(self):
+        """swrite.setNumber should return a callable."""
+        w3 = MagicMock()
+        encryption = _make_encryption()
+        pk = PrivateKey(b"\x01" * 32)
+        addr = "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046"
+
+        contract = ShieldedContract(w3, encryption, pk, addr, COUNTER_ABI)
+        fn = contract.swrite.setNumber
+        assert callable(fn)
+
+    def test_sread_namespace_getattr_returns_callable(self):
+        """sread.setNumber should return a callable."""
+        w3 = MagicMock()
+        encryption = _make_encryption()
+        pk = PrivateKey(b"\x01" * 32)
+        addr = "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046"
+
+        contract = ShieldedContract(w3, encryption, pk, addr, COUNTER_ABI)
+        fn = contract.sread.setNumber
         assert callable(fn)
 
     def test_dwrite_namespace_getattr_returns_callable(self):
@@ -98,11 +122,13 @@ class TestAsyncShieldedContract:
 
         contract = AsyncShieldedContract(w3, encryption, pk, addr, COUNTER_ABI)
 
-        assert hasattr(contract, "write")
-        assert hasattr(contract, "read")
-        assert hasattr(contract, "twrite")
-        assert hasattr(contract, "tread")
-        assert hasattr(contract, "dwrite")
+        assert hasattr(contract, "write")  # smart
+        assert hasattr(contract, "read")  # smart
+        assert hasattr(contract, "swrite")  # force shielded
+        assert hasattr(contract, "sread")  # force shielded
+        assert hasattr(contract, "twrite")  # force transparent
+        assert hasattr(contract, "tread")  # force transparent
+        assert hasattr(contract, "dwrite")  # debug
 
     def test_write_namespace_getattr_returns_callable(self):
         """write.increment should return a callable (async version)."""

@@ -31,19 +31,19 @@ Seismic Solidity provides built-in functions that call this precompile and autom
 
 **Shielded integers:**
 
-* `sync_rng8()` → `suint8`
-* `sync_rng16()` → `suint16`
-* `sync_rng32()` → `suint32`
-* `sync_rng64()` → `suint64`
-* `sync_rng96()` → `suint96`
-* `sync_rng128()` → `suint128`
-* `sync_rng256()` → `suint256`
+* `unsafe_rng_u8()` → `suint8`
+* `unsafe_rng_u16()` → `suint16`
+* `unsafe_rng_u32()` → `suint32`
+* `unsafe_rng_u64()` → `suint64`
+* `unsafe_rng_u96()` → `suint96`
+* `unsafe_rng_u128()` → `suint128`
+* `unsafe_rng_u256()` → `suint256`
 
 **Shielded fixed bytes:**
 
-* `sync_rng_b1()` → `sbytes1`
+* `unsafe_rng_b1()` → `sbytes1`
 * ...
-* `sync_rng_b32()` → `sbytes32`
+* `unsafe_rng_b32()` → `sbytes32`
 
 ## Use cases
 
@@ -55,7 +55,7 @@ Seismic Solidity provides built-in functions that call this precompile and autom
 ### Without personalization
 
 ```solidity
-suint256 random = sync_rng256();
+suint256 random = unsafe_rng_u256();
 ```
 
 ### With personalization

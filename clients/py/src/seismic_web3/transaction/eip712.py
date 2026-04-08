@@ -48,6 +48,7 @@ TX_SEISMIC_TYPE_STR: str = (
     "uint128 gasPrice,"
     "uint64 gasLimit,"
     "address to,"
+    "bool isCreate,"
     "uint256 value,"
     "bytes input,"
     "bytes encryptionPubkey,"
@@ -165,6 +166,7 @@ def struct_hash(tx: UnsignedSeismicTx) -> bytes:
         + _pad32_int(tx.gas_price)  # uint128
         + _pad32_int(tx.gas)  # uint64 (gasLimit)
         + _pad32_address(tx.to)  # address
+        + _pad32_bool(tx.to is None)  # isCreate bool
         + _pad32_int(tx.value)  # uint256
         + keccak(bytes(tx.data))  # bytes (dynamic)
         + keccak(bytes(se.encryption_pubkey))  # bytes (dynamic)
@@ -224,6 +226,7 @@ def build_seismic_typed_data(tx: UnsignedSeismicTx) -> dict[str, Any]:
                 {"name": "gasPrice", "type": "uint128"},
                 {"name": "gasLimit", "type": "uint64"},
                 {"name": "to", "type": "address"},
+                {"name": "isCreate", "type": "bool"},
                 {"name": "value", "type": "uint256"},
                 {"name": "input", "type": "bytes"},
                 {"name": "encryptionPubkey", "type": "bytes"},
@@ -247,6 +250,7 @@ def build_seismic_typed_data(tx: UnsignedSeismicTx) -> dict[str, Any]:
             "gasPrice": tx.gas_price,
             "gasLimit": tx.gas,
             "to": tx.to or VERIFYING_CONTRACT,
+            "isCreate": tx.to is None,
             "value": tx.value,
             "input": HexBytes(tx.data).to_0x_hex(),
             "encryptionPubkey": HexBytes(bytes(se.encryption_pubkey)).to_0x_hex(),

@@ -32,7 +32,7 @@ A frequent use of the precompiles is encrypting event data so that only the inte
 sbytes32 aesKey = sbytes32(ecdh(contractPrivKey, recipientCompressedPubKey));
 
 // 2. Generate a random nonce
-uint96 nonce = uint96(sync_rng96());
+uint96 nonce = uint96(unsafe_rng_u96());
 
 // 3. Encrypt the sensitive data
 bytes memory encrypted = aes_gcm_encrypt(aesKey, nonce, plaintext);

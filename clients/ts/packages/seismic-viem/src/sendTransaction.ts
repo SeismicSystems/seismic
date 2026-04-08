@@ -28,12 +28,7 @@ import type {
   GetTransactionErrorReturnType,
   RequestErrorType,
 } from 'viem/utils'
-import {
-  assertRequest,
-  extract,
-  getAction,
-  getTransactionError,
-} from 'viem/utils'
+import { assertRequest, getAction, getTransactionError } from 'viem/utils'
 
 import {
   SeismicSecurityParams,
@@ -214,17 +209,17 @@ export async function sendShieldedTransaction<
         metadata
       )
 
-      const chainFormat = client.chain?.formatters?.transactionRequest?.format
-      const request = {
-        ...extract(
-          { ...rest, ...metadata.seismicElements, type: 'seismic' },
-          { format: chainFormat }
-        ),
+      // Estimate gas and fill fee fields using PLAINTEXT calldata
+      // without seismic fields.  This avoids hitting sreth's
+      // eth_estimateGas with encrypted data + type 0x4a.
+      // We omit `type` so viem auto-detects EIP-1559 vs legacy and
+      // fills the appropriate fee fields with proper headroom.
+      const prepRequest = {
         accessList,
         authorizationList,
         blobs,
         chainId: metadata.legacyFields.chainId,
-        data: encryptedCalldata,
+        data: plaintextCalldata,
         from: account.address,
         gas,
         gasPrice,
@@ -234,16 +229,27 @@ export async function sendShieldedTransaction<
         nonce: metadata.legacyFields.nonce,
         to,
         value,
-        // prepareTransactionRequest will fill the required fields using legacy spec
-        type: 'legacy',
-        ...rest,
       } as any
 
-      const { type: _legacy, ...viemPreparedTx } =
-        await prepareTransactionRequest(client, request)
+      const viemPreparedTx = (await prepareTransactionRequest(
+        client,
+        prepRequest
+      )) as Record<string, unknown>
+
+      // Seismic txs use legacy-style gasPrice.  If viem chose EIP-1559
+      // fees (maxFeePerGas), use that as gasPrice — it already includes
+      // headroom above the current base fee so the tx won't be
+      // underpriced when the next block's base fee adjusts.
+      const resolvedGasPrice =
+        viemPreparedTx.gasPrice ??
+        viemPreparedTx.maxFeePerGas ??
+        (await client.getGasPrice())
 
       const preparedTx = {
         ...viemPreparedTx,
+        ...metadata.seismicElements,
+        data: encryptedCalldata,
+        gasPrice: resolvedGasPrice,
         type: 'seismic',
       } as TransactionSerializableSeismic
 

@@ -61,6 +61,18 @@
         "viem": "2.x",
       },
     },
+    "packages/seismic-encrypt": {
+      "name": "seismic-encrypt",
+      "version": "0.1.0",
+      "dependencies": {
+        "@noble/ciphers": "^1.2.0",
+        "@noble/curves": "^1.8.0",
+        "@noble/hashes": "^1.7.0",
+      },
+      "peerDependencies": {
+        "viem": "2.x",
+      },
+    },
     "packages/seismic-react": {
       "name": "seismic-react",
       "version": "1.1.1",
@@ -109,6 +121,13 @@
       "peerDependencies": {
         "seismic-viem": "^1.1.1",
         "viem": "2.x",
+      },
+    },
+    "tests/seismic-encrypt-test": {
+      "name": "seismic-encrypt-test",
+      "dependencies": {
+        "seismic-encrypt": "workspace:*",
+        "viem": "^2.0.0",
       },
     },
     "tests/seismic-viem": {
@@ -2112,6 +2131,10 @@
     "secure-password-utilities": ["secure-password-utilities@0.2.1", "", {}, "sha512-znUg8ae3cpuAaogiFBhP82gD2daVkSz4Qv/L7OWjB7wWvfbCdeqqQuJkm2/IvhKQPOV0T739YPR6rb7vs0uWaw=="],
 
     "seismic-bot": ["seismic-bot@workspace:packages/seismic-bot"],
+
+    "seismic-encrypt": ["seismic-encrypt@workspace:packages/seismic-encrypt"],
+
+    "seismic-encrypt-test": ["seismic-encrypt-test@workspace:tests/seismic-encrypt-test"],
 
     "seismic-react": ["seismic-react@workspace:packages/seismic-react"],
 

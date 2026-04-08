@@ -56,7 +56,7 @@ export const testSeismicTxTrace = async ({
       chain,
       data: plaintextCalldata,
       value,
-      gas: 30_000_000n,
+      gas: 100_000n,
       gasPrice: 10_000_000_000n,
       nonce,
     },
@@ -95,7 +95,7 @@ export const testLegacyTxTrace = async ({
     data,
     value: 1n,
     messageVersion: 0,
-    gas: 30_000_000n,
+    gas: 100_000n,
     nonce,
   })
 
