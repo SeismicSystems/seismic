@@ -3,6 +3,11 @@
 Provides the full pipeline for sending encrypted ``TxSeismic``
 transactions and executing signed reads (``eth_call`` with
 encrypted calldata).  Both sync and async variants are provided.
+
+Gas estimation for shielded transactions signs the tx before
+sending to ``eth_estimateGas`` so the node can authenticate
+the sender.  This prevents caller-spoofing attacks against
+``msg.sender``-gated private state.
 """
 
 from __future__ import annotations
@@ -38,7 +43,7 @@ if TYPE_CHECKING:
     from seismic_web3.client import EncryptionState
     from seismic_web3.transaction_types import SeismicSecurityParams, TxSeismicMetadata
 
-#: Default gas limit when not specified.
+#: Default gas limit for reads (signed calls) where estimation is unnecessary.
 _DEFAULT_GAS = 30_000_000
 
 
@@ -100,6 +105,119 @@ def _build_metadata_params(
         message_version=TYPED_DATA_MESSAGE_VERSION if eip712 else 0,
         signed_read=signed_read,
     )
+
+
+# ---------------------------------------------------------------------------
+# Signed gas estimation
+# ---------------------------------------------------------------------------
+
+
+def _sign_tx(
+    tx: UnsignedSeismicTx,
+    private_key: PrivateKey,
+    eip712: bool,
+) -> HexBytes:
+    """Sign a Seismic transaction (raw or EIP-712)."""
+    if eip712:
+        return sign_seismic_tx_eip712(tx, private_key)
+    return sign_seismic_tx(tx, private_key)
+
+
+def estimate_shielded_gas(
+    w3: Web3,
+    *,
+    encrypted_data: HexBytes,
+    metadata: TxSeismicMetadata,
+    gas_price: int,
+    private_key: PrivateKey,
+    to: ChecksumAddress,
+    value: int,
+    eip712: bool,
+) -> int:
+    """Estimate gas for a shielded transaction by signing it first (sync).
+
+    Builds a temporary tx using the block gas limit as a placeholder,
+    signs it, and sends the signed bytes to ``eth_estimateGas``.  The
+    node can then authenticate the sender and execute against the
+    correct private state.
+
+    Args:
+        w3: Sync ``Web3`` instance.
+        encrypted_data: Already-encrypted calldata.
+        metadata: Transaction metadata (nonce, seismic elements, etc.).
+        gas_price: Gas price in wei.
+        private_key: Signing key.
+        to: Recipient address.
+        value: Wei to transfer.
+        eip712: Whether to use EIP-712 signing.
+
+    Returns:
+        Estimated gas limit (int).
+    """
+    block_gas_limit = w3.eth.get_block("latest")["gasLimit"]
+
+    temp_tx = UnsignedSeismicTx(
+        chain_id=metadata.legacy_fields.chain_id,
+        nonce=metadata.legacy_fields.nonce,
+        gas_price=gas_price,
+        gas=block_gas_limit,
+        to=to,
+        value=value,
+        data=encrypted_data,
+        seismic=metadata.seismic_elements,
+    )
+
+    signed = _sign_tx(temp_tx, private_key, eip712)
+
+    response = w3.provider.make_request(
+        RPCEndpoint("eth_estimateGas"),
+        [signed.to_0x_hex()],
+    )
+    if "error" in response:
+        error = response["error"]
+        raise RuntimeError(f"eth_estimateGas failed: {error['message']}")
+    return int(response["result"], 16)
+
+
+async def async_estimate_shielded_gas(
+    w3: AsyncWeb3,
+    *,
+    encrypted_data: HexBytes,
+    metadata: TxSeismicMetadata,
+    gas_price: int,
+    private_key: PrivateKey,
+    to: ChecksumAddress,
+    value: int,
+    eip712: bool,
+) -> int:
+    """Estimate gas for a shielded transaction by signing it first (async).
+
+    Async variant of :func:`estimate_shielded_gas`.
+    """
+    block = await w3.eth.get_block("latest")
+    block_gas_limit = block["gasLimit"]
+
+    temp_tx = UnsignedSeismicTx(
+        chain_id=metadata.legacy_fields.chain_id,
+        nonce=metadata.legacy_fields.nonce,
+        gas_price=gas_price,
+        gas=block_gas_limit,
+        to=to,
+        value=value,
+        data=encrypted_data,
+        seismic=metadata.seismic_elements,
+    )
+
+    signed = _sign_tx(temp_tx, private_key, eip712)
+
+    response = await w3.provider.make_request(
+        RPCEndpoint("eth_estimateGas"),
+        [signed.to_0x_hex()],
+    )
+    if "error" in response:
+        error = response["error"]
+        raise RuntimeError(f"eth_estimateGas failed: {error['message']}")
+    return int(response["result"], 16)
 
 
 # ---------------------------------------------------------------------------
@@ -170,6 +288,9 @@ def _prepare_shielded_transaction(
     Returns the signed bytes, the unsigned tx, and metadata -- but
     does **not** broadcast.
 
+    When ``gas`` is ``None``, signs a temporary tx and sends it to
+    ``eth_estimateGas`` so the node can authenticate the sender.
+
     Returns:
         ``(signed_tx_bytes, unsigned_tx, metadata)``
     """
@@ -183,7 +304,20 @@ def _prepare_shielded_transaction(
     )
 
     resolved_gas_price = gas_price if gas_price is not None else w3.eth.gas_price
-    resolved_gas = gas if gas is not None else _DEFAULT_GAS
+
+    if gas is not None:
+        resolved_gas = gas
+    else:
+        resolved_gas = estimate_shielded_gas(
+            w3,
+            encrypted_data=HexBytes(encrypted),
+            metadata=metadata,
+            gas_price=resolved_gas_price,
+            private_key=private_key,
+            to=to,
+            value=value,
+            eip712=eip712,
+        )
 
     tx = UnsignedSeismicTx(
         chain_id=metadata.legacy_fields.chain_id,
@@ -196,11 +330,7 @@ def _prepare_shielded_transaction(
         seismic=metadata.seismic_elements,
     )
 
-    signed = (
-        sign_seismic_tx_eip712(tx, private_key)
-        if eip712
-        else sign_seismic_tx(tx, private_key)
-    )
+    signed = _sign_tx(tx, private_key, eip712)
     return signed, tx, metadata
 
 
@@ -219,6 +349,9 @@ async def _async_prepare_shielded_transaction(
 ) -> tuple[HexBytes, UnsignedSeismicTx, TxSeismicMetadata]:
     """Build, encrypt, and sign a shielded transaction (async).
 
+    When ``gas`` is ``None``, signs a temporary tx and sends it to
+    ``eth_estimateGas`` so the node can authenticate the sender.
+
     Returns:
         ``(signed_tx_bytes, unsigned_tx, metadata)``
     """
@@ -232,7 +365,20 @@ async def _async_prepare_shielded_transaction(
     )
 
     resolved_gas_price = gas_price if gas_price is not None else await w3.eth.gas_price
-    resolved_gas = gas if gas is not None else _DEFAULT_GAS
+
+    if gas is not None:
+        resolved_gas = gas
+    else:
+        resolved_gas = await async_estimate_shielded_gas(
+            w3,
+            encrypted_data=HexBytes(encrypted),
+            metadata=metadata,
+            gas_price=resolved_gas_price,
+            private_key=private_key,
+            to=to,
+            value=value,
+            eip712=eip712,
+        )
 
     tx = UnsignedSeismicTx(
         chain_id=metadata.legacy_fields.chain_id,
@@ -245,11 +391,7 @@ async def _async_prepare_shielded_transaction(
         seismic=metadata.seismic_elements,
     )
 
-    signed = (
-        sign_seismic_tx_eip712(tx, private_key)
-        if eip712
-        else sign_seismic_tx(tx, private_key)
-    )
+    signed = _sign_tx(tx, private_key, eip712)
     return signed, tx, metadata
 
 
@@ -283,7 +425,7 @@ def send_shielded_transaction(
         to: Recipient address.
         data: Plaintext calldata (will be encrypted).
         value: Wei to transfer (default ``0``).
-        gas: Gas limit.  Uses ``30_000_000`` if not specified.
+        gas: Gas limit.  Estimated via signed ``eth_estimateGas`` if not specified.
         gas_price: Gas price in wei.  Fetched from chain if not specified.
         security: Optional security parameter overrides.
 
@@ -330,7 +472,7 @@ async def async_send_shielded_transaction(
         to: Recipient address.
         data: Plaintext calldata (will be encrypted).
         value: Wei to transfer (default ``0``).
-        gas: Gas limit.  Uses ``30_000_000`` if not specified.
+        gas: Gas limit.  Estimated via signed ``eth_estimateGas`` if not specified.
         gas_price: Gas price in wei.  Fetched from chain if not specified.
         security: Optional security parameter overrides.
 
@@ -382,7 +524,7 @@ def debug_send_shielded_transaction(
         to: Recipient address.
         data: Plaintext calldata (will be encrypted).
         value: Wei to transfer (default ``0``).
-        gas: Gas limit.  Uses ``30_000_000`` if not specified.
+        gas: Gas limit.  Estimated via signed ``eth_estimateGas`` if not specified.
         gas_price: Gas price in wei.  Fetched from chain if not specified.
         security: Optional security parameter overrides.
 
@@ -444,7 +586,7 @@ async def async_debug_send_shielded_transaction(
         to: Recipient address.
         data: Plaintext calldata (will be encrypted).
         value: Wei to transfer (default ``0``).
-        gas: Gas limit.  Uses ``30_000_000`` if not specified.
+        gas: Gas limit.  Estimated via signed ``eth_estimateGas`` if not specified.
         gas_price: Gas price in wei.  Fetched from chain if not specified.
         security: Optional security parameter overrides.
 
