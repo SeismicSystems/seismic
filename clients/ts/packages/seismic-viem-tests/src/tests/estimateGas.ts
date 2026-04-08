@@ -55,9 +55,6 @@ const deployCounter = async (chain: Chain, url: string, account: Account) => {
   return { publicClient, walletClient, contract, address }
 }
 
-/**
- * Signed estimate gas should return a gas value > 21000 and < 30M.
- */
 export const testEstimateGasReturnsReasonableValue = async ({
   chain,
   url,
@@ -93,9 +90,6 @@ export const testEstimateGasReturnsReasonableValue = async ({
   expect(gas).toBeLessThan(30_000_000n)
 }
 
-/**
- * write() without explicit gas should auto-estimate and succeed.
- */
 export const testWriteWithoutExplicitGasSucceeds = async ({
   chain,
   url,
@@ -111,9 +105,6 @@ export const testWriteWithoutExplicitGasSucceeds = async ({
   expect(receipt.status).toBe('success')
 }
 
-/**
- * write() should use estimated gas, not the old 30M default.
- */
 export const testWriteUsesEstimatedGasNot30M = async ({
   chain,
   url,
@@ -137,9 +128,6 @@ export const testWriteUsesEstimatedGasNot30M = async ({
   expect(tx.gas).toBeGreaterThan(21_000n)
 }
 
-/**
- * Providing explicit gas should skip estimation and use that value.
- */
 export const testWriteWithExplicitGasSkipsEstimation = async ({
   chain,
   url,
@@ -161,9 +149,6 @@ export const testWriteWithExplicitGasSkipsEstimation = async ({
   expect(tx.gas).toBe(explicitGas)
 }
 
-/**
- * Full lifecycle with auto-estimated gas: set, read, increment, read.
- */
 export const testLifecycleWithEstimatedGas = async ({
   chain,
   url,

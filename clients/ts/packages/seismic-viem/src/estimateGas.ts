@@ -6,7 +6,7 @@
  * can authenticate the sender.  This prevents caller-spoofing
  * attacks against `msg.sender`-gated private state.
  */
-import type { Account, Chain, Hex, RpcSchema, Transport } from 'viem'
+import type { Account, Chain, Hex, Transport } from 'viem'
 
 import type { TransactionSerializableSeismic } from '@sviem/chain.ts'
 import { serializeSeismicTransaction } from '@sviem/chain.ts'
@@ -17,21 +17,12 @@ import {
   signSeismicTxTypedData,
 } from '@sviem/signSeismicTypedData.ts'
 
-/**
- * Estimate gas for a shielded transaction by signing it first.
- *
- * Builds a temporary tx using the block gas limit as a placeholder,
- * signs it, and sends the signed bytes to `eth_estimateGas`.  The
- * node can then authenticate the sender and execute against the
- * correct private state.
- */
 export async function estimateShieldedGas<
   TTransport extends Transport,
   TChain extends Chain | undefined,
   TAccount extends Account,
-  TRpcSchema extends RpcSchema | undefined = undefined,
 >(
-  client: ShieldedWalletClient<TTransport, TChain, TAccount, TRpcSchema>,
+  client: ShieldedWalletClient<TTransport, TChain, TAccount>,
   {
     encryptedData,
     metadata,
