@@ -7,6 +7,7 @@ import type {
   ContractFunctionArgs,
   ContractFunctionName,
   Hex,
+  PublicActions,
   ReadContractParameters,
   ReadContractReturnType,
   Transport,
@@ -112,5 +113,47 @@ export async function signedReadContract<
     args,
     functionName,
     data: data || '0x',
+  }) as ReadContractReturnType<TAbi, TFunctionName>
+}
+
+/**
+ * Executes a transparent (unsigned) read on a contract whose ABI may
+ * contain shielded types.  The function selector is derived from the
+ * original Seismic ABI (preserving `suint256` etc.) while parameters are
+ * encoded with the remapped standard types, and the call is sent as a
+ * plain `eth_call`.
+ */
+export async function transparentReadContract<
+  TChain extends Chain | undefined,
+  const TAbi extends Abi | readonly unknown[],
+  TFunctionName extends ContractFunctionName<TAbi, 'pure' | 'view'>,
+  TArgs extends ContractFunctionArgs<TAbi, 'pure' | 'view', TFunctionName>,
+>(
+  client: Pick<PublicActions<Transport, TChain>, 'call'>,
+  parameters: ReadContractParameters<TAbi, TFunctionName, TArgs>
+): Promise<ReadContractReturnType> {
+  const {
+    abi,
+    functionName,
+    args = [],
+    address,
+    ...rest
+  } = parameters as ReadContractParameters
+  const seismicAbi = getAbiItem({ abi, name: functionName }) as AbiFunction
+  const selector = toFunctionSelector(formatAbiItem(seismicAbi))
+  const ethAbi = remapSeismicAbiInputs(seismicAbi)
+  const encodedParams = encodeAbiParameters(ethAbi.inputs, args).slice(2)
+  const data = `${selector}${encodedParams}` as Hex
+  const callOptions = rest as unknown as Omit<CallParameters, 'to' | 'data'>
+  const { data: result } = await client.call({
+    to: address,
+    data,
+    ...callOptions,
+  } as CallParameters<TChain>)
+  return decodeFunctionResult({
+    abi,
+    args,
+    functionName,
+    data: result || '0x',
   }) as ReadContractReturnType<TAbi, TFunctionName>
 }
