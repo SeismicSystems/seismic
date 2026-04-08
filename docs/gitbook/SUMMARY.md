@@ -13,6 +13,11 @@
 - [Installation](getting-started/installation.md)
 - [Development Toolkit](getting-started/development-toolkit.md)
 - [Quickstart](getting-started/quickstart.md)
+- [Deploy an SRC20 in 60 Seconds](getting-started/src20-factory/README.md)
+  - [TypeScript SDK](getting-started/src20-factory/sdk.md)
+  - [Web Interface](getting-started/src20-factory/web.md)
+  - [REST API](getting-started/src20-factory/api.md)
+  - [Contracts](getting-started/src20-factory/contracts.md)
 
 ## Tutorials
 
