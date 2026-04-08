@@ -1,17 +1,14 @@
 import type { ExtractAbiFunctionNames } from 'abitype'
 import type {
   Abi,
-  AbiFunction,
   Account,
   Address,
-  CallParameters,
   Chain,
   Client,
   ContractFunctionArgs,
   ContractFunctionName,
   GetContractParameters,
   GetContractReturnType,
-  Hex,
   IsNarrowable,
   IsNever,
   ReadContractParameters,
@@ -20,29 +17,21 @@ import type {
   WriteContractParameters,
   WriteContractReturnType,
 } from 'viem'
-import {
-  decodeFunctionResult,
-  encodeAbiParameters,
-  getAbiItem,
-  getContract,
-  toFunctionSelector,
-} from 'viem'
+import { getContract } from 'viem'
 import { readContract, writeContract } from 'viem/actions'
-import { formatAbiItem } from 'viem/utils'
 
 import type { ShieldedWalletClient } from '@sviem/client.ts'
-import {
-  hasShieldedParams,
-  remapSeismicAbiInputs,
-} from '@sviem/contract/abi.ts'
+import { hasShieldedParams } from '@sviem/contract/abi.ts'
 import {
   SignedReadContractParameters,
   signedReadContract,
+  transparentReadContract,
 } from '@sviem/contract/read.ts'
 import {
   ShieldedWriteContractDebugResult,
   shieldedWriteContract,
   shieldedWriteContractDebug,
+  transparentWriteContract,
 } from '@sviem/contract/write.ts'
 import type { KeyedClient } from '@sviem/viem-internal/client.ts'
 import type {
@@ -264,25 +253,6 @@ export function getShieldedContract<
     return client as ShieldedWalletClient<TTransport, TChain, TAccount>
   })()
 
-  /**
-   * Builds calldata using the correct function selector from the original
-   * Seismic ABI (preserving suint256 etc. in the selector hash) while
-   * encoding parameters with the remapped standard types.
-   */
-  function buildSeismicCalldata(
-    functionName: string,
-    args: readonly unknown[]
-  ): Hex {
-    const seismicAbiItem = getAbiItem({
-      abi: abi as Abi,
-      name: functionName,
-    }) as AbiFunction
-    const selector = toFunctionSelector(formatAbiItem(seismicAbiItem))
-    const ethAbi = remapSeismicAbiInputs(seismicAbiItem)
-    const encodedParams = encodeAbiParameters(ethAbi.inputs, args).slice(2)
-    return `${selector}${encodedParams}` as Hex
-  }
-
   const transparentWriteAction = new Proxy(
     {},
     {
@@ -300,12 +270,18 @@ export function getShieldedContract<
             throw new Error('Must provide wallet client to call Contract.write')
           }
           const { args, options } = getFunctionParameters(parameters)
-          const data = buildSeismicCalldata(functionName, args)
-          return walletClient.sendTransaction({
-            to: address,
-            data,
-            ...(options as Record<string, unknown>),
-          } as unknown as Parameters<typeof walletClient.sendTransaction>[0])
+          return transparentWriteContract(
+            walletClient as unknown as Parameters<
+              typeof transparentWriteContract
+            >[0],
+            {
+              abi,
+              address,
+              functionName,
+              args,
+              ...(options as Record<string, unknown>),
+            } as unknown as Parameters<typeof transparentWriteContract>[1]
+          )
         }
       },
     }
@@ -447,7 +423,7 @@ export function getShieldedContract<
     return signedReadContract(walletClient, params)
   }
 
-  const readAction = new Proxy(
+  const transparentReadAction = new Proxy(
     {},
     {
       get(_, functionName: string) {
@@ -475,22 +451,18 @@ export function getShieldedContract<
               ContractFunctionArgs<TAbi, 'pure' | 'view'>
             >)
           }
-          const data = buildSeismicCalldata(functionName, args)
-          // @ts-expect-error: walletClient may be undefined but we handle that above
-          return walletClient
-            .call({
-              to: address,
-              data,
-              ...(opts as Omit<CallParameters, 'to' | 'data'>),
-            } as unknown as CallParameters<TChain>)
-            .then(({ data: result }: { data: Hex | undefined }) =>
-              decodeFunctionResult({
-                abi: abi as Abi,
-                args,
-                functionName,
-                data: result || '0x',
-              })
-            )
+          return transparentReadContract(
+            walletClient as unknown as Parameters<
+              typeof transparentReadContract
+            >[0],
+            {
+              abi,
+              address,
+              functionName,
+              args,
+              ...(opts as Record<string, unknown>),
+            } as unknown as Parameters<typeof transparentReadContract>[1]
+          )
         }
       },
     }
@@ -675,7 +647,7 @@ export function getShieldedContract<
   contract.twrite = transparentWriteAction
   // Transparent reads use signed reads,
   // but signing is only activated if they supply an account parameter
-  contract.tread = readAction
+  contract.tread = transparentReadAction
   // Force shielded writes always use seismic transactions
   contract.swrite = shieldedWriteAction
   // Force shielded reads always use signed reads

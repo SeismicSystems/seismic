@@ -1,40 +1,30 @@
 import type {
   Abi,
-  AbiFunction,
   Account,
   Address,
-  CallParameters,
   Chain,
   ContractFunctionArgs,
   ContractFunctionName,
-  Hex,
   ReadContractParameters,
   ReadContractReturnType,
   Transport,
   WriteContractParameters,
   WriteContractReturnType,
 } from 'viem'
-import {
-  decodeFunctionResult,
-  encodeAbiParameters,
-  getAbiItem,
-  toFunctionSelector,
-} from 'viem'
 import { readContract, writeContract } from 'viem/actions'
-import { formatAbiItem } from 'viem/utils'
 
 import { SeismicSecurityParams } from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'
+import { hasShieldedParams } from '@sviem/contract/abi.ts'
 import {
-  hasShieldedParams,
-  remapSeismicAbiInputs,
-} from '@sviem/contract/abi.ts'
-import { signedReadContract } from '@sviem/contract/read.ts'
+  signedReadContract,
+  transparentReadContract,
+} from '@sviem/contract/read.ts'
 import {
   ShieldedWriteContractDebugResult,
-  getPlaintextCalldata,
   shieldedWriteContract,
   shieldedWriteContractDebug,
+  transparentWriteContract,
 } from '@sviem/contract/write.ts'
 import type {
   SendSeismicTransactionParameters,
@@ -270,32 +260,11 @@ export const shieldedWalletActions = <
         client as unknown as Parameters<typeof shieldedWriteContract>[0],
         args as unknown as Parameters<typeof shieldedWriteContract>[1]
       ),
-    twriteContract: (args) => {
-      // Build calldata with correct selector from original ABI,
-      // encode params with remapped ABI, send as standard tx
-      const writeArgs = args as unknown as {
-        abi: Abi
-        address: Address
-        functionName: string
-        args: readonly unknown[]
-        gas?: bigint
-        gasPrice?: bigint
-        value?: bigint
-        nonce?: number
-      }
-      const data = getPlaintextCalldata(
-        writeArgs as unknown as Parameters<typeof getPlaintextCalldata>[0]
-      )
-      return client.sendTransaction({
-        chain: client.chain,
-        to: writeArgs.address,
-        data,
-        gas: writeArgs.gas,
-        gasPrice: writeArgs.gasPrice,
-        value: writeArgs.value,
-        nonce: writeArgs.nonce,
-      } as unknown as Parameters<typeof client.sendTransaction>[0])
-    },
+    twriteContract: (args) =>
+      transparentWriteContract(
+        client as unknown as Parameters<typeof transparentWriteContract>[0],
+        args as unknown as Parameters<typeof transparentWriteContract>[1]
+      ),
     dwriteContract: (args) => {
       const debugResult = shieldedWriteContractDebug(
         client as unknown as Parameters<typeof shieldedWriteContractDebug>[0],
@@ -331,48 +300,11 @@ export const shieldedWalletActions = <
         args as unknown as Parameters<typeof signedReadContract>[1],
         securityParams
       ),
-    treadContract: (args) => {
-      // Build calldata with correct selector from original ABI
-      const readArgs = args as unknown as {
-        abi: Abi
-        address: Address
-        functionName: string
-        args?: readonly unknown[]
-      }
-      const {
-        abi,
-        functionName,
-        args: fnArgs = [],
-        address,
-        ...rest
-      } = readArgs
-      const callOptions = rest as unknown as Omit<CallParameters, 'to' | 'data'>
-      const seismicAbiItem = getAbiItem({
-        abi: abi as Abi,
-        name: functionName,
-      }) as AbiFunction
-      const selector = toFunctionSelector(formatAbiItem(seismicAbiItem))
-      const ethAbi = remapSeismicAbiInputs(seismicAbiItem)
-      const encodedParams = encodeAbiParameters(
-        ethAbi.inputs,
-        fnArgs as readonly unknown[]
-      ).slice(2)
-      const data = `${selector}${encodedParams}` as Hex
-      return client
-        .call({
-          to: address,
-          data,
-          ...callOptions,
-        } as unknown as CallParameters<TChain>)
-        .then(({ data: result }) =>
-          decodeFunctionResult({
-            abi: abi as Abi,
-            args: fnArgs as readonly unknown[],
-            functionName,
-            data: result || '0x',
-          })
-        )
-    },
+    treadContract: (args) =>
+      transparentReadContract(
+        client as unknown as Parameters<typeof transparentReadContract>[0],
+        args as unknown as Parameters<typeof transparentReadContract>[1]
+      ),
     signedCall: (args, securityParams) =>
       signedCall(
         client as unknown as Parameters<typeof signedCall>[0],
