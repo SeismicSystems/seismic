@@ -37,11 +37,13 @@ def contract(w3: Web3, plain_w3: Web3, account_address: str) -> ShieldedContract
 class TestSignedEstimateGas:
     """Signed shielded eth_estimateGas should succeed."""
 
+    @pytest.mark.parametrize("eip712", [False, True], ids=["raw", "eip712"])
     def test_estimate_gas_returns_reasonable_value(
         self,
         contract: ShieldedContract,
         w3: Web3,
         private_key: PrivateKey,
+        eip712: bool,
     ) -> None:
         """Signed estimate gas should return a gas value > 21000."""
         encryption = w3.seismic.encryption  # type: ignore[attr-defined]
@@ -53,6 +55,7 @@ class TestSignedEstimateGas:
             contract._address,
             0,
             None,
+            eip712=eip712,
         )
         metadata = build_metadata(w3, params)
         encrypted = encryption.encrypt(
@@ -67,66 +70,29 @@ class TestSignedEstimateGas:
             metadata=metadata,
             gas_price=w3.eth.gas_price,
             private_key=private_key,
-            to=contract._address,
-            value=0,
-            eip712=False,
         )
 
         assert isinstance(gas, int)
         assert gas > 21_000, "Gas estimate should exceed the base tx cost"
         assert gas < 30_000_000, "Gas estimate should be well below 30M"
 
-    def test_estimate_gas_eip712(
-        self,
-        contract: ShieldedContract,
-        w3: Web3,
-        private_key: PrivateKey,
-    ) -> None:
-        """EIP-712 signed estimate gas should also succeed."""
-        encryption = w3.seismic.encryption  # type: ignore[attr-defined]
-        data = encode_shielded_calldata(SEISMIC_COUNTER_ABI, "setNumber", [99])
-
-        params = _build_metadata_params(
-            private_key,
-            encryption,
-            contract._address,
-            0,
-            None,
-            eip712=True,
-        )
-        metadata = build_metadata(w3, params)
-        encrypted = encryption.encrypt(
-            data,
-            metadata.seismic_elements.encryption_nonce,
-            metadata,
-        )
-
-        gas = estimate_shielded_gas(
-            w3,
-            encrypted_data=HexBytes(encrypted),
-            metadata=metadata,
-            gas_price=w3.eth.gas_price,
-            private_key=private_key,
-            to=contract._address,
-            value=0,
-            eip712=True,
-        )
-
-        assert isinstance(gas, int)
-        assert gas > 21_000
-
 
 class TestUnsignedEstimateGasRejected:
     """Unsigned seismic estimate gas should fail after node sanitization."""
 
-    def test_unsigned_estimate_gas_fails(
+    def test_unsigned_estimate_gas_sanitized(
         self,
         contract: ShieldedContract,
         w3: Web3,
         private_key: PrivateKey,
     ) -> None:
-        """Sending an unsigned TransactionRequest to eth_estimateGas
-        with seismic data should fail because the node clears ``from``."""
+        """Unsigned eth_estimateGas should succeed but with ``from`` cleared.
+
+        The node sanitizes unsigned requests by stripping ``from``,
+        so the result reflects execution without sender authentication.
+        For a simple setNumber call this still succeeds (the function
+        doesn't gate on msg.sender), but the spoofed ``from`` is ignored.
+        """
         sender = _address_from_key(private_key)
         data = encode_shielded_calldata(SEISMIC_COUNTER_ABI, "setNumber", [42])
 
@@ -135,11 +101,12 @@ class TestUnsignedEstimateGasRejected:
             [{"from": sender, "to": contract._address, "data": data.to_0x_hex()}],
         )
 
-        # The node sanitizes unsigned requests by clearing `from`.
-        # This should either error or return a result with `from` ignored.
-        # We just verify it doesn't crash and doesn't require auth.
-        # (The exact behavior depends on whether the call needs msg.sender.)
-        assert "result" in response or "error" in response
+        # The node clears `from` on unsigned requests.  For setNumber
+        # (no msg.sender gating) the call still succeeds, proving the
+        # supplied `from` address was not used for authentication.
+        assert "result" in response, (
+            f"Expected success for non-gated call, got error: {response.get('error')}"
+        )
 
 
 class TestEstimateGasIntegration:

@@ -123,6 +123,30 @@ def _sign_tx(
     return sign_seismic_tx(tx, private_key)
 
 
+def _build_unsigned_tx(
+    metadata: TxSeismicMetadata,
+    gas_price: int,
+    gas: int,
+    data: HexBytes,
+) -> UnsignedSeismicTx:
+    """Build an ``UnsignedSeismicTx`` from metadata and gas parameters."""
+    return UnsignedSeismicTx(
+        chain_id=metadata.legacy_fields.chain_id,
+        nonce=metadata.legacy_fields.nonce,
+        gas_price=gas_price,
+        gas=gas,
+        to=metadata.legacy_fields.to,
+        value=metadata.legacy_fields.value,
+        data=data,
+        seismic=metadata.seismic_elements,
+    )
+
+
+def _is_eip712(metadata: TxSeismicMetadata) -> bool:
+    """Check if metadata uses EIP-712 signing."""
+    return metadata.seismic_elements.message_version == TYPED_DATA_MESSAGE_VERSION
+
+
 def estimate_shielded_gas(
     w3: Web3,
     *,
@@ -130,9 +154,6 @@ def estimate_shielded_gas(
     metadata: TxSeismicMetadata,
     gas_price: int,
     private_key: PrivateKey,
-    to: ChecksumAddress,
-    value: int,
-    eip712: bool,
 ) -> int:
     """Estimate gas for a shielded transaction by signing it first (sync).
 
@@ -140,43 +161,16 @@ def estimate_shielded_gas(
     signs it, and sends the signed bytes to ``eth_estimateGas``.  The
     node can then authenticate the sender and execute against the
     correct private state.
-
-    Args:
-        w3: Sync ``Web3`` instance.
-        encrypted_data: Already-encrypted calldata.
-        metadata: Transaction metadata (nonce, seismic elements, etc.).
-        gas_price: Gas price in wei.
-        private_key: Signing key.
-        to: Recipient address.
-        value: Wei to transfer.
-        eip712: Whether to use EIP-712 signing.
-
-    Returns:
-        Estimated gas limit (int).
     """
     block_gas_limit = w3.eth.get_block("latest")["gasLimit"]
-
-    temp_tx = UnsignedSeismicTx(
-        chain_id=metadata.legacy_fields.chain_id,
-        nonce=metadata.legacy_fields.nonce,
-        gas_price=gas_price,
-        gas=block_gas_limit,
-        to=to,
-        value=value,
-        data=encrypted_data,
-        seismic=metadata.seismic_elements,
-    )
-
-    signed = _sign_tx(temp_tx, private_key, eip712)
+    temp_tx = _build_unsigned_tx(metadata, gas_price, block_gas_limit, encrypted_data)
+    signed = _sign_tx(temp_tx, private_key, _is_eip712(metadata))
 
     response = w3.provider.make_request(
         RPCEndpoint("eth_estimateGas"),
         [signed.to_0x_hex()],
     )
-    if "error" in response:
-        error = response["error"]
-        raise RuntimeError(f"eth_estimateGas failed: {error['message']}")
-    return int(response["result"], 16)
+    return int(_check_rpc_response(response), 16)
 
 
 async def async_estimate_shielded_gas(
@@ -186,38 +180,20 @@ async def async_estimate_shielded_gas(
     metadata: TxSeismicMetadata,
     gas_price: int,
     private_key: PrivateKey,
-    to: ChecksumAddress,
-    value: int,
-    eip712: bool,
 ) -> int:
     """Estimate gas for a shielded transaction by signing it first (async).
 
     Async variant of :func:`estimate_shielded_gas`.
     """
-    block = await w3.eth.get_block("latest")
-    block_gas_limit = block["gasLimit"]
-
-    temp_tx = UnsignedSeismicTx(
-        chain_id=metadata.legacy_fields.chain_id,
-        nonce=metadata.legacy_fields.nonce,
-        gas_price=gas_price,
-        gas=block_gas_limit,
-        to=to,
-        value=value,
-        data=encrypted_data,
-        seismic=metadata.seismic_elements,
-    )
-
-    signed = _sign_tx(temp_tx, private_key, eip712)
+    block_gas_limit = (await w3.eth.get_block("latest"))["gasLimit"]
+    temp_tx = _build_unsigned_tx(metadata, gas_price, block_gas_limit, encrypted_data)
+    signed = _sign_tx(temp_tx, private_key, _is_eip712(metadata))
 
     response = await w3.provider.make_request(
         RPCEndpoint("eth_estimateGas"),
         [signed.to_0x_hex()],
     )
-    if "error" in response:
-        error = response["error"]
-        raise RuntimeError(f"eth_estimateGas failed: {error['message']}")
-    return int(response["result"], 16)
+    return int(_check_rpc_response(response), 16)
 
 
 # ---------------------------------------------------------------------------
@@ -304,32 +280,20 @@ def _prepare_shielded_transaction(
     )
 
     resolved_gas_price = gas_price if gas_price is not None else w3.eth.gas_price
+    encrypted_data = HexBytes(encrypted)
 
     if gas is not None:
         resolved_gas = gas
     else:
         resolved_gas = estimate_shielded_gas(
             w3,
-            encrypted_data=HexBytes(encrypted),
+            encrypted_data=encrypted_data,
             metadata=metadata,
             gas_price=resolved_gas_price,
             private_key=private_key,
-            to=to,
-            value=value,
-            eip712=eip712,
         )
 
-    tx = UnsignedSeismicTx(
-        chain_id=metadata.legacy_fields.chain_id,
-        nonce=metadata.legacy_fields.nonce,
-        gas_price=resolved_gas_price,
-        gas=resolved_gas,
-        to=to,
-        value=value,
-        data=HexBytes(encrypted),
-        seismic=metadata.seismic_elements,
-    )
-
+    tx = _build_unsigned_tx(metadata, resolved_gas_price, resolved_gas, encrypted_data)
     signed = _sign_tx(tx, private_key, eip712)
     return signed, tx, metadata
 
@@ -365,32 +329,20 @@ async def _async_prepare_shielded_transaction(
     )
 
     resolved_gas_price = gas_price if gas_price is not None else await w3.eth.gas_price
+    encrypted_data = HexBytes(encrypted)
 
     if gas is not None:
         resolved_gas = gas
     else:
         resolved_gas = await async_estimate_shielded_gas(
             w3,
-            encrypted_data=HexBytes(encrypted),
+            encrypted_data=encrypted_data,
             metadata=metadata,
             gas_price=resolved_gas_price,
             private_key=private_key,
-            to=to,
-            value=value,
-            eip712=eip712,
         )
 
-    tx = UnsignedSeismicTx(
-        chain_id=metadata.legacy_fields.chain_id,
-        nonce=metadata.legacy_fields.nonce,
-        gas_price=resolved_gas_price,
-        gas=resolved_gas,
-        to=to,
-        value=value,
-        data=HexBytes(encrypted),
-        seismic=metadata.seismic_elements,
-    )
-
+    tx = _build_unsigned_tx(metadata, resolved_gas_price, resolved_gas, encrypted_data)
     signed = _sign_tx(tx, private_key, eip712)
     return signed, tx, metadata
 
@@ -669,25 +621,9 @@ def signed_call(
 
     gas_price = w3.eth.gas_price
 
-    tx = UnsignedSeismicTx(
-        chain_id=metadata.legacy_fields.chain_id,
-        nonce=metadata.legacy_fields.nonce,
-        gas_price=gas_price,
-        gas=gas,
-        to=to,
-        value=value,
-        data=HexBytes(encrypted),
-        seismic=metadata.seismic_elements,
-    )
+    tx = _build_unsigned_tx(metadata, gas_price, gas, HexBytes(encrypted))
+    signed = _sign_tx(tx, private_key, eip712)
 
-    signed = (
-        sign_seismic_tx_eip712(tx, private_key)
-        if eip712
-        else sign_seismic_tx(tx, private_key)
-    )
-
-    # Send signed raw tx directly as first param to eth_call
-    # (matches viem: params = [serializedTransaction, block])
     response = w3.provider.make_request(
         RPCEndpoint("eth_call"),
         [signed.to_0x_hex(), "latest"],
@@ -746,25 +682,9 @@ async def async_signed_call(
 
     gas_price = await w3.eth.gas_price
 
-    tx = UnsignedSeismicTx(
-        chain_id=metadata.legacy_fields.chain_id,
-        nonce=metadata.legacy_fields.nonce,
-        gas_price=gas_price,
-        gas=gas,
-        to=to,
-        value=value,
-        data=HexBytes(encrypted),
-        seismic=metadata.seismic_elements,
-    )
+    tx = _build_unsigned_tx(metadata, gas_price, gas, HexBytes(encrypted))
+    signed = _sign_tx(tx, private_key, eip712)
 
-    signed = (
-        sign_seismic_tx_eip712(tx, private_key)
-        if eip712
-        else sign_seismic_tx(tx, private_key)
-    )
-
-    # Send signed raw tx directly as first param to eth_call
-    # (matches viem: params = [serializedTransaction, block])
     response = await w3.provider.make_request(
         RPCEndpoint("eth_call"),
         [signed.to_0x_hex(), "latest"],
