@@ -17,6 +17,29 @@ import {
   testSecp256k1,
 } from '@sviem-tests/tests/precompiles.ts'
 import {
+  testHasShieldedParamsDetectsShielded,
+  testHasShieldedParamsDetectsTransparent,
+  testHasShieldedParamsTransparentContract,
+  testHasShieldedParamsViewFunctions,
+  testSmartReadAfterSmartWrite,
+  testSmartReadTransparentContract,
+  testSmartReadTransparentParam,
+  testSmartRoutingLifecycle,
+  testSmartWalletActionsLifecycle,
+  testSmartWalletReadTransparent,
+  testSmartWalletWriteShielded,
+  testSmartWalletWriteTransparent,
+  testSmartWriteShieldedParam,
+  testSmartWriteTransparentContract,
+  testSmartWriteTransparentParam,
+  testSreadAlwaysShielded,
+  testSreadContractAlwaysShielded,
+  testSwriteAlwaysShielded,
+  testSwriteContractAlwaysShielded,
+  testTwriteContractRemapsShieldedTypes,
+  testTwriteRemapsShieldedTypes,
+} from '@sviem-tests/tests/smartRouting/smartRouting.ts'
+import {
   testLegacyTxTrace,
   testSeismicTxTrace,
 } from '@sviem-tests/tests/trace.ts'
@@ -185,34 +208,6 @@ describe('Seismic Transaction Encoding', async () => {
   )
 })
 
-describe('Typed Data', async () => {
-  test(
-    'client can sign a seismic typed message',
-    async () =>
-      await testSeismicCallTypedData({
-        chain,
-        account,
-        url,
-        encryptionSk: ENC_SK,
-        encryptionPubkey: ENC_PK,
-      }),
-    { timeout: TIMEOUT_MS }
-  )
-
-  test(
-    'client can sign via eth_signTypedData',
-    async () =>
-      await testSeismicTxTypedData({
-        account,
-        chain,
-        url,
-        encryptionSk: ENC_SK,
-        encryptionPubkey: ENC_PK,
-      }),
-    { timeout: TIMEOUT_MS }
-  )
-})
-
 describe('AES', async () => {
   test('generates AES key correctly', testAesKeygen)
 })
@@ -303,6 +298,164 @@ describe('Transaction Trace', async () => {
     async () => {
       await testLegacyTxTrace({ chain, url, account })
     },
+    { timeout: TIMEOUT_MS }
+  )
+})
+
+describe('hasShieldedParams utility', () => {
+  test(
+    'detects shielded params (suint256)',
+    testHasShieldedParamsDetectsShielded
+  )
+  test(
+    'detects transparent params (no shielded types)',
+    testHasShieldedParamsDetectsTransparent
+  )
+  test(
+    'view functions with no inputs are not shielded',
+    testHasShieldedParamsViewFunctions
+  )
+  test(
+    'transparent contract has no shielded functions',
+    testHasShieldedParamsTransparentContract
+  )
+})
+
+describe('Smart routing: contract.write', () => {
+  test(
+    'contract.write routes to shielded tx for suint256 param',
+    async () => await testSmartWriteShieldedParam({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'contract.write routes to transparent tx for no shielded params',
+    async () => await testSmartWriteTransparentParam({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'contract.write on transparent contract uses transparent tx',
+    async () =>
+      await testSmartWriteTransparentContract({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+describe('Smart routing: contract.read', () => {
+  test(
+    'contract.read routes to transparent read for no shielded inputs',
+    async () => await testSmartReadTransparentParam({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'contract.read returns correct data after smart write cycle',
+    async () => await testSmartReadAfterSmartWrite({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'contract.read on transparent contract uses transparent read',
+    async () => await testSmartReadTransparentContract({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+describe('twrite/tread remap shielded types', () => {
+  test(
+    'contract.twrite remaps suint256 and sends non-seismic tx',
+    async () => await testTwriteRemapsShieldedTypes({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'walletClient.twriteContract remaps suint256 and sends non-seismic tx',
+    async () =>
+      await testTwriteContractRemapsShieldedTypes({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+describe('Force shielded: contract.swrite / contract.sread', () => {
+  test(
+    'contract.swrite always uses seismic tx even for transparent functions',
+    async () => await testSwriteAlwaysShielded({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'contract.sread always uses signed read even for transparent functions',
+    async () => await testSreadAlwaysShielded({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+describe('Smart routing: wallet client actions', () => {
+  test(
+    'walletClient.writeContract routes to shielded for suint256',
+    async () => await testSmartWalletWriteShielded({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'walletClient.writeContract routes to transparent for no shielded params',
+    async () => await testSmartWalletWriteTransparent({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'walletClient.readContract routes to transparent for no shielded inputs',
+    async () => await testSmartWalletReadTransparent({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+describe('Force shielded: wallet client actions', () => {
+  test(
+    'walletClient.swriteContract always uses seismic tx',
+    async () => await testSwriteContractAlwaysShielded({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'walletClient.sreadContract always uses signed read',
+    async () => await testSreadContractAlwaysShielded({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+describe('Smart routing: end-to-end lifecycle', () => {
+  test(
+    'full lifecycle via contract proxy with all routing modes',
+    async () => await testSmartRoutingLifecycle({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'full lifecycle via wallet client actions with all routing modes',
+    async () => await testSmartWalletActionsLifecycle({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+// Typed Data tests are placed last because they use EIP-712 messageVersion=2
+// signing which may fail on older sreth versions, and a failure here would
+// corrupt the shared account nonce for all subsequent tests.
+describe('Typed Data', async () => {
+  test(
+    'client can sign a seismic typed message',
+    async () =>
+      await testSeismicCallTypedData({
+        chain,
+        account,
+        url,
+        encryptionSk: ENC_SK,
+        encryptionPubkey: ENC_PK,
+      }),
+    { timeout: TIMEOUT_MS }
+  )
+
+  test(
+    'client can sign via eth_signTypedData',
+    async () =>
+      await testSeismicTxTypedData({
+        account,
+        chain,
+        url,
+        encryptionSk: ENC_SK,
+        encryptionPubkey: ENC_PK,
+      }),
     { timeout: TIMEOUT_MS }
   )
 })

@@ -133,6 +133,8 @@ docs/                    Documentation site (VoCs + Tailwind)
 
 These are resolved at build time by `tsc-alias`.
 
+**No `as any` casts.** Use concrete types instead. When bridging between viem's deeply generic types and runtime-dispatched implementations, use named concrete type aliases (e.g., `ConcreteWriteContractParameters`) with generics erased to their widest bounds, `Record<string, unknown>` for spreading untyped option bags, or `Parameters<typeof fn>[N]` to extract the expected parameter type from the target function. Reserve `@ts-expect-error` with a comment for the rare cases where TypeScript genuinely cannot follow the type narrowing.
+
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`):
