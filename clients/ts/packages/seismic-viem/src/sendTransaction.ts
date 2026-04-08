@@ -28,12 +28,7 @@ import type {
   GetTransactionErrorReturnType,
   RequestErrorType,
 } from 'viem/utils'
-import {
-  assertRequest,
-  extract,
-  getAction,
-  getTransactionError,
-} from 'viem/utils'
+import { assertRequest, getAction, getTransactionError } from 'viem/utils'
 
 import {
   SeismicSecurityParams,
@@ -214,17 +209,16 @@ export async function sendShieldedTransaction<
         metadata
       )
 
-      const chainFormat = client.chain?.formatters?.transactionRequest?.format
-      const request = {
-        ...extract(
-          { ...rest, ...metadata.seismicElements, type: 'seismic' },
-          { format: chainFormat }
-        ),
+      // Estimate gas and fill fee fields using PLAINTEXT calldata as a
+      // standard legacy tx (no seismic fields).  This avoids hitting
+      // sreth's eth_estimateGas with encrypted data + type 0x4a, which
+      // can return incorrect values and leave the tx stuck in the mempool.
+      const prepRequest = {
         accessList,
         authorizationList,
         blobs,
         chainId: metadata.legacyFields.chainId,
-        data: encryptedCalldata,
+        data: plaintextCalldata,
         from: account.address,
         gas,
         gasPrice,
@@ -234,16 +228,27 @@ export async function sendShieldedTransaction<
         nonce: metadata.legacyFields.nonce,
         to,
         value,
-        // prepareTransactionRequest will fill the required fields using legacy spec
         type: 'legacy',
-        ...rest,
       } as any
 
       const { type: _legacy, ...viemPreparedTx } =
-        await prepareTransactionRequest(client, request)
+        await prepareTransactionRequest(client, prepRequest)
 
+      // Seismic txs use legacy-style gasPrice.  prepareTransactionRequest
+      // may set gasPrice to 0 on dev chains whose base fee hasn't ramped
+      // up yet, but the block builder will skip txs with gasPrice < baseFee.
+      // Fall back to eth_gasPrice (which always returns >= baseFee).
+      const prepared = viemPreparedTx as Record<string, unknown>
+      if (!prepared.gasPrice) {
+        prepared.gasPrice = await client.getGasPrice()
+      }
+
+      // Graft the seismic fields and encrypted calldata onto the
+      // prepared transaction (gas, gasPrice, nonce are already filled).
       const preparedTx = {
         ...viemPreparedTx,
+        ...metadata.seismicElements,
+        data: encryptedCalldata,
         type: 'seismic',
       } as TransactionSerializableSeismic
 

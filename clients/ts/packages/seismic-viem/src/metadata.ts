@@ -45,7 +45,7 @@ const fillNonce = async <
     return nonce_
   }
 
-  const { blockNumber, blockTag = 'latest' } = parameters
+  const { blockNumber, blockTag = 'pending' } = parameters
   let args: GetTransactionCountParameters = {
     address: account.address,
     blockTag,
