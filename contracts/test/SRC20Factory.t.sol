@@ -17,9 +17,7 @@ contract SRC20FactoryTest is Test {
 
     function testCreateToken() public {
         vm.prank(alice);
-        address tokenAddr = factory.createToken(
-            "Test Token", "TST", 18, suint256(1_000_000e18)
-        );
+        address tokenAddr = factory.createToken("Test Token", "TST", 18, suint256(1_000_000e18));
 
         SRC20Token token = SRC20Token(tokenAddr);
 
@@ -162,12 +160,7 @@ contract SRC20FactoryTest is Test {
         assertEq(token.balance(), 0);
     }
 
-    function testFuzzCreateToken(
-        string memory name,
-        string memory symbol,
-        uint8 decimals,
-        uint128 supply
-    ) public {
+    function testFuzzCreateToken(string memory name, string memory symbol, uint8 decimals, uint128 supply) public {
         vm.prank(alice);
         address tokenAddr = factory.createToken(name, symbol, decimals, suint256(uint256(supply)));
         SRC20Token token = SRC20Token(tokenAddr);

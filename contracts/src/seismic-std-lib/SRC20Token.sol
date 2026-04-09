@@ -9,13 +9,9 @@ import {SRC20} from "seismic-std-lib/SRC20.sol";
 contract SRC20Token is SRC20 {
     address public owner;
 
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals,
-        suint256 _initialSupply,
-        address _owner
-    ) SRC20(_name, _symbol, _decimals) {
+    constructor(string memory _name, string memory _symbol, uint8 _decimals, suint256 _initialSupply, address _owner)
+        SRC20(_name, _symbol, _decimals)
+    {
         owner = _owner;
         _mint(_owner, _initialSupply);
     }

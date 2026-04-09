@@ -7,24 +7,15 @@ import {SRC20Token} from "./SRC20Token.sol";
 /// @dev Each createToken call deploys a full SRC20Token contract (not a clone)
 ///      because SRC20 uses immutable fields that must be set in the constructor.
 contract SRC20Factory {
-    event TokenCreated(
-        address indexed creator,
-        address indexed token,
-        string name,
-        string symbol
-    );
+    event TokenCreated(address indexed creator, address indexed token, string name, string symbol);
 
     address[] public tokens;
 
-    function createToken(
-        string memory name,
-        string memory symbol,
-        uint8 decimals,
-        suint256 initialSupply
-    ) external returns (address) {
-        SRC20Token token = new SRC20Token(
-            name, symbol, decimals, initialSupply, msg.sender
-        );
+    function createToken(string memory name, string memory symbol, uint8 decimals, suint256 initialSupply)
+        external
+        returns (address)
+    {
+        SRC20Token token = new SRC20Token(name, symbol, decimals, initialSupply, msg.sender);
         tokens.push(address(token));
         emit TokenCreated(msg.sender, address(token), name, symbol);
         return address(token);
