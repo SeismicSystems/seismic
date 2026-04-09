@@ -46,10 +46,8 @@ const doSignedCall = async <
   seismicTx: TransactionSerializableSeismic,
   { block }: { block: Hex | BlockTag }
 ) => {
-  if (client.account?.type === 'json-rpc') {
-    // for e.g. metamask support:
-    // submit a request to sign typed data and then send
-    // the typedData and signature to the node
+  if (client.account?.type === 'json-rpc' || client.account?.type === 'local') {
+    // sign typed data and then send the typedData and signature to the node
     const { typedData, signature } = await signSeismicTxTypedData(
       client,
       seismicTx
@@ -72,14 +70,6 @@ const doSignedCall = async <
   const response: Hex = await client.request({
     method: 'eth_call',
     params: [serializedTransaction, block],
-    // NOTE: not supporting state override for signed calls
-    // params: rpcStateOverride
-    //   ? [
-    //       request as ExactPartial<RpcTransactionRequest>,
-    //       block,
-    //       rpcStateOverride,
-    //     ]
-    //   : [request as ExactPartial<RpcTransactionRequest>, block],
   })
   return response
 }
