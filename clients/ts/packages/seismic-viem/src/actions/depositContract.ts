@@ -10,8 +10,7 @@ import type {
   WalletClient,
 } from 'viem'
 import type { WriteContractReturnType } from 'viem'
-import { encodeFunctionData } from 'viem'
-import { readContract } from 'viem/actions'
+import { readContract, writeContract } from 'viem/actions'
 
 import { depositContractAbi } from '@sviem/abis/depositContract.ts'
 
@@ -90,11 +89,10 @@ export const depositContractWalletActions = <
 >(
   client: WalletClient<TTransport, TChain, TAccount>
 ): DepositContractWalletActions => ({
-  deposit: async (args) => {
-    // Send directly via sendTransaction instead of writeContract to avoid
-    // eth_call simulation, which on sreth currently drops msg.value.
-    const data = encodeFunctionData({
+  deposit: async (args) =>
+    writeContract(client, {
       abi: depositContractAbi,
+      address: args.address || DEPOSIT_CONTRACT_ADDRESS,
       functionName: 'deposit',
       args: [
         args.nodePubkey,
@@ -104,11 +102,6 @@ export const depositContractWalletActions = <
         args.consensusSignature,
         args.depositDataRoot,
       ],
-    })
-    return client.sendTransaction({
-      to: args.address || DEPOSIT_CONTRACT_ADDRESS,
-      data,
       value: args.value,
-    } as any)
-  },
+    } as any),
 })
