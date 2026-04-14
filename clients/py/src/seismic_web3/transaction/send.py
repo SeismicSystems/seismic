@@ -205,7 +205,7 @@ async def async_estimate_shielded_gas(
 def estimate_transparent_gas(
     w3: Web3,
     *,
-    to: ChecksumAddress,
+    to: str,
     data: str,
     value: int,
     private_key: PrivateKey,
@@ -239,7 +239,7 @@ def estimate_transparent_gas(
 async def async_estimate_transparent_gas(
     w3: AsyncWeb3,
     *,
-    to: ChecksumAddress,
+    to: str,
     data: str,
     value: int,
     private_key: PrivateKey,
