@@ -11,9 +11,9 @@ import type {
   GetChainParameter,
   Hash,
   PrepareTransactionRequestErrorType,
-  SendTransactionReturnType,
   SendRawTransactionErrorType,
   SendTransactionParameters,
+  SendTransactionReturnType,
   Transport,
   UnionOmit,
 } from 'viem'
@@ -88,17 +88,17 @@ const DEFAULT_SIGNED_ESTIMATE_GAS_LIMIT = 30_000_000n
 export type SendSeismicTransactionErrorType =
   | ParseAccountErrorType
   | GetTransactionErrorReturnType<
-    | AccountNotFoundErrorType
-    | AccountTypeNotSupportedErrorType
-    | AssertCurrentChainErrorType
-    | AssertRequestErrorType
-    | GetChainIdErrorType
-    | PrepareTransactionRequestErrorType
-    | SendRawTransactionErrorType
-    | RecoverAuthorizationAddressErrorType
-    | SignTransactionErrorType
-    | RequestErrorType
-  >
+      | AccountNotFoundErrorType
+      | AccountTypeNotSupportedErrorType
+      | AssertCurrentChainErrorType
+      | AssertRequestErrorType
+      | GetChainIdErrorType
+      | PrepareTransactionRequestErrorType
+      | SendRawTransactionErrorType
+      | RecoverAuthorizationAddressErrorType
+      | SignTransactionErrorType
+      | RequestErrorType
+    >
   | ErrorType
 
 export async function sendTransparentTransaction<
@@ -165,7 +165,14 @@ export async function sendTransparentTransaction<
       maxPriorityFeePerGas,
       nonce,
       nonceManager: account.nonceManager,
-      parameters: ['blobVersionedHashes', 'chainId', 'fees', 'nonce', 'type', 'sidecars'],
+      parameters: [
+        'blobVersionedHashes',
+        'chainId',
+        'fees',
+        'nonce',
+        'type',
+        'sidecars',
+      ],
       value,
       ...rest,
       to,

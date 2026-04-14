@@ -78,9 +78,7 @@ export type ShieldedWalletActions<
   // Today only `local` accounts can perform signed transparent `eth_estimateGas`
   // because the client has direct access to the signing key. `json-rpc` accounts
   // fall back to viem's normal unsigned estimation path.
-  sendTransaction: <
-    TChainOverride extends Chain | undefined = undefined,
-  >(
+  sendTransaction: <TChainOverride extends Chain | undefined = undefined>(
     args: SendTransactionParameters<TChain, TAccount, TChainOverride>
   ) => Promise<SendTransactionReturnType>
   writeContract: <
