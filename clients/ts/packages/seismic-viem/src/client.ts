@@ -86,13 +86,22 @@ export type ShieldedPublicClient<
  *   - `getEncryptionPublicKey`: return only the user's encryption public key
  *   - `signedCall`: make an eth_call. The `data` parameter should already be encrypted
  *   - `sendShieldedTransaction`: send a Seismic transaction to the network. The `data` parameter should already be encrypted
+ *   - `sendTransaction`: transparent transaction path. For `local` accounts, gas estimation is
+ *     performed via a signed `eth_estimateGas` request; for `json-rpc` accounts, this currently
+ *     falls back to viem's standard behavior.
  *   - `readContract`: smart read — auto-detects shielded params; uses signed read if shielded, transparent read otherwise
  *   - `sreadContract`: force shielded read — always uses signed read
  *   - `treadContract`: force transparent read — always uses unsigned read (from the zero address)
  *   - `writeContract`: smart write — auto-detects shielded params; uses shielded write if shielded, transparent write otherwise
+ *     Transparent writes inherit the `sendTransaction` behavior above, so `local` accounts also
+ *     use signed `eth_estimateGas` there.
  *   - `swriteContract`: force shielded write — always encrypts calldata via seismic transaction
- *   - `twriteContract`: force transparent write — executes via standard ethereum transaction
- *   - `deposit`: deposit into the deposit contract
+ *   - `twriteContract`: force transparent write — executes via standard ethereum transaction and
+ *     also inherits signed `eth_estimateGas` for `local` accounts
+ *   - `deposit`: deposit into the deposit contract. This currently uses the transparent
+ *     `writeContract` path, so it inherits the same estimateGas behavior.
+ *   - `deployContract`: currently still uses viem's direct deploy path; treat its gas-estimation
+ *     behavior separately from the transparent send override above.
  *   - `watchSRC20Events`: watch SRC20 events for the connected wallet
  */
 export type ShieldedWalletClient<
