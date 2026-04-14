@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: ["clients/ts/**"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 defaults:
   run:
     working-directory: clients/ts
