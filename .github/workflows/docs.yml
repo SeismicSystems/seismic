@@ -19,6 +19,7 @@ jobs:
   gitbook-links:
     name: GitBook broken links
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
       - uses: lycheeverse/lychee-action@v2
@@ -29,6 +30,7 @@ jobs:
   repo-links:
     name: Repo docs broken links
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
       - uses: lycheeverse/lychee-action@v2

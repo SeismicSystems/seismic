@@ -11,6 +11,7 @@ jobs:
   # linter for the mise.toml files themselves, to catch common mistakes and enforce consistency across the files.
   validate-tasks:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v2
