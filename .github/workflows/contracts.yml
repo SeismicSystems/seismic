@@ -12,16 +12,7 @@ defaults:
     working-directory: contracts
 
 jobs:
-  contracts-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: recursive
-      - uses: jdx/mise-action@v2
-      - run: mise run test
-
-  contracts-fmt-check:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -29,3 +20,4 @@ jobs:
           submodules: recursive
       - uses: jdx/mise-action@v2
       - run: mise run fmt-check
+      - run: mise run test
