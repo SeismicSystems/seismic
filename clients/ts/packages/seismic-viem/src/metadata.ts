@@ -72,7 +72,7 @@ const inferTypedDataTx = (
   if (typedDataTx !== undefined) {
     return typedDataTx
   }
-  return account.type === 'json-rpc'
+  return account.type === 'json-rpc' || account.type === 'local'
 }
 
 export const buildTxSeismicMetadata = async <
