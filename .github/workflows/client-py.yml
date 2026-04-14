@@ -36,6 +36,7 @@ jobs:
       - run: uv run ty check src/
 
   test:
+    needs: [lint, typecheck]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -50,6 +51,7 @@ jobs:
       - run: uv run pytest tests/ -v --ignore=tests/integration
 
   integration-test:
+    needs: [lint, typecheck]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

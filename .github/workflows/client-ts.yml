@@ -34,6 +34,7 @@ jobs:
       - run: mise run build
 
   test-sanvil:
+    needs: [lint, typecheck, build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -41,6 +42,7 @@ jobs:
       - run: mise run test::sanvil
 
   test-sreth:
+    needs: [lint, typecheck, build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
