@@ -46,6 +46,13 @@ if TYPE_CHECKING:
     from seismic_web3.client import EncryptionState
     from seismic_web3.transaction_types import DebugWriteResult, SeismicSecurityParams
 
+#: Hardcoded gas limit for deposit transactions.  Unsigned
+#: ``eth_estimateGas`` zeroes ``value`` (to prevent InsufficientFunds
+#: from the zero address), which causes payable-minimum-check reverts.
+#: Providing an explicit gas skips the estimate entirely.
+#: TODO: remove once signed eth_estimateGas works for transparent txs.
+_DEPOSIT_GAS = 500_000
+
 
 # ---------------------------------------------------------------------------
 # Public (read-only) namespaces
@@ -461,8 +468,16 @@ class SeismicNamespace(SeismicPublicNamespace):
                 deposit_data_root,
             ],
         )
+        # Explicit gas avoids unsigned eth_estimateGas, which zeroes
+        # value and causes "deposit value too low" reverts.
+        # TODO: remove once signed eth_estimateGas works
         return self._w3.eth.send_transaction(
-            {"to": address, "data": data.to_0x_hex(), "value": value},
+            {
+                "to": address,
+                "data": data.to_0x_hex(),
+                "value": value,
+                "gas": _DEPOSIT_GAS,
+            },
         )
 
 
@@ -702,6 +717,14 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
                 deposit_data_root,
             ],
         )
+        # Explicit gas avoids unsigned eth_estimateGas, which zeroes
+        # value and causes "deposit value too low" reverts.
+        # TODO: remove once signed eth_estimateGas works
         return await self._w3.eth.send_transaction(
-            {"to": address, "data": data.to_0x_hex(), "value": value},
+            {
+                "to": address,
+                "data": data.to_0x_hex(),
+                "value": value,
+                "gas": _DEPOSIT_GAS,
+            },
         )

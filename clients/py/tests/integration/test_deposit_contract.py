@@ -83,6 +83,7 @@ def _make_deposit(
         CONSENSUS_SIGNATURE,
         deposit_data_root,
         value=amount_ether * 10**18,
+        gas=500_000,
     )
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
     assert receipt["status"] == 1, "Deposit transaction failed"
