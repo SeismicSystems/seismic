@@ -30,9 +30,11 @@ from seismic_web3.contract.shielded import AsyncShieldedContract, ShieldedContra
 from seismic_web3.rpc import async_get_tee_public_key, get_tee_public_key
 from seismic_web3.transaction.send import (
     async_debug_send_shielded_transaction,
+    async_estimate_transparent_gas,
     async_send_shielded_transaction,
     async_signed_call,
     debug_send_shielded_transaction,
+    estimate_transparent_gas,
     send_shielded_transaction,
     signed_call,
 )
@@ -45,13 +47,6 @@ if TYPE_CHECKING:
     from seismic_web3._types import CompressedPublicKey, PrivateKey
     from seismic_web3.client import EncryptionState
     from seismic_web3.transaction_types import DebugWriteResult, SeismicSecurityParams
-
-#: Hardcoded gas limit for deposit transactions.  Unsigned
-#: ``eth_estimateGas`` zeroes ``value`` (to prevent InsufficientFunds
-#: from the zero address), which causes payable-minimum-check reverts.
-#: Providing an explicit gas skips the estimate entirely.
-#: TODO: remove once signed eth_estimateGas works for transparent txs.
-_DEPOSIT_GAS = 500_000
 
 
 # ---------------------------------------------------------------------------
@@ -468,16 +463,15 @@ class SeismicNamespace(SeismicPublicNamespace):
                 deposit_data_root,
             ],
         )
-        # Explicit gas avoids unsigned eth_estimateGas, which zeroes
-        # value and causes "deposit value too low" reverts.
-        # TODO: remove once signed eth_estimateGas works
+        gas = estimate_transparent_gas(
+            self._w3,
+            to=address,
+            data=data.to_0x_hex(),
+            value=value,
+            private_key=self._private_key,
+        )
         return self._w3.eth.send_transaction(
-            {
-                "to": address,
-                "data": data.to_0x_hex(),
-                "value": value,
-                "gas": _DEPOSIT_GAS,
-            },
+            {"to": address, "data": data.to_0x_hex(), "value": value, "gas": gas},
         )
 
 
@@ -717,14 +711,13 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
                 deposit_data_root,
             ],
         )
-        # Explicit gas avoids unsigned eth_estimateGas, which zeroes
-        # value and causes "deposit value too low" reverts.
-        # TODO: remove once signed eth_estimateGas works
+        gas = await async_estimate_transparent_gas(
+            self._w3,
+            to=address,
+            data=data.to_0x_hex(),
+            value=value,
+            private_key=self._private_key,
+        )
         return await self._w3.eth.send_transaction(
-            {
-                "to": address,
-                "data": data.to_0x_hex(),
-                "value": value,
-                "gas": _DEPOSIT_GAS,
-            },
+            {"to": address, "data": data.to_0x_hex(), "value": value, "gas": gas},
         )
