@@ -464,15 +464,15 @@ class TestBuildSeismicTypedData:
 
 # Pre-computed expected signed tx (anvil key #0, message_version=2).
 EXPECTED_EIP712_SIGNED_TX = (
-    "0x4af90112827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f"
+    "0x4af90113827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f"
     "6cbdac39604687038d7ea4c68000a1028e76821eb4d77fd30223ca971c49738eb5"
     "b5b71eabe93f96b348fdce788ae5a08c46a2b6020bba77fcb1e676a602a0934207"
     "181885f6859ca848f5f01091d1957444a920a2bfb262fa043c6c239f906480b850"
     "bf645e68de8096b62950fac2d5bceb71ab1a085aed2e973a8b4f961ca77209f991"
     "16130edecd27c39fc62e1b3c05ff42d9e4382f987fc55c2011f8e4f2e66204e171"
-    "74e9d2756bb20f4cdfe48bd5d23780a075f0104222864723bca4714783f66ebe01"
-    "37682e32cac7dca7113fded9f4126aa008ca7dbe13125a35fd5baf6bb5ad7052e3"
-    "8f954e028ccd6ead85e9c39aafdbbe"
+    "74e9d2756bb20f4cdfe48bd5d237c080a075f0104222864723bca4714783f66ebe"
+    "0137682e32cac7dca7113fded9f4126aa008ca7dbe13125a35fd5baf6bb5ad7052"
+    "e38f954e028ccd6ead85e9c39aafdbbe"
 )
 
 
@@ -510,8 +510,8 @@ class TestSignSeismicTxEIP712:
         signed = sign_seismic_tx_eip712(tx, ANVIL_PK)
         # Strip 0x4a prefix, decode RLP
         decoded = rlp.decode(bytes(signed[1:]))
-        # 13 tx fields + 3 signature fields = 16
-        assert len(decoded) == 16
+        # 13 tx fields + 1 authorization_list + 3 signature fields = 17
+        assert len(decoded) == 17
 
     def test_message_version_in_rlp(self):
         """The RLP contains message_version=2."""
@@ -567,7 +567,7 @@ class TestRustCrossValidation:
         signed = serialize_signed(tx, sig)
         tx_hash = keccak(bytes(signed))
         expected = bytes.fromhex(
-            "d33755a15aeb3023cb6e5a593a60cb963b2381c44342a43b1088465931b1cdbc"
+            "8c95f5133ab8d55531621f1d46f0ca092084be09db7a932e738c56003d3735eb"
         )
         assert tx_hash == expected
 
