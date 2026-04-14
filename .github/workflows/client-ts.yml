@@ -22,6 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('clients/ts/bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
       - run: mise run lint::check
       - run: mise run typecheck
       - run: mise run build
@@ -33,6 +39,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('clients/ts/bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
       - run: mise run test::sanvil
 
   test-sreth:
@@ -52,6 +64,12 @@ jobs:
       - uses: jdx/mise-action@v2
         with:
           working_directory: seismic
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('seismic/clients/ts/bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
 
       # `mise run test::sreth` below starts reth in the background using `cargo run`,
       # so we cache the built binary to speed up the workflow.
