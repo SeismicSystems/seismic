@@ -8,6 +8,13 @@ import { testSeismicTx } from '@sviem-tests/tests/contract/contract.ts'
 import { testDepositContract } from '@sviem-tests/tests/contract/depositContract.ts'
 import { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'
 import {
+  testEstimateGasReturnsReasonableValue,
+  testLifecycleWithEstimatedGas,
+  testWriteUsesEstimatedGasNot30M,
+  testWriteWithExplicitGasSkipsEstimation,
+  testWriteWithoutExplicitGasSucceeds,
+} from '@sviem-tests/tests/estimateGas.ts'
+import {
   testAesGcm,
   testEcdh,
   testHkdfHex,
@@ -114,6 +121,41 @@ describe('Seismic Contract', async () => {
     {
       timeout: CONTRACT_TIMEOUT_MS,
     }
+  )
+})
+
+describe('Signed estimate gas', async () => {
+  test(
+    'signed estimate gas returns reasonable value',
+    async () =>
+      await testEstimateGasReturnsReasonableValue({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+
+  test(
+    'write without explicit gas auto-estimates and succeeds',
+    async () =>
+      await testWriteWithoutExplicitGasSucceeds({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+
+  test(
+    'write uses estimated gas, not 30M default',
+    async () => await testWriteUsesEstimatedGasNot30M({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+
+  test(
+    'explicit gas skips estimation',
+    async () =>
+      await testWriteWithExplicitGasSkipsEstimation({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+
+  test(
+    'full lifecycle with auto-estimated gas',
+    async () => await testLifecycleWithEstimatedGas({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
   )
 })
 

@@ -15,6 +15,10 @@ on:
       - "README.md"
       - "CLAUDE.md"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   gitbook-links:
     name: GitBook broken links
