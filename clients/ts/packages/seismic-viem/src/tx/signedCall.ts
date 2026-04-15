@@ -182,6 +182,7 @@ const prepareAccount = (
  * - Signed calls use Seismic metadata with `signedRead: true`.
  * - `local` and `json-rpc` accounts use the typed-data signing flow; other account types sign a serialized Seismic transaction directly.
  * - The function supports off-chain lookups (CCIP-Read) if enabled on the client.
+ * - TODO: deployless signed calls via `code` / `factory` / `factoryData` are not currently supported by this path.
  *
  * @example
  * ```typescript
