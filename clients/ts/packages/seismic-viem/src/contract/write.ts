@@ -24,8 +24,6 @@ import { buildTxSeismicMetadata } from '@sviem/metadata.ts'
 import { sendShieldedTransaction } from '@sviem/tx/sendShielded.ts'
 import type { SendSeismicTransactionParameters } from '@sviem/tx/types.ts'
 
-export { getPlaintextCalldata } from '@sviem/contract/calldata.ts'
-
 /**
  * Shared smart-write routing used by both the wallet actions and the
  * ABI/address-bound contract wrapper.
