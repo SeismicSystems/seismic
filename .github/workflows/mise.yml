@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: ["**/mise.toml"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   # linter for the mise.toml files themselves, to catch common mistakes and enforce consistency across the files.
   validate-tasks:
