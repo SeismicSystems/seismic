@@ -18,6 +18,7 @@ defaults:
 jobs:
   contracts-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
@@ -27,6 +28,7 @@ jobs:
 
   contracts-fmt-check:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
         with:
