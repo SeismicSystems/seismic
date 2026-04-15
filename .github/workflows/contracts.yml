@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: ["contracts/**"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 defaults:
   run:
     working-directory: contracts
@@ -14,6 +18,7 @@ defaults:
 jobs:
   contracts-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:
@@ -23,6 +28,7 @@ jobs:
 
   contracts-fmt-check:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
         with:

@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 
 import rlp
 from eth_hash.auto import keccak
-from eth_keys import keys as eth_keys
+from eth_keys.main import KeyAPI as eth_keys
 from hexbytes import HexBytes
 
 from seismic_web3._constants import SEISMIC_TX_TYPE
@@ -50,7 +50,7 @@ def _bool_to_rlp_bytes(value: bool) -> bytes:
     return b"\x01" if value else b""
 
 
-def _tx_rlp_fields(tx: UnsignedSeismicTx) -> list[bytes]:
+def _tx_rlp_fields(tx: UnsignedSeismicTx) -> list:
     """Build the ordered list of RLP fields for a Seismic transaction.
 
     Field order matches ``serializeSeismicTransaction`` in seismic-viem::
@@ -60,7 +60,9 @@ def _tx_rlp_fields(tx: UnsignedSeismicTx) -> list[bytes]:
         expiresAtBlock, signedRead, data
     """
     se = tx.seismic
-    return [
+    # Untyped list: contains bytes for scalar fields and list[list[bytes]]
+    # for the nested authorization list. rlp.encode handles both recursively.
+    fields: list = [
         _int_to_rlp_bytes(tx.chain_id),
         _int_to_rlp_bytes(tx.nonce),
         _int_to_rlp_bytes(tx.gas_price),
@@ -75,6 +77,21 @@ def _tx_rlp_fields(tx: UnsignedSeismicTx) -> list[bytes]:
         _bool_to_rlp_bytes(se.signed_read),
         bytes(tx.data),
     ]
+    # Authorization list: nested RLP list
+    # [[chain_id, address, nonce, y_parity, r, s], ...]
+    auth_items = [
+        [
+            _int_to_rlp_bytes(a.chain_id),
+            _address_to_bytes(a.address),
+            _int_to_rlp_bytes(a.nonce),
+            _int_to_rlp_bytes(a.y_parity),
+            _int_to_rlp_bytes(a.r),
+            _int_to_rlp_bytes(a.s),
+        ]
+        for a in tx.authorization_list
+    ]
+    fields.append(auth_items)
+    return fields
 
 
 def serialize_unsigned(tx: UnsignedSeismicTx) -> bytes:

@@ -23,9 +23,11 @@ from seismic_web3.contract.abi import (
 )
 from seismic_web3.transaction.send import (
     async_debug_send_shielded_transaction,
+    async_estimate_transparent_gas,
     async_send_shielded_transaction,
     async_signed_call,
     debug_send_shielded_transaction,
+    estimate_transparent_gas,
     send_shielded_transaction,
     signed_call,
 )
@@ -192,16 +194,26 @@ class _TransparentWriteNamespace:
         w3: Web3,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        private_key: PrivateKey | None = None,
     ) -> None:
         self._w3 = w3
         self._address = address
         self._abi = abi
+        self._private_key = private_key
 
     def __getattr__(self, fn_name: str) -> Callable[..., HexBytes]:
         """Return a callable that sends a standard transaction for ``fn_name``."""
 
         def call(*args: Any, value: int = 0, **tx_params: Any) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
+            if "gas" not in tx_params and self._private_key is not None:
+                tx_params["gas"] = estimate_transparent_gas(
+                    self._w3,
+                    to=self._address,
+                    data=data.to_0x_hex(),
+                    value=value,
+                    private_key=self._private_key,
+                )
             tx: dict[str, Any] = {
                 "to": self._address,
                 "data": data.to_0x_hex(),
@@ -286,13 +298,21 @@ class _SmartWriteNamespace:
                     eip712=self._eip712,
                 )
             else:
+                estimated_gas = gas
+                if estimated_gas is None:
+                    estimated_gas = estimate_transparent_gas(
+                        self._w3,
+                        to=self._address,
+                        data=data.to_0x_hex(),
+                        value=value,
+                        private_key=self._private_key,
+                    )
                 tx: dict[str, Any] = {
                     "to": self._address,
                     "data": data.to_0x_hex(),
                     "value": value,
+                    "gas": estimated_gas,
                 }
-                if gas is not None:
-                    tx["gas"] = gas
                 if gas_price is not None:
                     tx["gasPrice"] = gas_price
                 return self._w3.eth.send_transaction(tx)
@@ -499,16 +519,26 @@ class _AsyncTransparentWriteNamespace:
         w3: AsyncWeb3,
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
+        private_key: PrivateKey | None = None,
     ) -> None:
         self._w3 = w3
         self._address = address
         self._abi = abi
+        self._private_key = private_key
 
     def __getattr__(self, fn_name: str) -> Callable[..., Any]:
         """Return an async callable that sends a standard transaction."""
 
         async def call(*args: Any, value: int = 0, **tx_params: Any) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
+            if "gas" not in tx_params and self._private_key is not None:
+                tx_params["gas"] = await async_estimate_transparent_gas(
+                    self._w3,
+                    to=self._address,
+                    data=data.to_0x_hex(),
+                    value=value,
+                    private_key=self._private_key,
+                )
             tx: dict[str, Any] = {
                 "to": self._address,
                 "data": data.to_0x_hex(),
@@ -593,13 +623,21 @@ class _AsyncSmartWriteNamespace:
                     eip712=self._eip712,
                 )
             else:
+                estimated_gas = gas
+                if estimated_gas is None:
+                    estimated_gas = await async_estimate_transparent_gas(
+                        self._w3,
+                        to=self._address,
+                        data=data.to_0x_hex(),
+                        value=value,
+                        private_key=self._private_key,
+                    )
                 tx: dict[str, Any] = {
                     "to": self._address,
                     "data": data.to_0x_hex(),
                     "value": value,
+                    "gas": estimated_gas,
                 }
-                if gas is not None:
-                    tx["gas"] = gas
                 if gas_price is not None:
                     tx["gasPrice"] = gas_price
                 return await self._w3.eth.send_transaction(tx)
@@ -736,7 +774,12 @@ class ShieldedContract:
             abi,
             eip712=eip712,
         )
-        self.twrite = _TransparentWriteNamespace(w3, address, abi)
+        self.twrite = _TransparentWriteNamespace(
+            w3,
+            address,
+            abi,
+            private_key=private_key,
+        )
         self.tread = _TransparentReadNamespace(w3, address, abi)
         self.dwrite = _ShieldedDebugWriteNamespace(
             w3,
@@ -823,7 +866,12 @@ class AsyncShieldedContract:
             abi,
             eip712=eip712,
         )
-        self.twrite = _AsyncTransparentWriteNamespace(w3, address, abi)
+        self.twrite = _AsyncTransparentWriteNamespace(
+            w3,
+            address,
+            abi,
+            private_key=private_key,
+        )
         self.tread = _AsyncTransparentReadNamespace(w3, address, abi)
         self.dwrite = _AsyncShieldedDebugWriteNamespace(
             w3,
