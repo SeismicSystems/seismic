@@ -26,15 +26,23 @@ export {
 export { signSeismicTxTypedData } from '@sviem/signSeismicTypedData.ts'
 
 export { getShieldedContract } from '@sviem/contract/contract.ts'
-export { signedReadContract } from '@sviem/contract/read.ts'
+export {
+  signedReadContract,
+  transparentReadContract,
+} from '@sviem/contract/read.ts'
+export { estimateShieldedGas } from '@sviem/estimateGas.ts'
 export { signedCall } from '@sviem/signedCall.ts'
 export type { ShieldedWriteContractDebugResult } from '@sviem/contract/write.ts'
 export {
   shieldedWriteContract,
   shieldedWriteContractDebug,
   getPlaintextCalldata,
+  transparentWriteContract,
 } from '@sviem/contract/write.ts'
-export { remapSeismicAbiInputs } from '@sviem/contract/abi.ts'
+export {
+  hasShieldedParams,
+  remapSeismicAbiInputs,
+} from '@sviem/contract/abi.ts'
 
 export {
   createShieldedPublicClient,
