@@ -148,11 +148,11 @@ class TestTypeHashes:
         assert " ," not in TX_SEISMIC_TYPE_STR
         assert ", " not in TX_SEISMIC_TYPE_STR
 
-    def test_tx_seismic_has_13_fields(self):
-        """TxSeismic struct has exactly 13 fields."""
-        # Count commas inside the parentheses: 12 commas = 13 fields
+    def test_tx_seismic_has_14_fields(self):
+        """TxSeismic struct has exactly 14 fields."""
+        # Count commas inside the parentheses: 13 commas = 14 fields
         inner = TX_SEISMIC_TYPE_STR.split("(", 1)[1].rstrip(")")
-        assert inner.count(",") == 12
+        assert inner.count(",") == 13
 
     def test_domain_version_matches_constant(self):
         assert str(TYPED_DATA_MESSAGE_VERSION) == DOMAIN_VERSION
@@ -290,10 +290,9 @@ class TestStructHash:
     def test_known_vector_rust(self):
         """Cross-validate struct hash with seismic-alloy test_eip712_hash."""
         tx = _make_rust_test_vector_tx()
-        expected = bytes.fromhex(
-            "683f681e3a89f9fabcd7175e53c2d72ee0ecd9843e217aa9e97cfeebdad129de"
+        assert struct_hash(tx).hex() == (
+            "c9ae99a778a215dc1fd48f331e99aaff8a274c465c786ba3ba5e44facb5fcfb9"
         )
-        assert struct_hash(tx) == expected
 
 
 # ===================================================================
@@ -320,18 +319,16 @@ class TestEIP712SigningHash:
     def test_known_vector_anvil(self):
         """Known signing hash for the anvil test tx (chain 31337)."""
         tx = _make_eip712_tx()
-        expected = bytes.fromhex(
-            "ba60b0f59a1993d9bd3947ab92e9093a98580cf0ea886809d44488c116be6526"
+        assert eip712_signing_hash(tx).hex() == (
+            "2eed0627f80abbb44c3b6af040f5325566c481806a1c90e3dfe570ca8cf864f3"
         )
-        assert eip712_signing_hash(tx) == expected
 
     def test_known_vector_rust(self):
         """Cross-validate signing hash with seismic-alloy test_eip712_hash."""
         tx = _make_rust_test_vector_tx()
-        expected = bytes.fromhex(
-            "6152c0b10ef0cc2eb90a4bf27f5449d8a1f0529fb09998006dcee7a2e6f51f3f"
+        assert eip712_signing_hash(tx).hex() == (
+            "6f2f9a96ba31694d65f039356a838cf932f799b545fd95a7ff53616c55adffc1"
         )
-        assert eip712_signing_hash(tx) == expected
 
     def test_different_chain_ids_produce_different_hashes(self):
         """Same tx fields but different chain_id → different signing hash."""
@@ -388,10 +385,10 @@ class TestBuildSeismicTypedData:
         assert "EIP712Domain" in td["types"]
         assert "TxSeismic" in td["types"]
 
-    def test_tx_seismic_type_has_13_fields(self):
+    def test_tx_seismic_type_has_14_fields(self):
         tx = _make_eip712_tx()
         td = build_seismic_typed_data(tx)
-        assert len(td["types"]["TxSeismic"]) == 13
+        assert len(td["types"]["TxSeismic"]) == 14
 
     def test_message_fields_match_tx(self):
         tx = _make_eip712_tx()
@@ -428,6 +425,24 @@ class TestBuildSeismicTypedData:
         )
         td = build_seismic_typed_data(tx_create)
         assert td["message"]["to"] == VERIFYING_CONTRACT
+        assert td["message"]["isCreate"] is True
+
+    def test_call_to_zero_address_is_not_create(self):
+        """A call to the zero address must NOT be treated as contract creation."""
+        tx = _make_eip712_tx()
+        tx_zero = UnsignedSeismicTx(
+            chain_id=tx.chain_id,
+            nonce=tx.nonce,
+            gas_price=tx.gas_price,
+            gas=tx.gas,
+            to=VERIFYING_CONTRACT,  # explicit call to zero address
+            value=tx.value,
+            data=tx.data,
+            seismic=tx.seismic,
+        )
+        td = build_seismic_typed_data(tx_zero)
+        assert td["message"]["to"] == VERIFYING_CONTRACT
+        assert td["message"]["isCreate"] is False
 
     def test_encryption_nonce_is_integer(self):
         tx = _make_eip712_tx()
@@ -449,15 +464,15 @@ class TestBuildSeismicTypedData:
 
 # Pre-computed expected signed tx (anvil key #0, message_version=2).
 EXPECTED_EIP712_SIGNED_TX = (
-    "0x4af90112827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f"
+    "0x4af90113827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f"
     "6cbdac39604687038d7ea4c68000a1028e76821eb4d77fd30223ca971c49738eb5"
     "b5b71eabe93f96b348fdce788ae5a08c46a2b6020bba77fcb1e676a602a0934207"
     "181885f6859ca848f5f01091d1957444a920a2bfb262fa043c6c239f906480b850"
     "bf645e68de8096b62950fac2d5bceb71ab1a085aed2e973a8b4f961ca77209f991"
     "16130edecd27c39fc62e1b3c05ff42d9e4382f987fc55c2011f8e4f2e66204e171"
-    "74e9d2756bb20f4cdfe48bd5d23780a040ea4805150580ce89bd7478962ee176d1"
-    "ab030ae988ff9078803845dc8fbb64a0383bcbd8b9d35ff9d3cba98b8aa0be739c"
-    "b4fc2f0685b6ee9359a744a639a727"
+    "74e9d2756bb20f4cdfe48bd5d237c080a075f0104222864723bca4714783f66ebe"
+    "0137682e32cac7dca7113fded9f4126aa008ca7dbe13125a35fd5baf6bb5ad7052"
+    "e38f954e028ccd6ead85e9c39aafdbbe"
 )
 
 
@@ -478,6 +493,8 @@ class TestSignSeismicTxEIP712:
         """Full EIP-712 sign + serialize must match expected output."""
         tx = _make_eip712_tx()
         signed = sign_seismic_tx_eip712(tx, ANVIL_PK)
+        print(f"actual:   {signed.to_0x_hex()}")
+        print(f"expected: {EXPECTED_EIP712_SIGNED_TX}")
         assert signed.to_0x_hex() == EXPECTED_EIP712_SIGNED_TX
 
     def test_different_from_raw_signing(self):
@@ -493,8 +510,8 @@ class TestSignSeismicTxEIP712:
         signed = sign_seismic_tx_eip712(tx, ANVIL_PK)
         # Strip 0x4a prefix, decode RLP
         decoded = rlp.decode(bytes(signed[1:]))
-        # 13 tx fields + 3 signature fields = 16
-        assert len(decoded) == 16
+        # 13 tx fields + 1 authorization_list + 3 signature fields = 17
+        assert len(decoded) == 17
 
     def test_message_version_in_rlp(self):
         """The RLP contains message_version=2."""
@@ -550,7 +567,7 @@ class TestRustCrossValidation:
         signed = serialize_signed(tx, sig)
         tx_hash = keccak(bytes(signed))
         expected = bytes.fromhex(
-            "d33755a15aeb3023cb6e5a593a60cb963b2381c44342a43b1088465931b1cdbc"
+            "8c95f5133ab8d55531621f1d46f0ca092084be09db7a932e738c56003d3735eb"
         )
         assert tx_hash == expected
 
@@ -559,17 +576,15 @@ class TestRustCrossValidation:
 
     def test_struct_hash_matches_rust(self):
         tx = _make_rust_test_vector_tx()
-        expected = bytes.fromhex(
-            "683f681e3a89f9fabcd7175e53c2d72ee0ecd9843e217aa9e97cfeebdad129de"
+        assert struct_hash(tx).hex() == (
+            "c9ae99a778a215dc1fd48f331e99aaff8a274c465c786ba3ba5e44facb5fcfb9"
         )
-        assert struct_hash(tx) == expected
 
     def test_signing_hash_matches_rust(self):
         tx = _make_rust_test_vector_tx()
-        expected = bytes.fromhex(
-            "6152c0b10ef0cc2eb90a4bf27f5449d8a1f0529fb09998006dcee7a2e6f51f3f"
+        assert eip712_signing_hash(tx).hex() == (
+            "6f2f9a96ba31694d65f039356a838cf932f799b545fd95a7ff53616c55adffc1"
         )
-        assert eip712_signing_hash(tx) == expected
 
 
 # ===================================================================

@@ -7,7 +7,7 @@ and structures used to build, sign, and serialize ``TxSeismic``
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -114,6 +114,32 @@ class TxSeismicMetadata:
 
 
 # ---------------------------------------------------------------------------
+# Signed authorization (EIP-7702)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SignedAuthorization:
+    """A signed EIP-7702 authorization entry.
+
+    Attributes:
+        chain_id: Numeric chain identifier.
+        address: Checksummed address of the authorized contract.
+        nonce: Authorization nonce.
+        y_parity: Signature recovery bit (0 or 1).
+        r: First 32-byte integer of the signature.
+        s: Second 32-byte integer of the signature.
+    """
+
+    chain_id: int
+    address: ChecksumAddress
+    nonce: int
+    y_parity: int
+    r: int
+    s: int
+
+
+# ---------------------------------------------------------------------------
 # Unsigned Seismic transaction
 # ---------------------------------------------------------------------------
 
@@ -135,6 +161,7 @@ class UnsignedSeismicTx:
         value: Amount of wei to transfer.
         data: Encrypted calldata (ciphertext).
         seismic: Seismic-specific encryption and expiry fields.
+        authorization_list: List of signed EIP-7702 authorization entries.
     """
 
     chain_id: int
@@ -145,6 +172,7 @@ class UnsignedSeismicTx:
     value: int
     data: HexBytes
     seismic: SeismicElements
+    authorization_list: list[SignedAuthorization] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

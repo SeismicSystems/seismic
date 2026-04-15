@@ -1,7 +1,9 @@
 import {
+  type Abi,
   type AbiFunction,
   type AbiParameter,
   fromHex,
+  getAbiItem,
   sha256,
   toHex,
 } from 'viem'
@@ -63,6 +65,23 @@ const remapSeismicParam = (
   }
 
   return { shielded: false, type: ty }
+}
+
+export function hasShieldedParams(abi: Abi, functionName: string): boolean {
+  const abiItem = getAbiItem({ abi, name: functionName }) as AbiFunction
+  if (!abiItem?.inputs) return false
+  return abiItem.inputs.some((param) => remapSeismicParam(param).shielded)
+}
+
+/**
+ * Remaps an entire ABI, converting all shielded types (suint256, saddress, etc.)
+ * to their standard equivalents (uint256, address, etc.) so viem can encode them.
+ */
+export const remapSeismicAbi = (abi: Abi): Abi => {
+  return abi.map((item) => {
+    if (item.type !== 'function') return item
+    return remapSeismicAbiInputs(item)
+  }) as Abi
 }
 
 export const remapSeismicAbiInputs = (
