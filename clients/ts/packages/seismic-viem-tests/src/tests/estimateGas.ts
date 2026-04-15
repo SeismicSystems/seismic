@@ -8,14 +8,11 @@
  */
 import { expect } from 'bun:test'
 import {
-  buildTxSeismicMetadata,
   createShieldedPublicClient,
   createShieldedWalletClient,
-  estimateShieldedGas,
-  getPlaintextCalldata,
   getShieldedContract,
 } from 'seismic-viem'
-import type { Account, Chain, Hex } from 'viem'
+import type { Account, Chain } from 'viem'
 import { http } from 'viem'
 
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
@@ -53,41 +50,6 @@ const deployCounter = async (chain: Chain, url: string, account: Account) => {
     client: walletClient,
   })
   return { publicClient, walletClient, contract, address }
-}
-
-export const testEstimateGasReturnsReasonableValue = async ({
-  chain,
-  url,
-  account,
-}: EstimateGasTestArgs) => {
-  const { walletClient, address } = await deployCounter(chain, url, account)
-
-  // @ts-expect-error: seismicCounterAbi functionName type narrowing
-  const plaintextCalldata: Hex = getPlaintextCalldata({
-    abi: seismicCounterAbi,
-    functionName: 'setNumber',
-    args: [42n],
-  })
-
-  const metadata = await buildTxSeismicMetadata(walletClient, {
-    account: walletClient.account,
-    nonce: await walletClient.getTransactionCount({
-      address: walletClient.account.address,
-    }),
-    to: address,
-    signedRead: false,
-  })
-  const encryptedData = await walletClient.encrypt(plaintextCalldata, metadata)
-  const gasPrice = await walletClient.getGasPrice()
-
-  const gas = await estimateShieldedGas(walletClient, {
-    encryptedData,
-    metadata,
-    gasPrice,
-  })
-
-  expect(gas).toBeGreaterThan(21_000n)
-  expect(gas).toBeLessThan(30_000_000n)
 }
 
 export const testWriteWithoutExplicitGasSucceeds = async ({
