@@ -244,11 +244,15 @@ export async function signedCall<
     const fromAddress = account?.address
     if (!fromAddress) {
       throw new SignedCallError({
+        // TODO: link this
+        // docsPath: 'docs/actions/public/signedCall',
         reason: 'Invoked signedCall without an address',
       })
     }
     if (fromAddress !== client.account?.address) {
       throw new SignedCallError({
+        // TODO: link this
+        // docsPath: 'docs/actions/public/signedCall',
         reason: `Client cannot sign for address ${fromAddress}`,
       })
     }
