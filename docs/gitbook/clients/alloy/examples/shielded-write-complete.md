@@ -147,7 +147,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### 1. Provider setup
 
-The `SeismicProviderBuilder` creates a signed provider with a wallet and RPC URL. During construction, it generates an ephemeral secp256k1 keypair and fetches the TEE public key from the node. Both are cached for all subsequent operations.
+The `SeismicProviderBuilder` creates a signed provider with a wallet and RPC URL. During construction, it generates a provider-scoped secp256k1 keypair and fetches the TEE public key from the node. Both are cached for all subsequent operations.
 
 ### 2. Contract deployment (transparent)
 

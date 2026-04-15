@@ -148,7 +148,7 @@ Client                          TEE (Node)
 
 ### encryption_pubkey
 
-The compressed secp256k1 public key (33 bytes) used in the ECDH key exchange. For client-initiated transactions, this is the **client's ephemeral public key** -- the TEE uses its own private key combined with this public key to derive the shared encryption secret.
+The compressed secp256k1 public key (33 bytes) used in the ECDH key exchange. For client-initiated transactions, this is the **client's provider-scoped public key** -- the TEE uses its own private key combined with this public key to derive the shared encryption secret.
 
 ### encryption_nonce
 

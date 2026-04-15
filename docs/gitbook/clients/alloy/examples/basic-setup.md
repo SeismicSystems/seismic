@@ -89,7 +89,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
 
     // Create unsigned provider (no private key needed)
-    let provider = SeismicProviderBuilder::new().connect_http(url).await?;
+    // connect_http is synchronous for unsigned providers
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     // Verify connection
     let block_number = provider.get_block_number().await?;
