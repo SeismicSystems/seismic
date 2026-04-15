@@ -21,14 +21,17 @@ import { getContract } from 'viem'
 import { readContract, writeContract } from 'viem/actions'
 
 import type { ShieldedWalletClient } from '@sviem/client.ts'
+import { hasShieldedParams } from '@sviem/contract/abi.ts'
 import {
   SignedReadContractParameters,
   signedReadContract,
+  transparentReadContract,
 } from '@sviem/contract/read.ts'
 import {
   ShieldedWriteContractDebugResult,
   shieldedWriteContract,
   shieldedWriteContractDebug,
+  transparentWriteContract,
 } from '@sviem/contract/write.ts'
 import type { KeyedClient } from '@sviem/viem-internal/client.ts'
 import type {
@@ -56,6 +59,15 @@ type TransparentReadContractReturnType<
     ? unknown
     : {
         tread: {
+          [functionName in _readFunctionNames]: GetReadFunction<
+            _narrowable,
+            TAbi,
+            functionName extends ContractFunctionName<TAbi, 'pure' | 'view'>
+              ? functionName
+              : never
+          >
+        }
+        sread: {
           [functionName in _readFunctionNames]: GetReadFunction<
             _narrowable,
             TAbi,
@@ -100,6 +112,21 @@ type TransparentWriteContractReturnType<
             WriteContractReturnType
           >
         }
+        swrite: {
+          [functionName in _writeFunctionNames]: GetWriteFunction<
+            _narrowable,
+            _walletClient['chain'],
+            _walletClient['account'],
+            TAbi,
+            functionName extends ContractFunctionName<
+              TAbi,
+              'nonpayable' | 'payable'
+            >
+              ? functionName
+              : never,
+            WriteContractReturnType
+          >
+        }
         dwrite: {
           [functionName in _writeFunctionNames]: GetWriteFunction<
             _narrowable,
@@ -123,8 +150,10 @@ type TransparentWriteContractReturnType<
 
 /**
  * The same as viem's {@link https://viem.sh/docs/contract/getContract.html#with-wallet-client GetContractReturnType}, with a few differences:
- * - `read` and `write` use signed reads & seismic transactions
- * - `tread` and `twrite` behave like viem's standard read & write
+ * - `read` and `write` are "smart" — they auto-detect shielded params and route accordingly
+ * - `sread` and `swrite` always use signed reads & seismic transactions (force shielded)
+ * - `tread` and `twrite` behave like viem's standard read & write (force transparent)
+ * - `dwrite` returns both plaintext and encrypted tx for debugging
  */
 export type ShieldedContract<
   TTransport extends Transport = Transport,
@@ -145,11 +174,13 @@ export type ShieldedContract<
 
 /**
  * This function extends viem's base {@link https://viem.sh/docs/contract/getContract.html getContract} functionality by adding:
- * - `write`: write to a contract with encrypted calldata
- * - `read`: read from a contract using a signed read
- * - `tread`: transparently read from a contract using an unsigned read (from the zero address)
- * - `twrite`: transparently write to a contract using non-encrypted calldata
- * - `dwrite`: get plaintext and encrypted transaction without broadcasting
+ * - `read`: smart read — auto-detects shielded params; uses signed read if shielded, transparent read otherwise
+ * - `write`: smart write — auto-detects shielded params; uses shielded write if shielded, transparent write otherwise
+ * - `sread`: force shielded read — always uses signed read regardless of params
+ * - `swrite`: force shielded write — always uses encrypted seismic transaction regardless of params
+ * - `tread`: force transparent read — always uses unsigned read (from the zero address)
+ * - `twrite`: force transparent write — always uses non-encrypted calldata
+ * - `dwrite`: debug write — get plaintext and encrypted transaction without broadcasting
  *
  * @param {GetContractParameters} params - The configuration object.
  *   - `abi` ({@link Abi}) - The contract's ABI.
@@ -167,20 +198,27 @@ export type ShieldedContract<
  *   client: shieldedWalletClient,
  * });
  *
- * // Perform a shielded write
- * await contract.write.myFunction([arg1, arg2], { gas: 50000n });
+ * // Smart write — auto-detects shielded params
+ * await contract.write.setNumber([7n], { gas: 50000n }); // shielded if suint256 param
+ * await contract.write.increment();                       // transparent if no shielded params
  *
- * // Perform a signed read
- * const value = await contract.read.getValue();
- * console.log('Value:', value);
+ * // Smart read — auto-detects shielded params
+ * const value = await contract.read.getSecret();  // signed read if shielded param
+ * const odd = await contract.read.isOdd();         // transparent read if no shielded params
+ *
+ * // Force shielded
+ * await contract.swrite.increment();  // always shielded
+ * const val = await contract.sread.isOdd(); // always signed read
  * ```
  *
  * @remarks
- * - The `read` property will always call a signed read
- * - The `tread` property will toggle between public reads and signed reads, depending on whether an `account` is provided
- * - The `write` property will encrypt calldata of the transaction
- * - The `twrite` property will make a normal write, e.g. with transparent calldata
- * - The `dwrite` property will make the encrypted tx without writing
+ * - The `read` property auto-detects shielded params and routes to signed read or transparent read
+ * - The `write` property auto-detects shielded params and routes to shielded write or transparent write
+ * - The `sread` property always calls a signed read
+ * - The `swrite` property always encrypts calldata via seismic transaction
+ * - The `tread` property toggles between public reads and signed reads, depending on whether an `account` is provided
+ * - The `twrite` property makes a normal write with transparent calldata
+ * - The `dwrite` property returns both plaintext and encrypted tx for debugging
  * - The client must be a {@link ShieldedWalletClient}
  */
 export function getShieldedContract<
@@ -232,13 +270,18 @@ export function getShieldedContract<
             throw new Error('Must provide wallet client to call Contract.write')
           }
           const { args, options } = getFunctionParameters(parameters)
-          return writeContract(walletClient, {
-            abi,
-            address,
-            functionName,
-            args,
-            ...(options as any),
-          })
+          return transparentWriteContract(
+            walletClient as unknown as Parameters<
+              typeof transparentWriteContract
+            >[0],
+            {
+              abi,
+              address,
+              functionName,
+              args,
+              ...(options as Record<string, unknown>),
+            } as unknown as Parameters<typeof transparentWriteContract>[1]
+          )
         }
       },
     }
@@ -260,13 +303,16 @@ export function getShieldedContract<
       throw new Error('Must provide wallet client to call Contract.write')
     }
 
-    return shieldedWriteContract(walletClient, {
-      abi,
-      address,
-      functionName,
-      args,
-      ...(options as any),
-    })
+    return shieldedWriteContract(
+      walletClient as unknown as Parameters<typeof shieldedWriteContract>[0],
+      {
+        abi,
+        address,
+        functionName,
+        args,
+        ...(options as Record<string, unknown>),
+      } as unknown as Parameters<typeof shieldedWriteContract>[1]
+    )
   }
 
   function shieldedWriteDebug<
@@ -285,13 +331,18 @@ export function getShieldedContract<
       throw new Error('Must provide wallet client to call Contract.dwrite')
     }
 
-    return shieldedWriteContractDebug(walletClient, {
-      abi,
-      address,
-      functionName,
-      args,
-      ...(options as any),
-    })
+    return shieldedWriteContractDebug(
+      walletClient as unknown as Parameters<
+        typeof shieldedWriteContractDebug
+      >[0],
+      {
+        abi,
+        address,
+        functionName,
+        args,
+        ...(options as Record<string, unknown>),
+      } as unknown as Parameters<typeof shieldedWriteContractDebug>[1]
+    )
   }
 
   const shieldedWriteAction = new Proxy(
@@ -313,8 +364,14 @@ export function getShieldedContract<
             address,
             functionName,
             args,
-            ...(options as any),
-          })
+            ...(options as Record<string, unknown>),
+          } as unknown as WriteContractParameters<
+            TAbi,
+            ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
+            ContractFunctionArgs<TAbi, 'nonpayable' | 'payable'>,
+            TChain,
+            TAccount
+          >)
         }
       },
     }
@@ -339,8 +396,14 @@ export function getShieldedContract<
             address,
             functionName,
             args,
-            ...(options as any),
-          })
+            ...(options as Record<string, unknown>),
+          } as unknown as WriteContractParameters<
+            TAbi,
+            ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
+            ContractFunctionArgs<TAbi, 'nonpayable' | 'payable'>,
+            TChain,
+            TAccount
+          >)
         }
       },
     }
@@ -360,7 +423,7 @@ export function getShieldedContract<
     return signedReadContract(walletClient, params)
   }
 
-  const readAction = new Proxy(
+  const transparentReadAction = new Proxy(
     {},
     {
       get(_, functionName: string) {
@@ -374,24 +437,32 @@ export function getShieldedContract<
           ]
         ) => {
           const { args, options } = getFunctionParameters(parameters)
-          // @ts-expect-error: account might be here
-          if (!options?.account) {
-            // @ts-expect-error: this is valid
-            return readContract(walletClient, {
+          const opts = options as Record<string, unknown>
+          if (opts?.account) {
+            return signedRead({
               abi,
               address,
               functionName,
               args,
-              ...(options as any),
-            })
+              ...opts,
+            } as unknown as SignedReadContractParameters<
+              TAbi,
+              ContractFunctionName<TAbi, 'pure' | 'view'>,
+              ContractFunctionArgs<TAbi, 'pure' | 'view'>
+            >)
           }
-          return signedRead({
-            abi,
-            address,
-            functionName,
-            args,
-            ...(options as any),
-          })
+          return transparentReadContract(
+            walletClient as unknown as Parameters<
+              typeof transparentReadContract
+            >[0],
+            {
+              abi,
+              address,
+              functionName,
+              args,
+              ...(opts as Record<string, unknown>),
+            } as unknown as Parameters<typeof transparentReadContract>[1]
+          )
         }
       },
     }
@@ -419,8 +490,10 @@ export function getShieldedContract<
           const params = getFunctionParameters(parameters)
           const { args } = params
           const {
-            options: { account, ...options },
-          } = params as { options: { account: any } & any }
+            options: { account: _account, ...options },
+          } = params as {
+            options: { account: Account | undefined } & Record<string, unknown>
+          }
           return signedRead({
             abi,
             address,
@@ -431,7 +504,123 @@ export function getShieldedContract<
             // because of the AEAD in encryption
             account: walletClient.account,
             ...options,
-          })
+          } as unknown as SignedReadContractParameters<
+            TAbi,
+            ContractFunctionName<TAbi, 'pure' | 'view'>,
+            ContractFunctionArgs<TAbi, 'pure' | 'view'>
+          >)
+        }
+      },
+    }
+  )
+
+  const smartReadAction = new Proxy(
+    {},
+    {
+      get(_, functionName: string) {
+        return (
+          ...parameters: [
+            args?: readonly unknown[] | undefined,
+            options?: UnionOmit<
+              ReadContractParameters,
+              'abi' | 'address' | 'functionName' | 'args'
+            >,
+          ]
+        ) => {
+          const isShielded = hasShieldedParams(abi as Abi, functionName)
+          if (isShielded) {
+            if (!walletClient?.account) {
+              throw new Error(
+                'Wallet must have an account to perform signed reads'
+              )
+            }
+            const params = getFunctionParameters(parameters)
+            const { args } = params
+            const {
+              options: { account: _account, ...options },
+            } = params as {
+              options: { account: Account | undefined } & Record<
+                string,
+                unknown
+              >
+            }
+            return signedRead({
+              abi,
+              address,
+              functionName,
+              args,
+              account: walletClient.account,
+              ...options,
+            } as unknown as SignedReadContractParameters<
+              TAbi,
+              ContractFunctionName<TAbi, 'pure' | 'view'>,
+              ContractFunctionArgs<TAbi, 'pure' | 'view'>
+            >)
+          } else {
+            const { args, options } = getFunctionParameters(parameters)
+            // No shielded params → abi is valid for viem as-is
+            // @ts-expect-error: walletClient satisfies Client for readContract
+            return readContract(walletClient, {
+              abi,
+              address,
+              functionName,
+              args,
+              ...(options as Record<string, unknown>),
+            })
+          }
+        }
+      },
+    }
+  )
+
+  const smartWriteAction = new Proxy(
+    {},
+    {
+      get(_, functionName: string) {
+        return (
+          ...parameters: [
+            args?: readonly unknown[],
+            options?: UnionOmit<
+              WriteContractParameters,
+              'abi' | 'address' | 'functionName' | 'args'
+            >,
+          ]
+        ) => {
+          const isShielded = hasShieldedParams(abi as Abi, functionName)
+          if (isShielded) {
+            const { args, options } = getFunctionParameters(parameters)
+            return shieldedWrite({
+              abi,
+              address,
+              functionName,
+              args,
+              ...(options as Record<string, unknown>),
+            } as unknown as WriteContractParameters<
+              TAbi,
+              ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
+              ContractFunctionArgs<TAbi, 'nonpayable' | 'payable'>,
+              TChain,
+              TAccount
+            >)
+          } else {
+            if (walletClient === undefined) {
+              throw new Error(
+                'Must provide wallet client to call Contract.write'
+              )
+            }
+            // No shielded params → abi is valid for viem as-is
+            const { args, options } = getFunctionParameters(parameters)
+            return writeContract(
+              walletClient as unknown as Parameters<typeof writeContract>[0],
+              {
+                abi,
+                address,
+                functionName,
+                args,
+                ...(options as Record<string, unknown>),
+              } as unknown as Parameters<typeof writeContract>[1]
+            )
+          }
         }
       },
     }
@@ -447,8 +636,10 @@ export function getShieldedContract<
       | 'simulate'
       | 'watchEvent'
       | 'read'
+      | 'sread'
       | 'tread'
       | 'write'
+      | 'swrite'
       | 'twrite'
       | 'dwrite']?: unknown
   } = viemContract
@@ -456,13 +647,17 @@ export function getShieldedContract<
   contract.twrite = transparentWriteAction
   // Transparent reads use signed reads,
   // but signing is only activated if they supply an account parameter
-  contract.tread = readAction
-  // Shielded writes use seismic transactions
-  contract.write = shieldedWriteAction
+  contract.tread = transparentReadAction
+  // Force shielded writes always use seismic transactions
+  contract.swrite = shieldedWriteAction
+  // Force shielded reads always use signed reads
+  contract.sread = signedReadAction
+  // Smart writes auto-detect shielded params
+  contract.write = smartWriteAction
+  // Smart reads auto-detect shielded params
+  contract.read = smartReadAction
   // Debug writes use seismic debug transactions
   contract.dwrite = shieldedWriteDebugAction
-  // The default read is signed read, where we sign the raw tx with user's account
-  contract.read = signedReadAction
   return contract as ShieldedContract<
     TTransport,
     TAddress,

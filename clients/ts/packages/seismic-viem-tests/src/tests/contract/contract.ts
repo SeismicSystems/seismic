@@ -101,6 +101,7 @@ export const testSeismicTx = async ({
   expect(isOdd1_tread).toBe(true)
 
   // console.log('[2] calling write contract...')
+  // increment() has no shielded params → smart writeContract routes transparently
   const tx2 = await walletClient.writeContract({
     address: deployedContractAddress,
     abi: seismicCounterAbi,
@@ -111,7 +112,6 @@ export const testSeismicTx = async ({
   console.info(
     `[2] Increment receipt: ${JSON.stringify(receipt2, stringifyBigInt, 2)}`
   )
-  expectSeismicTx(receipt2.type as `0x${string}` | null)
 
   // Try reading using unsigned (normal) read
   const isOdd2 = await seismicContract.tread.isOdd()

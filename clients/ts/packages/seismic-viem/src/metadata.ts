@@ -45,7 +45,7 @@ const fillNonce = async <
     return nonce_
   }
 
-  const { blockNumber, blockTag = 'latest' } = parameters
+  const { blockNumber, blockTag = 'pending' } = parameters
   let args: GetTransactionCountParameters = {
     address: account.address,
     blockTag,
@@ -72,7 +72,7 @@ const inferTypedDataTx = (
   if (typedDataTx !== undefined) {
     return typedDataTx
   }
-  return account.type === 'json-rpc'
+  return account.type === 'json-rpc' || account.type === 'local'
 }
 
 export const buildTxSeismicMetadata = async <

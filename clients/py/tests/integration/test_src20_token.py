@@ -1,4 +1,10 @@
-"""Integration tests for SRC20 token (TestToken with shielded balances)."""
+"""Integration tests for SRC20 token (TestToken with shielded balances).
+
+balanceOf() has no shielded input params, so the smart router
+(``read``) sends it as a transparent eth_call.  But balanceOf reads
+shielded state keyed by msg.sender, so it needs a signed read
+(``sread``) to authenticate the caller.
+"""
 
 import pytest
 from web3 import Web3
@@ -39,7 +45,7 @@ class TestBalanceOf:
     """Verify balanceOf() works with no arguments (SRC20 vs ERC20 difference)."""
 
     def test_initial_balance_is_zero(self, token: ShieldedContract) -> None:
-        assert token.read.balanceOf() == 0
+        assert token.sread.balanceOf() == 0
 
 
 class TestMint:
@@ -64,7 +70,7 @@ class TestMint:
     ) -> None:
         tx = token.write.mint(account_address, 500)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
-        assert token.read.balanceOf() == 500
+        assert token.sread.balanceOf() == 500
 
     def test_mint_multiple_adds_up(
         self,
@@ -78,7 +84,7 @@ class TestMint:
         tx2 = token.write.mint(account_address, 200)
         w3.eth.wait_for_transaction_receipt(tx2, timeout=30)
 
-        assert token.read.balanceOf() == 500
+        assert token.sread.balanceOf() == 500
 
 
 class TestTransfer:
@@ -111,7 +117,7 @@ class TestTransfer:
         tx = token.write.transfer(recipient, 400)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
 
-        assert token.read.balanceOf() == 600
+        assert token.sread.balanceOf() == 600
 
 
 class TestApprove:
@@ -139,7 +145,7 @@ class TestBurn:
         tx = token.write.burn(account_address, 300)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
 
-        assert token.read.balanceOf() == 700
+        assert token.sread.balanceOf() == 700
 
 
 class TestSRC20Lifecycle:
@@ -152,14 +158,14 @@ class TestSRC20Lifecycle:
         account_address: str,
     ) -> None:
         # 1. Initial balance is 0
-        assert token.read.balanceOf() == 0
+        assert token.sread.balanceOf() == 0
 
         # 2. Mint 1000 to self
         tx = token.write.mint(account_address, 1000)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
 
         # 3. Balance is now 1000
-        assert token.read.balanceOf() == 1000
+        assert token.sread.balanceOf() == 1000
 
         # 4. Transfer 250 to another address
         recipient = "0x000000000000000000000000000000000000dEaD"
@@ -167,11 +173,11 @@ class TestSRC20Lifecycle:
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
 
         # 5. Balance is now 750
-        assert token.read.balanceOf() == 750
+        assert token.sread.balanceOf() == 750
 
         # 6. Burn 150 from self
         tx = token.write.burn(account_address, 150)
         w3.eth.wait_for_transaction_receipt(tx, timeout=30)
 
         # 7. Balance is now 600
-        assert token.read.balanceOf() == 600
+        assert token.sread.balanceOf() == 600

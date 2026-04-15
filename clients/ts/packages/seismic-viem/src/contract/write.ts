@@ -9,6 +9,7 @@ import type {
   Hash,
   Hex,
   Transport,
+  WalletActions,
   WriteContractParameters,
   WriteContractReturnType,
 } from 'viem'
@@ -56,6 +57,49 @@ export const getPlaintextCalldata = <
   const encodedParams = encodeAbiParameters(ethAbi.inputs, args).slice(2)
   const plaintextCalldata = `${selector}${encodedParams}` as Hex
   return plaintextCalldata
+}
+
+/**
+ * Sends a transparent (non-encrypted) write to a contract whose ABI may
+ * contain shielded types.  The function selector is derived from the
+ * original Seismic ABI while parameters are encoded with remapped
+ * standard types, then sent as a plain `eth_sendTransaction`.
+ */
+export async function transparentWriteContract<
+  TChain extends Chain | undefined,
+  TAccount extends Account,
+  const TAbi extends Abi | readonly unknown[],
+  TFunctionName extends ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
+  TArgs extends ContractFunctionArgs<
+    TAbi,
+    'nonpayable' | 'payable',
+    TFunctionName
+  >,
+  TChainOverride extends Chain | undefined = undefined,
+>(
+  client: Pick<WalletActions<TChain, TAccount>, 'sendTransaction'>,
+  parameters: WriteContractParameters<
+    TAbi,
+    TFunctionName,
+    TArgs,
+    TChain,
+    TAccount,
+    TChainOverride
+  >
+): Promise<WriteContractReturnType> {
+  const {
+    abi: _abi,
+    functionName: _fn,
+    args: _args,
+    address,
+    ...txOptions
+  } = parameters as WriteContractParameters & { address: Address }
+  const data = getPlaintextCalldata(parameters)
+  return client.sendTransaction({
+    to: address,
+    data,
+    ...(txOptions as Record<string, unknown>),
+  } as unknown as Parameters<typeof client.sendTransaction>[0])
 }
 
 async function getShieldedWriteContractRequest<

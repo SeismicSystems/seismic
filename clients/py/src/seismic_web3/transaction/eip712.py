@@ -20,7 +20,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from eth_hash.auto import keccak
-from eth_keys import keys as eth_keys
+from eth_keys.main import KeyAPI as eth_keys
 from hexbytes import HexBytes
 
 from seismic_web3._constants import TYPED_DATA_MESSAGE_VERSION
