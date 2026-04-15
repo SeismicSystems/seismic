@@ -7,6 +7,8 @@ import type {
   ContractFunctionName,
   ReadContractParameters,
   ReadContractReturnType,
+  SendTransactionParameters,
+  SendTransactionReturnType,
   Transport,
   WriteContractParameters,
   WriteContractReturnType,
@@ -31,7 +33,10 @@ import type {
   SendSeismicTransactionRequest,
   SendSeismicTransactionReturnType,
 } from '@sviem/sendTransaction.ts'
-import { sendShieldedTransaction } from '@sviem/sendTransaction.ts'
+import {
+  sendShieldedTransaction,
+  sendTransparentTransaction,
+} from '@sviem/sendTransaction.ts'
 import { signedCall } from '@sviem/signedCall.ts'
 import type { SignedCall } from '@sviem/signedCall.ts'
 
@@ -67,6 +72,15 @@ export type ShieldedWalletActions<
   TChain extends Chain | undefined = Chain | undefined,
   TAccount extends Account | undefined = Account | undefined,
 > = {
+  // `sendTransaction` is intentionally overridden on the Seismic wallet client.
+  // Transparent writes ultimately flow through this action, so it is the central
+  // place where Seismic-specific gas-estimation behavior is applied.
+  // Today only `local` accounts can perform signed transparent `eth_estimateGas`
+  // because the client has direct access to the signing key. `json-rpc` accounts
+  // fall back to viem's normal unsigned estimation path.
+  sendTransaction: <TChainOverride extends Chain | undefined = undefined>(
+    args: SendTransactionParameters<TChain, TAccount, TChainOverride>
+  ) => Promise<SendTransactionReturnType>
   writeContract: <
     TAbi extends Abi | readonly unknown[],
     TFunctionName extends ContractFunctionName<TAbi, 'payable' | 'nonpayable'>,
@@ -236,6 +250,11 @@ export const shieldedWalletActions = <
   client: ShieldedWalletClient<TTransport, TChain, TAccount>
 ): ShieldedWalletActions<TChain, TAccount> => {
   return {
+    sendTransaction: (args) =>
+      sendTransparentTransaction(
+        client as unknown as Parameters<typeof sendTransparentTransaction>[0],
+        args as unknown as Parameters<typeof sendTransparentTransaction>[1]
+      ),
     writeContract: (args) => {
       const writeArgs = args as unknown as {
         abi: Abi
