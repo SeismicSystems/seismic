@@ -22,8 +22,8 @@ import {
   AccountTypeNotSupportedError,
 } from '@sviem/error/account.ts'
 import {
-  buildTxSeismicMetadata,
   type TxSeismicMetadata,
+  buildTxSeismicMetadata,
 } from '@sviem/metadata.ts'
 import {
   TYPED_DATA_MESSAGE_VERSION,

@@ -64,8 +64,8 @@ const doSignedCall = async <
   // and send it to the node as raw tx bytes
   const serializedTransaction = await client.account!
     .signTransaction!<SeismicTxSerializer>(seismicTx, {
-      serializer: serializeSeismicTransaction,
-    })
+    serializer: serializeSeismicTransaction,
+  })
 
   const response: Hex = await client.request({
     method: 'eth_call',
