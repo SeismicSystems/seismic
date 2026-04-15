@@ -200,15 +200,11 @@ export async function signedCall<
 ): Promise<CallReturnType> {
   const {
     account: account_ = client.account,
-    batch = Boolean(client.batch?.multicall),
     blockNumber,
     blockTag = 'latest',
     accessList,
     blobs,
-    code,
     data: plaintextCalldata,
-    factory,
-    factoryData,
     gas = 30_000_000,
     gasPrice,
     maxFeePerBlobGas,
@@ -282,12 +278,6 @@ export async function signedCall<
       value,
       type: 'legacy',
     } as any
-
-    // TODO: decide if we ever want to add multicall support
-    void batch
-    void code
-    void factory
-    void factoryData
 
     const preparedTx = await prepareTransactionRequest(client, request)
     // @ts-ignore
