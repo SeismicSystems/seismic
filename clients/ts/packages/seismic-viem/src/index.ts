@@ -30,7 +30,6 @@ export {
   signedReadContract,
   transparentReadContract,
 } from '@sviem/contract/read.ts'
-export { estimateShieldedGas } from '@sviem/estimateGas.ts'
 export { signedCall } from '@sviem/tx/signedCall.ts'
 export type { ShieldedWriteContractDebugResult } from '@sviem/contract/write.ts'
 export {

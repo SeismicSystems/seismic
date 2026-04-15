@@ -3,6 +3,7 @@ import type {
   BaseError,
   Chain,
   ExactPartial,
+  Hex,
   SendTransactionParameters,
   Transport,
 } from 'viem'
@@ -20,8 +21,10 @@ import {
   AccountNotFoundError,
   AccountTypeNotSupportedError,
 } from '@sviem/error/account.ts'
-import { estimateShieldedGas } from '@sviem/estimateGas.ts'
-import { buildTxSeismicMetadata } from '@sviem/metadata.ts'
+import {
+  buildTxSeismicMetadata,
+  type TxSeismicMetadata,
+} from '@sviem/metadata.ts'
 import {
   TYPED_DATA_MESSAGE_VERSION,
   signSeismicTxTypedData,
@@ -242,4 +245,65 @@ export async function sendShieldedTransaction<
       type: 'legacy',
     })
   }
+}
+
+/**
+ * Signs a temporary shielded transaction and sends it to `eth_estimateGas`
+ * so the node can authenticate the sender during simulation.
+ */
+async function estimateShieldedGas<
+  TTransport extends Transport,
+  TChain extends Chain | undefined,
+  TAccount extends Account,
+>(
+  client: ShieldedWalletClient<TTransport, TChain, TAccount>,
+  {
+    encryptedData,
+    metadata,
+    gasPrice,
+  }: {
+    encryptedData: Hex
+    metadata: TxSeismicMetadata
+    gasPrice: bigint
+  }
+): Promise<bigint> {
+  const block = await client.getBlock({ blockTag: 'latest' })
+  const blockGasLimit = block.gasLimit
+
+  const tempTx: TransactionSerializableSeismic = {
+    type: 'seismic',
+    chainId: metadata.legacyFields.chainId,
+    nonce: metadata.legacyFields.nonce,
+    gasPrice,
+    gas: blockGasLimit,
+    to: metadata.legacyFields.to ?? undefined,
+    value: metadata.legacyFields.value,
+    data: encryptedData,
+    ...metadata.seismicElements,
+  }
+
+  const isEip712 =
+    metadata.seismicElements.messageVersion === TYPED_DATA_MESSAGE_VERSION
+
+  if (isEip712) {
+    const { typedData, signature } = await signSeismicTxTypedData(
+      client,
+      tempTx
+    )
+    const response: Hex = await client.request({
+      method: 'eth_estimateGas',
+      params: [{ data: typedData, signature }],
+    })
+    return BigInt(response)
+  }
+
+  const serializedTransaction = await client.account!.signTransaction!(tempTx, {
+    serializer: serializeSeismicTransaction,
+  })
+
+  const response: Hex = await client.request({
+    method: 'eth_estimateGas',
+    params: [serializedTransaction],
+  })
+  return BigInt(response)
 }
