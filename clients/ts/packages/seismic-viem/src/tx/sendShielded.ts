@@ -1,235 +1,39 @@
 import type {
   Account,
-  Address,
-  AssertCurrentChainErrorType,
   BaseError,
   Chain,
-  DeriveChain,
   ExactPartial,
-  FormattedTransactionRequest,
-  GetChainIdErrorType,
-  GetChainParameter,
-  Hash,
-  PrepareTransactionRequestErrorType,
-  SendRawTransactionErrorType,
+  Hex,
   SendTransactionParameters,
-  SendTransactionReturnType,
   Transport,
-  UnionOmit,
 } from 'viem'
-import type {
-  ParseAccountErrorType,
-  SignTransactionErrorType,
-} from 'viem/accounts'
 import { parseAccount } from 'viem/accounts'
-import {
-  prepareTransactionRequest,
-  sendRawTransaction,
-  sendTransaction as viemSendTransaction,
-} from 'viem/actions'
-import type { RecoverAuthorizationAddressErrorType } from 'viem/experimental'
-import type {
-  AssertRequestErrorType,
-  GetTransactionErrorReturnType,
-  RequestErrorType,
-} from 'viem/utils'
+import { prepareTransactionRequest, sendRawTransaction } from 'viem/actions'
 import { assertRequest, getAction, getTransactionError } from 'viem/utils'
 
 import {
   SeismicSecurityParams,
-  SeismicTxExtras,
   TransactionSerializableSeismic,
   serializeSeismicTransaction,
 } from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'
-import type {
-  AccountNotFoundErrorType,
-  AccountTypeNotSupportedErrorType,
-} from '@sviem/error/account.ts'
 import {
   AccountNotFoundError,
   AccountTypeNotSupportedError,
 } from '@sviem/error/account.ts'
-import { estimateShieldedGas } from '@sviem/estimateGas.ts'
-import { buildTxSeismicMetadata } from '@sviem/metadata.ts'
+import {
+  type TxSeismicMetadata,
+  buildTxSeismicMetadata,
+} from '@sviem/metadata.ts'
 import {
   TYPED_DATA_MESSAGE_VERSION,
   signSeismicTxTypedData,
 } from '@sviem/signSeismicTypedData.ts'
-import { GetAccountParameter } from '@sviem/viem-internal/account.ts'
-import type { ErrorType } from '@sviem/viem-internal/error.ts'
-
-export type SendSeismicTransactionRequest<
-  chain extends Chain | undefined = Chain | undefined,
-  chainOverride extends Chain | undefined = Chain | undefined,
-  _derivedChain extends Chain | undefined = DeriveChain<chain, chainOverride>,
-> = UnionOmit<FormattedTransactionRequest<_derivedChain>, 'from' | 'type'> &
-  SeismicTxExtras
-
-export type SendSeismicTransactionParameters<
-  chain extends Chain | undefined = Chain | undefined,
-  account extends Account | undefined = Account | undefined,
-  chainOverride extends Chain | undefined = Chain | undefined,
-  request extends SendSeismicTransactionRequest<
-    chain,
-    chainOverride
-  > = SendSeismicTransactionRequest<chain, chainOverride>,
-> = request &
-  GetAccountParameter<account, Account | Address, true, true> &
-  GetChainParameter<chain, chainOverride>
-
-export type AssertSeismicRequestParameters = ExactPartial<
-  SendSeismicTransactionParameters<Chain>
->
-
-export type SendSeismicTransactionReturnType = Hash
-
-const DEFAULT_SIGNED_ESTIMATE_GAS_LIMIT = 30_000_000n
-
-export type SendSeismicTransactionErrorType =
-  | ParseAccountErrorType
-  | GetTransactionErrorReturnType<
-      | AccountNotFoundErrorType
-      | AccountTypeNotSupportedErrorType
-      | AssertCurrentChainErrorType
-      | AssertRequestErrorType
-      | GetChainIdErrorType
-      | PrepareTransactionRequestErrorType
-      | SendRawTransactionErrorType
-      | RecoverAuthorizationAddressErrorType
-      | SignTransactionErrorType
-      | RequestErrorType
-    >
-  | ErrorType
-
-export async function sendTransparentTransaction<
-  TChain extends Chain | undefined,
-  TAccount extends Account,
-  TChainOverride extends Chain | undefined = undefined,
->(
-  client: ShieldedWalletClient<Transport, TChain, TAccount>,
-  parameters: SendTransactionParameters<TChain, TAccount, TChainOverride>
-): Promise<SendTransactionReturnType> {
-  const {
-    account: account_ = client.account,
-    chain = client.chain,
-    accessList,
-    authorizationList,
-    blobs,
-    data,
-    gas,
-    gasPrice,
-    maxFeePerBlobGas,
-    maxFeePerGas,
-    maxPriorityFeePerGas,
-    nonce,
-    value,
-    ...rest
-  } = parameters
-  if (typeof account_ === 'undefined')
-    throw new AccountNotFoundError({
-      docsPath: '/docs/actions/wallet/sendTransaction',
-    })
-  const account = account_ ? parseAccount(account_) : null
-
-  try {
-    assertRequest(parameters)
-
-    const to = await (async () => {
-      if (parameters.to) return parameters.to
-      return undefined
-    })()
-
-    // Only `local` accounts can do signed transparent gas estimation because
-    // the SDK can produce a provisional signed raw transaction locally.
-    // For `json-rpc` accounts (e.g. external wallets), we do not have the
-    // private key in-process, so we currently fall back to viem's standard
-    // unsigned `sendTransaction` behavior.
-    if (account?.type !== 'local') {
-      return await viemSendTransaction(client, parameters)
-    }
-
-    // Fill nonce / fees / type using viem, but intentionally skip viem's gas
-    // estimation step. On Seismic, unsigned `eth_estimateGas` sanitizes caller
-    // context (notably `from`, and for some request shapes related fields), so
-    // unsigned estimation is not equivalent to the final authenticated tx.
-    const request = await prepareTransactionRequest(client, {
-      account,
-      accessList,
-      authorizationList,
-      blobs,
-      chain,
-      data,
-      gasPrice,
-      maxFeePerBlobGas,
-      maxFeePerGas,
-      maxPriorityFeePerGas,
-      nonce,
-      nonceManager: account.nonceManager,
-      parameters: [
-        'blobVersionedHashes',
-        'chainId',
-        'fees',
-        'nonce',
-        'type',
-        'sidecars',
-      ],
-      value,
-      ...rest,
-      to,
-    } as any)
-
-    const serializer = chain?.serializers?.transaction
-    const gasEstimate =
-      gas ??
-      BigInt(
-        await client.request(
-          {
-            // Estimate gas from a signed raw transaction so the node can
-            // recover the real sender and simulate execution with authenticated
-            // caller context. We use a large temporary gas limit here only for
-            // the estimation request; the final tx is re-signed below with the
-            // actual estimated gas.
-            method: 'eth_estimateGas',
-            params: [
-              await account.signTransaction(
-                {
-                  ...request,
-                  gas: DEFAULT_SIGNED_ESTIMATE_GAS_LIMIT,
-                },
-                { serializer }
-              ),
-            ],
-          } as any,
-          { retryCount: 0 }
-        )
-      )
-
-    // Re-sign the final transparent transaction with the resolved gas limit
-    // and submit it normally as a raw transaction.
-    const serializedTransaction = await account.signTransaction(
-      {
-        ...request,
-        gas: gasEstimate,
-      },
-      { serializer }
-    )
-
-    return await getAction(
-      client,
-      sendRawTransaction,
-      'sendRawTransaction'
-    )({
-      serializedTransaction,
-    })
-  } catch (err) {
-    throw getTransactionError(err as BaseError, {
-      ...parameters,
-      account,
-      chain: parameters.chain || undefined,
-    })
-  }
-}
+import type {
+  SendSeismicTransactionParameters,
+  SendSeismicTransactionRequest,
+  SendSeismicTransactionReturnType,
+} from '@sviem/tx/types.ts'
 
 /**
  * Sends a shielded transaction on the Seismic network.
@@ -380,6 +184,7 @@ export async function sendShieldedTransaction<
         nonce: metadata.legacyFields.nonce,
         to,
         value,
+        ...rest,
       } as any
 
       const viemPreparedTx = (await prepareTransactionRequest(
@@ -411,13 +216,12 @@ export async function sendShieldedTransaction<
           // @ts-ignore
           serializedTransaction: { data: typedData, signature },
         })
-      } else {
-        const serializedTransaction = await account!.signTransaction!(
-          preparedTx,
-          { serializer: serializeSeismicTransaction }
-        )
-        return await sendRawTransaction(client, { serializedTransaction })
       }
+
+      const serializedTransaction = await account.signTransaction!(preparedTx, {
+        serializer: serializeSeismicTransaction,
+      })
+      return await sendRawTransaction(client, { serializedTransaction })
     }
 
     if (account?.type === 'smart')
@@ -441,4 +245,65 @@ export async function sendShieldedTransaction<
       type: 'legacy',
     })
   }
+}
+
+/**
+ * Signs a temporary shielded transaction and sends it to `eth_estimateGas`
+ * so the node can authenticate the sender during simulation.
+ */
+async function estimateShieldedGas<
+  TTransport extends Transport,
+  TChain extends Chain | undefined,
+  TAccount extends Account,
+>(
+  client: ShieldedWalletClient<TTransport, TChain, TAccount>,
+  {
+    encryptedData,
+    metadata,
+    gasPrice,
+  }: {
+    encryptedData: Hex
+    metadata: TxSeismicMetadata
+    gasPrice: bigint
+  }
+): Promise<bigint> {
+  const block = await client.getBlock({ blockTag: 'latest' })
+  const blockGasLimit = block.gasLimit
+
+  const tempTx: TransactionSerializableSeismic = {
+    type: 'seismic',
+    chainId: metadata.legacyFields.chainId,
+    nonce: metadata.legacyFields.nonce,
+    gasPrice,
+    gas: blockGasLimit,
+    to: metadata.legacyFields.to ?? undefined,
+    value: metadata.legacyFields.value,
+    data: encryptedData,
+    ...metadata.seismicElements,
+  }
+
+  const isEip712 =
+    metadata.seismicElements.messageVersion === TYPED_DATA_MESSAGE_VERSION
+
+  if (isEip712) {
+    const { typedData, signature } = await signSeismicTxTypedData(
+      client,
+      tempTx
+    )
+    const response: Hex = await client.request({
+      method: 'eth_estimateGas',
+      params: [{ data: typedData, signature }],
+    })
+    return BigInt(response)
+  }
+
+  const serializedTransaction = await client.account!.signTransaction!(tempTx, {
+    serializer: serializeSeismicTransaction,
+  })
+
+  const response: Hex = await client.request({
+    method: 'eth_estimateGas',
+    params: [serializedTransaction],
+  })
+  return BigInt(response)
 }

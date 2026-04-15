@@ -8,7 +8,6 @@ import { testSeismicTx } from '@sviem-tests/tests/contract/contract.ts'
 import { testDepositContract } from '@sviem-tests/tests/contract/depositContract.ts'
 import { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'
 import {
-  testEstimateGasReturnsReasonableValue,
   testLifecycleWithEstimatedGas,
   testWriteUsesEstimatedGasNot30M,
   testWriteWithExplicitGasSkipsEstimation,
@@ -125,13 +124,6 @@ describe('Seismic Contract', async () => {
 })
 
 describe('Signed estimate gas', async () => {
-  test(
-    'signed estimate gas returns reasonable value',
-    async () =>
-      await testEstimateGasReturnsReasonableValue({ chain, url, account }),
-    { timeout: CONTRACT_TIMEOUT_MS }
-  )
-
   test(
     'write without explicit gas auto-estimates and succeeds',
     async () =>

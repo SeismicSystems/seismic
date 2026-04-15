@@ -9,7 +9,7 @@
   "type": "module",
   "scripts": {
     "clean": "rimraf packages/*/dist -g; rimraf tests/*/dist -g",
-    "typecheck": "bun run viem:typecheck && bun run react:typecheck",
+    "typecheck": "bun run viem:typecheck && bun run react:typecheck && bun run tests:typecheck",
     "lint": "eslint ./packages --fix; eslint ./tests --fix; prettier ./packages --write; prettier ./tests --write",
     "lint:check": "eslint ./packages && eslint ./tests && prettier ./packages -c && prettier ./tests -c",
     "docs:dev": "bun run --cwd docs dev",
@@ -24,6 +24,7 @@
     "react:typecheck": "bun run viem:build && bun run --cwd packages/seismic-react typecheck",
     "react:build": "bun run --cwd packages/seismic-react build",
     "react:publish": "npm publish -w packages/seismic-react",
+    "tests:typecheck": "bun run --cwd packages/seismic-viem-tests typecheck && bun run --cwd tests/seismic-viem typecheck",
     "tests:build": "bun run --cwd packages/seismic-viem-tests build",
     "tests:publish": "npm publish -w packages/seismic-viem-tests"
   },

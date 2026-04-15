@@ -28,17 +28,15 @@ import {
   shieldedWriteContractDebug,
   transparentWriteContract,
 } from '@sviem/contract/write.ts'
+import { sendShieldedTransaction } from '@sviem/tx/sendShielded.ts'
+import { sendTransparentTransaction } from '@sviem/tx/sendTransparent.ts'
+import { signedCall } from '@sviem/tx/signedCall.ts'
+import type { SignedCall } from '@sviem/tx/signedCall.ts'
 import type {
   SendSeismicTransactionParameters,
   SendSeismicTransactionRequest,
   SendSeismicTransactionReturnType,
-} from '@sviem/sendTransaction.ts'
-import {
-  sendShieldedTransaction,
-  sendTransparentTransaction,
-} from '@sviem/sendTransaction.ts'
-import { signedCall } from '@sviem/signedCall.ts'
-import type { SignedCall } from '@sviem/signedCall.ts'
+} from '@sviem/tx/types.ts'
 
 /**
  * Defines the actions available for a shielded wallet client.
