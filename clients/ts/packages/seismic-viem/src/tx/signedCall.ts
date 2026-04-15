@@ -64,8 +64,8 @@ const doSignedCall = async <
   // and send it to the node as raw tx bytes
   const serializedTransaction = await client.account!
     .signTransaction!<SeismicTxSerializer>(seismicTx, {
-    serializer: serializeSeismicTransaction,
-  })
+      serializer: serializeSeismicTransaction,
+    })
 
   const response: Hex = await client.request({
     method: 'eth_call',
@@ -151,8 +151,12 @@ const prepareAccount = (
 ): Account => {
   const account = parseAccount(paramsAccount)
   if (account.address === clientAccount.address) {
+    // if they put in an address, and it matches their local account,
+    // then we should use their local account because they can sign for it right here
     return clientAccount
   }
+  // if not, they will have their JSON-RPC account sign,
+  // meaning they will use messageVersion = 2 for signed reads
   return account
 }
 
@@ -276,8 +280,29 @@ export async function signedCall<
       nonce: nonce_,
       to,
       value,
+      // prepareTransactionRequest will fill the required fields using legacy spec
       type: 'legacy',
     } as any
+
+    // TODO: decide if we ever want to add multicall support
+    /*
+    const rpcStateOverride = serializeStateOverride(stateOverride)
+    if (batch && shouldPerformMulticall({ request }) && !rpcStateOverride) {
+      try {
+        return await scheduleMulticall(client, {
+          ...request,
+          blockNumber,
+          blockTag,
+        } as unknown as ScheduleMulticallParameters<TChain>)
+      } catch (err) {
+        if (
+          !(err instanceof ClientChainNotConfiguredError) &&
+          !(err instanceof ChainDoesNotSupportContract)
+        )
+          throw err
+      }
+    }
+    */
 
     const preparedTx = await prepareTransactionRequest(client, request)
     // @ts-ignore
@@ -293,6 +318,7 @@ export async function signedCall<
   } catch (err) {
     const data = getRevertErrorData(err)
 
+    // Check for CCIP-Read offchain lookup signature.
     if (
       client.ccipRead !== false &&
       data?.slice(0, 10) === offchainLookupSignature &&
