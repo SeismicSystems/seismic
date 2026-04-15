@@ -3,6 +3,7 @@ import type {
   AbiFunction,
   Account,
   CallParameters,
+  Client,
   Chain,
   ContractFunctionArgs,
   ContractFunctionName,
@@ -18,11 +19,12 @@ import {
   getAbiItem,
   toFunctionSelector,
 } from 'viem'
+import { readContract as viemReadContract } from 'viem/actions'
 import { formatAbiItem } from 'viem/utils'
 
 import { SeismicSecurityParams } from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'
-import { remapSeismicAbiInputs } from '@sviem/contract/abi.ts'
+import { hasShieldedParams, remapSeismicAbiInputs } from '@sviem/contract/abi.ts'
 import type { SignedCallParameters } from '@sviem/tx/signedCall.ts'
 import { signedCall } from '@sviem/tx/signedCall.ts'
 
@@ -32,6 +34,57 @@ export type SignedReadContractParameters<
   TArgs extends ContractFunctionArgs<TAbi, 'pure' | 'view', TFunctionName>,
 > = ReadContractParameters<TAbi, TFunctionName, TArgs> & {
   nonce?: number
+}
+
+/**
+ * Shared smart-read routing used by both the wallet actions and the
+ * ABI/address-bound contract wrapper.
+ *
+ * This helper inspects the target ABI/function and chooses the read path:
+ *
+ * - if the function has shielded params, it routes to `signedReadContract(...)`
+ * - otherwise it routes to viem's `readContract(...)`
+ *
+ * `walletClient` is only required for the signed-read path. `readClient` is
+ * the client used for the plain viem read path.
+ */
+export async function smartReadContract<
+  TChain extends Chain | undefined,
+  TAccount extends Account,
+  const TAbi extends Abi | readonly unknown[],
+  TFunctionName extends ContractFunctionName<TAbi, 'pure' | 'view'>,
+  TArgs extends ContractFunctionArgs<TAbi, 'pure' | 'view', TFunctionName>,
+>(
+  walletClient: ShieldedWalletClient<Transport, TChain, TAccount> | undefined,
+  readClient: Client,
+  parameters: ReadContractParameters<TAbi, TFunctionName, TArgs>,
+  securityParams?: SeismicSecurityParams,
+  forcedAccount?: Account
+): Promise<ReadContractReturnType> {
+  const readArgs = parameters as unknown as {
+    abi: Abi
+    functionName: string
+  }
+  if (hasShieldedParams(readArgs.abi, readArgs.functionName)) {
+    const account = forcedAccount ?? walletClient?.account
+    if (!walletClient || !account) {
+      throw new Error('Wallet must have an account to perform signed reads')
+    }
+    return signedReadContract(
+      walletClient as unknown as Parameters<typeof signedReadContract>[0],
+      {
+        ...(parameters as Record<string, unknown>),
+        account,
+      } as unknown as Parameters<typeof signedReadContract>[1],
+      securityParams
+    )
+  }
+
+  // No shielded params -> the ABI is valid for viem as-is.
+  return viemReadContract(
+    readClient as unknown as Parameters<typeof viemReadContract>[0],
+    parameters as unknown as Parameters<typeof viemReadContract>[1]
+  )
 }
 
 /**
