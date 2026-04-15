@@ -30,9 +30,11 @@ from seismic_web3.contract.shielded import AsyncShieldedContract, ShieldedContra
 from seismic_web3.rpc import async_get_tee_public_key, get_tee_public_key
 from seismic_web3.transaction.send import (
     async_debug_send_shielded_transaction,
+    async_estimate_transparent_gas,
     async_send_shielded_transaction,
     async_signed_call,
     debug_send_shielded_transaction,
+    estimate_transparent_gas,
     send_shielded_transaction,
     signed_call,
 )
@@ -461,8 +463,15 @@ class SeismicNamespace(SeismicPublicNamespace):
                 deposit_data_root,
             ],
         )
+        gas = estimate_transparent_gas(
+            self._w3,
+            to=address,
+            data=data.to_0x_hex(),
+            value=value,
+            private_key=self._private_key,
+        )
         return self._w3.eth.send_transaction(
-            {"to": address, "data": data.to_0x_hex(), "value": value},
+            {"to": address, "data": data.to_0x_hex(), "value": value, "gas": gas},
         )
 
 
@@ -702,6 +711,13 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
                 deposit_data_root,
             ],
         )
+        gas = await async_estimate_transparent_gas(
+            self._w3,
+            to=address,
+            data=data.to_0x_hex(),
+            value=value,
+            private_key=self._private_key,
+        )
         return await self._w3.eth.send_transaction(
-            {"to": address, "data": data.to_0x_hex(), "value": value},
+            {"to": address, "data": data.to_0x_hex(), "value": value, "gas": gas},
         )

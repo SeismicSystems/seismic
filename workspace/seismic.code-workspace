@@ -41,6 +41,9 @@
 			"path": "../../seismic-images"
 		},
 		{
+			"path": "../../tdx-init"
+		},
+		{
 			"path": "../../deploy"
 		},
 	],
