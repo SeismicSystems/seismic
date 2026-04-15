@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from eth_account import Account as EthAccount
 from eth_keys.main import KeyAPI as eth_keys
 from hexbytes import HexBytes
 from web3.types import RPCEndpoint
@@ -192,6 +193,77 @@ async def async_estimate_shielded_gas(
     response = await w3.provider.make_request(
         RPCEndpoint("eth_estimateGas"),
         [signed.to_0x_hex()],
+    )
+    return int(_check_rpc_response(response), 16)
+
+
+# ---------------------------------------------------------------------------
+# Transparent signed gas estimation
+# ---------------------------------------------------------------------------
+
+
+def estimate_transparent_gas(
+    w3: Web3,
+    *,
+    to: str,
+    data: str,
+    value: int,
+    private_key: PrivateKey,
+) -> int:
+    """Estimate gas for a transparent tx by signing it first (sync).
+
+    Signs a temporary standard transaction using the block gas limit as
+    a placeholder and sends the signed bytes to ``eth_estimateGas``.
+    This prevents the node from zeroing ``msg.value`` during simulation.
+    """
+    acct = EthAccount.from_key(private_key)
+    block_gas_limit = w3.eth.get_block("latest")["gasLimit"]
+    tx = {
+        "to": to,
+        "data": data,
+        "value": value,
+        "gas": block_gas_limit,
+        "gasPrice": w3.eth.gas_price,
+        "nonce": w3.eth.get_transaction_count(acct.address),
+        "chainId": w3.eth.chain_id,
+    }
+    signed = acct.sign_transaction(tx)
+
+    response = w3.provider.make_request(
+        RPCEndpoint("eth_estimateGas"),
+        [signed.raw_transaction.to_0x_hex()],
+    )
+    return int(_check_rpc_response(response), 16)
+
+
+async def async_estimate_transparent_gas(
+    w3: AsyncWeb3,
+    *,
+    to: str,
+    data: str,
+    value: int,
+    private_key: PrivateKey,
+) -> int:
+    """Estimate gas for a transparent tx by signing it first (async).
+
+    Async variant of :func:`estimate_transparent_gas`.
+    """
+    acct = EthAccount.from_key(private_key)
+    block_gas_limit = (await w3.eth.get_block("latest"))["gasLimit"]
+    tx = {
+        "to": to,
+        "data": data,
+        "value": value,
+        "gas": block_gas_limit,
+        "gasPrice": await w3.eth.gas_price,
+        "nonce": await w3.eth.get_transaction_count(acct.address),
+        "chainId": await w3.eth.chain_id,
+    }
+    signed = acct.sign_transaction(tx)
+
+    response = await w3.provider.make_request(
+        RPCEndpoint("eth_estimateGas"),
+        [signed.raw_transaction.to_0x_hex()],
     )
     return int(_check_rpc_response(response), 16)
 

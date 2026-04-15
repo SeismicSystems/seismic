@@ -1,6 +1,6 @@
 """Tests for seismic_web3.module — SeismicNamespace and AsyncSeismicNamespace."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from hexbytes import HexBytes
@@ -85,7 +85,8 @@ class TestDepositActions:
         assert callable(ns.get_deposit_root)
         assert callable(ns.get_deposit_count)
 
-    def test_deposit_calls_send_transaction(self):
+    @patch("seismic_web3.module.estimate_transparent_gas", return_value=100_000)
+    def test_deposit_calls_send_transaction(self, mock_estimate):
         w3 = MagicMock()
         w3.eth.send_transaction.return_value = HexBytes(b"\xaa" * 32)
         encryption = get_encryption(_NETWORK_PK, _CLIENT_SK)
@@ -105,6 +106,7 @@ class TestDepositActions:
         w3.eth.send_transaction.assert_called_once()
         call_args = w3.eth.send_transaction.call_args[0][0]
         assert call_args["value"] == 32 * 10**18
+        assert call_args["gas"] == 100_000
         assert "data" in call_args
 
     def test_deposit_rejects_wrong_byte_lengths(self):

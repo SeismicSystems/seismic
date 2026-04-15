@@ -103,7 +103,5 @@ export const depositContractWalletActions = <
         args.depositDataRoot,
       ],
       value: args.value,
-      // TODO: remove once signed eth_estimateGas works
-      gas: 500_000n,
     } as any),
 })
