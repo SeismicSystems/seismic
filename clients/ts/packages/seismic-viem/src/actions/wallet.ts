@@ -12,7 +12,6 @@ import type {
   WriteContractParameters,
   WriteContractReturnType,
 } from 'viem'
-import { readContract } from 'viem/actions'
 
 import { SeismicSecurityParams } from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'

@@ -3,8 +3,8 @@ import type {
   AbiFunction,
   Account,
   CallParameters,
-  Client,
   Chain,
+  Client,
   ContractFunctionArgs,
   ContractFunctionName,
   Hex,
@@ -24,7 +24,10 @@ import { formatAbiItem } from 'viem/utils'
 
 import { SeismicSecurityParams } from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'
-import { hasShieldedParams, remapSeismicAbiInputs } from '@sviem/contract/abi.ts'
+import {
+  hasShieldedParams,
+  remapSeismicAbiInputs,
+} from '@sviem/contract/abi.ts'
 import type { SignedCallParameters } from '@sviem/tx/signedCall.ts'
 import { signedCall } from '@sviem/tx/signedCall.ts'
 

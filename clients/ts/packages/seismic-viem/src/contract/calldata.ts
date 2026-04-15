@@ -8,11 +8,7 @@ import type {
   Hex,
   WriteContractParameters,
 } from 'viem'
-import {
-  encodeAbiParameters,
-  getAbiItem,
-  toFunctionSelector,
-} from 'viem'
+import { encodeAbiParameters, getAbiItem, toFunctionSelector } from 'viem'
 import { formatAbiItem } from 'viem/utils'
 
 import { remapSeismicAbiInputs } from '@sviem/contract/abi.ts'

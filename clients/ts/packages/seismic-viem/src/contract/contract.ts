@@ -19,7 +19,6 @@ import type {
   WriteContractReturnType,
 } from 'viem'
 import { getContract } from 'viem'
-import { readContract } from 'viem/actions'
 
 import type { ShieldedWalletClient } from '@sviem/client.ts'
 import {
@@ -594,19 +593,17 @@ export function getShieldedContract<
           ]
         ) => {
           const { args, options } = getFunctionParameters(parameters)
-          return smartRead(
-            {
-              abi,
-              address,
-              functionName,
-              args,
-              ...(options as Record<string, unknown>),
-            } as unknown as ReadContractParameters<
-              TAbi,
-              ContractFunctionName<TAbi, 'pure' | 'view'>,
-              ContractFunctionArgs<TAbi, 'pure' | 'view'>
-            >
-          )
+          return smartRead({
+            abi,
+            address,
+            functionName,
+            args,
+            ...(options as Record<string, unknown>),
+          } as unknown as ReadContractParameters<
+            TAbi,
+            ContractFunctionName<TAbi, 'pure' | 'view'>,
+            ContractFunctionArgs<TAbi, 'pure' | 'view'>
+          >)
         }
       },
     }
@@ -626,21 +623,19 @@ export function getShieldedContract<
           ]
         ) => {
           const { args, options } = getFunctionParameters(parameters)
-          return smartWrite(
-            {
-              abi,
-              address,
-              functionName,
-              args,
-              ...(options as Record<string, unknown>),
-            } as unknown as WriteContractParameters<
-              TAbi,
-              ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
-              ContractFunctionArgs<TAbi, 'nonpayable' | 'payable'>,
-              TChain,
-              TAccount
-            >
-          )
+          return smartWrite({
+            abi,
+            address,
+            functionName,
+            args,
+            ...(options as Record<string, unknown>),
+          } as unknown as WriteContractParameters<
+            TAbi,
+            ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
+            ContractFunctionArgs<TAbi, 'nonpayable' | 'payable'>,
+            TChain,
+            TAccount
+          >)
         }
       },
     }
