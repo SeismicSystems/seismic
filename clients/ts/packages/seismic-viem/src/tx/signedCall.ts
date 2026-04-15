@@ -151,12 +151,8 @@ const prepareAccount = (
 ): Account => {
   const account = parseAccount(paramsAccount)
   if (account.address === clientAccount.address) {
-    // if they put in an address, and it matches their local account,
-    // then we should use their local account because they can sign for it right here
     return clientAccount
   }
-  // if not, they will have their JSON-RPC account sign,
-  // meaning they will use messageVersion = 2 for signed reads
   return account
 }
 
@@ -230,30 +226,6 @@ export async function signedCall<
     throw new BaseError("Signed calls must set 'to' address")
   }
 
-  /*
-  // Check if the call is deployless via bytecode.
-  const deploylessCallViaBytecode = code && data_
-  // Check if the call is deployless via a factory.
-  const deploylessCallViaFactory = factory && factoryData && to && data_
-  const deploylessCall = deploylessCallViaBytecode || deploylessCallViaFactory
-
-  const data = (() => {
-    if (deploylessCallViaBytecode)
-      return toDeploylessCallViaBytecodeData({
-        code,
-        data: data_,
-      })
-    if (deploylessCallViaFactory)
-      return toDeploylessCallViaFactoryData({
-        data: data_,
-        factory,
-        factoryData,
-        to,
-      })
-    return data_
-  })()
-  */
-
   try {
     const assertRequestParams = {
       account,
@@ -272,15 +244,11 @@ export async function signedCall<
     const fromAddress = account?.address
     if (!fromAddress) {
       throw new SignedCallError({
-        // TODO: link this
-        // docsPath: 'docs/actions/public/signedCall',
         reason: 'Invoked signedCall without an address',
       })
     }
     if (fromAddress !== client.account?.address) {
       throw new SignedCallError({
-        // TODO: link this
-        // docsPath: 'docs/actions/public/signedCall',
         reason: `Client cannot sign for address ${fromAddress}`,
       })
     }
@@ -310,31 +278,16 @@ export async function signedCall<
       maxFeePerGas,
       maxPriorityFeePerGas,
       nonce: nonce_,
-      to, // : deploylessCall ? undefined : to,
+      to,
       value,
-      // prepareTransactionRequest will fill the required fields using legacy spec
       type: 'legacy',
     } as any
 
     // TODO: decide if we ever want to add multicall support
-    /*
-    const rpcStateOverride = serializeStateOverride(stateOverride)
-    if (batch && shouldPerformMulticall({ request }) && !rpcStateOverride) {
-      try {
-        return await scheduleMulticall(client, {
-          ...request,
-          blockNumber,
-          blockTag,
-        } as unknown as ScheduleMulticallParameters<TChain>)
-      } catch (err) {
-        if (
-          !(err instanceof ClientChainNotConfiguredError) &&
-          !(err instanceof ChainDoesNotSupportContract)
-        )
-          throw err
-      }
-    }
-    */
+    void batch
+    void code
+    void factory
+    void factoryData
 
     const preparedTx = await prepareTransactionRequest(client, request)
     // @ts-ignore
@@ -350,19 +303,12 @@ export async function signedCall<
   } catch (err) {
     const data = getRevertErrorData(err)
 
-    // Check for CCIP-Read offchain lookup signature.
     if (
       client.ccipRead !== false &&
       data?.slice(0, 10) === offchainLookupSignature &&
       to
     )
       return { data: await offchainLookup(client, { data, to }) }
-
-    /*
-    // Check for counterfactual deployment error.
-    if (deploylessCall && data?.slice(0, 10) === '0x101bb98d')
-      throw new CounterfactualDeploymentFailedError({ factory })
-    */
 
     throw getCallError(err as ErrorType, {
       account,

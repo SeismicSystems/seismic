@@ -23,8 +23,8 @@ import { formatAbiItem } from 'viem/utils'
 import { SeismicSecurityParams } from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'
 import { remapSeismicAbiInputs } from '@sviem/contract/abi.ts'
-import type { SignedCallParameters } from '@sviem/signedCall.ts'
-import { signedCall } from '@sviem/signedCall.ts'
+import type { SignedCallParameters } from '@sviem/tx/signedCall.ts'
+import { signedCall } from '@sviem/tx/signedCall.ts'
 
 export type SignedReadContractParameters<
   TAbi extends Abi | readonly unknown[],

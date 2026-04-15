@@ -26,8 +26,8 @@ import type { ShieldedWalletClient } from '@sviem/client.ts'
 import { remapSeismicAbiInputs } from '@sviem/contract/abi.ts'
 import { randomEncryptionNonce } from '@sviem/crypto/nonce.ts'
 import { buildTxSeismicMetadata } from '@sviem/metadata.ts'
-import type { SendSeismicTransactionParameters } from '@sviem/sendTransaction.ts'
-import { sendShieldedTransaction } from '@sviem/sendTransaction.ts'
+import type { SendSeismicTransactionParameters } from '@sviem/tx/types.ts'
+import { sendShieldedTransaction } from '@sviem/tx/sendShielded.ts'
 
 export const getPlaintextCalldata = <
   TChain extends Chain | undefined,
