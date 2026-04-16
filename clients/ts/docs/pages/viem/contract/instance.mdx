@@ -39,10 +39,13 @@ Depending on the client you provide, different methods will be available on the 
 
 ### Available Methods
 
-- **`write`**: Write to a contract with encrypted calldata
-- **`read`**: Read from a contract using a signed read
-- **`tread`**: Transparently read from a contract using an unsigned read (from the zero address)
-- **`twrite`**: Transparently write to a contract using non-encrypted calldata
+- **`write`**: Smart write, shielded if the target function has shielded params, transparent otherwise
+- **`read`**: Smart read, signed if the target function has shielded params, transparent otherwise
+- **`swrite`**: Force shielded write
+- **`sread`**: Force signed read
+- **`twrite`**: Force transparent write
+- **`tread`**: Force transparent read
+- **`dwrite`**: Send a real shielded transaction and return the plaintext/shielded tx views plus `txHash`
 
 ### Calling Methods
 
@@ -50,7 +53,7 @@ Contract instance methods follow this general format:
 
 ```ts
 // function calls
-contract.(read|write|tread|twrite).(functionName)(args, options)
+contract.(read|write|sread|swrite|tread|twrite|dwrite).(functionName)(args, options)
 ```
 
 If the contract function doesn't accept arguments, you can set the `args` parameter to an empty array `[]`
@@ -91,6 +94,8 @@ const contract = getShieldedContract({
 
 The ShieldedWalletClient for performing contract actions with privacy features.
 
+For read-only usage, you can also pass a keyed client object with only `public`.
+
 ```ts
 const contract = getShieldedContract({
   address: '0x1234...',
@@ -101,11 +106,14 @@ const contract = getShieldedContract({
 
 ## Remarks
 
-- The `read` property will always call a signed read
-- The `tread` property will toggle between public reads and signed reads, depending on whether an `account` is provided
-- The `write` property will encrypt calldata of the transaction
-- The `twrite` property will make a normal write with transparent calldata
-- The client must be a `ShieldedWalletClient`
+- The `read` property auto-detects shielded params and routes to signed read or transparent read
+- The `write` property auto-detects shielded params and routes to shielded write or transparent write
+- The `sread` property always performs a signed read
+- The `swrite` property always sends a shielded transaction
+- The `tread` property always performs a transparent read. Seismic zeroes out `from` on transparent `eth_call`, so `tread` rejects `account` here to prevent silent bugs; use `sread` for sender-aware reads
+- The `twrite` property always sends transparent calldata
+- The `dwrite` property sends a real shielded transaction and returns inspection data for that submitted tx
+- The client must be a `ShieldedWalletClient` for write, signed-read, and debug-write surfaces
 
 ## Throws
 

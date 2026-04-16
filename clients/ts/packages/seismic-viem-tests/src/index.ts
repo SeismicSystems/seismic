@@ -6,6 +6,9 @@ export { testSeismicTx } from '@sviem-tests/tests/contract/contract.ts'
 export { testDepositContract } from '@sviem-tests/tests/contract/depositContract.ts'
 export {
   testContractTreadIsntSeismicTx,
+  testContractTreadRejectsAccountOption,
+  testContractTreadWithPublicOnlyClient,
+  testShieldedWalletClientTreadRejectsAccountOption,
   testShieldedWalletClientTreadIsntSeismicTx,
   testViemReadContractIsntSeismicTx,
 } from '@sviem-tests/tests/transparentContract/tread-contract.ts'

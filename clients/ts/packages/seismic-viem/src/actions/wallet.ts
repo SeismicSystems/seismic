@@ -1,7 +1,6 @@
 import type {
   Abi,
   Account,
-  Address,
   Chain,
   ContractFunctionArgs,
   ContractFunctionName,
@@ -13,19 +12,19 @@ import type {
   WriteContractParameters,
   WriteContractReturnType,
 } from 'viem'
-import { readContract, writeContract } from 'viem/actions'
 
 import { SeismicSecurityParams } from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'
-import { hasShieldedParams } from '@sviem/contract/abi.ts'
 import {
   signedReadContract,
+  smartReadContract,
   transparentReadContract,
 } from '@sviem/contract/read.ts'
 import {
   ShieldedWriteContractDebugResult,
   shieldedWriteContract,
   shieldedWriteContractDebug,
+  smartWriteContract,
   transparentWriteContract,
 } from '@sviem/contract/write.ts'
 import { sendShieldedTransaction } from '@sviem/tx/sendShielded.ts'
@@ -253,25 +252,7 @@ export const shieldedWalletActions = <
         client as unknown as Parameters<typeof sendTransparentTransaction>[0],
         args as unknown as Parameters<typeof sendTransparentTransaction>[1]
       ),
-    writeContract: (args) => {
-      const writeArgs = args as unknown as {
-        abi: Abi
-        address: Address
-        functionName: string
-        args?: readonly unknown[]
-      }
-      if (hasShieldedParams(writeArgs.abi, writeArgs.functionName)) {
-        return shieldedWriteContract(
-          client as unknown as Parameters<typeof shieldedWriteContract>[0],
-          args as unknown as Parameters<typeof shieldedWriteContract>[1]
-        )
-      }
-      // No shielded params → abi is valid for viem as-is
-      return writeContract(
-        client as unknown as Parameters<typeof writeContract>[0],
-        args as unknown as Parameters<typeof writeContract>[1]
-      )
-    },
+    writeContract: (args) => smartWriteContract(client, args),
     swriteContract: (args) =>
       shieldedWriteContract(
         client as unknown as Parameters<typeof shieldedWriteContract>[0],
@@ -291,37 +272,26 @@ export const shieldedWalletActions = <
         ShieldedWriteContractDebugResult<TChain | undefined, TAccount>
       >
     },
-    readContract: (args, securityParams) => {
-      const readArgs = args as unknown as {
-        abi: Abi
-        address: Address
-        functionName: string
-        args?: readonly unknown[]
-      }
-      if (hasShieldedParams(readArgs.abi as Abi, readArgs.functionName)) {
-        return signedReadContract(
-          client as unknown as Parameters<typeof signedReadContract>[0],
-          args as unknown as Parameters<typeof signedReadContract>[1],
-          securityParams
-        )
-      }
-      // No shielded params → abi is valid for viem as-is
-      return readContract(
-        client as unknown as Parameters<typeof readContract>[0],
-        args as unknown as Parameters<typeof readContract>[1]
-      )
-    },
+    readContract: (args, securityParams) =>
+      smartReadContract(client, client, args, securityParams),
     sreadContract: (args, securityParams) =>
       signedReadContract(
         client as unknown as Parameters<typeof signedReadContract>[0],
         args as unknown as Parameters<typeof signedReadContract>[1],
         securityParams
       ),
-    treadContract: (args) =>
-      transparentReadContract(
+    treadContract: (args) => {
+      const readArgs = args as Record<string, unknown>
+      if (readArgs.account !== undefined) {
+        throw new Error(
+          'walletClient.treadContract is always transparent. Seismic zeroes out `from` on transparent `eth_call`, so `account` would be ignored on the node and cause silent bugs. Remove `account` or use `walletClient.sreadContract`.'
+        )
+      }
+      return transparentReadContract(
         client as unknown as Parameters<typeof transparentReadContract>[0],
         args as unknown as Parameters<typeof transparentReadContract>[1]
-      ),
+      )
+    },
     signedCall: (args, securityParams) =>
       signedCall(
         client as unknown as Parameters<typeof signedCall>[0],

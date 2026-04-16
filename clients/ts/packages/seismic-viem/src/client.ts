@@ -92,12 +92,16 @@ export type ShieldedPublicClient<
  *   - `readContract`: smart read — auto-detects shielded params; uses signed read if shielded, transparent read otherwise
  *   - `sreadContract`: force shielded read — always uses signed read
  *   - `treadContract`: force transparent read — always uses unsigned read (from the zero address)
+ *     and rejects `account`. Seismic zeroes out `from` on transparent `eth_call`,
+ *     so this prevents silent bugs; use `sreadContract` for sender-aware reads.
  *   - `writeContract`: smart write — auto-detects shielded params; uses shielded write if shielded, transparent write otherwise
  *     Transparent writes inherit the `sendTransaction` behavior above, so `local` accounts also
  *     use signed `eth_estimateGas` there.
  *   - `swriteContract`: force shielded write — always encrypts calldata via seismic transaction
  *   - `twriteContract`: force transparent write — executes via standard ethereum transaction and
  *     also inherits signed `eth_estimateGas` for `local` accounts
+ *   - `dwriteContract`: send + inspect write — sends a real shielded tx and returns the submitted
+ *     `txHash` together with plaintext and shielded tx views for debugging
  *   - `deposit`: deposit into the deposit contract. This currently uses the transparent
  *     `writeContract` path, so it inherits the same estimateGas behavior.
  *   - `deployContract`: currently still uses viem's direct deploy path; treat its gas-estimation
