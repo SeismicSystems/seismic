@@ -19,6 +19,7 @@ import { hkdf } from '@noble/hashes/hkdf'
 import { sha256 } from '@noble/hashes/sha256'
 
 export const SEISMIC_TX_TYPE = 0x4a
+const DEFAULT_SEISMIC_BLOCKS_WINDOW = 100n
 
 // ── Helpers (inlined from seismic-viem to keep this package standalone) ──
 
@@ -191,7 +192,10 @@ export type EncryptSeismicTxParams = {
   rpcUrl: string
   /** Optional: your own encryption private key (ephemeral one generated if omitted) */
   encryptionPrivateKey?: Hex
-  /** Optional: how many blocks until this tx expires (default 100) */
+  /**
+   * Optional: how many blocks until this tx expires.
+   * Defaults to `DEFAULT_SEISMIC_BLOCKS_WINDOW`.
+   */
   blocksWindow?: bigint
 }
 
@@ -248,7 +252,7 @@ export const encryptSeismicTx = async ({
   sender,
   rpcUrl,
   encryptionPrivateKey,
-  blocksWindow = 100n,
+  blocksWindow = DEFAULT_SEISMIC_BLOCKS_WINDOW,
 }: EncryptSeismicTxParams): Promise<EncryptSeismicTxResult> => {
   const client = createPublicClient({ transport: http(rpcUrl) })
 
