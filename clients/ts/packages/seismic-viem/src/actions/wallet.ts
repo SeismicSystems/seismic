@@ -280,11 +280,18 @@ export const shieldedWalletActions = <
         args as unknown as Parameters<typeof signedReadContract>[1],
         securityParams
       ),
-    treadContract: (args) =>
-      transparentReadContract(
+    treadContract: (args) => {
+      const readArgs = args as Record<string, unknown>
+      if (readArgs.account !== undefined) {
+        throw new Error(
+          'walletClient.treadContract is always transparent. Seismic zeroes out `from` on transparent `eth_call`, so `account` would be ignored on the node and cause silent bugs. Remove `account` or use `walletClient.sreadContract`.'
+        )
+      }
+      return transparentReadContract(
         client as unknown as Parameters<typeof transparentReadContract>[0],
         args as unknown as Parameters<typeof transparentReadContract>[1]
-      ),
+      )
+    },
     signedCall: (args, securityParams) =>
       signedCall(
         client as unknown as Parameters<typeof signedCall>[0],

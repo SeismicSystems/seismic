@@ -89,3 +89,81 @@ export const testShieldedWalletClientTreadIsntSeismicTx = async ({
   })
   expect(isOdd).toBe(false)
 }
+
+export const testContractTreadRejectsAccountOption = async ({
+  chain,
+  url,
+  account,
+}: ContractTestArgs) => {
+  const { deployedContractAddress, walletClient } = await treadSetup({
+    chain,
+    url,
+    account,
+  })
+
+  const seismicContract = getShieldedContract({
+    abi: transparentCounterABI,
+    address: deployedContractAddress,
+    client: walletClient,
+  })
+
+  let error: Error | undefined
+  try {
+    await seismicContract.tread.isOdd({
+      account: walletClient.account.address,
+    })
+  } catch (err) {
+    error = err as Error
+  }
+
+  expect(error).toBeDefined()
+  expect(error?.message).toContain('zeroes out `from`')
+}
+
+export const testShieldedWalletClientTreadRejectsAccountOption = async ({
+  chain,
+  url,
+  account,
+}: ContractTestArgs) => {
+  const { deployedContractAddress, walletClient } = await treadSetup({
+    chain,
+    url,
+    account,
+  })
+
+  let error: Error | undefined
+  try {
+    await walletClient.treadContract({
+      address: deployedContractAddress,
+      abi: transparentCounterABI,
+      functionName: 'isOdd',
+      account: walletClient.account.address,
+    })
+  } catch (err) {
+    error = err as Error
+  }
+
+  expect(error).toBeDefined()
+  expect(error?.message).toContain('zeroes out `from`')
+}
+
+export const testContractTreadWithPublicOnlyClient = async ({
+  chain,
+  url,
+  account,
+}: ContractTestArgs) => {
+  const { deployedContractAddress, publicClient } = await treadSetup({
+    chain,
+    url,
+    account,
+  })
+
+  const seismicContract = getShieldedContract({
+    abi: transparentCounterABI,
+    address: deployedContractAddress,
+    client: { public: publicClient },
+  })
+
+  const isOdd = await seismicContract.tread.isOdd()
+  expect(isOdd).toBe(false)
+}

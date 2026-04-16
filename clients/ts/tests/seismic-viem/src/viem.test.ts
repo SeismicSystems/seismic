@@ -51,7 +51,10 @@ import {
 } from '@sviem-tests/tests/trace.ts'
 import {
   testContractTreadIsntSeismicTx,
+  testContractTreadRejectsAccountOption,
+  testContractTreadWithPublicOnlyClient,
   testShieldedWalletClientTreadIsntSeismicTx,
+  testShieldedWalletClientTreadRejectsAccountOption,
   testViemReadContractIsntSeismicTx,
 } from '@sviem-tests/tests/transparentContract/tread-contract.ts'
 import {
@@ -206,6 +209,37 @@ describe('tread should not use seismic tx', async () => {
     'viem readContract should not use seismic tx',
     async () =>
       await testViemReadContractIsntSeismicTx({ chain, url, account }),
+    {
+      timeout: TIMEOUT_MS,
+    }
+  )
+
+  test(
+    'ShieldedContract.tread rejects account because it is always transparent',
+    async () =>
+      await testContractTreadRejectsAccountOption({ chain, url, account }),
+    {
+      timeout: TIMEOUT_MS,
+    }
+  )
+
+  test(
+    'ShieldedContract.tread works with a public-only keyed client',
+    async () =>
+      await testContractTreadWithPublicOnlyClient({ chain, url, account }),
+    {
+      timeout: TIMEOUT_MS,
+    }
+  )
+
+  test(
+    'ShieldedWalletClient.treadContract rejects account because it is always transparent',
+    async () =>
+      await testShieldedWalletClientTreadRejectsAccountOption({
+        chain,
+        url,
+        account,
+      }),
     {
       timeout: TIMEOUT_MS,
     }
