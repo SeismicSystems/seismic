@@ -58,6 +58,52 @@ export {
   testSmartWalletActionsLifecycle,
 } from '@sviem-tests/tests/smartRouting/smartRouting.ts'
 
+// Explorer URL unit tests
+export {
+  testGetExplorerUrlReturnsNullForUndefinedChain,
+  testGetExplorerUrlReturnsNullForChainWithoutExplorer,
+  testGetExplorerUrlReturnsBaseUrlWithoutOptions,
+  testGetExplorerUrlBuildsItemUrl,
+  testGetExplorerUrlBuildsItemUrlWithTab,
+  testTxExplorerUrlBuildsCorrectUrl,
+  testTxExplorerUrlWithTab,
+  testTxExplorerUrlReturnsNullWithoutChain,
+  testAddressExplorerUrlBuildsCorrectUrl,
+  testAddressExplorerUrlWithTab,
+  testAddressExplorerUrlReturnsNullWithoutExplorer,
+  testBlockExplorerUrlBuildsCorrectUrl,
+  testBlockExplorerUrlWithTab,
+  testTokenExplorerUrlBuildsCorrectUrl,
+  testTokenExplorerUrlWithTab,
+  testSanvilHasNoExplorer,
+} from '@sviem-tests/tests/explorerUrl.ts'
+
+// Serialization error tests
+export {
+  testSerializeMissingChainId,
+  testSerializeMissingNonce,
+  testSerializeMissingGasPrice,
+  testSerializeMissingGas,
+  testSerializeMissingTo,
+  testSerializeMissingEncryptionPubkey,
+  testSerializeMissingEncryptionNonce,
+  testSerializeMissingRecentBlockHash,
+  testSerializeMissingExpiresAtBlock,
+  testSerializeMissingData,
+  testSerializeValidTxDoesNotThrow,
+} from '@sviem-tests/tests/serializationErrors.ts'
+
+// SRC20 crypto and Directory unit tests
+export {
+  testParseEncryptedDataThrowsOnEmpty,
+  testParseEncryptedDataThrowsOnEmptyString,
+  testParseEncryptedDataRoundtrip,
+  testParseEncryptedDataRoundtripLargeAmount,
+  testComputeKeyHashIsDeterministic,
+  testComputeKeyHashMatchesKeccak256,
+  testComputeKeyHashDifferentKeysProduceDifferentHashes,
+} from '@sviem-tests/tests/src20Crypto.ts'
+
 export { loadDotenv } from '@sviem-tests/util.ts'
 
 /**
