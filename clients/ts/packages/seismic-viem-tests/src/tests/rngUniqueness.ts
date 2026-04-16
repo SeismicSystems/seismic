@@ -8,11 +8,6 @@ type PublicClientConfig = {
   url: string
 }
 
-/**
- * Call RNG multiple times and verify that all results are unique.
- * This addresses the gap where RNG tests only checked range bounds
- * but didn't verify uniqueness, meaning a constant value could pass.
- */
 export const testRngUniqueness = async (
   { chain, url }: PublicClientConfig,
   size: number,
@@ -31,15 +26,10 @@ export const testRngUniqueness = async (
     results.push(value)
   }
 
-  // All values should be unique
   const uniqueValues = new Set(results.map((v) => v.toString()))
   expect(uniqueValues.size).toBe(iterations)
 }
 
-/**
- * Call RNG with personalization and verify uniqueness.
- * Different personalization strings should produce different outputs.
- */
 export const testRngDifferentPersProducesDifferentResults = async ({
   chain,
   url,
@@ -55,6 +45,5 @@ export const testRngDifferentPersProducesDifferentResults = async ({
   const result1 = await publicClient.rng({ numBytes: 32, pers: pers1 })
   const result2 = await publicClient.rng({ numBytes: 32, pers: pers2 })
 
-  // Different personalizations should yield different random values
   expect(result1).not.toBe(result2)
 }

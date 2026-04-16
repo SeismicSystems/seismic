@@ -527,8 +527,6 @@ describe('Smart routing: end-to-end lifecycle', () => {
   )
 })
 
-// ---- Error path tests (require running node) ----
-
 describe('Error paths', () => {
   test(
     'getStorageAt throws on shielded public client',
@@ -541,8 +539,6 @@ describe('Error paths', () => {
     { timeout: TIMEOUT_MS }
   )
 })
-
-// ---- Privacy invariant tests (require running node) ----
 
 describe('Privacy invariants', () => {
   test(
@@ -558,8 +554,6 @@ describe('Privacy invariants', () => {
   )
 })
 
-// ---- RNG uniqueness tests (require running node) ----
-
 describe('RNG uniqueness', () => {
   test(
     'RNG(32) returns unique values across 5 calls',
@@ -574,8 +568,6 @@ describe('RNG uniqueness', () => {
   )
 })
 
-// ---- SignedCall standalone tests (require running node) ----
-
 describe('SignedCall standalone', () => {
   test(
     'signedCall directly reads contract state',
@@ -588,8 +580,6 @@ describe('SignedCall standalone', () => {
     { timeout: CONTRACT_TIMEOUT_MS }
   )
 })
-
-// ---- Concurrency tests (require running node) ----
 
 describe('Concurrent transactions', () => {
   test(

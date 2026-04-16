@@ -5,6 +5,8 @@ export {
   TEST_ACCOUNT_PRIVATE_KEY,
   ENCRYPTION_SK,
   ENCRYPTION_PK,
+  ZERO_ADDRESS,
+  STORAGE_SLOT_ZERO,
 } from '@sviem-tests/constants.ts'
 
 export { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'

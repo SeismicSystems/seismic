@@ -6,15 +6,13 @@ import {
 import type { Account, Chain } from 'viem'
 import { http } from 'viem'
 
+import { ZERO_ADDRESS } from '@sviem-tests/constants.ts'
+
 type NodeParams = {
   chain: Chain
   url: string
 }
 
-/**
- * Verify that getStorageAt always throws on a shielded public client.
- * This is a privacy invariant — raw storage access is forbidden.
- */
 export const testGetStorageAtThrows = async ({ chain, url }: NodeParams) => {
   const publicClient = createShieldedPublicClient({
     chain,
@@ -22,7 +20,7 @@ export const testGetStorageAtThrows = async ({ chain, url }: NodeParams) => {
   })
   await expect(
     publicClient.getStorageAt({
-      address: '0x0000000000000000000000000000000000000000',
+      address: ZERO_ADDRESS,
       slot: '0x0',
     })
   ).rejects.toThrow('Cannot call getStorageAt with a shielded public client')
@@ -34,9 +32,6 @@ type SignedCallErrorParams = {
   account: Account
 }
 
-/**
- * Verify that signedCall throws when no 'to' address is provided.
- */
 export const testSignedCallWithoutToThrows = async ({
   chain,
   url,

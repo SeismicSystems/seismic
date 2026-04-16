@@ -16,10 +16,6 @@ type SignedCallTestArgs = {
   account: Account
 }
 
-/**
- * Test signedCall directly as a standalone action (not through contract.read).
- * Deploy a contract, set a value, then use signedCall to read it.
- */
 export const testSignedCallDirect = async ({
   chain,
   url,
@@ -46,7 +42,6 @@ export const testSignedCallDirect = async ({
   })
   const contractAddress = deployReceipt.contractAddress!
 
-  // Set the number to 7
   const contract = getShieldedContract({
     abi: seismicCounterAbi,
     address: contractAddress,
@@ -55,7 +50,6 @@ export const testSignedCallDirect = async ({
   const setTx = await contract.write.setNumber([7n])
   await publicClient.waitForTransactionReceipt({ hash: setTx })
 
-  // Use signedCall directly to read isOdd()
   const calldata = encodeFunctionData({
     abi: seismicCounterAbi,
     functionName: 'isOdd',
@@ -66,16 +60,10 @@ export const testSignedCallDirect = async ({
     account: account.address,
   })
 
-  // 7 is odd, so we expect a truthy response
-  // The response is ABI-encoded bool
   expect(data).toBeDefined()
-  // ABI-encoded true is 0x...0001
   expect(data!.endsWith('1')).toBe(true)
 }
 
-/**
- * Test signedCall with explicit security params (custom blocksWindow).
- */
 export const testSignedCallWithSecurityParams = async ({
   chain,
   url,
@@ -107,7 +95,6 @@ export const testSignedCallWithSecurityParams = async ({
     functionName: 'isOdd',
   })
 
-  // Call with a large blocksWindow — should succeed
   const { data } = await walletClient.signedCall(
     {
       to: contractAddress,
