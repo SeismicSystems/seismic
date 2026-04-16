@@ -130,6 +130,10 @@ const supply2 = await contract.tread.totalSupply();
 The smart `.read` namespace handles most cases correctly by inspecting the ABI. Use `.sread` when you need the response encrypted even though the function has no shielded input parameters. Use `.tread` only for public data where you don't need authentication.
 {% endhint %}
 
+{% hint style="warning" %}
+`.tread` and `walletClient.treadContract` reject the `account` option and will throw. On Seismic, transparent `eth_call` zeroes out `from` on the node, so any `account` you pass would silently be ignored. For any sender-aware read, use `.sread` / `sreadContract`.
+{% endhint %}
+
 ## See Also
 
 - [Contract Instance](contract-instance.md) -- `getShieldedContract` with `.read` and `.tread` namespaces

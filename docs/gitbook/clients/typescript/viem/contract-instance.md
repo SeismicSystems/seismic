@@ -13,11 +13,11 @@ import { getShieldedContract } from "seismic-viem";
 
 ## Constructor
 
-| Parameter | Type                   | Required | Description                                           |
-| --------- | ---------------------- | -------- | ----------------------------------------------------- |
-| `abi`     | `Abi`                  | Yes      | Contract ABI (use `as const` for full type inference) |
-| `address` | `Address`              | Yes      | Deployed contract address                             |
-| `client`  | `ShieldedWalletClient` | Yes      | Wallet client with encryption capabilities            |
+| Parameter | Type                                | Required | Description                                           |
+| --------- | ----------------------------------- | -------- | ----------------------------------------------------- |
+| `abi`     | `Abi`                               | Yes      | Contract ABI (use `as const` for full type inference) |
+| `address` | `Address`                           | Yes      | Deployed contract address                             |
+| `client`  | `ShieldedWalletClient` \| keyed client | Yes   | Wallet client for full capabilities, or a keyed client (e.g., `{ public: publicClient }`) for read-only use. `.write`, `.swrite`, `.sread`, and `.dwrite` require a wallet client. |
 
 ```typescript
 import { getShieldedContract } from "seismic-viem";
@@ -76,9 +76,9 @@ The returned `ShieldedContract` exposes seven namespaces. Each namespace provide
 | `.write`  | Smart Write       | Auto-detected   | Signer's address | Inspects ABI -- shielded if shielded params, else transparent |
 | `.sread`  | Force Signed Read | Encrypted       | Signer's address | Always authenticated read -- proves identity        |
 | `.swrite` | Force Shielded    | Encrypted       | Signer's address | Always encrypted transaction                        |
-| `.tread`  | Transparent Read  | Plaintext       | Zero address     | Always standard read                                |
+| `.tread`  | Transparent Read  | Plaintext       | Zero address     | Always standard read -- rejects `account`           |
 | `.twrite` | Transparent Write | Plaintext       | Signer's address | Always standard write                               |
-| `.dwrite` | Debug Write       | Encrypted       | Signer's address | Returns plaintext + encrypted tx + hash             |
+| `.dwrite` | Send + Inspect    | Encrypted       | Signer's address | Broadcasts shielded tx and returns plaintext + encrypted tx + hash |
 
 ---
 
@@ -145,6 +145,10 @@ const supply = await contract.tread.totalSupply();
 
 Use `.tread` for public view functions that do not depend on `msg.sender`.
 
+{% hint style="warning" %}
+`.tread` **rejects** the `account` option and will throw. Seismic zeroes out `from` on transparent `eth_call`, so an `account` passed here would be ignored on the node and cause silent bugs. Use `.sread` for sender-aware reads.
+{% endhint %}
+
 ---
 
 ### `.twrite` -- Transparent Write
@@ -159,9 +163,9 @@ Use `.twrite` when you intentionally want calldata to be visible on-chain (e.g.,
 
 ---
 
-### `.dwrite` -- Debug Write
+### `.dwrite` -- Send + Inspect
 
-Builds the same encrypted transaction as `.swrite`, but returns the plaintext transaction, the shielded transaction, and the transaction hash. Useful for inspecting what the SDK produces before sending.
+Sends the same encrypted transaction as `.swrite` -- the tx **is** broadcast and `txHash` is a real on-chain hash -- and additionally returns the plaintext transaction view and the shielded (encrypted) transaction view alongside the hash. Useful for inspecting exactly what the SDK encrypted and submitted.
 
 ```typescript
 const { plaintextTx, shieldedTx, txHash } = await contract.dwrite.transfer([
@@ -173,6 +177,10 @@ console.log("Plaintext calldata:", plaintextTx.data);
 console.log("Encrypted calldata:", shieldedTx.data);
 console.log("Transaction hash:", txHash);
 ```
+
+{% hint style="info" %}
+Despite the "debug" flavor of the name, `.dwrite` broadcasts a real shielded transaction. If you just want to see what would be sent without submitting, build the calldata yourself via `getPlaintextCalldata`.
+{% endhint %}
 
 ## TypeScript ABI Typing
 

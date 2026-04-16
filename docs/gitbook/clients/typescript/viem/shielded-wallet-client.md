@@ -95,10 +95,10 @@ When you call `createShieldedWalletClient()`, the following steps happen:
 | `writeContract(params)`           | Smart write -- inspects ABI for shielded params; encrypts if shielded, sends transparent otherwise                 |
 | `swriteContract(params)`          | Force shielded write -- always encrypts calldata with the AES key before sending                                   |
 | `twriteContract(params)`          | Transparent write -- always sends with plaintext calldata (unencrypted)                                            |
-| `dwriteContract(params)`          | Debug write -- returns the plaintext tx, encrypted tx, and tx hash without broadcasting                            |
+| `dwriteContract(params)`          | Send + inspect write -- broadcasts a real shielded tx and returns the plaintext tx, shielded tx, and `txHash`       |
 | `readContract(params)`            | Smart read -- inspects ABI for shielded params; uses signed read if shielded, transparent read otherwise            |
 | `sreadContract(params)`           | Force signed read -- always authenticated `eth_call` that proves the caller's identity                             |
-| `treadContract(params)`           | Transparent read -- always standard unsigned call                                                                  |
+| `treadContract(params)`           | Transparent read -- always standard unsigned call. Rejects `account` (Seismic zeroes out `from` on transparent `eth_call`); use `sreadContract` for sender-aware reads |
 | `signedCall(params)`              | Low-level signed `eth_call`                                                                                        |
 | `sendShieldedTransaction(params)` | Low-level shielded transaction send                                                                                |
 
@@ -210,10 +210,11 @@ const walletClient2 = await createShieldedWalletClient({
 });
 ```
 
-### Debug Write
+### Send + Inspect Write
 
 ```typescript
-// Debug write: inspect the transaction without broadcasting
+// dwriteContract broadcasts a real shielded tx AND returns the plaintext
+// and shielded tx views for inspection. txHash is a real on-chain hash.
 const debugResult = await walletClient.dwriteContract({
   address: "0xContractAddress",
   abi: contractAbi,
