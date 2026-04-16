@@ -3,10 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
     "transfer": "bun run src/transfer.ts"
   },
   "dependencies": {
     "seismic-encrypt": "workspace:*",
+    "seismic-viem": "workspace:*",
     "viem": "^2.0.0"
   }
 }
