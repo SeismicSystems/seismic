@@ -90,18 +90,22 @@ export type ShieldedPublicClient<
  *     performed via a signed `eth_estimateGas` request; for `json-rpc` accounts, this currently
  *     falls back to viem's standard behavior.
  *   - `readContract`: smart read — auto-detects shielded params; uses signed read if shielded, transparent read otherwise
- *   - `sreadContract`: force shielded read — always uses signed read
+ *   - `sreadContract`: force shielded read — always uses signed read. This accepts optional
+ *     `securityParams` advanced metadata overrides for deterministic tests/debugging,
+ *     expiry control, and low-level Seismic interop.
  *   - `treadContract`: force transparent read — always uses unsigned read (from the zero address)
  *     and rejects `account`. Seismic zeroes out `from` on transparent `eth_call`,
  *     so this prevents silent bugs; use `sreadContract` for sender-aware reads.
  *   - `writeContract`: smart write — auto-detects shielded params; uses shielded write if shielded, transparent write otherwise
  *     Transparent writes inherit the `sendTransaction` behavior above, so `local` accounts also
  *     use signed `eth_estimateGas` there.
- *   - `swriteContract`: force shielded write — always encrypts calldata via seismic transaction
+ *   - `swriteContract`: force shielded write — always encrypts calldata via seismic transaction.
+ *     This accepts optional `securityParams` advanced metadata overrides.
  *   - `twriteContract`: force transparent write — executes via standard ethereum transaction and
  *     also inherits signed `eth_estimateGas` for `local` accounts
  *   - `dwriteContract`: send + inspect write — sends a real shielded tx and returns the submitted
- *     `txHash` together with plaintext and shielded tx views for debugging
+ *     `txHash` together with plaintext and shielded tx views for debugging. This also accepts
+ *     optional `securityParams` advanced metadata overrides.
  *   - `deposit`: deposit into the deposit contract. This currently uses the transparent
  *     `writeContract` path, so it inherits the same estimateGas behavior.
  *   - `deployContract`: currently still uses viem's direct deploy path; treat its gas-estimation

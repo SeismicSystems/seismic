@@ -1,4 +1,5 @@
 export type {
+  SeismicSecurityParams,
   SeismicTxExtras,
   SeismicTransactionRequest,
   TransactionSerializableSeismic,
