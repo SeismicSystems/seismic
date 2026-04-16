@@ -17,6 +17,8 @@ import { ShieldedWalletClient } from '@sviem/client.ts'
 import { randomEncryptionNonce } from '@sviem/crypto/nonce.ts'
 import { TYPED_DATA_MESSAGE_VERSION } from '@sviem/signSeismicTypedData.ts'
 
+const DEFAULT_SEISMIC_BLOCKS_WINDOW = 100n
+
 export type LegacyFields = {
   chainId: number
   nonce: number
@@ -86,7 +88,7 @@ export const buildTxSeismicMetadata = async <
     to,
     value = 0n,
     encryptionNonce,
-    blocksWindow = 100n,
+    blocksWindow = DEFAULT_SEISMIC_BLOCKS_WINDOW,
     recentBlockHash,
     expiresAtBlock,
     typedDataTx,

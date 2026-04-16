@@ -83,9 +83,31 @@ export type SeismicElements = {
  * do not apply to transparent reads or writes.
  */
 export type SeismicSecurityParams = {
+  /**
+   * Expiry window used when deriving `expiresAtBlock` from a recent block.
+   * Defaults to the standard 100-block window.
+   * Ignored when `expiresAtBlock` is provided explicitly.
+   */
   blocksWindow?: bigint
+  /**
+   * Override the AEAD encryption nonce used for the Seismic payload.
+   * Mainly useful for deterministic tests or reproducing an exact request.
+   * When omitted, a random nonce is generated.
+   */
   encryptionNonce?: Hex
+  /**
+   * Override the recent block hash used for freshness and replay protection.
+   * If provided without `expiresAtBlock`, expiry is derived from this block plus
+   * `blocksWindow`.
+   * When omitted, the latest block hash is used.
+   */
   recentBlockHash?: Hex
+  /**
+   * Override the block height after which the signed or shielded request is no
+   * longer valid.
+   * When omitted, expiry is derived from the chosen recent block plus
+   * `blocksWindow`.
+   */
   expiresAtBlock?: bigint
 }
 

@@ -92,7 +92,7 @@ export async function sendShieldedTransaction<
     TRequest
   >,
   {
-    blocksWindow = 100n,
+    blocksWindow,
     encryptionNonce,
     recentBlockHash,
     expiresAtBlock,

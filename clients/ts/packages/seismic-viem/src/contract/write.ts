@@ -226,7 +226,7 @@ export async function shieldedWriteContractDebug<
   securityParams: SeismicSecurityParams = {}
 ): Promise<ShieldedWriteContractDebugResult<TChain, TAccount>> {
   const {
-    blocksWindow = 100n,
+    blocksWindow,
     encryptionNonce: userEncNonce,
     recentBlockHash,
     expiresAtBlock,

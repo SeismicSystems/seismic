@@ -207,7 +207,7 @@ export async function signedCall<
   client: ShieldedWalletClient<TTransport, TChain, TAccount>,
   args: SignedCallParameters<TChain>,
   {
-    blocksWindow = 100n,
+    blocksWindow,
     encryptionNonce,
     recentBlockHash,
     expiresAtBlock,
