@@ -2,10 +2,11 @@ import { expect } from 'bun:test'
 import type { Hex } from 'viem'
 import { parseEther } from 'viem/utils'
 
+import { SAMPLE_TX_HASH } from '@sviem-tests/constants.ts'
+
 /**
- * Inline the parseMinBalance logic from @sviem/faucet.ts since it's not
- * exported. These tests verify the balance threshold parsing without
- * needing a running faucet service.
+ * Inline copy of parseMinBalance from @sviem/faucet.ts
+ * since it's not exported.
  */
 const DEFAULT_MIN_BALANCE_WEI = parseEther('0.5')
 
@@ -27,8 +28,6 @@ const parseMinBalance = (
   return DEFAULT_MIN_BALANCE_WEI
 }
 
-// --- parseMinBalance tests ---
-
 export const testParseMinBalanceDefaultsToHalfEther = () => {
   const result = parseMinBalance()
   expect(result).toBe(parseEther('0.5'))
@@ -45,7 +44,6 @@ export const testParseMinBalanceUsesEtherWhenProvided = () => {
 }
 
 export const testParseMinBalancePrefersWeiOverEther = () => {
-  // When both are provided, minBalanceWei wins
   const result = parseMinBalance(999n, 1)
   expect(result).toBe(999n)
 }
@@ -55,11 +53,9 @@ export const testParseMinBalanceHandlesNumericWei = () => {
   expect(result).toBe(5000n)
 }
 
-// --- faucet response parsing tests ---
-
 /**
- * Inline the hash extraction logic from checkFaucet to test it
- * without a running faucet.
+ * Inline copy of hash extraction logic from checkFaucet
+ * since it's not exported.
  */
 const extractFaucetHash = (
   msg: string
@@ -74,12 +70,10 @@ const extractFaucetHash = (
 }
 
 export const testFaucetHashExtractionValid = () => {
-  const hash =
-    '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'
-  const result = extractFaucetHash(`Txhash: ${hash}`)
+  const result = extractFaucetHash(`Txhash: ${SAMPLE_TX_HASH}`)
   expect(result.valid).toBe(true)
   if (result.valid) {
-    expect(result.hash).toBe(hash)
+    expect(result.hash).toBe(SAMPLE_TX_HASH)
   }
 }
 
@@ -94,9 +88,7 @@ export const testFaucetHashExtractionNoPrefix = () => {
 }
 
 export const testFaucetHashExtractionMissingHexPrefix = () => {
-  // 64 hex chars but no 0x prefix → not valid
-  const result = extractFaucetHash(
-    'Txhash: abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'
-  )
+  const hashWithout0x = SAMPLE_TX_HASH.slice(2)
+  const result = extractFaucetHash(`Txhash: ${hashWithout0x}`)
   expect(result.valid).toBe(false)
 }

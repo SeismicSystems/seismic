@@ -594,6 +594,7 @@ describe('Concurrent transactions', () => {
   )
 })
 
+
 describe('Faucet parseMinBalance', () => {
   test('defaults to 0.5 ether', testParseMinBalanceDefaultsToHalfEther)
   test('uses wei when provided', testParseMinBalanceUsesWeiWhenProvided)

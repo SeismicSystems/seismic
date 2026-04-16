@@ -6,6 +6,7 @@ export {
   ENCRYPTION_SK,
   ENCRYPTION_PK,
   ZERO_ADDRESS,
+  SAMPLE_TX_HASH,
 } from '@sviem-tests/constants.ts'
 
 export { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'

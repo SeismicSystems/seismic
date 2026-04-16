@@ -8,9 +8,6 @@ type WsTestArgs = {
   wsUrl: string
 }
 
-/**
- * Test that a WS client can subscribe to new block headers.
- */
 export const testWsBlockSubscription = async ({ chain, wsUrl }: WsTestArgs) => {
   const client = await createShieldedPublicClient({
     chain,
@@ -24,9 +21,6 @@ export const testWsBlockSubscription = async ({ chain, wsUrl }: WsTestArgs) => {
   rpcClient.close()
 }
 
-/**
- * Test that a WS client can call precompiles (e.g. getTeePublicKey).
- */
 export const testWsPrecompileCall = async ({ chain, wsUrl }: WsTestArgs) => {
   const client = await createShieldedPublicClient({
     chain,
@@ -42,9 +36,6 @@ export const testWsPrecompileCall = async ({ chain, wsUrl }: WsTestArgs) => {
   rpcClient.close()
 }
 
-/**
- * Test that a WS client can call the RNG precompile.
- */
 export const testWsRngCall = async ({ chain, wsUrl }: WsTestArgs) => {
   const client = await createShieldedPublicClient({
     chain,
