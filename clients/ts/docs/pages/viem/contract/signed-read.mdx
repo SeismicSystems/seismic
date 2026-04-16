@@ -36,6 +36,8 @@ const result = await signedReadContract(client, {
   functionName: 'balanceOf',
   address: '0x5678...',
   args: [],
+}, {
+  blocksWindow: 50n,
 })
 console.log('Shielded balance:', result)
 ```
@@ -100,6 +102,12 @@ The arguments for the function.
 - **Type:** `Address`
 
 The contract's address on the blockchain.
+
+### securityParams (optional)
+
+- **Type:** `SeismicSecurityParams`
+
+Advanced Seismic metadata overrides. Most callers should omit these; they are mainly useful for deterministic tests/debugging, explicit expiry control, and low-level interop.
 
 ## Throws
 

@@ -32,6 +32,8 @@ const transparentResult = await walletClient.treadContract({
 - `sreadContract`: always signed
 - `treadContract`: always transparent. Seismic zeroes out `from` on transparent `eth_call`, so it rejects `account` here to prevent silent bugs; use `sreadContract` for sender-aware reads
 
+`securityParams` are advanced metadata overrides for Seismic signed/shielded paths. Most callers should omit them; they are mainly useful for deterministic tests/debugging, explicit expiry control, and low-level interop. These apply to `sreadContract`, `swriteContract`, `dwriteContract`, `signedCall`, and `sendShieldedTransaction`, not to smart or transparent helpers.
+
 ## Write Helpers
 
 ```ts
