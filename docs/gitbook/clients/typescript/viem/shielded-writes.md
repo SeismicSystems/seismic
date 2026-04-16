@@ -115,7 +115,7 @@ The encrypted calldata is bound to the transaction context (chain ID, nonce, blo
 
 ## Security Parameters
 
-Every shielded transaction includes a block-hash freshness check and an expiry window. The defaults are sensible for most cases, but you can override them per-call via `SeismicSecurityParams`:
+Every shielded transaction includes a block-hash freshness check and an expiry window. The defaults are sensible for most cases, but you can override them per-call via `SeismicSecurityParams`, passed as the optional third argument to `shieldedWriteContract`, `shieldedWriteContractDebug`, `sendShieldedTransaction`, `signedReadContract`, and `signedCall`:
 
 | Parameter         | Type     | Default    | Description                                     |
 | ----------------- | -------- | ---------- | ----------------------------------------------- |
@@ -125,16 +125,23 @@ Every shielded transaction includes a block-hash freshness check and an expiry w
 | `expiresAtBlock`  | `bigint` | Calculated | Override the expiry block directly              |
 
 ```typescript
-const hash = await shieldedWriteContract(client, {
-  address: "0x...",
-  abi: myContractAbi,
-  functionName: "transfer",
-  args: ["0x...", 100n],
-  securityParams: {
+const hash = await shieldedWriteContract(
+  client,
+  {
+    address: "0x...",
+    abi: myContractAbi,
+    functionName: "transfer",
+    args: ["0x...", 100n],
+  },
+  {
     blocksWindow: 50n, // expires after 50 blocks instead of 100
   },
-});
+);
 ```
+
+{% hint style="info" %}
+`securityParams` only applies to the low-level shielded paths (`shieldedWriteContract`, `shieldedWriteContractDebug`, `sendShieldedTransaction`, `signedReadContract`, `signedCall`, and the `.swrite`/`.sread`/`.dwrite` namespaces on `getShieldedContract`). The smart-routing `.read`/`.write` and transparent `.tread`/`.twrite` paths do not accept it.
+{% endhint %}
 
 {% hint style="info" %}
 The default 100-block window, random nonce, and latest block hash are appropriate for nearly all use cases. Override these only if you have a specific reason -- for example, reducing the window for time-sensitive operations or pinning the block hash in tests.

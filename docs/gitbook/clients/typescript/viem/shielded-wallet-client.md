@@ -267,6 +267,8 @@ This is useful when you need the encryption key material without constructing a 
 ## See Also
 
 - [Shielded Public Client](shielded-public-client.md) -- Read-only client without private key
+- [Deposit Contract](deposit-contract.md) -- Validator staking via `deposit()`
+- [SRC20 Event Watching](src20.md) -- Watch and decrypt SRC20 token events
 - [Encryption](encryption.md) -- Encryption utilities and `getEncryption()`
 - [Chains](chains.md) -- Chain configurations for Seismic networks
 - [Precompiles](precompiles.md) -- Precompile details and parameters

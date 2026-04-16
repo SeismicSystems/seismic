@@ -42,6 +42,8 @@ import { signedReadContract } from "seismic-viem";
 
 ### Parameters
 
+`signedReadContract(client, parameters, securityParams?)`
+
 | Parameter      | Type     | Required | Description                    |
 | -------------- | -------- | -------- | ------------------------------ |
 | `address`      | `Hex`    | Yes      | Contract address               |
@@ -50,21 +52,33 @@ import { signedReadContract } from "seismic-viem";
 | `args`         | `array`  | No       | Function arguments             |
 | `nonce`        | `number` | No       | Override the nonce             |
 
+The optional third argument `securityParams: SeismicSecurityParams` accepts advanced Seismic metadata overrides (see [Security Parameters](shielded-writes.md#security-parameters)). Most callers should omit these; they are mainly useful for deterministic tests/debugging, explicit expiry control, and low-level interop.
+
 ### Returns
 
 `Promise<ReadContractReturnType>` -- the decoded return value, typed according to the ABI.
+
+{% hint style="info" %}
+If the `client` has no `account` configured, `signedReadContract` falls back to a standard `readContract` (transparent `eth_call`). Pass an account-bearing `ShieldedWalletClient` to get the signed read behavior.
+{% endhint %}
 
 ### Example
 
 ```typescript
 import { signedReadContract } from "seismic-viem";
 
-const balance = await signedReadContract(client, {
-  address: "0x1234567890abcdef1234567890abcdef12345678",
-  abi: myContractAbi,
-  functionName: "balanceOf",
-  args: ["0xMyAddress..."],
-});
+const balance = await signedReadContract(
+  client,
+  {
+    address: "0x1234567890abcdef1234567890abcdef12345678",
+    abi: myContractAbi,
+    functionName: "balanceOf",
+    args: ["0xMyAddress..."],
+  },
+  {
+    blocksWindow: 50n, // optional: expire after 50 blocks instead of the default 100
+  },
+);
 ```
 
 ---

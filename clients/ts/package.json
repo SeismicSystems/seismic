@@ -3,8 +3,7 @@
   "private": true,
   "workspaces": [
     "packages/**",
-    "tests/**",
-    "docs"
+    "tests/**"
   ],
   "type": "module",
   "scripts": {
@@ -13,10 +12,6 @@
     "build": "bun run viem:build; bun run encrypt:build; bun run react:build; bun run tests:build",
     "lint": "eslint ./packages --fix; eslint ./tests --fix; prettier ./packages --write; prettier ./tests --write",
     "lint:check": "eslint ./packages && eslint ./tests && prettier ./packages -c && prettier ./tests -c",
-    "docs:dev": "bun run --cwd docs dev",
-    "docs:build": "bun run --cwd docs build",
-    "docs:preview": "bun run --cwd docs preview",
-    "docs:twoslash": "bun run --cwd docs twoslash",
     "viem:typecheck": "bun run --cwd packages/seismic-viem typecheck",
     "viem:build": "bun run --cwd packages/seismic-viem build",
     "viem:publish": "npm publish -w packages/seismic-viem",
@@ -42,9 +37,7 @@
     "bun-types": "^1.1.42",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^10.0.1",
-    "eslint-mdx": "^3.1.5",
     "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-mdx": "^3.1.5",
     "eslint-plugin-no-relative-import-paths": "^1.5.5",
     "eslint-plugin-unused-imports": "^4.1.4",
     "prettier": "^3.4.2",
