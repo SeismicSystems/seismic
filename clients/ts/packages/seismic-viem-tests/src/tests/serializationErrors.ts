@@ -14,11 +14,6 @@ const SAMPLE_GAS_PRICE = 1_000_000_000n // 1 gwei
 const SAMPLE_GAS_LIMIT = 100_000n
 const SAMPLE_EXPIRES_AT_BLOCK = 100n
 
-/**
- * A complete valid seismic tx using values from the encoding.ts
- * golden-output test. Each test below removes one field and asserts
- * the serializer rejects it.
- */
 const validSeismicTx = {
   type: 'seismic' as const,
   chainId: SANVIL_CHAIN_ID,

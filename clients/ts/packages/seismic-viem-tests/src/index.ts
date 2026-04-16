@@ -68,7 +68,6 @@ export {
   testSmartWalletActionsLifecycle,
 } from '@sviem-tests/tests/smartRouting/smartRouting.ts'
 
-// Explorer URL unit tests
 export {
   testGetExplorerUrlReturnsNullForUndefinedChain,
   testGetExplorerUrlReturnsNullForChainWithoutExplorer,
@@ -88,7 +87,6 @@ export {
   testSanvilHasNoExplorer,
 } from '@sviem-tests/tests/explorerUrl.ts'
 
-// Serialization error tests
 export {
   testSerializeMissingChainId,
   testSerializeMissingNonce,
@@ -103,7 +101,6 @@ export {
   testSerializeValidTxDoesNotThrow,
 } from '@sviem-tests/tests/serializationErrors.ts'
 
-// SRC20 crypto and Directory unit tests
 export {
   testParseEncryptedDataThrowsOnEmpty,
   testParseEncryptedDataThrowsOnEmptyString,

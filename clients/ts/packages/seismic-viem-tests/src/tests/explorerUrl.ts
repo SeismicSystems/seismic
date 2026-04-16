@@ -28,10 +28,8 @@ const chainWithoutExplorer = defineChain({
   rpcUrls: { default: { http: ['http://localhost:8545'] } },
 })
 
-// First Anvil address (per CLAUDE.md conventions)
 const ANVIL_ADDRESS = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
 
-// A realistic 66-char tx hash (32 bytes + 0x prefix)
 const SAMPLE_TX_HASH =
   '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'
 

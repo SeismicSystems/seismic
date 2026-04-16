@@ -3,7 +3,6 @@ import { AesGcmCrypto, computeKeyHash } from 'seismic-viem'
 import type { Hex } from 'viem'
 import { keccak256, numberToHex } from 'viem'
 
-// 32-byte AES-256 key (all zeros — matches the key used in precompiles.ts)
 const AES_KEY_ZEROS =
   '0x0000000000000000000000000000000000000000000000000000000000000000' as Hex
 
@@ -13,7 +12,6 @@ const AES_KEY_ONE =
 const AES_KEY_TWO =
   '0x0000000000000000000000000000000000000000000000000000000000000002' as Hex
 
-// 24 hex chars = 12 bytes, matching @sviem/actions/src20/crypto.ts
 const NONCE_HEX_LENGTH = 24
 
 /**
