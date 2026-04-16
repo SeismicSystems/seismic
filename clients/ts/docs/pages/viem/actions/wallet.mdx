@@ -4,38 +4,73 @@ description: Actions for the shielded wallet client
 
 # Shielded Wallet Actions
 
-In addition to all standard viem WalletClient methods, the ShieldedWalletClient provides several privacy-preserving features:
+In addition to standard viem wallet actions, the shielded wallet client exposes Seismic-specific contract helpers.
 
-## signedReadContract
+## Read Helpers
 
 ```ts
-const result = await walletClient.signedReadContract({
+const smartResult = await walletClient.readContract({
   address: '0x1234...',
   abi: contractAbi,
-  functionName: 'balanceOf',
-  args: ['0xabcd...'],
+  functionName: 'isOdd',
+})
+
+const signedResult = await walletClient.sreadContract({
+  address: '0x1234...',
+  abi: contractAbi,
+  functionName: 'isOdd',
+})
+
+const transparentResult = await walletClient.treadContract({
+  address: '0x1234...',
+  abi: contractAbi,
+  functionName: 'isOdd',
 })
 ```
 
-Performs a signed read operation from a contract.
+- `readContract`: smart routing, signed if the target function has shielded params, transparent otherwise
+- `sreadContract`: always signed
+- `treadContract`: always transparent. Seismic zeroes out `from` on transparent `eth_call`, so it rejects `account` here to prevent silent bugs; use `sreadContract` for sender-aware reads
 
-## shieldedWriteContract
+## Write Helpers
 
 ```ts
-const hash = await walletClient.shieldedWriteContract({
+const smartHash = await walletClient.writeContract({
   address: '0x1234...',
   abi: contractAbi,
-  functionName: 'transfer',
-  args: ['0xabcd...', 100n],
+  functionName: 'setNumber',
+  args: [7n],
+})
+
+const shieldedHash = await walletClient.swriteContract({
+  address: '0x1234...',
+  abi: contractAbi,
+  functionName: 'increment',
+})
+
+const transparentHash = await walletClient.twriteContract({
+  address: '0x1234...',
+  abi: contractAbi,
+  functionName: 'increment',
+})
+
+const debugResult = await walletClient.dwriteContract({
+  address: '0x1234...',
+  abi: contractAbi,
+  functionName: 'setNumber',
+  args: [7n],
 })
 ```
 
-Executes a contract write with encrypted calldata.
+- `writeContract`: smart routing, shielded if the target function has shielded params, transparent otherwise
+- `swriteContract`: always shielded
+- `twriteContract`: always transparent
+- `dwriteContract`: sends a real shielded transaction and returns `txHash`, `plaintextTx`, and `shieldedTx`
 
 ## getEncryption
 
 ```ts
-const { aesKey, ecdhPubKey } = walletClient.getEncryption()
+const { aesKey, encryptionPublicKey } = walletClient.getEncryption()
 ```
 
 Retrieves the encryption keys currently in use by the client.

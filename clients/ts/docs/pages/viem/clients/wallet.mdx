@@ -30,7 +30,9 @@ const walletClient = await createShieldedWalletClient({
 // Perform wallet operations
 const result = await walletClient.writeContract({
   address: '0x1234...',
-  data: '0xdeadbeef...',
+  abi: contractAbi,
+  functionName: 'setNumber',
+  args: [7n],
 })
 
 // Access shielded-specific actions
@@ -43,6 +45,17 @@ console.info('AES Key:', aesKey)
 `Promise<ShieldedWalletClient>` - A promise that resolves to a shielded wallet client instance.
 
 The ShieldedWalletClient extends viem's WalletClient with additional methods for privacy-preserving operations.
+
+Important contract helpers:
+
+- `readContract`: smart routing, signed if the target function has shielded params, transparent otherwise
+- `sreadContract`: always signed
+- `treadContract`: always transparent. Seismic zeroes out `from` on transparent `eth_call`, so it rejects `account` here to prevent silent bugs; use `sreadContract` for sender-aware reads
+- `writeContract`: smart routing, shielded if the target function has shielded params, transparent otherwise
+- `swriteContract`: always shielded
+- `twriteContract`: always transparent
+- `dwriteContract`: sends a real shielded transaction and returns `txHash`, `plaintextTx`, and `shieldedTx`
+- `deployContract`: still uses viem's direct deploy path, so treat its gas-estimation behavior separately from `sendTransaction`
 
 ## Parameters
 

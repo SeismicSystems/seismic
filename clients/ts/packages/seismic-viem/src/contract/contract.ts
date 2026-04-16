@@ -153,8 +153,8 @@ type TransparentWriteContractReturnType<
  * The same as viem's {@link https://viem.sh/docs/contract/getContract.html#with-wallet-client GetContractReturnType}, with a few differences:
  * - `read` and `write` are "smart" — they auto-detect shielded params and route accordingly
  * - `sread` and `swrite` always use signed reads & seismic transactions (force shielded)
- * - `tread` and `twrite` behave like viem's standard read & write (force transparent)
- * - `dwrite` returns both plaintext and encrypted tx for debugging
+ * - `tread` and `twrite` always use the transparent path
+ * - `dwrite` sends a real shielded tx and returns both plaintext and shielded tx views for inspection
  */
 export type ShieldedContract<
   TTransport extends Transport = Transport,
@@ -181,12 +181,12 @@ export type ShieldedContract<
  * - `swrite`: force shielded write — always uses encrypted seismic transaction regardless of params
  * - `tread`: force transparent read — always uses unsigned read (from the zero address)
  * - `twrite`: force transparent write — always uses non-encrypted calldata
- * - `dwrite`: debug write — get plaintext and encrypted transaction details
+ * - `dwrite`: send + inspect write — sends a real shielded tx and returns the plaintext/shielded tx details
  *
  * @param {GetContractParameters} params - The configuration object.
  *   - `abi` ({@link Abi}) - The contract's ABI.
  *   - `address` ({@link Address}) - The contract's address.
- *   - `client` ({@link ShieldedWalletClient}) - The client instance to use for interacting with the contract.
+ *   - `client` ({@link ShieldedWalletClient} | keyed client object) - The client instance to use for interacting with the contract.
  *
  * @throws {Error} If the wallet client is not provided for shielded write or signed read operations.
  * @throws {Error} If the wallet client does not have an account configured for signed reads.
@@ -217,10 +217,10 @@ export type ShieldedContract<
  * - The `write` property auto-detects shielded params and routes to shielded write or transparent write
  * - The `sread` property always calls a signed read
  * - The `swrite` property always encrypts calldata via seismic transaction
- * - The `tread` property toggles between public reads and signed reads, depending on whether an `account` is provided
+ * - The `tread` property always performs a transparent read. Seismic zeroes out `from` on transparent `eth_call`, so `tread` rejects `account` here to prevent silent bugs; use `sread` for sender-aware reads
  * - The `twrite` property makes a normal write with transparent calldata
- * - The `dwrite` property returns both plaintext and encrypted tx for debugging
- * - The client must be a {@link ShieldedWalletClient}
+ * - The `dwrite` property sends a real shielded tx and returns inspection data for it
+ * - The client must include a wallet client for write, signed-read, and debug-write surfaces
  */
 export function getShieldedContract<
   TTransport extends Transport,
@@ -503,21 +503,16 @@ export function getShieldedContract<
         ) => {
           const { args, options } = getFunctionParameters(parameters)
           const opts = options as Record<string, unknown>
-          if (opts?.account) {
-            return signedRead({
-              abi,
-              address,
-              functionName,
-              args,
-              ...opts,
-            } as unknown as SignedReadContractParameters<
-              TAbi,
-              ContractFunctionName<TAbi, 'pure' | 'view'>,
-              ContractFunctionArgs<TAbi, 'pure' | 'view'>
-            >)
+          if (opts?.account !== undefined) {
+            throw new Error(
+              'Contract.tread is always transparent. Seismic zeroes out `from` on transparent `eth_call`, so `account` would be ignored on the node and cause silent bugs. Remove `account` or use `contract.sread`.'
+            )
+          }
+          if (readClient === undefined) {
+            throw new Error('Must provide a client to call Contract.tread')
           }
           return transparentReadContract(
-            walletClient as unknown as Parameters<
+            readClient as unknown as Parameters<
               typeof transparentReadContract
             >[0],
             {
