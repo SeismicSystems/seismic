@@ -82,11 +82,7 @@ bun run viem:test         # connects to http://127.0.0.1:8545 by default
 
 ### Docs
 
-```bash
-bun run docs:dev         # local dev server
-bun run docs:build       # production build (VoCs)
-bun run docs:preview     # preview production build
-```
+User-facing docs for seismic-viem and seismic-react live in the Seismic monorepo gitbook at [`seismic/docs/gitbook/clients/typescript/`](../../docs/gitbook/clients/typescript/). Edit those `.md` files directly -- there is no local dev server; GitBook publishes from the repo.
 
 ## Project Layout
 
@@ -115,7 +111,6 @@ packages/
   seismic-spammer/       Transaction load testing tool (internal)
 tests/
   seismic-viem/          Integration test runner (bun test)
-docs/                    Documentation site (VoCs + Tailwind)
 ```
 
 ## Code Style
@@ -159,5 +154,3 @@ GitHub Actions (`.github/workflows/ci.yml`):
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SRETH_ROOT env variable must be set to build reth`         | Set `SRETH_ROOT` to your seismic-reth repo path (with Rust/Cargo installed)                                                                                                                             |
 | `react:typecheck` fails with missing types                  | Run `bun run viem:build` first — react typecheck depends on built viem types                                                                                                                            |
-| `Browserslist: browsers data is X months old` on docs build | Harmless warning. Fix with `npx update-browserslist-db@latest` if desired                                                                                                                               |
-| `hideExternalIcon` React prop warning during docs build     | Harmless VoCs warning — safe to ignore                                                                                                                                                                  |

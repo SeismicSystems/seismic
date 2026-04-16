@@ -365,6 +365,24 @@ Each precompile is defined as a `Precompile<P, R>` object with a standard interf
 
 The `CallClient` type accepts any client with a `.call()` method, so both `ShieldedPublicClient` and `ShieldedWalletClient` work with `callPrecompile`.
 
+### Calling via `callPrecompile`
+
+```typescript
+import { callPrecompile, rngPrecompile } from "seismic-viem";
+
+// Access the precompile address directly
+console.log("RNG precompile address:", rngPrecompile.address);
+
+// Call any precompile by passing its object to callPrecompile
+const randomValue = await callPrecompile({
+  client,
+  precompile: rngPrecompile,
+  args: { numBytes: 32 },
+});
+```
+
+`callPrecompile` handles gas cost calculation, parameter encoding, and result decoding automatically using the `Precompile<P, R>` object passed in. It throws if no data is returned, if the arguments fail validation, or if encoding/decoding fails.
+
 ## See Also
 
 - [Shielded Public Client](shielded-public-client.md) -- Read-only client with precompile methods

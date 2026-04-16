@@ -82,17 +82,20 @@ const balance = await publicClient.getBalance({
 
 ### SRC20 Actions
 
-| Action                      | Return Type | Description                                  |
-| --------------------------- | ----------- | -------------------------------------------- |
-| `watchSRC20Events()`        | --          | Watch for SRC20 token events                 |
-| `watchSRC20EventsWithKey()` | --          | Watch for SRC20 events with a decryption key |
+| Action                      | Return Type          | Description                                  |
+| --------------------------- | -------------------- | -------------------------------------------- |
+| `watchSRC20EventsWithKey()` | `Promise<() => void>` | Watch for SRC20 events with a decryption key |
+
+See [SRC20 Event Watching](src20.md) for the full flow, log types, and example usage.
 
 ### Deposit Contract Actions
 
-| Action              | Return Type       | Description                   |
-| ------------------- | ----------------- | ----------------------------- |
-| `getDepositRoot()`  | `Promise<Hex>`    | Query the deposit merkle root |
-| `getDepositCount()` | `Promise<bigint>` | Query the deposit count       |
+| Action              | Return Type    | Description                   |
+| ------------------- | -------------- | ----------------------------- |
+| `getDepositRoot()`  | `Promise<Hex>` | Query the deposit merkle root |
+| `getDepositCount()` | `Promise<Hex>` | Query the deposit count       |
+
+See [Deposit Contract](deposit-contract.md) for parameters and validator registration via `deposit()`.
 
 ### Standard viem Public Actions
 
@@ -162,24 +165,70 @@ const derivedKey = await publicClient.hdfk("0x...");
 
 ### Explorer URL Helpers
 
+Each helper accepts an optional `tab` argument to deep-link into a specific view. The helpers return `string | null` -- `null` when the chain has no configured block explorer.
+
 ```typescript
 const publicClient = createShieldedPublicClient({
   chain: seismicTestnet,
   transport: http(),
 });
 
-const txUrl = publicClient.txExplorerUrl("0xabc123...");
-const addrUrl = publicClient.addressExplorerUrl("0x742d35Cc...");
-const blockUrl = publicClient.blockExplorerUrl(12345n);
+const txUrl = publicClient.txExplorerUrl({ txHash: "0xabc123..." });
+const txLogs = publicClient.txExplorerUrl({
+  txHash: "0xabc123...",
+  tab: "logs",
+});
+const addrUrl = publicClient.addressExplorerUrl({
+  address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+});
+const blockUrl = publicClient.blockExplorerUrl({ blockNumber: 12345 });
+const tokenUrl = publicClient.tokenExplorerUrl({
+  address: "0xYourTokenAddress",
+  tab: "holders",
+});
+```
 
-console.log("Transaction:", txUrl);
-console.log("Address:", addrUrl);
-console.log("Block:", blockUrl);
+#### Tab values by item type
+
+| Helper                | Tab type             | Values                                                                                              |
+| --------------------- | -------------------- | --------------------------------------------------------------------------------------------------- |
+| `txExplorerUrl`       | `TxExplorerTab`      | `'index'`, `'token_transfers'`, `'internal'`, `'logs'`, `'state'`, `'raw_trace'`                    |
+| `addressExplorerUrl`  | `AddressExplorerTab` | `'txs'`, `'token_transfers'`, `'tokens'`, `'internal_txns'`, `'coin_balance_history'`, `'logs'`, `'contract'` |
+| `tokenExplorerUrl`    | `TokenExplorerTab`   | `'token_transfers'`, `'holders'`, `'contract'`                                                      |
+| `blockExplorerUrl`    | `BlockExplorerTab`   | `'index'`, `'txs'`                                                                                  |
+
+#### Standalone functions
+
+The same helpers are exported as standalone functions that take an explicit `chain` and can be used without a client:
+
+```typescript
+import {
+  addressExplorerUrl,
+  blockExplorerUrl,
+  getExplorerUrl,
+  tokenExplorerUrl,
+  txExplorerUrl,
+} from "seismic-viem";
+
+const url = txExplorerUrl({
+  chain: seismicTestnet,
+  txHash: "0xabc...",
+  tab: "logs",
+});
+
+// Low-level form used by all helpers internally:
+const raw = getExplorerUrl(seismicTestnet, {
+  item: "address",
+  id: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  tab: "logs",
+});
 ```
 
 ## See Also
 
 - [Shielded Wallet Client](shielded-wallet-client.md) -- Full-featured client with encryption and shielded writes
+- [Deposit Contract](deposit-contract.md) -- Validator staking read/write actions
+- [SRC20 Event Watching](src20.md) -- Watch and decrypt SRC20 token events
 - [Chains](chains.md) -- Chain configurations for Seismic networks
 - [Precompiles](precompiles.md) -- Precompile details and parameters
 - [Encryption](encryption.md) -- Encryption utilities and `getEncryption()`
