@@ -17,7 +17,7 @@ import { getShieldedContract } from "seismic-viem";
 | --------- | ----------------------------------- | -------- | ----------------------------------------------------- |
 | `abi`     | `Abi`                               | Yes      | Contract ABI (use `as const` for full type inference) |
 | `address` | `Address`                           | Yes      | Deployed contract address                             |
-| `client`  | `ShieldedWalletClient` \| keyed client | Yes   | Wallet client for full capabilities, or a keyed client (e.g., `{ public: publicClient }`) for read-only use. `.write`, `.swrite`, `.sread`, and `.dwrite` require a wallet client. |
+| `client`  | `ShieldedWalletClient` \| keyed client | Yes   | Wallet client for full capabilities, or a keyed client (e.g., `{ public: publicClient }`) for read-only use. All writes (`.write`, `.swrite`, `.twrite`, `.dwrite`) and signed reads (`.sread`, plus `.read` when the target function has shielded params) require a wallet client. A keyed read-only client only supports `.tread` and `.read` on functions without shielded params. |
 
 ```typescript
 import { getShieldedContract } from "seismic-viem";
