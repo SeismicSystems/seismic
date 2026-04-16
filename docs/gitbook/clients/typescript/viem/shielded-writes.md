@@ -55,9 +55,13 @@ const hash = await shieldedWriteContract(client, {
 
 ---
 
-## Debug: `shieldedWriteContractDebug`
+## Send + Inspect: `shieldedWriteContractDebug`
 
-Returns the plaintext transaction, the shielded (encrypted) transaction, and the transaction hash. Useful for inspecting what the SDK encrypts and broadcasts.
+Broadcasts a shielded transaction (like `shieldedWriteContract`) and additionally returns the plaintext transaction view and the shielded (encrypted) transaction view alongside the resulting transaction hash. Useful for inspecting exactly what the SDK encrypted and submitted.
+
+{% hint style="info" %}
+Despite the "debug" flavor of the name, `shieldedWriteContractDebug` does send the transaction -- the returned `txHash` is a real on-chain hash, not a dry run.
+{% endhint %}
 
 ```typescript
 import { shieldedWriteContractDebug } from "seismic-viem";
