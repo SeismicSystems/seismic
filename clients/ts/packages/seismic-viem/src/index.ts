@@ -35,9 +35,12 @@ export type { ShieldedWriteContractDebugResult } from '@sviem/contract/write.ts'
 export {
   shieldedWriteContract,
   shieldedWriteContractDebug,
-  getPlaintextCalldata,
   transparentWriteContract,
 } from '@sviem/contract/write.ts'
+// TODO(samlaf): Revisit whether getPlaintextCalldata should remain part of the public
+// package surface. It is currently used by tests, but likely belongs as an
+// internal helper rather than a root re-export.
+export { getPlaintextCalldata } from '@sviem/contract/calldata.ts'
 export {
   hasShieldedParams,
   remapSeismicAbiInputs,
