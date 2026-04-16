@@ -13,7 +13,6 @@ import {
   testWriteWithExplicitGasSkipsEstimation,
   testWriteWithoutExplicitGasSucceeds,
 } from '@sviem-tests/tests/estimateGas.ts'
-import { testDwriteContractUsesSecurityParams } from '@sviem-tests/tests/securityParams.ts'
 import {
   testAesGcm,
   testEcdh,
@@ -23,6 +22,7 @@ import {
   testRngWithPers,
   testSecp256k1,
 } from '@sviem-tests/tests/precompiles.ts'
+import { testDwriteContractUsesSecurityParams } from '@sviem-tests/tests/securityParams.ts'
 import {
   testHasShieldedParamsDetectsShielded,
   testHasShieldedParamsDetectsTransparent,
@@ -130,7 +130,8 @@ describe('Seismic Contract', async () => {
 describe('Security params', async () => {
   test(
     'dwriteContract forwards explicit Seismic metadata overrides',
-    async () => await testDwriteContractUsesSecurityParams({ chain, url, account }),
+    async () =>
+      await testDwriteContractUsesSecurityParams({ chain, url, account }),
     {
       timeout: CONTRACT_TIMEOUT_MS,
     }
