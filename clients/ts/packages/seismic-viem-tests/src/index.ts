@@ -131,6 +131,24 @@ export {
   testConcurrentReads,
 } from '@sviem-tests/tests/concurrency.ts'
 
+export {
+  testParseMinBalanceDefaultsToHalfEther,
+  testParseMinBalanceUsesWeiWhenProvided,
+  testParseMinBalanceUsesEtherWhenProvided,
+  testParseMinBalancePrefersWeiOverEther,
+  testParseMinBalanceHandlesNumericWei,
+  testFaucetHashExtractionValid,
+  testFaucetHashExtractionInvalidLength,
+  testFaucetHashExtractionNoPrefix,
+  testFaucetHashExtractionMissingHexPrefix,
+} from '@sviem-tests/tests/faucet.ts'
+
+export {
+  testWsBlockSubscription,
+  testWsPrecompileCall,
+  testWsRngCall,
+} from '@sviem-tests/tests/wsExtended.ts'
+
 export { loadDotenv } from '@sviem-tests/util.ts'
 
 /**

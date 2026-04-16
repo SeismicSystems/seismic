@@ -27,6 +27,17 @@ import {
   testWriteWithoutExplicitGasSucceeds,
 } from '@sviem-tests/tests/estimateGas.ts'
 import {
+  testFaucetHashExtractionInvalidLength,
+  testFaucetHashExtractionMissingHexPrefix,
+  testFaucetHashExtractionNoPrefix,
+  testFaucetHashExtractionValid,
+  testParseMinBalanceDefaultsToHalfEther,
+  testParseMinBalanceHandlesNumericWei,
+  testParseMinBalancePrefersWeiOverEther,
+  testParseMinBalanceUsesEtherWhenProvided,
+  testParseMinBalanceUsesWeiWhenProvided,
+} from '@sviem-tests/tests/faucet.ts'
+import {
   testAesGcm,
   testEcdh,
   testHkdfHex,
@@ -87,6 +98,11 @@ import {
   testSeismicTxTypedData,
 } from '@sviem-tests/tests/typedData.ts'
 import { testWsConnection } from '@sviem-tests/tests/ws.ts'
+import {
+  testWsBlockSubscription,
+  testWsPrecompileCall,
+  testWsRngCall,
+} from '@sviem-tests/tests/wsExtended.ts'
 import { sanvil } from '@sviem/chain.ts'
 
 const TIMEOUT_MS = 60_000
@@ -577,6 +593,40 @@ describe('Concurrent transactions', () => {
     { timeout: CONTRACT_TIMEOUT_MS }
   )
 })
+
+describe('Faucet parseMinBalance', () => {
+  test('defaults to 0.5 ether', testParseMinBalanceDefaultsToHalfEther)
+  test('uses wei when provided', testParseMinBalanceUsesWeiWhenProvided)
+  test('uses ether when provided', testParseMinBalanceUsesEtherWhenProvided)
+  test('prefers wei over ether', testParseMinBalancePrefersWeiOverEther)
+  test('handles numeric wei', testParseMinBalanceHandlesNumericWei)
+})
+
+describe('Faucet hash extraction', () => {
+  test('extracts valid hash', testFaucetHashExtractionValid)
+  test('rejects invalid length', testFaucetHashExtractionInvalidLength)
+  test('rejects non-txhash prefix', testFaucetHashExtractionNoPrefix)
+  test('rejects missing 0x prefix', testFaucetHashExtractionMissingHexPrefix)
+})
+
+describe('WebSocket extended', () => {
+  test(
+    'WS client can get block number',
+    async () => await testWsBlockSubscription({ chain, wsUrl }),
+    { timeout: TIMEOUT_MS }
+  )
+  test(
+    'WS client can call getTeePublicKey',
+    async () => await testWsPrecompileCall({ chain, wsUrl }),
+    { timeout: TIMEOUT_MS }
+  )
+  test(
+    'WS client can call RNG precompile',
+    async () => await testWsRngCall({ chain, wsUrl }),
+    { timeout: TIMEOUT_MS }
+  )
+})
+
 
 // Typed Data tests are placed last because they use EIP-712 messageVersion=2
 // signing which may fail on older sreth versions, and a failure here would

@@ -23,6 +23,7 @@
     "react:typecheck": "bun run viem:build && bun run --cwd packages/seismic-react typecheck",
     "react:build": "bun run --cwd packages/seismic-react build",
     "react:publish": "npm publish -w packages/seismic-react",
+    "react:test": "bun run --cwd tests/seismic-react test",
     "tests:typecheck": "bun run --cwd packages/seismic-viem-tests typecheck && bun run --cwd tests/seismic-viem typecheck && bun run --cwd tests/seismic-encrypt-test typecheck",
     "tests:build": "bun run --cwd packages/seismic-viem-tests build",
     "tests:publish": "npm publish -w packages/seismic-viem-tests"
@@ -31,6 +32,7 @@
     "typescript": "^5.7.2"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.2",
     "@trivago/prettier-plugin-sort-imports": "^5.2.1",
     "@types/bun": "^1.1.14",
     "@typescript-eslint/eslint-plugin": "^8.19.0",
@@ -41,6 +43,7 @@
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-no-relative-import-paths": "^1.5.5",
     "eslint-plugin-unused-imports": "^4.1.4",
+    "happy-dom": "^20.9.0",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
     "tsc-alias": "^1.8.10"
