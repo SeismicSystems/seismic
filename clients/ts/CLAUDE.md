@@ -17,7 +17,7 @@ Requires **Bun >=1.2.5**.
 curl -fsSL https://bun.sh/install | bash
 
 bun install         # install dependencies
-bun run all:build   # builds seismic-viem, seismic-react, seismic-viem-tests
+bun run build       # builds seismic-viem, seismic-encrypt, seismic-react, seismic-viem-tests
 ```
 
 ### Verify
@@ -55,8 +55,9 @@ Tests live in `tests/seismic-viem/` and connect to an already-running node. The 
 **Quick start** (mise starts the node for you):
 
 ```bash
-mise run test::anvil   # starts sanvil, runs tests, stops sanvil
-mise run test::reth    # builds & starts reth, runs tests, stops reth
+mise run test::unit    # fast unit tests, no node required
+mise run test::integration::sanvil  # starts sanvil, runs tests, stops sanvil
+mise run test::integration::sreth   # builds & starts reth, runs tests, stops reth
 ```
 
 **Manual** (start a node yourself, then run tests):

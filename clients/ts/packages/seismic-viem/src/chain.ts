@@ -21,10 +21,11 @@ import type {
   SerializeTransactionFn,
   Signature,
   TransactionRequest,
+  TransactionRequestEIP7702,
   TransactionRequestLegacy,
   TransactionSerializable,
+  TransactionSerializableEIP7702,
   TransactionSerializableLegacy,
-  UnionOmit,
 } from 'viem'
 
 import { toYParitySignatureArray } from '@sviem/viem-internal/signature.ts'
@@ -120,8 +121,11 @@ export type SeismicSecurityParams = {
  */
 export type SeismicTransactionRequest =
   | (TransactionRequest & SeismicTxExtrasBlank)
-  | (UnionOmit<TransactionRequestLegacy, 'type'> &
-      SeismicTxExtras & { type: 'seismic' })
+  | (Omit<TransactionRequestLegacy, 'type'> &
+      SeismicTxExtras & {
+        authorizationList?: TransactionRequestEIP7702['authorizationList']
+        type: 'seismic'
+      })
 
 /**
  * Represents a serializable Seismic transaction, extending viem's base {@link https://viem.sh/docs/utilities/parseTransaction#returns TransactionSerializable} with {@link SeismicTxExtras}
@@ -132,8 +136,11 @@ export type SeismicTransactionRequest =
  */
 export type TransactionSerializableSeismic =
   | (TransactionSerializable & SeismicTxExtrasBlank)
-  | (UnionOmit<TransactionSerializable, 'type'> &
-      SeismicTxExtras & { type: 'seismic' })
+  | (Omit<TransactionSerializableLegacy, 'type'> &
+      SeismicTxExtras & {
+        authorizationList?: TransactionSerializableEIP7702['authorizationList']
+        type: 'seismic'
+      })
 
 export type TxSeismic = {
   chainId?: number
@@ -152,7 +159,7 @@ export type TxSeismic = {
   signedRead: boolean
   authorizationList?: {
     chainId: bigint
-    address: `0x${string}`
+    contractAddress: `0x${string}`
     nonce: bigint
     yParity: number
     r: `0x${string}`
@@ -242,7 +249,7 @@ export const serializeSeismicTransaction: SeismicTxSerializer = (
     ((authorizationList ?? []) as TxSeismic['authorizationList'] & []).map(
       (auth) => [
         auth.chainId ? toHex(auth.chainId) : '0x',
-        auth.address,
+        auth.contractAddress,
         auth.nonce ? toHex(auth.nonce) : '0x',
         auth.yParity ? toHex(auth.yParity) : '0x',
         auth.r,
@@ -294,13 +301,38 @@ const hasSeismicFields = (request: SeismicTransactionRequest) => {
   )
 }
 
+const formatAuthorizationList = (
+  authorizationList: NonNullable<TransactionRequestEIP7702['authorizationList']>
+) =>
+  authorizationList.map((authorization) => ({
+    address: authorization.contractAddress,
+    r: authorization.r,
+    s: authorization.s,
+    chainId: toHex(authorization.chainId),
+    nonce: toHex(authorization.nonce),
+    ...(typeof authorization.yParity !== 'undefined'
+      ? { yParity: toHex(authorization.yParity) }
+      : {}),
+    ...(typeof authorization.v !== 'undefined' &&
+    typeof authorization.yParity === 'undefined'
+      ? { v: toHex(authorization.v) }
+      : {}),
+  }))
+
 const fmtRpcRequest = (request: SeismicTransactionRequest) => {
   if (request.type === 'seismic') {
+    const { authorizationList, ...legacyCompatibleRequest } = request
     const seismicFmt = formatTransactionRequest({
-      ...request,
+      ...legacyCompatibleRequest,
       type: 'legacy',
     })
-    return { ...seismicFmt, type: SEISMIC_TX_TYPE }
+    return {
+      ...seismicFmt,
+      type: SEISMIC_TX_TYPE,
+      ...(authorizationList
+        ? { authorizationList: formatAuthorizationList(authorizationList) }
+        : {}),
+    }
   }
 
   const { type, ...fmt } = formatTransactionRequest(request)
