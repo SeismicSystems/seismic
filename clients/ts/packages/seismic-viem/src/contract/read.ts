@@ -112,6 +112,9 @@ export async function smartReadContract<
  *   - `args` (array) - The arguments for the function.
  *   - `address` ({@link Hex}) - The contract's address on the blockchain.
  *   - Additional options for customizing the call request.
+ * @param securityParams - Optional advanced Seismic metadata overrides. Most
+ * callers should omit these; they are mainly useful for deterministic
+ * tests/debugging, explicit expiry control, and low-level interop.
  *
  * @returns {Promise<ReadContractReturnType>} A promise that resolves to the response from the contract.
  *

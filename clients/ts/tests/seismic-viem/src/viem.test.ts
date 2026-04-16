@@ -22,6 +22,7 @@ import {
   testRngWithPers,
   testSecp256k1,
 } from '@sviem-tests/tests/precompiles.ts'
+import { testDwriteContractUsesSecurityParams } from '@sviem-tests/tests/securityParams.ts'
 import {
   testHasShieldedParamsDetectsShielded,
   testHasShieldedParamsDetectsTransparent,
@@ -120,6 +121,17 @@ describe('Seismic Contract', async () => {
       // @ts-ignore
       await testSeismicTx({ chain, url, account: jsonRpcAccount })
     },
+    {
+      timeout: CONTRACT_TIMEOUT_MS,
+    }
+  )
+})
+
+describe('Security params', async () => {
+  test(
+    'dwriteContract forwards explicit Seismic metadata overrides',
+    async () =>
+      await testDwriteContractUsesSecurityParams({ chain, url, account }),
     {
       timeout: CONTRACT_TIMEOUT_MS,
     }

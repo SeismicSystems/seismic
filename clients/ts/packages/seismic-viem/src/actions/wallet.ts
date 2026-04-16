@@ -46,14 +46,21 @@ import type {
  * @template TChain - The type of the blockchain chain (extends `Chain` or `undefined`).
  * @template TAccount - The type of the account (extends `Account` or `undefined`).
  *
- * @property writeContract - Executes a write operation on a shielded contract.
- * Takes parameters specific to the contract and returns the transaction result.
+ * @property writeContract - Smart write helper. Routes to a shielded write when
+ * the target function has shielded params, and to a transparent write otherwise.
  *
- * @property readContract - Reads data from a shielded contract using signed read methods.
- * Returns the contract's data as defined by the provided arguments.
+ * @property readContract - Smart read helper. Routes to a signed read when the
+ * target function has shielded params, and to a transparent read otherwise.
  *
  * @property signedCall - Executes a signed call on the blockchain, allowing for
  * advanced interactions with shielded contracts or transactions.
+ *
+ * Explicit signed/shielded helpers such as `sreadContract`,
+ * `swriteContract`, `dwriteContract`, `signedCall`, and
+ * `sendShieldedTransaction` accept optional `securityParams` advanced metadata
+ * overrides. Most callers should omit these; they are mainly useful for
+ * deterministic tests/debugging, explicit expiry control, and low-level
+ * interoperability.
  *
  * @property sendShieldedTransaction - Sends a shielded transaction using encrypted payloads
  * and advanced features such as blobs and authorization lists.
@@ -95,8 +102,7 @@ export type ShieldedWalletActions<
       TChain,
       TAccount,
       TChainOverride
-    >,
-    securityParams?: SeismicSecurityParams
+    >
   ) => Promise<WriteContractReturnType>
   swriteContract: <
     TAbi extends Abi | readonly unknown[],
@@ -162,8 +168,7 @@ export type ShieldedWalletActions<
     TFunctionName extends ContractFunctionName<TAbi, 'pure' | 'view'>,
     TArgs extends ContractFunctionArgs<TAbi, 'pure' | 'view', TFunctionName>,
   >(
-    args: ReadContractParameters<TAbi, TFunctionName, TArgs>,
-    securityParams?: SeismicSecurityParams
+    args: ReadContractParameters<TAbi, TFunctionName, TArgs>
   ) => Promise<ReadContractReturnType>
   sreadContract: <
     TAbi extends Abi | readonly unknown[],
@@ -178,8 +183,7 @@ export type ShieldedWalletActions<
     TFunctionName extends ContractFunctionName<TAbi, 'pure' | 'view'>,
     TArgs extends ContractFunctionArgs<TAbi, 'pure' | 'view', TFunctionName>,
   >(
-    args: ReadContractParameters<TAbi, TFunctionName, TArgs>,
-    securityParams?: SeismicSecurityParams
+    args: ReadContractParameters<TAbi, TFunctionName, TArgs>
   ) => Promise<ReadContractReturnType>
   signedCall: SignedCall<TChain>
   sendShieldedTransaction: <
@@ -253,27 +257,29 @@ export const shieldedWalletActions = <
         args as unknown as Parameters<typeof sendTransparentTransaction>[1]
       ),
     writeContract: (args) => smartWriteContract(client, args),
-    swriteContract: (args) =>
+    swriteContract: (args, securityParams) =>
       shieldedWriteContract(
         client as unknown as Parameters<typeof shieldedWriteContract>[0],
-        args as unknown as Parameters<typeof shieldedWriteContract>[1]
+        args as unknown as Parameters<typeof shieldedWriteContract>[1],
+        securityParams
       ),
     twriteContract: (args) =>
       transparentWriteContract(
         client as unknown as Parameters<typeof transparentWriteContract>[0],
         args as unknown as Parameters<typeof transparentWriteContract>[1]
       ),
-    dwriteContract: (args) => {
+    dwriteContract: (args, securityParams) => {
       const debugResult = shieldedWriteContractDebug(
         client as unknown as Parameters<typeof shieldedWriteContractDebug>[0],
-        args as unknown as Parameters<typeof shieldedWriteContractDebug>[1]
+        args as unknown as Parameters<typeof shieldedWriteContractDebug>[1],
+        undefined,
+        securityParams
       )
       return debugResult as unknown as Promise<
         ShieldedWriteContractDebugResult<TChain | undefined, TAccount>
       >
     },
-    readContract: (args, securityParams) =>
-      smartReadContract(client, client, args, securityParams),
+    readContract: (args) => smartReadContract(client, client, args),
     sreadContract: (args, securityParams) =>
       signedReadContract(
         client as unknown as Parameters<typeof signedReadContract>[0],

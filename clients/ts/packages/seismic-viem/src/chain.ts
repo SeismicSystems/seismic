@@ -68,6 +68,20 @@ export type SeismicElements = {
   signedRead: boolean
 } & SeismicBlockParams
 
+/**
+ * Advanced overrides for Seismic metadata generation.
+ *
+ * Most callers should omit these and let the client derive safe defaults from
+ * chain state. These are primarily useful for:
+ *
+ * - deterministic tests and debugging
+ * - reproducing an exact encrypted or signed request shape
+ * - explicit expiry-window control
+ * - low-level interoperability with other Seismic tooling
+ *
+ * These options are only meaningful on Seismic signed or shielded paths. They
+ * do not apply to transparent reads or writes.
+ */
 export type SeismicSecurityParams = {
   blocksWindow?: bigint
   encryptionNonce?: Hex

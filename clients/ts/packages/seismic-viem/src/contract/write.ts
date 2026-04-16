@@ -144,7 +144,8 @@ export async function shieldedWriteContract<
     TChain,
     TAccount,
     TChainOverride
-  >
+  >,
+  securityParams?: SeismicSecurityParams
 ): Promise<WriteContractReturnType> {
   const plaintextCalldata = getPlaintextCalldata(parameters)
   const request = buildShieldedWriteRequest(
@@ -152,7 +153,7 @@ export async function shieldedWriteContract<
     parameters,
     plaintextCalldata
   )
-  return sendShieldedTransaction(client, request)
+  return sendShieldedTransaction(client, request, securityParams)
 }
 
 type PlaintextTransactionParameters = {
@@ -193,8 +194,9 @@ export type ShieldedWriteContractDebugResult<
  * `writeContract` shape.
  * @param checkContractDeployed - When true, verifies that code exists at the
  * target address before sending.
- * @param securityParams - Optional Seismic metadata controls such as
- * `blocksWindow` and `encryptionNonce`.
+ * @param securityParams - Optional advanced Seismic metadata overrides. Most
+ * callers should omit these; they are mainly useful for deterministic
+ * tests/debugging, explicit expiry control, and low-level interop.
  * @returns Both plaintext and shielded transaction representations, plus the
  * submitted transaction hash.
  */
@@ -221,11 +223,14 @@ export async function shieldedWriteContractDebug<
     TChainOverride
   >,
   checkContractDeployed?: boolean,
-  {
+  securityParams: SeismicSecurityParams = {}
+): Promise<ShieldedWriteContractDebugResult<TChain, TAccount>> {
+  const {
     blocksWindow = 100n,
     encryptionNonce: userEncNonce,
-  }: SeismicSecurityParams = {}
-): Promise<ShieldedWriteContractDebugResult<TChain, TAccount>> {
+    recentBlockHash,
+    expiresAtBlock,
+  } = securityParams
   if (checkContractDeployed) {
     const code = await client.getCode({ address: parameters.address })
     if (code === undefined) {
@@ -246,11 +251,14 @@ export async function shieldedWriteContractDebug<
     value: request.value,
     encryptionNonce,
     blocksWindow,
+    recentBlockHash,
+    expiresAtBlock,
     signedRead: false,
   })
   const txHash = await sendShieldedTransaction(client, request, {
-    blocksWindow,
     encryptionNonce,
+    recentBlockHash: metadata.seismicElements.recentBlockHash,
+    expiresAtBlock: metadata.seismicElements.expiresAtBlock,
   })
   return {
     plaintextTx: {

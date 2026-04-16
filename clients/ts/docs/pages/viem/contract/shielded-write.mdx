@@ -54,6 +54,8 @@ const hash = await shieldedWriteContract(client, {
   abi: parseAbi(['function mint(uint32 tokenId) nonpayable']),
   functionName: 'mint',
   args: [69420],
+}, {
+  blocksWindow: 50n,
 })
 ```
 
@@ -139,3 +141,9 @@ Gas price for the transaction.
 - **Type:** `bigint`
 
 Value (native token amount) to send with the transaction.
+
+### securityParams (optional)
+
+- **Type:** `SeismicSecurityParams`
+
+Advanced Seismic metadata overrides. Most callers should omit these; they are mainly useful for deterministic tests/debugging, explicit expiry control, and low-level interop.

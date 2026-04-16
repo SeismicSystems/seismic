@@ -119,6 +119,9 @@ export type SignedCallParameters<chain extends Chain | undefined> = UnionOmit<
  * - The blockchain account to use for signing.
  * - The contract address, method, and parameters.
  * - Additional transaction-related options (e.g., gas, value).
+ * @param securityParams - Optional advanced Seismic metadata overrides. Most
+ * callers should omit these; they are mainly useful for deterministic
+ * tests/debugging, explicit expiry control, and low-level interop.
  *
  * @returns {Promise<CallReturnType>} A promise that resolves to the result of the signed call,
  * including any data returned by the contract or transaction.
@@ -171,6 +174,9 @@ const prepareAccount = (
  *
  * @param client - {@link ShieldedPublicClient}
  * @param args - {@link SignedCallParameters}
+ * @param securityParams - Optional advanced Seismic metadata overrides. Most
+ * callers should omit these; they are mainly useful for deterministic
+ * tests/debugging, explicit expiry control, and low-level interop.
  *
  * @returns A promise that resolves to the result of the call, including any returned data.
  *
@@ -200,7 +206,12 @@ export async function signedCall<
 >(
   client: ShieldedWalletClient<TTransport, TChain, TAccount>,
   args: SignedCallParameters<TChain>,
-  { blocksWindow = 100n, encryptionNonce }: SeismicSecurityParams = {}
+  {
+    blocksWindow = 100n,
+    encryptionNonce,
+    recentBlockHash,
+    expiresAtBlock,
+  }: SeismicSecurityParams = {}
 ): Promise<CallReturnType> {
   const {
     account: account_ = client.account,
@@ -262,6 +273,8 @@ export async function signedCall<
       to: to!,
       blocksWindow,
       encryptionNonce,
+      recentBlockHash,
+      expiresAtBlock,
       signedRead: true,
     })
     const encryptedCalldata = await client.encrypt(plaintextCalldata, metadata)

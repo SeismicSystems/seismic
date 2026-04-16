@@ -50,6 +50,9 @@ import type {
  * @param client - The client instance used to execute the transaction, including chain, account,
  * and transport configurations.
  * @param parameters - The transaction parameters, including gas, value, blobs, and other details.
+ * @param securityParams - Optional advanced Seismic metadata overrides. Most
+ * callers should omit these; they are mainly useful for deterministic
+ * tests/debugging, explicit expiry control, and low-level interop.
  *
  * @returns A promise that resolves to the result of the shielded transaction submission.
  *
@@ -88,7 +91,12 @@ export async function sendShieldedTransaction<
     TChainOverride,
     TRequest
   >,
-  { blocksWindow = 100n, encryptionNonce }: SeismicSecurityParams = {}
+  {
+    blocksWindow = 100n,
+    encryptionNonce,
+    recentBlockHash,
+    expiresAtBlock,
+  }: SeismicSecurityParams = {}
 ): Promise<SendSeismicTransactionReturnType> {
   const {
     account: account_ = client.account,
@@ -144,6 +152,8 @@ export async function sendShieldedTransaction<
         blocksWindow,
         signedRead: false,
         encryptionNonce,
+        recentBlockHash,
+        expiresAtBlock,
       })
       const encryptedCalldata = await client.encrypt(
         plaintextCalldata,
