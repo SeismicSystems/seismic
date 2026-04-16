@@ -22,12 +22,12 @@ import {
 import { readContract as viemReadContract } from 'viem/actions'
 import { formatAbiItem } from 'viem/utils'
 
-import { SeismicSecurityParams } from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'
 import {
   hasShieldedParams,
   remapSeismicAbiInputs,
 } from '@sviem/contract/abi.ts'
+import { SeismicSecurityParams } from '@sviem/tx/seismicTx.ts'
 import type { SignedCallParameters } from '@sviem/tx/signedCall.ts'
 import { signedCall } from '@sviem/tx/signedCall.ts'
 

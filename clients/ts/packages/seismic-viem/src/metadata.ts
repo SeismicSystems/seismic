@@ -8,14 +8,14 @@ import {
 } from 'viem'
 import { parseAccount } from 'viem/accounts'
 
+import { ShieldedWalletClient } from '@sviem/client.ts'
+import { randomEncryptionNonce } from '@sviem/crypto/nonce.ts'
+import { TYPED_DATA_MESSAGE_VERSION } from '@sviem/signSeismicTypedData.ts'
 import type {
   SeismicBlockParams,
   SeismicElements,
   SeismicSecurityParams,
-} from '@sviem/chain.ts'
-import { ShieldedWalletClient } from '@sviem/client.ts'
-import { randomEncryptionNonce } from '@sviem/crypto/nonce.ts'
-import { TYPED_DATA_MESSAGE_VERSION } from '@sviem/signSeismicTypedData.ts'
+} from '@sviem/tx/seismicTx.ts'
 
 const DEFAULT_SEISMIC_BLOCKS_WINDOW = 100n
 

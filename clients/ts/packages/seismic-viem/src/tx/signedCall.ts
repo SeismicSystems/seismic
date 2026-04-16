@@ -22,17 +22,17 @@ import {
 import { prepareTransactionRequest } from 'viem/actions'
 import { extract, getCallError, parseAccount } from 'viem/utils'
 
-import {
-  SeismicSecurityParams,
-  SeismicTxExtras,
-  SeismicTxSerializer,
-  TransactionSerializableSeismic,
-  serializeSeismicTransaction,
-} from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'
 import { SignedCallError } from '@sviem/error/signedCall.ts'
 import { buildTxSeismicMetadata } from '@sviem/metadata.ts'
 import { signSeismicTxTypedData } from '@sviem/signSeismicTypedData.ts'
+import {
+  type SeismicSecurityParams,
+  type SeismicTxExtras,
+  type SeismicTxSerializer,
+  type TransactionSerializableSeismic,
+  serializeSeismicTransaction,
+} from '@sviem/tx/seismicTx.ts'
 import { getRevertErrorData } from '@sviem/viem-internal/call.ts'
 import type { ErrorType } from '@sviem/viem-internal/error.ts'
 

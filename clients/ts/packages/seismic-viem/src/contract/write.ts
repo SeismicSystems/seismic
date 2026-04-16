@@ -15,12 +15,12 @@ import type {
 import { numberToHex } from 'viem'
 import { writeContract } from 'viem/actions'
 
-import { SEISMIC_TX_TYPE, SeismicSecurityParams } from '@sviem/chain.ts'
 import type { ShieldedWalletClient } from '@sviem/client.ts'
 import { hasShieldedParams } from '@sviem/contract/abi.ts'
 import { getPlaintextCalldata } from '@sviem/contract/calldata.ts'
 import { randomEncryptionNonce } from '@sviem/crypto/nonce.ts'
 import { buildTxSeismicMetadata } from '@sviem/metadata.ts'
+import { SEISMIC_TX_TYPE, SeismicSecurityParams } from '@sviem/tx/seismicTx.ts'
 import { sendShieldedTransaction } from '@sviem/tx/sendShielded.ts'
 import type { SendSeismicTransactionParameters } from '@sviem/tx/types.ts'
 

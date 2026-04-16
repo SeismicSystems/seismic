@@ -11,11 +11,6 @@ import { parseAccount } from 'viem/accounts'
 import { prepareTransactionRequest, sendRawTransaction } from 'viem/actions'
 import { assertRequest, getAction, getTransactionError } from 'viem/utils'
 
-import {
-  SeismicSecurityParams,
-  TransactionSerializableSeismic,
-  serializeSeismicTransaction,
-} from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'
 import {
   AccountNotFoundError,
@@ -29,6 +24,11 @@ import {
   TYPED_DATA_MESSAGE_VERSION,
   signSeismicTxTypedData,
 } from '@sviem/signSeismicTypedData.ts'
+import type {
+  SeismicSecurityParams,
+  TransactionSerializableSeismic,
+} from '@sviem/tx/seismicTx.ts'
+import { serializeSeismicTransaction } from '@sviem/tx/seismicTx.ts'
 import type {
   SendSeismicTransactionParameters,
   SendSeismicTransactionRequest,
