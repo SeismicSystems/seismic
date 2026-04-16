@@ -127,6 +127,7 @@
       "name": "seismic-encrypt-test",
       "dependencies": {
         "seismic-encrypt": "workspace:*",
+        "seismic-viem": "workspace:*",
         "viem": "^2.0.0",
       },
     },
