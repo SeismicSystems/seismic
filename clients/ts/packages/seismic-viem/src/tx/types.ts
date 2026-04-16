@@ -25,11 +25,11 @@ import type {
   RequestErrorType,
 } from 'viem/utils'
 
-import type { SeismicTxExtras } from '@sviem/chain.ts'
 import type {
   AccountNotFoundErrorType,
   AccountTypeNotSupportedErrorType,
 } from '@sviem/error/account.ts'
+import type { SeismicTxExtras } from '@sviem/tx/seismicTx.ts'
 import type { GetAccountParameter } from '@sviem/viem-internal/account.ts'
 import type { ErrorType } from '@sviem/viem-internal/error.ts'
 

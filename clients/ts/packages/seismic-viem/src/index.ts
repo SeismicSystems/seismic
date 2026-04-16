@@ -1,10 +1,14 @@
+export type { CreateSeismicDevnetParams } from '@sviem/chain.ts'
 export type {
+  SeismicBlockParams,
+  SeismicElements,
   SeismicSecurityParams,
-  SeismicTxExtras,
   SeismicTransactionRequest,
+  SeismicTxExtras,
+  SeismicTxSerializer,
   TransactionSerializableSeismic,
-  CreateSeismicDevnetParams,
-} from '@sviem/chain.ts'
+  TxSeismic,
+} from '@sviem/tx/seismicTx.ts'
 
 export type { TxSeismicMetadata } from '@sviem/metadata.ts'
 export { buildTxSeismicMetadata } from '@sviem/metadata.ts'
@@ -19,10 +23,17 @@ export {
   createSeismicDevnet,
   createSeismicAzTestnet,
   createSeismicGcpTestnet,
-  serializeSeismicTransaction,
-  seismicChainFormatters,
-  SEISMIC_TX_TYPE,
 } from '@sviem/chain.ts'
+export {
+  SEISMIC_TX_TYPE,
+  serializeSeismicTransaction,
+} from '@sviem/tx/seismicTx.ts'
+export {
+  callRpcSchema,
+  estimateGasRpcSchema,
+  seismicChainFormatters,
+  seismicRpcSchema,
+} from '@sviem/tx/seismicRpc.ts'
 
 export { signSeismicTxTypedData } from '@sviem/signSeismicTypedData.ts'
 

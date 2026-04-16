@@ -13,7 +13,6 @@ import type {
   WriteContractReturnType,
 } from 'viem'
 
-import { SeismicSecurityParams } from '@sviem/chain.ts'
 import { ShieldedWalletClient } from '@sviem/client.ts'
 import {
   signedReadContract,
@@ -27,6 +26,7 @@ import {
   smartWriteContract,
   transparentWriteContract,
 } from '@sviem/contract/write.ts'
+import { SeismicSecurityParams } from '@sviem/tx/seismicTx.ts'
 import { sendShieldedTransaction } from '@sviem/tx/sendShielded.ts'
 import { sendTransparentTransaction } from '@sviem/tx/sendTransparent.ts'
 import { signedCall } from '@sviem/tx/signedCall.ts'

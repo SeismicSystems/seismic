@@ -43,9 +43,9 @@ import {
 } from '@sviem/actions/src20/src20Actions.ts'
 import type { ShieldedWalletActions } from '@sviem/actions/wallet.ts'
 import { shieldedWalletActions } from '@sviem/actions/wallet.ts'
-import { seismicRpcSchema } from '@sviem/chain.ts'
 import { generateAesKey } from '@sviem/crypto/aes.ts'
 import { compressPublicKey } from '@sviem/crypto/secp.ts'
+import { seismicRpcSchema } from '@sviem/tx/seismicRpc.ts'
 
 /**
  * This is the same as viem's public client, with a few notable differences:
