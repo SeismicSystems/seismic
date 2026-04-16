@@ -9,9 +9,17 @@ import {
   TEST_ACCOUNT_PRIVATE_KEY,
 } from '@sviem-tests/constants.ts'
 import { testAesKeygen } from '@sviem-tests/tests/aesKeygen.ts'
+import {
+  testConcurrentReads,
+  testConcurrentShieldedTransactions,
+} from '@sviem-tests/tests/concurrency.ts'
 import { testSeismicTx } from '@sviem-tests/tests/contract/contract.ts'
 import { testDepositContract } from '@sviem-tests/tests/contract/depositContract.ts'
 import { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'
+import {
+  testGetStorageAtThrows,
+  testSignedCallWithoutToThrows,
+} from '@sviem-tests/tests/errorPaths.ts'
 import {
   testLifecycleWithEstimatedGas,
   testWriteUsesEstimatedGasNot30M,
@@ -28,6 +36,18 @@ import {
   testSecp256k1,
 } from '@sviem-tests/tests/precompiles.ts'
 import { testDwriteContractUsesSecurityParams } from '@sviem-tests/tests/securityParams.ts'
+import {
+  testGetStorageAtBlockedForContract,
+  testSeismicTxCalldataIsEncrypted,
+} from '@sviem-tests/tests/privacy.ts'
+import {
+  testRngDifferentPersProducesDifferentResults,
+  testRngUniqueness,
+} from '@sviem-tests/tests/rngUniqueness.ts'
+import {
+  testSignedCallDirect,
+  testSignedCallWithSecurityParams,
+} from '@sviem-tests/tests/signedCallDirect.ts'
 import {
   testHasShieldedParamsDetectsShielded,
   testHasShieldedParamsDetectsTransparent,
@@ -503,6 +523,84 @@ describe('Smart routing: end-to-end lifecycle', () => {
   test(
     'full lifecycle via wallet client actions with all routing modes',
     async () => await testSmartWalletActionsLifecycle({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+// ---- Error path tests (require running node) ----
+
+describe('Error paths', () => {
+  test(
+    'getStorageAt throws on shielded public client',
+    async () => await testGetStorageAtThrows({ chain, url }),
+    { timeout: TIMEOUT_MS }
+  )
+  test(
+    'signedCall without to address throws',
+    async () => await testSignedCallWithoutToThrows({ chain, url, account }),
+    { timeout: TIMEOUT_MS }
+  )
+})
+
+// ---- Privacy invariant tests (require running node) ----
+
+describe('Privacy invariants', () => {
+  test(
+    'seismic tx calldata is encrypted on-chain',
+    async () => await testSeismicTxCalldataIsEncrypted({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'getStorageAt blocked for deployed contract',
+    async () =>
+      await testGetStorageAtBlockedForContract({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+// ---- RNG uniqueness tests (require running node) ----
+
+describe('RNG uniqueness', () => {
+  test(
+    'RNG(32) returns unique values across 5 calls',
+    async () => await testRngUniqueness({ chain, url }, 32, 5),
+    { timeout: TIMEOUT_MS }
+  )
+  test(
+    'RNG with different personalization produces different results',
+    async () =>
+      await testRngDifferentPersProducesDifferentResults({ chain, url }),
+    { timeout: TIMEOUT_MS }
+  )
+})
+
+// ---- SignedCall standalone tests (require running node) ----
+
+describe('SignedCall standalone', () => {
+  test(
+    'signedCall directly reads contract state',
+    async () => await testSignedCallDirect({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'signedCall with custom security params',
+    async () => await testSignedCallWithSecurityParams({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+// ---- Concurrency tests (require running node) ----
+
+describe('Concurrent transactions', () => {
+  test(
+    'multiple sequential shielded writes all succeed',
+    async () =>
+      await testConcurrentShieldedTransactions({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'concurrent reads via different methods return consistent results',
+    async () => await testConcurrentReads({ chain, url, account }),
     { timeout: CONTRACT_TIMEOUT_MS }
   )
 })

@@ -111,6 +111,31 @@ export {
   testComputeKeyHashDifferentKeysProduceDifferentHashes,
 } from '@sviem-tests/tests/src20Crypto.ts'
 
+export {
+  testGetStorageAtThrows,
+  testSignedCallWithoutToThrows,
+} from '@sviem-tests/tests/errorPaths.ts'
+
+export {
+  testSeismicTxCalldataIsEncrypted,
+  testGetStorageAtBlockedForContract,
+} from '@sviem-tests/tests/privacy.ts'
+
+export {
+  testRngUniqueness,
+  testRngDifferentPersProducesDifferentResults,
+} from '@sviem-tests/tests/rngUniqueness.ts'
+
+export {
+  testSignedCallDirect,
+  testSignedCallWithSecurityParams,
+} from '@sviem-tests/tests/signedCallDirect.ts'
+
+export {
+  testConcurrentShieldedTransactions,
+  testConcurrentReads,
+} from '@sviem-tests/tests/concurrency.ts'
+
 export { loadDotenv } from '@sviem-tests/util.ts'
 
 /**
