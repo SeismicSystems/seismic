@@ -28,7 +28,7 @@ const chainWithoutExplorer = defineChain({
   rpcUrls: { default: { http: ['http://localhost:8545'] } },
 })
 
-const ANVIL_ADDRESS = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
+const SANVIL_TEST_ADDRESS = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
 
 const SAMPLE_TX_HASH =
   '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890'
@@ -92,26 +92,26 @@ export const testTxExplorerUrlReturnsNullWithoutChain = () => {
 export const testAddressExplorerUrlBuildsCorrectUrl = () => {
   const result = addressExplorerUrl({
     chain: chainWithExplorer,
-    address: ANVIL_ADDRESS,
+    address: SANVIL_TEST_ADDRESS,
   })
-  expect(result).toBe(`${TEST_EXPLORER_URL}/address/${ANVIL_ADDRESS}`)
+  expect(result).toBe(`${TEST_EXPLORER_URL}/address/${SANVIL_TEST_ADDRESS}`)
 }
 
 export const testAddressExplorerUrlWithTab = () => {
   const result = addressExplorerUrl({
     chain: chainWithExplorer,
-    address: ANVIL_ADDRESS,
+    address: SANVIL_TEST_ADDRESS,
     tab: 'tokens',
   })
   expect(result).toBe(
-    `${TEST_EXPLORER_URL}/address/${ANVIL_ADDRESS}?tab=tokens`
+    `${TEST_EXPLORER_URL}/address/${SANVIL_TEST_ADDRESS}?tab=tokens`
   )
 }
 
 export const testAddressExplorerUrlReturnsNullWithoutExplorer = () => {
   const result = addressExplorerUrl({
     chain: chainWithoutExplorer,
-    address: ANVIL_ADDRESS,
+    address: SANVIL_TEST_ADDRESS,
   })
   expect(result).toBeNull()
 }
@@ -138,18 +138,18 @@ export const testBlockExplorerUrlWithTab = () => {
 export const testTokenExplorerUrlBuildsCorrectUrl = () => {
   const result = tokenExplorerUrl({
     chain: chainWithExplorer,
-    address: ANVIL_ADDRESS,
+    address: SANVIL_TEST_ADDRESS,
   })
-  expect(result).toBe(`${TEST_EXPLORER_URL}/token/${ANVIL_ADDRESS}`)
+  expect(result).toBe(`${TEST_EXPLORER_URL}/token/${SANVIL_TEST_ADDRESS}`)
 }
 
 export const testTokenExplorerUrlWithTab = () => {
   const result = tokenExplorerUrl({
     chain: chainWithExplorer,
-    address: ANVIL_ADDRESS,
+    address: SANVIL_TEST_ADDRESS,
     tab: 'holders',
   })
-  expect(result).toBe(`${TEST_EXPLORER_URL}/token/${ANVIL_ADDRESS}?tab=holders`)
+  expect(result).toBe(`${TEST_EXPLORER_URL}/token/${SANVIL_TEST_ADDRESS}?tab=holders`)
 }
 
 export const testSanvilHasNoExplorer = () => {
