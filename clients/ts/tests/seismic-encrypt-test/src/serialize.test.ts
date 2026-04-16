@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test'
 import { serializeSeismicTx } from 'seismic-encrypt'
 import {
-  serializeSeismicTransaction,
   type TransactionSerializableSeismic,
+  serializeSeismicTransaction,
 } from 'seismic-viem'
 import type { Signature, TransactionSerializableEIP7702 } from 'viem'
 
