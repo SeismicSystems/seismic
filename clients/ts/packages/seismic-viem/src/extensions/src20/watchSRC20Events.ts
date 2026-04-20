@@ -1,11 +1,11 @@
 import type { Address, Hex } from 'viem'
 
 import { SRC20Abi } from '@sviem/abis/src20.ts'
+import type { ShieldedWalletClient } from '@sviem/client.ts'
+import { AesGcmCrypto } from '@sviem/crypto/aes.ts'
 import { parseEncryptedData } from '@sviem/extensions/src20/crypto.ts'
 import { computeKeyHash, getKey } from '@sviem/extensions/src20/directory.ts'
 import type { WatchSRC20EventsParams } from '@sviem/extensions/src20/types.ts'
-import type { ShieldedWalletClient } from '@sviem/client.ts'
-import { AesGcmCrypto } from '@sviem/crypto/aes.ts'
 
 /**
  * Watch SRC20 events for the connected wallet.

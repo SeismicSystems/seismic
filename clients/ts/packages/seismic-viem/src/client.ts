@@ -19,6 +19,16 @@ import {
 } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
+import {
+  EncryptionActions,
+  encryptionActions,
+} from '@sviem/actions/encryption.ts'
+import type { ShieldedPublicActions } from '@sviem/actions/public.ts'
+import { shieldedPublicActions } from '@sviem/actions/public.ts'
+import type { ShieldedWalletActions } from '@sviem/actions/wallet.ts'
+import { shieldedWalletActions } from '@sviem/actions/wallet.ts'
+import { generateAesKey } from '@sviem/crypto/aes.ts'
+import { compressPublicKey } from '@sviem/crypto/secp.ts'
 import type {
   DepositContractPublicActions,
   DepositContractWalletActions,
@@ -27,12 +37,6 @@ import {
   depositContractPublicActions,
   depositContractWalletActions,
 } from '@sviem/extensions/depositContract.ts'
-import {
-  EncryptionActions,
-  encryptionActions,
-} from '@sviem/actions/encryption.ts'
-import type { ShieldedPublicActions } from '@sviem/actions/public.ts'
-import { shieldedPublicActions } from '@sviem/actions/public.ts'
 import type {
   SRC20PublicActions,
   SRC20WalletActions,
@@ -41,10 +45,6 @@ import {
   src20PublicActions,
   src20WalletActions,
 } from '@sviem/extensions/src20/src20Actions.ts'
-import type { ShieldedWalletActions } from '@sviem/actions/wallet.ts'
-import { shieldedWalletActions } from '@sviem/actions/wallet.ts'
-import { generateAesKey } from '@sviem/crypto/aes.ts'
-import { compressPublicKey } from '@sviem/crypto/secp.ts'
 import { seismicRpcSchema } from '@sviem/tx/seismicRpc.ts'
 
 /**
