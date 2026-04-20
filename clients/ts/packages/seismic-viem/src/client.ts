@@ -22,11 +22,11 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import type {
   DepositContractPublicActions,
   DepositContractWalletActions,
-} from '@sviem/actions/depositContract.ts'
+} from '@sviem/extensions/depositContract.ts'
 import {
   depositContractPublicActions,
   depositContractWalletActions,
-} from '@sviem/actions/depositContract.ts'
+} from '@sviem/extensions/depositContract.ts'
 import {
   EncryptionActions,
   encryptionActions,
@@ -36,11 +36,11 @@ import { shieldedPublicActions } from '@sviem/actions/public.ts'
 import type {
   SRC20PublicActions,
   SRC20WalletActions,
-} from '@sviem/actions/src20/src20Actions.ts'
+} from '@sviem/extensions/src20/src20Actions.ts'
 import {
   src20PublicActions,
   src20WalletActions,
-} from '@sviem/actions/src20/src20Actions.ts'
+} from '@sviem/extensions/src20/src20Actions.ts'
 import type { ShieldedWalletActions } from '@sviem/actions/wallet.ts'
 import { shieldedWalletActions } from '@sviem/actions/wallet.ts'
 import { generateAesKey } from '@sviem/crypto/aes.ts'
