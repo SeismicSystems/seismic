@@ -149,7 +149,9 @@ export const testTokenExplorerUrlWithTab = () => {
     address: SANVIL_TEST_ADDRESS,
     tab: 'holders',
   })
-  expect(result).toBe(`${TEST_EXPLORER_URL}/token/${SANVIL_TEST_ADDRESS}?tab=holders`)
+  expect(result).toBe(
+    `${TEST_EXPLORER_URL}/token/${SANVIL_TEST_ADDRESS}?tab=holders`
+  )
 }
 
 export const testSanvilHasNoExplorer = () => {
