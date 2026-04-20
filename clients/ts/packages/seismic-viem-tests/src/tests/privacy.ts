@@ -52,16 +52,21 @@ export const testSeismicTxCalldataIsEncrypted = async ({
     client: walletClient,
   })
 
-  const { txHash, plaintextTx, shieldedTx } = await contract.dwrite.setNumber([
+  const { txHash, plaintextTx } = await contract.dwrite.setNumber([
     COUNTER_VALUE_ENCRYPTED,
   ])
   await publicClient.waitForTransactionReceipt({ hash: txHash })
 
   const onChainTx = await publicClient.getTransaction({ hash: txHash })
+  const plaintextData = plaintextTx.data
+  expect(plaintextData).toBeDefined()
 
-  expect(plaintextTx.data).toBeDefined()
-  expect(onChainTx.input).not.toBe(plaintextTx.data!)
-  expect(onChainTx.input).toBe(shieldedTx.data!)
+  // The on-chain calldata must not equal the plaintext, and must not
+  // even leak the 4-byte function selector — that would expose which
+  // function was called.
+  const functionSelector = plaintextData!.slice(0, 10)
+  expect(onChainTx.input).not.toBe(plaintextData!)
+  expect(onChainTx.input.startsWith(functionSelector)).toBe(false)
 }
 
 export const testGetStorageAtBlockedForContract = async ({
