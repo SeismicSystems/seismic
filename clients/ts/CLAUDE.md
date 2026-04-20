@@ -86,32 +86,15 @@ User-facing docs for seismic-viem and seismic-react live in the Seismic monorepo
 
 ## Project Layout
 
-```
-packages/
-  seismic-viem/          Core viem extensions (npm: seismic-viem@1.1.1)
-    src/
-      chain.ts           Chain definitions (sanvil, seismicTestnet, localSeismicDevnet)
-      client.ts          createShieldedPublicClient, createShieldedWalletClient
-      sendTransaction.ts Seismic transaction sending
-      contract/          getShieldedContract, shieldedWriteContract, signedReadContract
-      crypto/            AES-GCM, ECDH, HKDF, nonce generation, AEAD
-      precompiles/       On-chain precompile wrappers (rng, ecdh, hkdf, aes, secp256k1)
-      actions/           Deposit contract, SRC20 token support
-      abis/              SRC20, deposit contract, directory ABIs
-  seismic-react/         React hooks (npm: seismic-react@1.1.1)
-    src/
-      context/           ShieldedWalletProvider
-      hooks/             useShieldedWriteContract, useSignedReadContract, useShieldedContract
-      rainbowkit/        RainbowKit integration
-  seismic-viem-tests/    Shared test utilities (npm: seismic-viem-tests@0.1.4)
-    src/
-      process/           Node process management (anvil, reth spawn/kill)
-      tests/             Reusable test functions (contract, precompiles, encoding, etc.)
-  seismic-bot/           Slack bot for faucet management (internal)
-  seismic-spammer/       Transaction load testing tool (internal)
-tests/
-  seismic-viem/          Integration test runner (bun test)
-```
+Packages in this monorepo:
+
+- **seismic-viem** (npm) — viem extensions for the Seismic blockchain. See [`packages/seismic-viem/ARCHITECTURE.md`](packages/seismic-viem/ARCHITECTURE.md) for the src/ layout, the 3-layer split (core / tx / extensions), and the transaction flow diagram.
+- **seismic-react** (npm) — wagmi-compatible React hooks: `ShieldedWalletProvider`, `useShieldedWriteContract`, `useSignedReadContract`, `useShieldedContract`, RainbowKit integration.
+- **seismic-viem-tests** (npm) — shared test utilities: node process management (`process/`) and reusable test functions (`tests/`).
+- **seismic-bot** (internal) — Slack bot for faucet management.
+- **seismic-spammer** (internal) — transaction load-testing tool.
+
+Integration tests for seismic-viem live in `tests/seismic-viem/`.
 
 ## Code Style
 
