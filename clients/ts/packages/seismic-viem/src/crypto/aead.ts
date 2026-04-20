@@ -1,6 +1,6 @@
 import { Hex, toHex, toRlp } from 'viem'
 
-import { TxSeismicMetadata } from '@sviem/metadata.ts'
+import { TxSeismicMetadata } from '@sviem/tx/metadata.ts'
 
 /**
  * Encodes transaction metadata as Additional Authenticated Data (AAD) for AEAD encryption

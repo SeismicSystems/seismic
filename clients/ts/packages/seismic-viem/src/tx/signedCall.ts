@@ -24,8 +24,7 @@ import { extract, getCallError, parseAccount } from 'viem/utils'
 
 import { ShieldedWalletClient } from '@sviem/client.ts'
 import { SignedCallError } from '@sviem/error/signedCall.ts'
-import { buildTxSeismicMetadata } from '@sviem/metadata.ts'
-import { signSeismicTxTypedData } from '@sviem/signSeismicTypedData.ts'
+import { buildTxSeismicMetadata } from '@sviem/tx/metadata.ts'
 import {
   type SeismicSecurityParams,
   type SeismicTxExtras,
@@ -33,6 +32,7 @@ import {
   type TransactionSerializableSeismic,
   serializeSeismicTransaction,
 } from '@sviem/tx/seismicTx.ts'
+import { signSeismicTxTypedData } from '@sviem/tx/signSeismicTypedData.ts'
 import { getRevertErrorData } from '@sviem/viem-internal/call.ts'
 import type { ErrorType } from '@sviem/viem-internal/error.ts'
 

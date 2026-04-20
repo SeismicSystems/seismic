@@ -19,16 +19,16 @@ import {
 import {
   type TxSeismicMetadata,
   buildTxSeismicMetadata,
-} from '@sviem/metadata.ts'
-import {
-  TYPED_DATA_MESSAGE_VERSION,
-  signSeismicTxTypedData,
-} from '@sviem/signSeismicTypedData.ts'
+} from '@sviem/tx/metadata.ts'
 import type {
   SeismicSecurityParams,
   TransactionSerializableSeismic,
 } from '@sviem/tx/seismicTx.ts'
 import { serializeSeismicTransaction } from '@sviem/tx/seismicTx.ts'
+import {
+  TYPED_DATA_MESSAGE_VERSION,
+  signSeismicTxTypedData,
+} from '@sviem/tx/signSeismicTypedData.ts'
 import type {
   SendSeismicTransactionParameters,
   SendSeismicTransactionRequest,

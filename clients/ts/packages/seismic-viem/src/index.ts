@@ -10,8 +10,8 @@ export type {
   TxSeismic,
 } from '@sviem/tx/seismicTx.ts'
 
-export type { TxSeismicMetadata } from '@sviem/metadata.ts'
-export { buildTxSeismicMetadata } from '@sviem/metadata.ts'
+export type { TxSeismicMetadata } from '@sviem/tx/metadata.ts'
+export { buildTxSeismicMetadata } from '@sviem/tx/metadata.ts'
 export {
   sanvil,
   seismicTestnet,
@@ -35,7 +35,7 @@ export {
   seismicRpcSchema,
 } from '@sviem/tx/seismicRpc.ts'
 
-export { signSeismicTxTypedData } from '@sviem/signSeismicTypedData.ts'
+export { signSeismicTxTypedData } from '@sviem/tx/signSeismicTypedData.ts'
 
 export { getShieldedContract } from '@sviem/contract/contract.ts'
 export {
@@ -94,7 +94,6 @@ export {
   tokenExplorerUrl,
 } from '@sviem/explorer.ts'
 
-export { stringifyBigInt } from '@sviem/utils.ts'
 export { compressPublicKey } from '@sviem/crypto/secp.ts'
 export { encodeSeismicMetadataAsAAD } from '@sviem/crypto/aead.ts'
 export {
