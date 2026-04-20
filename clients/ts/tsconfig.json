@@ -7,7 +7,6 @@
     { "path": "./packages/seismic-spammer/tsconfig.json" },
     { "path": "./tests/seismic-viem/tsconfig.json" },
     { "path": "./tests/seismic-encrypt-test/tsconfig.json" },
-    { "path": "./docs/tsconfig.json" }
   ],
   "exclude": ["node_modules", "dist", "packages/**/dist"],
   "compilerOptions": {
