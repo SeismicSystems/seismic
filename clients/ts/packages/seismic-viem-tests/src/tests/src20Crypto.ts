@@ -1,5 +1,5 @@
 import { expect } from 'bun:test'
-import { AesGcmCrypto, computeKeyHash } from 'seismic-viem'
+import { AesGcmCrypto, computeKeyHash, parseEncryptedData } from 'seismic-viem'
 import type { Hex } from 'viem'
 import { keccak256, numberToHex } from 'viem'
 
@@ -11,25 +11,6 @@ const AES_KEY_ONE =
 
 const AES_KEY_TWO =
   '0x0000000000000000000000000000000000000000000000000000000000000002' as Hex
-
-const NONCE_HEX_LENGTH = 24
-
-/**
- * Inline copy of parseEncryptedData since it's not exported from
- * seismic-viem. Mirrors @sviem/actions/src20/crypto.ts exactly.
- */
-
-function parseEncryptedData(encryptedData: Hex): {
-  ciphertext: Hex
-  nonce: Hex
-} {
-  if (!encryptedData || encryptedData === '0x' || encryptedData.length <= 2) {
-    throw new Error('Empty encrypted data - recipient has no key')
-  }
-  const nonce = `0x${encryptedData.slice(-NONCE_HEX_LENGTH)}` as Hex
-  const ciphertext = encryptedData.slice(0, -NONCE_HEX_LENGTH) as Hex
-  return { ciphertext, nonce }
-}
 
 export const testParseEncryptedDataThrowsOnEmpty = () => {
   expect(() => parseEncryptedData('0x' as Hex)).toThrow(
@@ -43,62 +24,33 @@ export const testParseEncryptedDataThrowsOnEmptyString = () => {
   )
 }
 
-/**
- * Encrypt real data with AesGcmCrypto, pack it the way SRC20 events do
- * (ciphertext || nonce), then parse and decrypt — verify the plaintext
- * survives the roundtrip.
- */
 export const testParseEncryptedDataRoundtrip = async () => {
   const cipher = new AesGcmCrypto(AES_KEY_ZEROS)
-
-  // Encode a token amount the way SRC20 does: uint256 as 32-byte hex
   const tokenAmount = 1_000_000n
   const plaintextHex = numberToHex(tokenAmount, { size: 32 })
+  const nonceHex = cipher.createNonce(42)
 
-  // Use a numeric nonce (the way AesGcmCrypto.createNonce works)
-  const nonceNum = 42n
-  const nonceHex = cipher.createNonce(Number(nonceNum))
-
-  // Encrypt
   const ciphertext = await cipher.encrypt(plaintextHex, nonceHex)
+  const packedBlob = `${ciphertext}${nonceHex.slice(2)}` as Hex
 
-  // Build the packed blob: ciphertext_hex + nonce_hex (no 0x on nonce)
-  // This matches how SRC20 Transfer events encode encryptedAmount.
-  const nonceWithout0x = nonceHex.slice(2)
-  const packedBlob = `${ciphertext}${nonceWithout0x}` as Hex
-
-  // Parse — this is the function under test
   const parsed = parseEncryptedData(packedBlob)
 
-  // The parsed nonce should match the original nonce
   expect(parsed.nonce).toBe(nonceHex)
-
-  // The parsed ciphertext should match the original ciphertext
   expect(parsed.ciphertext).toBe(ciphertext)
 
-  // Decrypt with the parsed values — should recover the original amount
   const decrypted = await cipher.decrypt(parsed.ciphertext, parsed.nonce)
   expect(BigInt(decrypted)).toBe(tokenAmount)
 }
 
-/**
- * Same roundtrip but with a different key and a larger amount,
- * to verify the split doesn't depend on specific ciphertext length.
- */
 export const testParseEncryptedDataRoundtripLargeAmount = async () => {
   const cipher = new AesGcmCrypto(AES_KEY_ONE)
-
-  // Max uint256 - 1
   const tokenAmount =
     0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffen
   const plaintextHex = numberToHex(tokenAmount, { size: 32 })
-
-  const nonceNum = 999n
-  const nonceHex = cipher.createNonce(Number(nonceNum))
+  const nonceHex = cipher.createNonce(999)
 
   const ciphertext = await cipher.encrypt(plaintextHex, nonceHex)
-  const nonceWithout0x = nonceHex.slice(2)
-  const packedBlob = `${ciphertext}${nonceWithout0x}` as Hex
+  const packedBlob = `${ciphertext}${nonceHex.slice(2)}` as Hex
 
   const parsed = parseEncryptedData(packedBlob)
 

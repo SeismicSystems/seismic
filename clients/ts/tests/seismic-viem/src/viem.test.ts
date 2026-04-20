@@ -547,8 +547,6 @@ describe('Smart routing: end-to-end lifecycle', () => {
   )
 })
 
-// ---- Explorer URL unit tests (no node required) ----
-
 describe('Explorer URL utilities', () => {
   test(
     'getExplorerUrl returns null for undefined chain',
@@ -595,8 +593,6 @@ describe('Explorer URL utilities', () => {
   test('sanvil chain has no explorer', testSanvilHasNoExplorer)
 })
 
-// ---- Serialization error path tests (no node required) ----
-
 describe('serializeSeismicTransaction error paths', () => {
   test('throws when chainId is missing', testSerializeMissingChainId)
   test('throws when nonce is missing', testSerializeMissingNonce)
@@ -622,8 +618,6 @@ describe('serializeSeismicTransaction error paths', () => {
   test('throws when data is missing', testSerializeMissingData)
   test('valid tx does not throw', testSerializeValidTxDoesNotThrow)
 })
-
-// ---- SRC20 crypto unit tests (no node required) ----
 
 describe('SRC20 parseEncryptedData', () => {
   test('throws on empty hex (0x)', testParseEncryptedDataThrowsOnEmpty)
