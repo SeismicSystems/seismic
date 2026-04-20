@@ -53,11 +53,11 @@ Viem-speak recap:
 
 Our `actions/*.ts` files each export a decorator, matching viem's `publicActions` / `walletActions` naming convention:
 
-| file | decorator | viem analogue |
-|------|-----------|----------------|
-| `actions/public.ts` | `shieldedPublicActions` | `publicActions` |
-| `actions/wallet.ts` | `shieldedWalletActions` | `walletActions` |
-| `actions/encryption.ts` | `encryptionActions` | *(no viem analogue)* |
+| file                    | decorator               | viem analogue        |
+| ----------------------- | ----------------------- | -------------------- |
+| `actions/public.ts`     | `shieldedPublicActions` | `publicActions`      |
+| `actions/wallet.ts`     | `shieldedWalletActions` | `walletActions`      |
+| `actions/encryption.ts` | `encryptionActions`     | _(no viem analogue)_ |
 
 The decorators are composed together in `client.ts` to build `ShieldedPublicClient` and `ShieldedWalletClient`.
 
