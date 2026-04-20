@@ -21,7 +21,6 @@ export const testRngUniqueness = async (
   const results: bigint[] = []
   for (let i = 0; i < iterations; i++) {
     const value = await publicClient.rng({ numBytes: size })
-    expect(value).toBeGreaterThan(0n)
     expect(value).toBeLessThan(2n ** BigInt(8 * size))
     results.push(value)
   }

@@ -17,6 +17,9 @@ type PrivacyTestArgs = {
   account: Account
 }
 
+const COUNTER_VALUE_ENCRYPTED = 42n
+const COUNTER_VALUE_STORAGE = 99n
+
 export const testSeismicTxCalldataIsEncrypted = async ({
   chain,
   url,
@@ -50,7 +53,7 @@ export const testSeismicTxCalldataIsEncrypted = async ({
   })
 
   const { txHash, plaintextTx, shieldedTx } = await contract.dwrite.setNumber([
-    42n,
+    COUNTER_VALUE_ENCRYPTED,
   ])
   await publicClient.waitForTransactionReceipt({ hash: txHash })
 
@@ -92,7 +95,7 @@ export const testGetStorageAtBlockedForContract = async ({
     address: contractAddress,
     client: walletClient,
   })
-  const setTx = await contract.write.setNumber([99n])
+  const setTx = await contract.write.setNumber([COUNTER_VALUE_STORAGE])
   await publicClient.waitForTransactionReceipt({ hash: setTx })
 
   await expect(

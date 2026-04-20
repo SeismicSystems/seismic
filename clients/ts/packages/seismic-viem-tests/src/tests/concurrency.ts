@@ -4,7 +4,7 @@ import {
   createShieldedWalletClient,
   getShieldedContract,
 } from 'seismic-viem'
-import type { Account, Chain } from 'viem'
+import type { Account, Chain, Hex } from 'viem'
 import { http } from 'viem'
 
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
@@ -17,6 +17,8 @@ type ConcurrencyTestArgs = {
 }
 
 const NUM_SEQUENTIAL_WRITES = 3
+const ODD_COUNTER_VALUE = 5n
+const RECEIPT_TIMEOUT_MS = 30_000
 
 export const testConcurrentShieldedTransactions = async ({
   chain,
@@ -50,7 +52,7 @@ export const testConcurrentShieldedTransactions = async ({
     client: walletClient,
   })
 
-  const hashes = []
+  const hashes: Hex[] = []
   for (let i = 0; i < NUM_SEQUENTIAL_WRITES; i++) {
     const hash = await contract.write.increment()
     hashes.push(hash)
@@ -59,8 +61,8 @@ export const testConcurrentShieldedTransactions = async ({
   const receipts = await Promise.all(
     hashes.map((hash) =>
       publicClient.waitForTransactionReceipt({
-        hash: hash as `0x${string}`,
-        timeout: 30_000,
+        hash,
+        timeout: RECEIPT_TIMEOUT_MS,
       })
     )
   )
@@ -109,7 +111,7 @@ export const testConcurrentReads = async ({
     client: walletClient,
   })
 
-  const setTx = await contract.write.setNumber([5n])
+  const setTx = await contract.write.setNumber([ODD_COUNTER_VALUE])
   await publicClient.waitForTransactionReceipt({ hash: setTx })
 
   const [signedResult, transparentResult, smartResult] = await Promise.all([

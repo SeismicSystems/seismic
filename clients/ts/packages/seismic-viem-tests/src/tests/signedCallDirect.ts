@@ -16,6 +16,9 @@ type SignedCallTestArgs = {
   account: Account
 }
 
+const ODD_COUNTER_VALUE = 7n
+const LARGE_BLOCKS_WINDOW = 200n
+
 export const testSignedCallDirect = async ({
   chain,
   url,
@@ -47,7 +50,7 @@ export const testSignedCallDirect = async ({
     address: contractAddress,
     client: walletClient,
   })
-  const setTx = await contract.write.setNumber([7n])
+  const setTx = await contract.write.setNumber([ODD_COUNTER_VALUE])
   await publicClient.waitForTransactionReceipt({ hash: setTx })
 
   const calldata = encodeFunctionData({
@@ -101,7 +104,7 @@ export const testSignedCallWithSecurityParams = async ({
       data: calldata,
       account: account.address,
     },
-    { blocksWindow: 200n }
+    { blocksWindow: LARGE_BLOCKS_WINDOW }
   )
   expect(data).toBeDefined()
 }
