@@ -1,3 +1,18 @@
+/**
+ * EIP-712 typed-data signing path for Seismic transactions.
+ *
+ * Used when the client's account is a wallet it does not directly control
+ * (MetaMask, WalletConnect, Ledger, Trezor, etc.) and therefore cannot hand
+ * us a locally-signed raw Seismic tx. Instead, we build an EIP-712 typed
+ * message whose schema matches what the Seismic node validates, ask the
+ * wallet to sign that, and forward the `{ typedData, signature }` pair to
+ * the node via `eth_sendRawTransaction` / `eth_call` (the node
+ * reconstructs and verifies the tx from those two pieces).
+ *
+ * Local (private-key) accounts use a different path entirely — they sign
+ * the serialized Seismic tx directly. See `tx/sendShielded.ts` and
+ * `tx/signedCall.ts` for the branching.
+ */
 import {
   Account,
   Chain,
@@ -15,8 +30,13 @@ import {
   type TxSeismic,
 } from '@sviem/tx/seismicTx.ts'
 
-// reserve 0 for normal seismic tx
-// reserve 1 for personal_sign (ledger/trezor compatible)
+/**
+ * Seismic `messageVersion` selector embedded in the tx.
+ *
+ *  - `0` — raw serialized Seismic tx signed by a local account
+ *  - `1` — reserved for personal_sign (ledger/trezor friendly)
+ *  - `2` — EIP-712 typed-data signing (this module's path)
+ */
 export const TYPED_DATA_MESSAGE_VERSION: number = 2
 
 const seismicTxTypedData = <
@@ -108,6 +128,19 @@ type PrimitiveSignature = {
   yParity: Hex
 }
 
+/**
+ * Builds the EIP-712 typed-data envelope for a Seismic tx and asks the
+ * wallet to sign it via `eth_signTypedData_v4`.
+ *
+ * Returns both the typed-data payload and the parsed signature (`r`, `s`,
+ * `yParity`). Callers forward the pair to the node as the tx's
+ * `serializedTransaction` — the node reconstructs the Seismic tx from the
+ * typed data and recovers the sender from the signature.
+ *
+ * Throws if the tx is missing any field required by the EIP-712 schema
+ * (`chainId`, `encryptionPubkey`, `encryptionNonce`, `recentBlockHash`,
+ * `expiresAtBlock`, `signedRead`) — `buildTxSeismicMetadata` fills these.
+ */
 export const signSeismicTxTypedData = async <
   TTransport extends Transport,
   TChain extends Chain | undefined,

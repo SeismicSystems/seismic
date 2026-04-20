@@ -7,7 +7,6 @@ import {
   createShieldedWalletClient,
   getPlaintextCalldata,
   signSeismicTxTypedData,
-  stringifyBigInt,
 } from 'seismic-viem'
 import { getShieldedContract } from 'seismic-viem'
 import {
@@ -22,6 +21,9 @@ import { http } from 'viem'
 
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
 import { seismicCounterBytecode } from '@sviem-tests/tests/contract/bytecode.ts'
+
+const stringifyBigInt = (_: unknown, v: unknown) =>
+  typeof v === 'bigint' ? v.toString() : v
 
 export type ContractTestArgs = {
   chain: Chain

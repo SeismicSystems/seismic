@@ -16,7 +16,9 @@ import {
   type ShieldedWalletClient,
   createShieldedWalletClient,
 } from '@sviem/client'
-import { stringifyBigInt } from '@sviem/utils.ts'
+
+const stringifyBigInt = (_: unknown, v: unknown) =>
+  typeof v === 'bigint' ? v.toString() : v
 
 const MIN_ETH_REFILL = 10_000
 const REFILL_AMOUNT_ETH = 20_000
