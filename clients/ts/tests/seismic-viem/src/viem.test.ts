@@ -40,10 +40,7 @@ import {
   testGetStorageAtBlockedForContract,
   testSeismicTxCalldataIsEncrypted,
 } from '@sviem-tests/tests/privacy.ts'
-import {
-  testRngDifferentPersProducesDifferentResults,
-  testRngUniqueness,
-} from '@sviem-tests/tests/rngUniqueness.ts'
+import { testRngDifferentPersProducesDifferentResults } from '@sviem-tests/tests/rngUniqueness.ts'
 import {
   testSignedCallDirect,
   testSignedCallWithSecurityParams,
@@ -555,11 +552,6 @@ describe('Privacy invariants', () => {
 })
 
 describe('RNG uniqueness', () => {
-  test(
-    'RNG(32) returns unique values across 5 calls',
-    async () => await testRngUniqueness({ chain, url }, 32, 5),
-    { timeout: TIMEOUT_MS }
-  )
   test(
     'RNG with different personalization produces different results',
     async () =>

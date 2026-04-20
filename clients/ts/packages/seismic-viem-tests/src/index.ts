@@ -123,10 +123,7 @@ export {
   testGetStorageAtBlockedForContract,
 } from '@sviem-tests/tests/privacy.ts'
 
-export {
-  testRngUniqueness,
-  testRngDifferentPersProducesDifferentResults,
-} from '@sviem-tests/tests/rngUniqueness.ts'
+export { testRngDifferentPersProducesDifferentResults } from '@sviem-tests/tests/rngUniqueness.ts'
 
 export {
   testSignedCallDirect,

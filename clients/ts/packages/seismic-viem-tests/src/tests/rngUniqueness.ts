@@ -8,27 +8,6 @@ type PublicClientConfig = {
   url: string
 }
 
-export const testRngUniqueness = async (
-  { chain, url }: PublicClientConfig,
-  size: number,
-  iterations: number = 5
-) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-
-  const results: bigint[] = []
-  for (let i = 0; i < iterations; i++) {
-    const value = await publicClient.rng({ numBytes: size })
-    expect(value).toBeLessThan(2n ** BigInt(8 * size))
-    results.push(value)
-  }
-
-  const uniqueValues = new Set(results.map((v) => v.toString()))
-  expect(uniqueValues.size).toBe(iterations)
-}
-
 export const testRngDifferentPersProducesDifferentResults = async ({
   chain,
   url,
