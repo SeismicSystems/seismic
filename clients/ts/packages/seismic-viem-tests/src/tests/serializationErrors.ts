@@ -1,4 +1,5 @@
 import { expect } from 'bun:test'
+import type { TransactionSerializableSeismic } from 'seismic-viem'
 import { serializeSeismicTransaction } from 'seismic-viem'
 import type { Hex } from 'viem'
 
@@ -14,8 +15,8 @@ const SAMPLE_GAS_PRICE = 1_000_000_000n // 1 gwei
 const SAMPLE_GAS_LIMIT = 100_000n
 const SAMPLE_EXPIRES_AT_BLOCK = 100n
 
-const validSeismicTx = {
-  type: 'seismic' as const,
+const validSeismicTx: TransactionSerializableSeismic = {
+  type: 'seismic',
   chainId: SANVIL_CHAIN_ID,
   nonce: 1,
   gasPrice: SAMPLE_GAS_PRICE,
@@ -31,76 +32,58 @@ const validSeismicTx = {
   signedRead: false,
 }
 
-export const testSerializeMissingChainId = () => {
-  const { chainId: _, ...tx } = validSeismicTx
-  expect(() => serializeSeismicTransaction(tx as any)).toThrow(
-    'Seismic transactions require chainId'
-  )
+type SeismicTxField = keyof typeof validSeismicTx
+
+const expectThrowsWithoutField = (
+  field: SeismicTxField,
+  message: string
+): void => {
+  const { [field]: _omitted, ...tx } = validSeismicTx
+  expect(() => serializeSeismicTransaction(tx)).toThrow(message)
 }
 
-export const testSerializeMissingNonce = () => {
-  const { nonce: _, ...tx } = validSeismicTx
-  expect(() => serializeSeismicTransaction(tx as any)).toThrow(
-    'Seismic transactions require nonce'
-  )
-}
+export const testSerializeMissingChainId = () =>
+  expectThrowsWithoutField('chainId', 'Seismic transactions require chainId')
 
-export const testSerializeMissingGasPrice = () => {
-  const { gasPrice: _, ...tx } = validSeismicTx
-  expect(() => serializeSeismicTransaction(tx as any)).toThrow(
-    'Seismic transactions require gasPrice'
-  )
-}
+export const testSerializeMissingNonce = () =>
+  expectThrowsWithoutField('nonce', 'Seismic transactions require nonce')
 
-export const testSerializeMissingGas = () => {
-  const { gas: _, ...tx } = validSeismicTx
-  expect(() => serializeSeismicTransaction(tx as any)).toThrow(
-    'Seismic transactions require gas'
-  )
-}
+export const testSerializeMissingGasPrice = () =>
+  expectThrowsWithoutField('gasPrice', 'Seismic transactions require gasPrice')
 
-export const testSerializeMissingTo = () => {
-  const { to: _, ...tx } = validSeismicTx
-  expect(() => serializeSeismicTransaction(tx as any)).toThrow(
-    'Seismic transactions require to'
-  )
-}
+export const testSerializeMissingGas = () =>
+  expectThrowsWithoutField('gas', 'Seismic transactions require gas')
 
-export const testSerializeMissingEncryptionPubkey = () => {
-  const { encryptionPubkey: _, ...tx } = validSeismicTx
-  expect(() => serializeSeismicTransaction(tx as any)).toThrow(
+export const testSerializeMissingTo = () =>
+  expectThrowsWithoutField('to', 'Seismic transactions require to')
+
+export const testSerializeMissingEncryptionPubkey = () =>
+  expectThrowsWithoutField(
+    'encryptionPubkey',
     'Seismic transactions require encryptionPubkey'
   )
-}
 
-export const testSerializeMissingEncryptionNonce = () => {
-  const { encryptionNonce: _, ...tx } = validSeismicTx
-  expect(() => serializeSeismicTransaction(tx as any)).toThrow(
+export const testSerializeMissingEncryptionNonce = () =>
+  expectThrowsWithoutField(
+    'encryptionNonce',
     'Seismic transactions require encryptionNonce'
   )
-}
 
-export const testSerializeMissingRecentBlockHash = () => {
-  const { recentBlockHash: _, ...tx } = validSeismicTx
-  expect(() => serializeSeismicTransaction(tx as any)).toThrow(
+export const testSerializeMissingRecentBlockHash = () =>
+  expectThrowsWithoutField(
+    'recentBlockHash',
     'Seismic transactions require recentBlockHash'
   )
-}
 
-export const testSerializeMissingExpiresAtBlock = () => {
-  const { expiresAtBlock: _, ...tx } = validSeismicTx
-  expect(() => serializeSeismicTransaction(tx as any)).toThrow(
+export const testSerializeMissingExpiresAtBlock = () =>
+  expectThrowsWithoutField(
+    'expiresAtBlock',
     'Seismic transactions require expiresAtBlock'
   )
-}
 
-export const testSerializeMissingData = () => {
-  const { data: _, ...tx } = validSeismicTx
-  expect(() => serializeSeismicTransaction(tx as any)).toThrow(
-    'Seismic transactions require input'
-  )
-}
+export const testSerializeMissingData = () =>
+  expectThrowsWithoutField('data', 'Seismic transactions require input')
 
 export const testSerializeValidTxDoesNotThrow = () => {
-  expect(() => serializeSeismicTransaction(validSeismicTx as any)).not.toThrow()
+  expect(() => serializeSeismicTransaction(validSeismicTx)).not.toThrow()
 }
