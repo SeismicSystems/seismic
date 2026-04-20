@@ -13,7 +13,6 @@ import { testSeismicTx } from '@sviem-tests/tests/contract/contract.ts'
 import { testDepositContract } from '@sviem-tests/tests/contract/depositContract.ts'
 import { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'
 import {
-  testEstimateGasReturnsReasonableValue,
   testLifecycleWithEstimatedGas,
   testWriteUsesEstimatedGasNot30M,
   testWriteWithExplicitGasSkipsEstimation,
@@ -46,6 +45,7 @@ import {
   testRngWithPers,
   testSecp256k1,
 } from '@sviem-tests/tests/precompiles.ts'
+import { testDwriteContractUsesSecurityParams } from '@sviem-tests/tests/securityParams.ts'
 import {
   testSerializeMissingChainId,
   testSerializeMissingData,
@@ -97,7 +97,10 @@ import {
 } from '@sviem-tests/tests/trace.ts'
 import {
   testContractTreadIsntSeismicTx,
+  testContractTreadRejectsAccountOption,
+  testContractTreadWithPublicOnlyClient,
   testShieldedWalletClientTreadIsntSeismicTx,
+  testShieldedWalletClientTreadRejectsAccountOption,
   testViemReadContractIsntSeismicTx,
 } from '@sviem-tests/tests/transparentContract/tread-contract.ts'
 import {
@@ -162,14 +165,18 @@ describe('Seismic Contract', async () => {
   )
 })
 
-describe('Signed estimate gas', async () => {
+describe('Security params', async () => {
   test(
-    'signed estimate gas returns reasonable value',
+    'dwriteContract forwards explicit Seismic metadata overrides',
     async () =>
-      await testEstimateGasReturnsReasonableValue({ chain, url, account }),
-    { timeout: CONTRACT_TIMEOUT_MS }
+      await testDwriteContractUsesSecurityParams({ chain, url, account }),
+    {
+      timeout: CONTRACT_TIMEOUT_MS,
+    }
   )
+})
 
+describe('Signed estimate gas', async () => {
   test(
     'write without explicit gas auto-estimates and succeeds',
     async () =>
@@ -252,6 +259,37 @@ describe('tread should not use seismic tx', async () => {
     'viem readContract should not use seismic tx',
     async () =>
       await testViemReadContractIsntSeismicTx({ chain, url, account }),
+    {
+      timeout: TIMEOUT_MS,
+    }
+  )
+
+  test(
+    'ShieldedContract.tread rejects account because it is always transparent',
+    async () =>
+      await testContractTreadRejectsAccountOption({ chain, url, account }),
+    {
+      timeout: TIMEOUT_MS,
+    }
+  )
+
+  test(
+    'ShieldedContract.tread works with a public-only keyed client',
+    async () =>
+      await testContractTreadWithPublicOnlyClient({ chain, url, account }),
+    {
+      timeout: TIMEOUT_MS,
+    }
+  )
+
+  test(
+    'ShieldedWalletClient.treadContract rejects account because it is always transparent',
+    async () =>
+      await testShieldedWalletClientTreadRejectsAccountOption({
+        chain,
+        url,
+        account,
+      }),
     {
       timeout: TIMEOUT_MS,
     }

@@ -7,12 +7,15 @@ icon: pen
 
 Shielded writes encrypt transaction calldata before submission. This prevents calldata from being visible on-chain -- an observer can see that a transaction was sent to a particular contract address, but not what function was called or what arguments were passed.
 
-seismic-viem provides two approaches:
+seismic-viem provides several approaches:
 
-- **`shieldedWriteContract()`** -- standalone function, same API shape as viem's `writeContract`
-- **`contract.write.functionName()`** -- via a `ShieldedContract` from [getShieldedContract](contract-instance.md)
+- **`contract.write.functionName()`** -- smart routing via [getShieldedContract](contract-instance.md). Auto-detects shielded parameters and encrypts only when needed.
+- **`contract.swrite.functionName()`** -- force shielded via [getShieldedContract](contract-instance.md). Always encrypts, regardless of parameter types.
+- **`shieldedWriteContract()`** -- standalone function, same API shape as viem's `writeContract`. Always encrypts.
+- **`walletClient.writeContract()`** -- smart routing via the wallet client. Same auto-detection as `contract.write`.
+- **`walletClient.swriteContract()`** -- force shielded via the wallet client. Always encrypts.
 
-Both produce the same on-chain result: an encrypted type `0x4A` Seismic transaction.
+The shielded paths all produce the same on-chain result: an encrypted type `0x4A` Seismic transaction.
 
 ## Standalone: `shieldedWriteContract`
 
@@ -52,9 +55,13 @@ const hash = await shieldedWriteContract(client, {
 
 ---
 
-## Debug: `shieldedWriteContractDebug`
+## Send + Inspect: `shieldedWriteContractDebug`
 
-Returns the plaintext transaction, the shielded (encrypted) transaction, and the transaction hash. Useful for inspecting what the SDK encrypts and broadcasts.
+Broadcasts a shielded transaction (like `shieldedWriteContract`) and additionally returns the plaintext transaction view and the shielded (encrypted) transaction view alongside the resulting transaction hash. Useful for inspecting exactly what the SDK encrypted and submitted.
+
+{% hint style="info" %}
+Despite the "debug" flavor of the name, `shieldedWriteContractDebug` does send the transaction -- the returned `txHash` is a real on-chain hash, not a dry run.
+{% endhint %}
 
 ```typescript
 import { shieldedWriteContractDebug } from "seismic-viem";
@@ -94,7 +101,7 @@ const hash = await client.sendShieldedTransaction({
 
 ## How It Works
 
-When you call `shieldedWriteContract` (or `contract.write.functionName`), the SDK performs the following steps:
+When you call `shieldedWriteContract` (or `contract.swrite.functionName`), the SDK performs the following steps:
 
 1. **ABI-encode** the function call into plaintext calldata
 2. **Build Seismic metadata** -- encryption nonce, recent block hash, expiry block
@@ -108,7 +115,7 @@ The encrypted calldata is bound to the transaction context (chain ID, nonce, blo
 
 ## Security Parameters
 
-Every shielded transaction includes a block-hash freshness check and an expiry window. The defaults are sensible for most cases, but you can override them per-call via `SeismicSecurityParams`:
+Every shielded transaction includes a block-hash freshness check and an expiry window. The defaults are sensible for most cases, but you can override them per-call via `SeismicSecurityParams`, passed as the optional third argument to `shieldedWriteContract`, `shieldedWriteContractDebug`, `sendShieldedTransaction`, `signedReadContract`, and `signedCall`:
 
 | Parameter         | Type     | Default    | Description                                     |
 | ----------------- | -------- | ---------- | ----------------------------------------------- |
@@ -118,16 +125,23 @@ Every shielded transaction includes a block-hash freshness check and an expiry w
 | `expiresAtBlock`  | `bigint` | Calculated | Override the expiry block directly              |
 
 ```typescript
-const hash = await shieldedWriteContract(client, {
-  address: "0x...",
-  abi: myContractAbi,
-  functionName: "transfer",
-  args: ["0x...", 100n],
-  securityParams: {
+const hash = await shieldedWriteContract(
+  client,
+  {
+    address: "0x...",
+    abi: myContractAbi,
+    functionName: "transfer",
+    args: ["0x...", 100n],
+  },
+  {
     blocksWindow: 50n, // expires after 50 blocks instead of 100
   },
-});
+);
 ```
+
+{% hint style="info" %}
+`securityParams` only applies to the low-level shielded paths (`shieldedWriteContract`, `shieldedWriteContractDebug`, `sendShieldedTransaction`, `signedReadContract`, `signedCall`, and the `.swrite`/`.sread`/`.dwrite` namespaces on `getShieldedContract`). The smart-routing `.read`/`.write` and transparent `.tread`/`.twrite` paths do not accept it.
+{% endhint %}
 
 {% hint style="info" %}
 The default 100-block window, random nonce, and latest block hash are appropriate for nearly all use cases. Override these only if you have a specific reason -- for example, reducing the window for time-sensitive operations or pinning the block hash in tests.

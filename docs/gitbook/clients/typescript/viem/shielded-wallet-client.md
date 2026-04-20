@@ -57,7 +57,8 @@ const walletClient = await createShieldedWalletClient({
   account: privateKeyToAccount("0x..."),
 });
 
-// Shielded write -- calldata is encrypted
+// Smart write -- auto-detects shielded params in the ABI
+// transfer(saddress, suint256) has shielded params → encrypted seismic tx
 const hash = await walletClient.writeContract({
   address: "0xContractAddress",
   abi: contractAbi,
@@ -65,7 +66,8 @@ const hash = await walletClient.writeContract({
   args: ["0xRecipient", 1000n],
 });
 
-// Signed read -- authenticated eth_call
+// Smart read -- auto-detects shielded params in the ABI
+// balanceOf(saddress) has shielded params → signed read
 const balance = await walletClient.readContract({
   address: "0xContractAddress",
   abi: contractAbi,
@@ -88,15 +90,17 @@ When you call `createShieldedWalletClient()`, the following steps happen:
 
 ### Shielded Wallet Actions
 
-| Action                            | Description                                                                             |
-| --------------------------------- | --------------------------------------------------------------------------------------- |
-| `writeContract(params)`           | Shielded write -- encrypts calldata with the AES key before sending                     |
-| `twriteContract(params)`          | Transparent write -- standard viem `writeContract` (unencrypted calldata)               |
-| `dwriteContract(params)`          | Debug write -- returns the plaintext tx, encrypted tx, and tx hash without broadcasting |
-| `readContract(params)`            | Signed read -- authenticated `eth_call` that proves the caller's identity               |
-| `treadContract(params)`           | Transparent read -- standard viem `readContract` (unsigned call)                        |
-| `signedCall(params)`              | Low-level signed `eth_call`                                                             |
-| `sendShieldedTransaction(params)` | Low-level shielded transaction send                                                     |
+| Action                            | Description                                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `writeContract(params)`           | Smart write -- inspects ABI for shielded params; encrypts if shielded, sends transparent otherwise                 |
+| `swriteContract(params)`          | Force shielded write -- always encrypts calldata with the AES key before sending                                   |
+| `twriteContract(params)`          | Transparent write -- always sends with plaintext calldata (unencrypted)                                            |
+| `dwriteContract(params)`          | Send + inspect write -- broadcasts a real shielded tx and returns the plaintext tx, shielded tx, and `txHash`       |
+| `readContract(params)`            | Smart read -- inspects ABI for shielded params; uses signed read if shielded, transparent read otherwise            |
+| `sreadContract(params)`           | Force signed read -- always authenticated `eth_call` that proves the caller's identity                             |
+| `treadContract(params)`           | Transparent read -- always standard unsigned call. Rejects `account` (Seismic zeroes out `from` on transparent `eth_call`); use `sreadContract` for sender-aware reads |
+| `signedCall(params)`              | Low-level signed `eth_call`                                                                                        |
+| `sendShieldedTransaction(params)` | Low-level shielded transaction send                                                                                |
 
 ### Encryption Actions
 
@@ -206,10 +210,11 @@ const walletClient2 = await createShieldedWalletClient({
 });
 ```
 
-### Debug Write
+### Send + Inspect Write
 
 ```typescript
-// Debug write: inspect the transaction without broadcasting
+// dwriteContract broadcasts a real shielded tx AND returns the plaintext
+// and shielded tx views for inspection. txHash is a real on-chain hash.
 const debugResult = await walletClient.dwriteContract({
   address: "0xContractAddress",
   abi: contractAbi,
@@ -262,6 +267,8 @@ This is useful when you need the encryption key material without constructing a 
 ## See Also
 
 - [Shielded Public Client](shielded-public-client.md) -- Read-only client without private key
+- [Deposit Contract](deposit-contract.md) -- Validator staking via `deposit()`
+- [SRC20 Event Watching](src20.md) -- Watch and decrypt SRC20 token events
 - [Encryption](encryption.md) -- Encryption utilities and `getEncryption()`
 - [Chains](chains.md) -- Chain configurations for Seismic networks
 - [Precompiles](precompiles.md) -- Precompile details and parameters

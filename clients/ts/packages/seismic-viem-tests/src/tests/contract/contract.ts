@@ -7,7 +7,6 @@ import {
   createShieldedWalletClient,
   getPlaintextCalldata,
   signSeismicTxTypedData,
-  stringifyBigInt,
 } from 'seismic-viem'
 import { getShieldedContract } from 'seismic-viem'
 import {
@@ -22,6 +21,9 @@ import { http } from 'viem'
 
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
 import { seismicCounterBytecode } from '@sviem-tests/tests/contract/bytecode.ts'
+
+const stringifyBigInt = (_: unknown, v: unknown) =>
+  typeof v === 'bigint' ? v.toString() : v
 
 export type ContractTestArgs = {
   chain: Chain
@@ -152,11 +154,8 @@ export const testSeismicTx = async ({
   )
   expectSeismicTx(receiptDw2.type as `0x${string}` | null)
 
-  console.log(`[3] Using non-explicit signed read...`)
-  // Use non-explicit signed-read
-  const isOdd3 = await seismicContract.tread.isOdd({
-    account: walletClient.account.address,
-  })
+  console.log('[3] Using explicit force-signed read...')
+  const isOdd3 = await seismicContract.sread.isOdd()
   // number has been set back to 11
   expect(isOdd3).toBe(true)
 

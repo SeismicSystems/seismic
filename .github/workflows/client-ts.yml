@@ -31,6 +31,7 @@ jobs:
       - run: mise run lint::check
       - run: mise run typecheck
       - run: mise run build
+      - run: mise run test::unit
 
   test-sanvil:
     needs: [check]
@@ -45,7 +46,7 @@ jobs:
           key: bun-${{ runner.os }}-${{ hashFiles('clients/ts/bun.lock') }}
           restore-keys: |
             bun-${{ runner.os }}-
-      - run: mise run test::sanvil
+      - run: mise run test::integration::sanvil
 
   test-sreth:
     needs: [check]
@@ -55,7 +56,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           path: seismic
-      # We checkout the seismic-reth repo as a sibling repo. `mise run test::sreth` has this hardcoded requirement for now
+      # We checkout the seismic-reth repo as a sibling repo. `mise run test::integration::sreth` has this hardcoded requirement for now
       # as it starts reth by cd'ing into ../seismic-reth and running `cargo run ...`
       - uses: actions/checkout@v6
         with:
@@ -71,7 +72,7 @@ jobs:
           restore-keys: |
             bun-${{ runner.os }}-
 
-      # `mise run test::sreth` below starts reth in the background using `cargo run`,
+      # `mise run test::integration::sreth` below starts reth in the background using `cargo run`,
       # so we cache the built binary to speed up the workflow.
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -82,5 +83,5 @@ jobs:
       - run: cargo build --bin seismic-reth
         working-directory: seismic-reth
 
-      - run: mise run test::sreth
+      - run: mise run test::integration::sreth
         working-directory: seismic/clients/ts

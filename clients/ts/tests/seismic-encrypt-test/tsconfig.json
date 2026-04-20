@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": [
+    "src/**/*.test.ts",
+    "../../packages/seismic-encrypt/src/**/*",
+    "../../packages/seismic-viem/src/**/*"
+  ],
+  "exclude": ["node_modules", "dist"],
+  "compilerOptions": {
+    "paths": {
+      "@sviem/*": ["../../packages/seismic-viem/src/*"],
+      "seismic-encrypt": ["../../packages/seismic-encrypt/src/index.ts"],
+      "seismic-viem": ["../../packages/seismic-viem/src/index.ts"]
+    },
+    "composite": true,
+    "baseUrl": ".",
+    "rootDir": "../..",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+  }
+}

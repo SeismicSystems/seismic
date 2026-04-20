@@ -2,7 +2,7 @@ import { Hex } from 'viem'
 
 import { encodeSeismicMetadataAsAAD } from '@sviem/crypto/aead.ts'
 import { AesGcmCrypto } from '@sviem/crypto/aes.ts'
-import type { TxSeismicMetadata } from '@sviem/metadata.ts'
+import type { TxSeismicMetadata } from '@sviem/tx/metadata.ts'
 
 export type EncryptionActions = {
   getEncryption: () => Hex

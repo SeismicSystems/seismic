@@ -1,6 +1,5 @@
 import type {
   Abi,
-  AbiFunction,
   Account,
   Address,
   Chain,
@@ -13,23 +12,36 @@ import type {
   WriteContractParameters,
   WriteContractReturnType,
 } from 'viem'
-import {
-  encodeAbiParameters,
-  getAbiItem,
-  numberToHex,
-  toFunctionSelector,
-} from 'viem'
-import { formatAbiItem } from 'viem/utils'
+import { numberToHex } from 'viem'
+import { writeContract } from 'viem/actions'
 
-import { SEISMIC_TX_TYPE, SeismicSecurityParams } from '@sviem/chain.ts'
 import type { ShieldedWalletClient } from '@sviem/client.ts'
-import { remapSeismicAbiInputs } from '@sviem/contract/abi.ts'
+import { hasShieldedParams } from '@sviem/contract/abi.ts'
+import { getPlaintextCalldata } from '@sviem/contract/calldata.ts'
 import { randomEncryptionNonce } from '@sviem/crypto/nonce.ts'
-import { buildTxSeismicMetadata } from '@sviem/metadata.ts'
-import type { SendSeismicTransactionParameters } from '@sviem/sendTransaction.ts'
-import { sendShieldedTransaction } from '@sviem/sendTransaction.ts'
+import { buildTxSeismicMetadata } from '@sviem/tx/metadata.ts'
+import { SEISMIC_TX_TYPE, SeismicSecurityParams } from '@sviem/tx/seismicTx.ts'
+import { sendShieldedTransaction } from '@sviem/tx/sendShielded.ts'
+import type { SendSeismicTransactionParameters } from '@sviem/tx/types.ts'
 
-export const getPlaintextCalldata = <
+/**
+ * Shared smart-write routing used by both the wallet actions and the
+ * ABI/address-bound contract wrapper.
+ *
+ * This helper inspects the target ABI/function and chooses the write path:
+ *
+ * - if the function has shielded params, it routes to
+ *   `shieldedWriteContract(...)`
+ * - otherwise it routes to viem's `writeContract(...)`
+ *
+ * It does not currently route non-shielded writes through
+ * `transparentWriteContract(...)`. That helper exists for the explicit
+ * force-transparent API (`twriteContract` / `contract.twrite.*`), where Seismic
+ * remaps ABI inputs and sends plaintext calldata through the transparent send
+ * path directly.
+ */
+export async function smartWriteContract<
+  TTransport extends Transport,
   TChain extends Chain | undefined,
   TAccount extends Account,
   const TAbi extends Abi | readonly unknown[],
@@ -39,31 +51,40 @@ export const getPlaintextCalldata = <
     'nonpayable' | 'payable',
     TFunctionName
   >,
-  chainOverride extends Chain | undefined = undefined,
+  TChainOverride extends Chain | undefined = undefined,
 >(
+  client: ShieldedWalletClient<TTransport, TChain, TAccount>,
   parameters: WriteContractParameters<
     TAbi,
     TFunctionName,
     TArgs,
     TChain,
     TAccount,
-    chainOverride
+    TChainOverride
   >
-): Hex => {
-  const { abi, functionName, args = [] } = parameters as WriteContractParameters
-  const seismicAbi = getAbiItem({ abi, name: functionName }) as AbiFunction
-  const selector = toFunctionSelector(formatAbiItem(seismicAbi))
-  const ethAbi = remapSeismicAbiInputs(seismicAbi)
-  const encodedParams = encodeAbiParameters(ethAbi.inputs, args).slice(2)
-  const plaintextCalldata = `${selector}${encodedParams}` as Hex
-  return plaintextCalldata
+): Promise<WriteContractReturnType> {
+  const writeArgs = parameters as unknown as {
+    abi: Abi
+    functionName: string
+  }
+  if (hasShieldedParams(writeArgs.abi, writeArgs.functionName)) {
+    return shieldedWriteContract(
+      client as unknown as Parameters<typeof shieldedWriteContract>[0],
+      parameters as unknown as Parameters<typeof shieldedWriteContract>[1]
+    )
+  }
+
+  // No shielded params -> the ABI is valid for viem as-is.
+  return writeContract(
+    client as unknown as Parameters<typeof writeContract>[0],
+    parameters as unknown as Parameters<typeof writeContract>[1]
+  )
 }
 
 /**
  * Sends a transparent (non-encrypted) write to a contract whose ABI may
- * contain shielded types.  The function selector is derived from the
- * original Seismic ABI while parameters are encoded with remapped
- * standard types, then sent as a plain `eth_sendTransaction`.
+ * contain shielded types. The selector is derived from the Seismic ABI while
+ * parameters are encoded with remapped standard types.
  */
 export async function transparentWriteContract<
   TChain extends Chain | undefined,
@@ -102,7 +123,7 @@ export async function transparentWriteContract<
   } as unknown as Parameters<typeof client.sendTransaction>[0])
 }
 
-async function getShieldedWriteContractRequest<
+export async function shieldedWriteContract<
   TTransport extends Transport,
   TChain extends Chain | undefined,
   TAccount extends Account,
@@ -124,82 +145,15 @@ async function getShieldedWriteContractRequest<
     TAccount,
     TChainOverride
   >,
-  plaintextCalldata: Hex
-): Promise<SendSeismicTransactionParameters<TChain, TAccount>> {
-  const { address, gas, gasPrice, value, nonce } = parameters
-  return {
-    account: client.account,
-    chain: undefined,
-    to: address,
-    data: plaintextCalldata,
-    nonce,
-    value,
-    gas,
-    gasPrice,
-  }
-}
-
-/**
- * Executes a shielded write function on a contract, where the calldata is encrypted. The API for this is the same as viem's {@link https://viem.sh/docs/contract/writeContract writeContract}
- *
- *
- * @param {ShieldedWalletClient} client - The client to use.
- * @param {WriteContractParameters} parameters - The configuration object for the write operation.
- *   - `address` ({@link Hex}) - The address of the contract.
- *   - `abi` ({@link Abi}) - The contract's ABI.
- *   - `functionName` (string) - The name of the contract function to call.
- *   - `args` (array) - The arguments to pass to the contract function.
- *   - `gas` (bigint, optional) - Optional gas limit for the transaction.
- *   - `gasPrice` (bigint, optional) - Optional gas price for the transaction.
- *   - `value` (bigint, optional) - Optional value (native token amount) to send with the transaction.
- *
- * @returns {Promise<WriteContractReturnType>} A promise that resolves to a transaction hash.
- *
- * @example
- * import { custom, parseAbi } from 'viem'
- * import { createShieldedWalletContract, shieldedWriteContract, seismicTestnet } from 'seismic-viem'
- *
- * const client = createShieldedWalletClient({
- *   chain: seismicTestnet,
- *   transport: custom(window.ethereum),
- * })
- * const hash = await shieldedWriteContract(client, {
- *   address: '0xFBA3912Ca04dd458c843e2EE08967fC04f3579c2',
- *   abi: parseAbi(['function mint(uint32 tokenId) nonpayable']),
- *   functionName: 'mint',
- *   args: [69420],
- * })
- */
-export async function shieldedWriteContract<
-  TTransport extends Transport,
-  TChain extends Chain | undefined,
-  TAccount extends Account,
-  const TAbi extends Abi | readonly unknown[],
-  TFunctionName extends ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
-  TArgs extends ContractFunctionArgs<
-    TAbi,
-    'nonpayable' | 'payable',
-    TFunctionName
-  >,
-  chainOverride extends Chain | undefined = undefined,
->(
-  client: ShieldedWalletClient<TTransport, TChain, TAccount>,
-  parameters: WriteContractParameters<
-    TAbi,
-    TFunctionName,
-    TArgs,
-    TChain,
-    TAccount,
-    chainOverride
-  >
+  securityParams?: SeismicSecurityParams
 ): Promise<WriteContractReturnType> {
   const plaintextCalldata = getPlaintextCalldata(parameters)
-  const request = await getShieldedWriteContractRequest(
+  const request = buildShieldedWriteRequest(
     client,
     parameters,
     plaintextCalldata
   )
-  return sendShieldedTransaction(client, request)
+  return sendShieldedTransaction(client, request, securityParams)
 }
 
 type PlaintextTransactionParameters = {
@@ -222,19 +176,29 @@ export type ShieldedWriteContractDebugResult<
 }
 
 /**
- * Creates a transaction for a shielded write. Returns both plaintext and shielded transaction versions. Useful for debugging.
+ * Sends a shielded write and returns both plaintext and shielded transaction
+ * views for inspection.
  *
- * @param {ShieldedWalletClient} client - The client to use.
- * @param {WriteContractParameters} parameters - The configuration object for the write operation.
- *   - `address` ({@link Hex}) - The address of the contract.
- *   - `abi` ({@link Abi}) - The contract's ABI.
- *   - `functionName` (string) - The name of the contract function to call.
- *   - `args` (array) - The arguments to pass to the contract function.
- *   - `gas` (bigint, optional) - Optional gas limit for the transaction.
- *   - `gasPrice` (bigint, optional) - Optional gas price for the transaction.
- *   - `value` (bigint, optional) - Optional value (native token amount) to send with the transaction.
+ * This is primarily useful for debugging Seismic write behavior because the
+ * caller can see:
  *
- * @returns {ShieldedWriteContractDebugResult} Object containing both the plaintext and shielded transaction parameters.
+ * - the plaintext calldata transaction shape
+ * - the shielded transaction payload that was derived from it
+ * - the resulting transaction hash
+ *
+ * Note: despite the debug-oriented name, this function currently does
+ * broadcast the shielded transaction and returns a real `txHash`.
+ *
+ * @param client - The wallet client used to prepare, encrypt, and send the write.
+ * @param parameters - The contract write parameters, matching viem's
+ * `writeContract` shape.
+ * @param checkContractDeployed - When true, verifies that code exists at the
+ * target address before sending.
+ * @param securityParams - Optional advanced Seismic metadata overrides. Most
+ * callers should omit these; they are mainly useful for deterministic
+ * tests/debugging, explicit expiry control, and low-level interop.
+ * @returns Both plaintext and shielded transaction representations, plus the
+ * submitted transaction hash.
  */
 export async function shieldedWriteContractDebug<
   TTransport extends Transport,
@@ -247,7 +211,7 @@ export async function shieldedWriteContractDebug<
     'nonpayable' | 'payable',
     TFunctionName
   >,
-  chainOverride extends Chain | undefined = undefined,
+  TChainOverride extends Chain | undefined = undefined,
 >(
   client: ShieldedWalletClient<TTransport, TChain, TAccount>,
   parameters: WriteContractParameters<
@@ -256,14 +220,17 @@ export async function shieldedWriteContractDebug<
     TArgs,
     TChain,
     TAccount,
-    chainOverride
+    TChainOverride
   >,
   checkContractDeployed?: boolean,
-  {
-    blocksWindow = 100n,
-    encryptionNonce: userEncNonce,
-  }: SeismicSecurityParams = {}
+  securityParams: SeismicSecurityParams = {}
 ): Promise<ShieldedWriteContractDebugResult<TChain, TAccount>> {
+  const {
+    blocksWindow,
+    encryptionNonce: userEncNonce,
+    recentBlockHash,
+    expiresAtBlock,
+  } = securityParams
   if (checkContractDeployed) {
     const code = await client.getCode({ address: parameters.address })
     if (code === undefined) {
@@ -271,7 +238,7 @@ export async function shieldedWriteContractDebug<
     }
   }
   const plaintextCalldata = getPlaintextCalldata(parameters)
-  const request = await getShieldedWriteContractRequest(
+  const request = buildShieldedWriteRequest(
     client,
     parameters,
     plaintextCalldata
@@ -284,11 +251,14 @@ export async function shieldedWriteContractDebug<
     value: request.value,
     encryptionNonce,
     blocksWindow,
+    recentBlockHash,
+    expiresAtBlock,
     signedRead: false,
   })
   const txHash = await sendShieldedTransaction(client, request, {
-    blocksWindow,
     encryptionNonce,
+    recentBlockHash: metadata.seismicElements.recentBlockHash,
+    expiresAtBlock: metadata.seismicElements.expiresAtBlock,
   })
   return {
     plaintextTx: {
@@ -306,5 +276,50 @@ export async function shieldedWriteContractDebug<
       ...metadata.seismicElements,
     },
     txHash,
+  }
+}
+
+/**
+ * Builds the Seismic transaction request consumed by the shielded send path.
+ *
+ * At this stage the calldata is still plaintext. This helper only maps the
+ * contract-write parameters into the request fields needed by
+ * `sendShieldedTransaction(...)`, preserving user-supplied tx options like
+ * `gas`, `gasPrice`, `value`, and `nonce`.
+ */
+function buildShieldedWriteRequest<
+  TTransport extends Transport,
+  TChain extends Chain | undefined,
+  TAccount extends Account,
+  const TAbi extends Abi | readonly unknown[],
+  TFunctionName extends ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
+  TArgs extends ContractFunctionArgs<
+    TAbi,
+    'nonpayable' | 'payable',
+    TFunctionName
+  >,
+  TChainOverride extends Chain | undefined = undefined,
+>(
+  client: ShieldedWalletClient<TTransport, TChain, TAccount>,
+  parameters: WriteContractParameters<
+    TAbi,
+    TFunctionName,
+    TArgs,
+    TChain,
+    TAccount,
+    TChainOverride
+  >,
+  plaintextCalldata: Hex
+): SendSeismicTransactionParameters<TChain, TAccount> {
+  const { address, gas, gasPrice, value, nonce } = parameters
+  return {
+    account: client.account,
+    chain: undefined,
+    to: address,
+    data: plaintextCalldata,
+    nonce,
+    value,
+    gas,
+    gasPrice,
   }
 }

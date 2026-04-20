@@ -1,12 +1,17 @@
+export type { CreateSeismicDevnetParams } from '@sviem/chain.ts'
 export type {
-  SeismicTxExtras,
+  SeismicBlockParams,
+  SeismicElements,
+  SeismicSecurityParams,
   SeismicTransactionRequest,
+  SeismicTxExtras,
+  SeismicTxSerializer,
   TransactionSerializableSeismic,
-  CreateSeismicDevnetParams,
-} from '@sviem/chain.ts'
+  TxSeismic,
+} from '@sviem/tx/seismicTx.ts'
 
-export type { TxSeismicMetadata } from '@sviem/metadata.ts'
-export { buildTxSeismicMetadata } from '@sviem/metadata.ts'
+export type { TxSeismicMetadata } from '@sviem/tx/metadata.ts'
+export { buildTxSeismicMetadata } from '@sviem/tx/metadata.ts'
 export {
   sanvil,
   seismicTestnet,
@@ -18,27 +23,36 @@ export {
   createSeismicDevnet,
   createSeismicAzTestnet,
   createSeismicGcpTestnet,
-  serializeSeismicTransaction,
-  seismicChainFormatters,
-  SEISMIC_TX_TYPE,
 } from '@sviem/chain.ts'
+export {
+  SEISMIC_TX_TYPE,
+  serializeSeismicTransaction,
+} from '@sviem/tx/seismicTx.ts'
+export {
+  callRpcSchema,
+  estimateGasRpcSchema,
+  seismicChainFormatters,
+  seismicRpcSchema,
+} from '@sviem/tx/seismicRpc.ts'
 
-export { signSeismicTxTypedData } from '@sviem/signSeismicTypedData.ts'
+export { signSeismicTxTypedData } from '@sviem/tx/signSeismicTypedData.ts'
 
 export { getShieldedContract } from '@sviem/contract/contract.ts'
 export {
   signedReadContract,
   transparentReadContract,
 } from '@sviem/contract/read.ts'
-export { estimateShieldedGas } from '@sviem/estimateGas.ts'
-export { signedCall } from '@sviem/signedCall.ts'
+export { signedCall } from '@sviem/tx/signedCall.ts'
 export type { ShieldedWriteContractDebugResult } from '@sviem/contract/write.ts'
 export {
   shieldedWriteContract,
   shieldedWriteContractDebug,
-  getPlaintextCalldata,
   transparentWriteContract,
 } from '@sviem/contract/write.ts'
+// TODO(samlaf): Revisit whether getPlaintextCalldata should remain part of the public
+// package surface. It is currently used by tests, but likely belongs as an
+// internal helper rather than a root re-export.
+export { getPlaintextCalldata } from '@sviem/contract/calldata.ts'
 export {
   hasShieldedParams,
   remapSeismicAbiInputs,
@@ -58,8 +72,8 @@ export type {
 
 export type { ShieldedContract } from '@sviem/contract/contract.ts'
 
-export type { CheckFaucetParams } from '@sviem/faucet.ts'
-export { checkFaucet } from '@sviem/faucet.ts'
+export type { CheckFaucetParams } from '@sviem/extensions/faucet.ts'
+export { checkFaucet } from '@sviem/extensions/faucet.ts'
 
 export type {
   GetTxExplorerUrlParams,
@@ -80,7 +94,6 @@ export {
   tokenExplorerUrl,
 } from '@sviem/explorer.ts'
 
-export { stringifyBigInt } from '@sviem/utils.ts'
 export { compressPublicKey } from '@sviem/crypto/secp.ts'
 export { encodeSeismicMetadataAsAAD } from '@sviem/crypto/aead.ts'
 export {
@@ -114,25 +127,25 @@ export {
 export type { Secp256K1SigParams } from '@sviem/precompiles/secp256k1.ts'
 
 export type { CallClient, Precompile } from '@sviem/precompiles/precompile.ts'
-export { DEPOSIT_CONTRACT_ADDRESS } from '@sviem/actions/depositContract.ts'
+export { DEPOSIT_CONTRACT_ADDRESS } from '@sviem/extensions/depositContract.ts'
 
 // SRC20 event watching
-export { watchSRC20Events } from '@sviem/actions/src20/watchSRC20Events.ts'
-export { watchSRC20EventsWithKey } from '@sviem/actions/src20/watchSRC20EventsWithKey.ts'
+export { watchSRC20Events } from '@sviem/extensions/src20/watchSRC20Events.ts'
+export { watchSRC20EventsWithKey } from '@sviem/extensions/src20/watchSRC20EventsWithKey.ts'
 export {
   src20PublicActions,
   src20WalletActions,
-} from '@sviem/actions/src20/src20Actions.ts'
+} from '@sviem/extensions/src20/src20Actions.ts'
 export type {
   SRC20PublicActions,
   SRC20WalletActions,
-} from '@sviem/actions/src20/src20Actions.ts'
+} from '@sviem/extensions/src20/src20Actions.ts'
 export type {
   DecryptedTransferLog,
   DecryptedApprovalLog,
   WatchSRC20EventsParams,
   WatchSRC20EventsWithKeyParams,
-} from '@sviem/actions/src20/types.ts'
+} from '@sviem/extensions/src20/types.ts'
 
 // Directory contract helpers
 export {
@@ -141,5 +154,5 @@ export {
   getKey,
   registerKey,
   computeKeyHash,
-} from '@sviem/actions/src20/directory.ts'
+} from '@sviem/extensions/src20/directory.ts'
 export { DIRECTORY_ADDRESS, DirectoryAbi } from '@sviem/abis/directory.ts'

@@ -70,19 +70,20 @@ That's it. The calldata is AES-256-GCM encrypted before it hits the network. The
 
 ### `encryptSeismicTx(params)`
 
-| Parameter              | Type      | Description                                                     |
-| ---------------------- | --------- | --------------------------------------------------------------- |
-| `tx.to`                | `Address` | Destination address                                             |
-| `tx.data`              | `Hex`     | Plaintext calldata to encrypt                                   |
-| `tx.nonce`             | `number`  | Sender's transaction nonce                                      |
-| `tx.gasPrice`          | `bigint`  | Gas price                                                       |
-| `tx.gas`               | `bigint`  | Gas limit                                                       |
-| `tx.chainId`           | `number`  | Chain ID (`5124` for Seismic testnet, `31337` for local sanvil) |
-| `tx.value`             | `bigint?` | ETH value in wei (default `0`)                                  |
-| `sender`               | `Address` | Sender address (must match the signer)                          |
-| `rpcUrl`               | `string`  | Seismic node RPC URL                                            |
-| `encryptionPrivateKey` | `Hex?`    | Your own ephemeral key. One is generated per call if omitted.   |
-| `blocksWindow`         | `bigint?` | Blocks until the tx expires (default `100`)                     |
+| Parameter              | Type                       | Description                                                     |
+| ---------------------- | -------------------------- | --------------------------------------------------------------- |
+| `tx.to`                | `Address`                  | Destination address                                             |
+| `tx.data`              | `Hex`                      | Plaintext calldata to encrypt                                   |
+| `tx.nonce`             | `number`                   | Sender's transaction nonce                                      |
+| `tx.gasPrice`          | `bigint`                   | Gas price                                                       |
+| `tx.gas`               | `bigint`                   | Gas limit                                                       |
+| `tx.chainId`           | `number`                   | Chain ID (`5124` for Seismic testnet, `31337` for local sanvil) |
+| `tx.value`             | `bigint?`                  | ETH value in wei (default `0`)                                  |
+| `tx.authorizationList` | `SignedAuthorizationList?` | Optional EIP-7702 authorization list                            |
+| `sender`               | `Address`                  | Sender address (must match the signer)                          |
+| `rpcUrl`               | `string`                   | Seismic node RPC URL                                            |
+| `encryptionPrivateKey` | `Hex?`                     | Your own ephemeral key. One is generated per call if omitted.   |
+| `blocksWindow`         | `bigint?`                  | Blocks until the tx expires (default `100`)                     |
 
 Returns a `Promise<EncryptSeismicTxResult>`:
 

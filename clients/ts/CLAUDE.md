@@ -17,7 +17,7 @@ Requires **Bun >=1.2.5**.
 curl -fsSL https://bun.sh/install | bash
 
 bun install         # install dependencies
-bun run all:build   # builds seismic-viem, seismic-react, seismic-viem-tests
+bun run build       # builds seismic-viem, seismic-encrypt, seismic-react, seismic-viem-tests
 ```
 
 ### Verify
@@ -55,8 +55,9 @@ Tests live in `tests/seismic-viem/` and connect to an already-running node. The 
 **Quick start** (mise starts the node for you):
 
 ```bash
-mise run test::anvil   # starts sanvil, runs tests, stops sanvil
-mise run test::reth    # builds & starts reth, runs tests, stops reth
+mise run test::unit    # fast unit tests, no node required
+mise run test::integration::sanvil  # starts sanvil, runs tests, stops sanvil
+mise run test::integration::sreth   # builds & starts reth, runs tests, stops reth
 ```
 
 **Manual** (start a node yourself, then run tests):
@@ -81,41 +82,19 @@ bun run viem:test         # connects to http://127.0.0.1:8545 by default
 
 ### Docs
 
-```bash
-bun run docs:dev         # local dev server
-bun run docs:build       # production build (VoCs)
-bun run docs:preview     # preview production build
-```
+User-facing docs for seismic-viem and seismic-react live in the Seismic monorepo gitbook at [`seismic/docs/gitbook/clients/typescript/`](../../docs/gitbook/clients/typescript/). Edit those `.md` files directly -- there is no local dev server; GitBook publishes from the repo.
 
 ## Project Layout
 
-```
-packages/
-  seismic-viem/          Core viem extensions (npm: seismic-viem@1.1.1)
-    src/
-      chain.ts           Chain definitions (sanvil, seismicTestnet, localSeismicDevnet)
-      client.ts          createShieldedPublicClient, createShieldedWalletClient
-      sendTransaction.ts Seismic transaction sending
-      contract/          getShieldedContract, shieldedWriteContract, signedReadContract
-      crypto/            AES-GCM, ECDH, HKDF, nonce generation, AEAD
-      precompiles/       On-chain precompile wrappers (rng, ecdh, hkdf, aes, secp256k1)
-      actions/           Deposit contract, SRC20 token support
-      abis/              SRC20, deposit contract, directory ABIs
-  seismic-react/         React hooks (npm: seismic-react@1.1.1)
-    src/
-      context/           ShieldedWalletProvider
-      hooks/             useShieldedWriteContract, useSignedReadContract, useShieldedContract
-      rainbowkit/        RainbowKit integration
-  seismic-viem-tests/    Shared test utilities (npm: seismic-viem-tests@0.1.4)
-    src/
-      process/           Node process management (anvil, reth spawn/kill)
-      tests/             Reusable test functions (contract, precompiles, encoding, etc.)
-  seismic-bot/           Slack bot for faucet management (internal)
-  seismic-spammer/       Transaction load testing tool (internal)
-tests/
-  seismic-viem/          Integration test runner (bun test)
-docs/                    Documentation site (VoCs + Tailwind)
-```
+Packages in this monorepo:
+
+- **seismic-viem** (npm) — viem extensions for the Seismic blockchain. See [`packages/seismic-viem/ARCHITECTURE.md`](packages/seismic-viem/ARCHITECTURE.md) for the src/ layout, the 3-layer split (core / tx / extensions), and the transaction flow diagram.
+- **seismic-react** (npm) — wagmi-compatible React hooks: `ShieldedWalletProvider`, `useShieldedWriteContract`, `useSignedReadContract`, `useShieldedContract`, RainbowKit integration.
+- **seismic-viem-tests** (npm) — shared test utilities: node process management (`process/`) and reusable test functions (`tests/`).
+- **seismic-bot** (internal) — Slack bot for faucet management.
+- **seismic-spammer** (internal) — transaction load-testing tool.
+
+Integration tests for seismic-viem live in `tests/seismic-viem/`.
 
 ## Code Style
 
@@ -158,5 +137,3 @@ GitHub Actions (`.github/workflows/ci.yml`):
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SRETH_ROOT env variable must be set to build reth`         | Set `SRETH_ROOT` to your seismic-reth repo path (with Rust/Cargo installed)                                                                                                                             |
 | `react:typecheck` fails with missing types                  | Run `bun run viem:build` first — react typecheck depends on built viem types                                                                                                                            |
-| `Browserslist: browsers data is X months old` on docs build | Harmless warning. Fix with `npx update-browserslist-db@latest` if desired                                                                                                                               |
-| `hideExternalIcon` React prop warning during docs build     | Harmless VoCs warning — safe to ignore                                                                                                                                                                  |

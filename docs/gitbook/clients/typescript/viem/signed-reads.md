@@ -12,19 +12,25 @@ On standard Ethereum, `eth_call` can spoof any `from` address -- there is no sig
 Contracts can use `msg.sender` in view functions to gate access to shielded data. A common example: a token contract with a `balanceOf()` that takes no arguments and uses `msg.sender` internally to look up the caller's balance. Without a signed read, the contract sees the zero address and returns that address's balance -- which is almost certainly zero.
 
 ```typescript
-// Signed read -- msg.sender = your address
+// Smart read -- balanceOf(saddress) has shielded param → signed read automatically
 const myBalance = await contract.read.balanceOf(["0x1234..."]);
 
-// Transparent read -- msg.sender = zero address
-const totalSupply = await contract.tread.totalSupply();
+// Smart read -- totalSupply() has no shielded params → transparent read automatically
+const totalSupply = await contract.read.totalSupply();
+
+// Force signed read -- always encrypted, even for non-shielded functions
+const supply = await contract.sread.totalSupply();
 ```
 
-seismic-viem provides two approaches:
+seismic-viem provides several approaches:
 
-- **`signedReadContract()`** -- standalone function, same API shape as viem's `readContract`
-- **`contract.read.functionName()`** -- via a `ShieldedContract` from [getShieldedContract](contract-instance.md)
+- **`contract.read.functionName()`** -- smart routing via [getShieldedContract](contract-instance.md). Auto-detects shielded parameters and uses signed read only when needed.
+- **`contract.sread.functionName()`** -- force signed read via [getShieldedContract](contract-instance.md). Always uses signed read regardless of parameter types.
+- **`signedReadContract()`** -- standalone function, same API shape as viem's `readContract`. Always uses signed read.
+- **`walletClient.readContract()`** -- smart routing via the wallet client. Same auto-detection as `contract.read`.
+- **`walletClient.sreadContract()`** -- force signed read via the wallet client. Always uses signed read.
 
-Both encrypt the calldata, sign it, and decrypt the response automatically.
+The signed read paths all encrypt the calldata, sign it, and decrypt the response automatically.
 
 ---
 
@@ -36,6 +42,8 @@ import { signedReadContract } from "seismic-viem";
 
 ### Parameters
 
+`signedReadContract(client, parameters, securityParams?)`
+
 | Parameter      | Type     | Required | Description                    |
 | -------------- | -------- | -------- | ------------------------------ |
 | `address`      | `Hex`    | Yes      | Contract address               |
@@ -44,21 +52,33 @@ import { signedReadContract } from "seismic-viem";
 | `args`         | `array`  | No       | Function arguments             |
 | `nonce`        | `number` | No       | Override the nonce             |
 
+The optional third argument `securityParams: SeismicSecurityParams` accepts advanced Seismic metadata overrides (see [Security Parameters](shielded-writes.md#security-parameters)). Most callers should omit these; they are mainly useful for deterministic tests/debugging, explicit expiry control, and low-level interop.
+
 ### Returns
 
 `Promise<ReadContractReturnType>` -- the decoded return value, typed according to the ABI.
+
+{% hint style="info" %}
+If the `client` has no `account` configured, `signedReadContract` falls back to a standard `readContract` (transparent `eth_call`). Pass an account-bearing `ShieldedWalletClient` to get the signed read behavior.
+{% endhint %}
 
 ### Example
 
 ```typescript
 import { signedReadContract } from "seismic-viem";
 
-const balance = await signedReadContract(client, {
-  address: "0x1234567890abcdef1234567890abcdef12345678",
-  abi: myContractAbi,
-  functionName: "balanceOf",
-  args: ["0xMyAddress..."],
-});
+const balance = await signedReadContract(
+  client,
+  {
+    address: "0x1234567890abcdef1234567890abcdef12345678",
+    abi: myContractAbi,
+    functionName: "balanceOf",
+    args: ["0xMyAddress..."],
+  },
+  {
+    blocksWindow: 50n, // optional: expire after 50 blocks instead of the default 100
+  },
+);
 ```
 
 ---
@@ -84,7 +104,7 @@ const result = await signedCall(client, {
 
 ## How It Works
 
-When you call `signedReadContract` (or `contract.read.functionName`), the SDK performs the following steps:
+When you call `signedReadContract` (or `contract.sread.functionName`), the SDK performs the following steps:
 
 1. **ABI-encode** the function call into plaintext calldata
 2. **Build Seismic metadata** with `signedRead: true`
@@ -101,23 +121,31 @@ Both the calldata you send and the result you receive are encrypted. An observer
 
 ## Signed Read vs Transparent Read
 
-| Aspect       | `.read` (Signed)                           | `.tread` (Transparent)    |
-| ------------ | ------------------------------------------ | ------------------------- |
-| Calldata     | Encrypted                                  | Plaintext                 |
-| `msg.sender` | Signer's address                           | Zero address              |
-| Use case     | Shielded data gated by `msg.sender`        | Public view functions     |
-| Performance  | Slightly slower (sign + encrypt + decrypt) | Standard `eth_call` speed |
+| Aspect       | `.read` (Smart)                            | `.sread` (Force Signed)                    | `.tread` (Transparent)    |
+| ------------ | ------------------------------------------ | ------------------------------------------ | ------------------------- |
+| Calldata     | Auto-detected by ABI                       | Always encrypted                           | Always plaintext          |
+| `msg.sender` | Signer if shielded, zero if not            | Always signer's address                    | Always zero address       |
+| Use case     | Default -- handles most cases              | Force encryption for sensitive returns     | Public view functions     |
+| Performance  | Optimal -- encrypts only when needed       | Slightly slower (sign + encrypt + decrypt) | Standard `eth_call` speed |
 
 ```typescript
-// Signed read -- proves identity, encrypted calldata
+// Smart read -- auto-detects: balanceOf(saddress) → signed, totalSupply() → transparent
 const myBalance = await contract.read.balanceOf(["0x1234..."]);
+const totalSupply = await contract.read.totalSupply();
 
-// Transparent read -- no identity, plaintext calldata
-const totalSupply = await contract.tread.totalSupply();
+// Force signed read -- always encrypted
+const supply = await contract.sread.totalSupply();
+
+// Force transparent read -- always plaintext
+const supply2 = await contract.tread.totalSupply();
 ```
 
 {% hint style="info" %}
-Signed reads are critical for any contract that checks `msg.sender` in view functions to gate shielded data access. If you are unsure whether a view function depends on `msg.sender`, use `.read` -- it is always safe, just slightly slower than `.tread`.
+The smart `.read` namespace handles most cases correctly by inspecting the ABI. Use `.sread` when you need the response encrypted even though the function has no shielded input parameters. Use `.tread` only for public data where you don't need authentication.
+{% endhint %}
+
+{% hint style="warning" %}
+`.tread` and `walletClient.treadContract` reject the `account` option and will throw. On Seismic, transparent `eth_call` zeroes out `from` on the node, so any `account` you pass would silently be ignored. For any sender-aware read, use `.sread` / `sreadContract`.
 {% endhint %}
 
 ## See Also

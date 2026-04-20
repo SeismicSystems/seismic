@@ -25,13 +25,4 @@ module.exports = [
       'unused-imports/no-unused-imports': 'error',
     },
   },
-  {
-    files: ['docs/pages/**/*.md', 'docs/pages/**/*.mdx'],
-    plugins: {
-      'eslint-plugin-mdx': require('eslint-plugin-mdx'),
-    },
-    languageOptions: {
-      parser: require('eslint-mdx'),
-    },
-  },
 ]

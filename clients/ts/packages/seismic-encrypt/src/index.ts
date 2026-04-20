@@ -1,4 +1,4 @@
-import type { Address, Hex } from 'viem'
+import type { Address, Hex, TransactionSerializableEIP7702 } from 'viem'
 import {
   bytesToHex,
   concatHex,
@@ -19,6 +19,7 @@ import { hkdf } from '@noble/hashes/hkdf'
 import { sha256 } from '@noble/hashes/sha256'
 
 export const SEISMIC_TX_TYPE = 0x4a
+const DEFAULT_SEISMIC_BLOCKS_WINDOW = 100n
 
 // ── Helpers (inlined from seismic-viem to keep this package standalone) ──
 
@@ -150,10 +151,11 @@ export const serializeSeismicTx = (
     expiresAtBlock: bigint
     signedRead: boolean
     data: Hex
+    authorizationList?: TransactionSerializableEIP7702['authorizationList']
   },
   signature?: { v: bigint; r: Hex; s: Hex }
 ): Hex => {
-  const rlpArray: Hex[] = [
+  const rlpArray = [
     toHex(tx.chainId),
     tx.nonce ? toHex(tx.nonce) : '0x',
     tx.gasPrice ? toHex(tx.gasPrice) : '0x',
@@ -167,9 +169,17 @@ export const serializeSeismicTx = (
     toHex(tx.expiresAtBlock),
     tx.signedRead ? '0x01' : '0x',
     tx.data ?? '0x',
+    (tx.authorizationList ?? []).map((auth) => [
+      auth.chainId ? toHex(auth.chainId) : '0x',
+      auth.contractAddress,
+      auth.nonce ? toHex(auth.nonce) : '0x',
+      auth.yParity ? toHex(auth.yParity) : '0x',
+      auth.r,
+      auth.s,
+    ]),
     ...toYParitySignatureArray(signature),
   ]
-  return concatHex([toHex(SEISMIC_TX_TYPE), toRlp(rlpArray)])
+  return concatHex([toHex(SEISMIC_TX_TYPE), toRlp(rlpArray as any)])
 }
 
 // ── Public API ──────────────────────────────────────────────────────
@@ -184,6 +194,7 @@ export type EncryptSeismicTxParams = {
     gasPrice: bigint
     gas: bigint
     chainId: number
+    authorizationList?: TransactionSerializableEIP7702['authorizationList']
   }
   /** Sender address (must match the signer) */
   sender: Address
@@ -191,7 +202,10 @@ export type EncryptSeismicTxParams = {
   rpcUrl: string
   /** Optional: your own encryption private key (ephemeral one generated if omitted) */
   encryptionPrivateKey?: Hex
-  /** Optional: how many blocks until this tx expires (default 100) */
+  /**
+   * Optional: how many blocks until this tx expires.
+   * Defaults to `DEFAULT_SEISMIC_BLOCKS_WINDOW`.
+   */
   blocksWindow?: bigint
 }
 
@@ -213,6 +227,7 @@ export type EncryptSeismicTxResult = {
     recentBlockHash: Hex
     expiresAtBlock: bigint
     signedRead: boolean
+    authorizationList?: TransactionSerializableEIP7702['authorizationList']
     type: 'seismic'
   }
   /** Serialize + concat type prefix. Pass a viem Signature to get the final signed bytes. */
@@ -248,7 +263,7 @@ export const encryptSeismicTx = async ({
   sender,
   rpcUrl,
   encryptionPrivateKey,
-  blocksWindow = 100n,
+  blocksWindow = DEFAULT_SEISMIC_BLOCKS_WINDOW,
 }: EncryptSeismicTxParams): Promise<EncryptSeismicTxResult> => {
   const client = createPublicClient({ transport: http(rpcUrl) })
 
@@ -306,6 +321,7 @@ export const encryptSeismicTx = async ({
     recentBlockHash,
     expiresAtBlock,
     signedRead: false as const,
+    authorizationList: tx.authorizationList,
     type: 'seismic' as const,
   }
 

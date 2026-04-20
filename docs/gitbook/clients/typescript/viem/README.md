@@ -26,21 +26,20 @@ const client = await createShieldedWalletClient({
   account: privateKeyToAccount("0x..."),
 });
 
-// Shielded write — calldata encrypted automatically
+// Smart write — auto-detects shielded params, encrypts only when needed
 const hash = await client.writeContract({
   address: "0x...",
   abi: myContractAbi,
-  functionName: "transfer",
+  functionName: "transfer", // has suint256/saddress params → encrypted automatically
   args: ["0x...", 100n],
 });
 
-// Signed read — proves caller identity
+// Smart read — auto-detects shielded params, uses signed read only when needed
 const balance = await client.readContract({
   address: "0x...",
   abi: myContractAbi,
-  functionName: "balanceOf",
+  functionName: "balanceOf", // has saddress param → signed read automatically
   args: ["0x..."],
-  account: client.account,
 });
 ```
 
@@ -52,7 +51,7 @@ seismic-viem
 │   ├── createShieldedPublicClient  — read-only, TEE key, precompiles
 │   └── createShieldedWalletClient  — full capabilities, encryption pipeline
 ├── Contract Layer
-│   ├── getShieldedContract          — .read / .write / .tread / .twrite / .dwrite
+│   ├── getShieldedContract          — .read / .write (smart) / .sread / .swrite (force shielded) / .tread / .twrite (force transparent) / .dwrite
 │   ├── shieldedWriteContract        — standalone encrypted write
 │   └── signedReadContract           — standalone signed read
 ├── Chain Configs
@@ -90,7 +89,7 @@ seismic-viem
 
 | Section               | Description                                                                 |
 | --------------------- | --------------------------------------------------------------------------- |
-| **Contract Instance** | `getShieldedContract` for `.read`, `.write`, `.tread`, `.twrite`, `.dwrite` |
+| **Contract Instance** | `getShieldedContract` for `.read`, `.write` (smart), `.sread`, `.swrite` (force shielded), `.tread`, `.twrite` (force transparent), `.dwrite` |
 | **Shielded Writes**   | Encrypt calldata and send Seismic transactions (type 0x4A)                  |
 | **Signed Reads**      | Prove caller identity in `eth_call` via `seismic_call`                      |
 
@@ -107,7 +106,8 @@ seismic-viem
 - **Shielded Transactions** -- Encrypt calldata with TEE public key via AES-GCM before sending
 - **Signed Reads** -- Prove identity in `eth_call` with signed read requests
 - **Two Client Types** -- `createShieldedPublicClient` (read-only) and `createShieldedWalletClient` (full capabilities)
-- **Contract Abstraction** -- `getShieldedContract` provides `.read`, `.write`, `.tread`, `.twrite`, and `.dwrite` methods
+- **Smart Routing** -- `.read` and `.write` auto-detect shielded parameters and route to the correct path
+- **Contract Abstraction** -- `getShieldedContract` provides `.read`, `.write` (smart), `.sread`, `.swrite` (force shielded), `.tread`, `.twrite` (force transparent), and `.dwrite` methods
 - **Automatic Encryption Pipeline** -- Calldata encryption handled transparently in the client layer
 - **Type 0x4A Transactions** -- Native support for Seismic transaction type with custom chain formatters
 - **Precompile Bindings** -- TypeScript wrappers for all Seismic precompiles (RNG, ECDH, AES-GCM, HKDF, secp256k1)
