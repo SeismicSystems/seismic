@@ -74,7 +74,11 @@ export type {
 export type { ShieldedContract } from '@sviem/contract/contract.ts'
 
 export type { CheckFaucetParams } from '@sviem/extensions/faucet.ts'
-export { checkFaucet } from '@sviem/extensions/faucet.ts'
+export {
+  checkFaucet,
+  parseFaucetResponseHash,
+  parseMinBalance,
+} from '@sviem/extensions/faucet.ts'
 
 export type {
   GetTxExplorerUrlParams,

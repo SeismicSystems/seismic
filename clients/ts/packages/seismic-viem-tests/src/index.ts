@@ -138,10 +138,10 @@ export {
   testParseMinBalanceUsesEtherWhenProvided,
   testParseMinBalancePrefersWeiOverEther,
   testParseMinBalanceHandlesNumericWei,
-  testFaucetHashExtractionValid,
-  testFaucetHashExtractionInvalidLength,
-  testFaucetHashExtractionNoPrefix,
-  testFaucetHashExtractionMissingHexPrefix,
+  testParseFaucetResponseHashValid,
+  testParseFaucetResponseHashNoPrefix,
+  testParseFaucetResponseHashThrowsOnInvalidLength,
+  testParseFaucetResponseHashThrowsOnMissingHexPrefix,
 } from '@sviem-tests/tests/faucet.ts'
 
 export {

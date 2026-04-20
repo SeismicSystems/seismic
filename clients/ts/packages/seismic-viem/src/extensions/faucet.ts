@@ -16,8 +16,10 @@ export type CheckFaucetResult =
   | { sent: true; hash: Hex; txUrl?: string }
 
 const DEFAULT_MIN_BALANCE_WEI = parseEther('0.5')
+const TXHASH_PREFIX = 'Txhash: '
+const HASH_HEX_LENGTH = 66
 
-const parseMinBalance = (
+export const parseMinBalance = (
   minBalanceWei?: bigint | number,
   minBalanceEther?: bigint | number
 ): bigint => {
@@ -36,6 +38,22 @@ const parseMinBalance = (
     return parseEther(minBalanceEther.toString())
   }
   return DEFAULT_MIN_BALANCE_WEI
+}
+
+/**
+ * Extract a tx hash from a faucet response message of the form
+ * "Txhash: 0x..". Returns null when the message has no hash.
+ * Throws when the prefix is present but the hash is malformed.
+ */
+export const parseFaucetResponseHash = (msg: string): Hex | null => {
+  if (!msg.startsWith(TXHASH_PREFIX)) {
+    return null
+  }
+  const hash = msg.slice(TXHASH_PREFIX.length)
+  if (!hash.startsWith('0x') || hash.length !== HASH_HEX_LENGTH) {
+    throw new Error(`Invalid hash from faucet claim: ${hash}`)
+  }
+  return hash as Hex
 }
 
 export const checkFaucet = async ({
@@ -60,21 +78,15 @@ export const checkFaucet = async ({
     )
   }
   const { msg } = await response.json()
-
-  if (msg.startsWith('Txhash: ')) {
-    const hash = msg.slice(8)
-    if (hash.startsWith('0x') && hash.length === 66) {
-      const txUrl = txExplorerUrl({ chain: publicClient.chain, txHash: hash })
-      if (txUrl) {
-        console.debug(`Faucet sent eth to ${address}: ${txUrl}`)
-      }
-      // only return after the tx is confirmed, to prevent double-requesting
-      await publicClient.waitForTransactionReceipt({ hash })
-      return { sent: true, hash, txUrl: txUrl ?? undefined }
-    } else {
-      throw new Error(`Invalid hash from faucet claim: ${hash}`)
-    }
+  const hash = parseFaucetResponseHash(msg)
+  if (!hash) {
+    throw new Error(`Faucet claim failed: ${msg}`)
   }
-
-  throw new Error(`Faucet claim failed: ${msg}`)
+  const txUrl = txExplorerUrl({ chain: publicClient.chain, txHash: hash })
+  if (txUrl) {
+    console.debug(`Faucet sent eth to ${address}: ${txUrl}`)
+  }
+  // only return after the tx is confirmed, to prevent double-requesting
+  await publicClient.waitForTransactionReceipt({ hash })
+  return { sent: true, hash, txUrl: txUrl ?? undefined }
 }

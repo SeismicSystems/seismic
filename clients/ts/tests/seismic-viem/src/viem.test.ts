@@ -27,10 +27,10 @@ import {
   testWriteWithoutExplicitGasSucceeds,
 } from '@sviem-tests/tests/estimateGas.ts'
 import {
-  testFaucetHashExtractionInvalidLength,
-  testFaucetHashExtractionMissingHexPrefix,
-  testFaucetHashExtractionNoPrefix,
-  testFaucetHashExtractionValid,
+  testParseFaucetResponseHashNoPrefix,
+  testParseFaucetResponseHashThrowsOnInvalidLength,
+  testParseFaucetResponseHashThrowsOnMissingHexPrefix,
+  testParseFaucetResponseHashValid,
   testParseMinBalanceDefaultsToHalfEther,
   testParseMinBalanceHandlesNumericWei,
   testParseMinBalancePrefersWeiOverEther,
@@ -603,11 +603,20 @@ describe('Faucet parseMinBalance', () => {
   test('handles numeric wei', testParseMinBalanceHandlesNumericWei)
 })
 
-describe('Faucet hash extraction', () => {
-  test('extracts valid hash', testFaucetHashExtractionValid)
-  test('rejects invalid length', testFaucetHashExtractionInvalidLength)
-  test('rejects non-txhash prefix', testFaucetHashExtractionNoPrefix)
-  test('rejects missing 0x prefix', testFaucetHashExtractionMissingHexPrefix)
+describe('parseFaucetResponseHash', () => {
+  test('extracts valid hash', testParseFaucetResponseHashValid)
+  test(
+    'returns null when prefix is missing',
+    testParseFaucetResponseHashNoPrefix
+  )
+  test(
+    'throws on invalid hash length',
+    testParseFaucetResponseHashThrowsOnInvalidLength
+  )
+  test(
+    'throws when 0x prefix is missing',
+    testParseFaucetResponseHashThrowsOnMissingHexPrefix
+  )
 })
 
 describe('WebSocket extended', () => {

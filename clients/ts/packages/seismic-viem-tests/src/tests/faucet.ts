@@ -1,32 +1,8 @@
 import { expect } from 'bun:test'
-import type { Hex } from 'viem'
+import { parseFaucetResponseHash, parseMinBalance } from 'seismic-viem'
 import { parseEther } from 'viem/utils'
 
 import { SAMPLE_TX_HASH } from '@sviem-tests/constants.ts'
-
-/**
- * Inline copy of parseMinBalance from @sviem/faucet.ts
- * since it's not exported.
- */
-const DEFAULT_MIN_BALANCE_WEI = parseEther('0.5')
-
-const parseMinBalance = (
-  minBalanceWei?: bigint | number,
-  minBalanceEther?: bigint | number
-): bigint => {
-  if (minBalanceWei && minBalanceEther) {
-    if (BigInt(minBalanceWei) !== parseEther(minBalanceEther.toString())) {
-      // warn, but use minBalanceWei
-    }
-  }
-  if (minBalanceWei) {
-    return BigInt(minBalanceWei)
-  }
-  if (minBalanceEther) {
-    return parseEther(minBalanceEther.toString())
-  }
-  return DEFAULT_MIN_BALANCE_WEI
-}
 
 export const testParseMinBalanceDefaultsToHalfEther = () => {
   const result = parseMinBalance()
@@ -53,42 +29,25 @@ export const testParseMinBalanceHandlesNumericWei = () => {
   expect(result).toBe(5000n)
 }
 
-/**
- * Inline copy of hash extraction logic from checkFaucet
- * since it's not exported.
- */
-const extractFaucetHash = (
-  msg: string
-): { valid: true; hash: Hex } | { valid: false } => {
-  if (msg.startsWith('Txhash: ')) {
-    const hash = msg.slice(8)
-    if (hash.startsWith('0x') && hash.length === 66) {
-      return { valid: true, hash: hash as Hex }
-    }
-  }
-  return { valid: false }
+export const testParseFaucetResponseHashValid = () => {
+  const hash = parseFaucetResponseHash(`Txhash: ${SAMPLE_TX_HASH}`)
+  expect(hash).toBe(SAMPLE_TX_HASH)
 }
 
-export const testFaucetHashExtractionValid = () => {
-  const result = extractFaucetHash(`Txhash: ${SAMPLE_TX_HASH}`)
-  expect(result.valid).toBe(true)
-  if (result.valid) {
-    expect(result.hash).toBe(SAMPLE_TX_HASH)
-  }
+export const testParseFaucetResponseHashNoPrefix = () => {
+  const hash = parseFaucetResponseHash('Some other message')
+  expect(hash).toBeNull()
 }
 
-export const testFaucetHashExtractionInvalidLength = () => {
-  const result = extractFaucetHash('Txhash: 0xshort')
-  expect(result.valid).toBe(false)
+export const testParseFaucetResponseHashThrowsOnInvalidLength = () => {
+  expect(() => parseFaucetResponseHash('Txhash: 0xshort')).toThrow(
+    'Invalid hash from faucet claim'
+  )
 }
 
-export const testFaucetHashExtractionNoPrefix = () => {
-  const result = extractFaucetHash('Some other message')
-  expect(result.valid).toBe(false)
-}
-
-export const testFaucetHashExtractionMissingHexPrefix = () => {
+export const testParseFaucetResponseHashThrowsOnMissingHexPrefix = () => {
   const hashWithout0x = SAMPLE_TX_HASH.slice(2)
-  const result = extractFaucetHash(`Txhash: ${hashWithout0x}`)
-  expect(result.valid).toBe(false)
+  expect(() => parseFaucetResponseHash(`Txhash: ${hashWithout0x}`)).toThrow(
+    'Invalid hash from faucet claim'
+  )
 }
