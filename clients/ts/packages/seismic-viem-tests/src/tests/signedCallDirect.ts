@@ -5,7 +5,7 @@ import {
   getShieldedContract,
 } from 'seismic-viem'
 import type { Account, Chain } from 'viem'
-import { encodeFunctionData, http } from 'viem'
+import { decodeFunctionResult, encodeFunctionData, http } from 'viem'
 
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
 import { deploySeismicCounter } from '@sviem-tests/tests/contract/deploy.ts'
@@ -54,7 +54,12 @@ export const testSignedCallDirect = async ({
   })
 
   expect(data).toBeDefined()
-  expect(data!.endsWith('1')).toBe(true)
+  const isOdd = decodeFunctionResult({
+    abi: seismicCounterAbi,
+    functionName: 'isOdd',
+    data: data!,
+  })
+  expect(isOdd).toBe(true)
 }
 
 export const testSignedCallWithSecurityParams = async ({
@@ -86,5 +91,13 @@ export const testSignedCallWithSecurityParams = async ({
     },
     { blocksWindow: LARGE_BLOCKS_WINDOW }
   )
+
   expect(data).toBeDefined()
+  // Counter initializes to 0; 0 is even.
+  const isOdd = decodeFunctionResult({
+    abi: seismicCounterAbi,
+    functionName: 'isOdd',
+    data: data!,
+  })
+  expect(isOdd).toBe(false)
 }
