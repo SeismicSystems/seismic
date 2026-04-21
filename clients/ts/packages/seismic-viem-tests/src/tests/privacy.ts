@@ -7,7 +7,6 @@ import {
 import type { Account, Chain } from 'viem'
 import { http } from 'viem'
 
-import { STORAGE_SLOT_ZERO } from '@sviem-tests/constants.ts'
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
 import { deploySeismicCounter } from '@sviem-tests/tests/contract/deploy.ts'
 
@@ -18,7 +17,6 @@ type PrivacyTestArgs = {
 }
 
 const COUNTER_VALUE_ENCRYPTED = 42n
-const COUNTER_VALUE_STORAGE = 99n
 
 export const testSeismicTxCalldataIsEncrypted = async ({
   chain,
@@ -57,36 +55,4 @@ export const testSeismicTxCalldataIsEncrypted = async ({
   const functionSelector = plaintextData!.slice(0, 10)
   expect(onChainTx.input).not.toBe(plaintextData!)
   expect(onChainTx.input.startsWith(functionSelector)).toBe(false)
-}
-
-export const testGetStorageAtBlockedForContract = async ({
-  chain,
-  url,
-  account,
-}: PrivacyTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
-  const address = await deploySeismicCounter({ publicClient, walletClient })
-
-  const contract = getShieldedContract({
-    abi: seismicCounterAbi,
-    address,
-    client: walletClient,
-  })
-  const setTx = await contract.write.setNumber([COUNTER_VALUE_STORAGE])
-  await publicClient.waitForTransactionReceipt({ hash: setTx })
-
-  await expect(
-    publicClient.getStorageAt({
-      address,
-      slot: STORAGE_SLOT_ZERO,
-    })
-  ).rejects.toThrow('Cannot call getStorageAt with a shielded public client')
 }

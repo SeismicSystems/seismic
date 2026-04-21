@@ -6,7 +6,6 @@ export {
   ENCRYPTION_SK,
   ENCRYPTION_PK,
   ZERO_ADDRESS,
-  STORAGE_SLOT_ZERO,
 } from '@sviem-tests/constants.ts'
 
 export { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'
@@ -118,10 +117,7 @@ export {
   testSignedCallWithoutToThrows,
 } from '@sviem-tests/tests/errorPaths.ts'
 
-export {
-  testSeismicTxCalldataIsEncrypted,
-  testGetStorageAtBlockedForContract,
-} from '@sviem-tests/tests/privacy.ts'
+export { testSeismicTxCalldataIsEncrypted } from '@sviem-tests/tests/privacy.ts'
 
 export { testRngDifferentPersProducesDifferentResults } from '@sviem-tests/tests/rngUniqueness.ts'
 

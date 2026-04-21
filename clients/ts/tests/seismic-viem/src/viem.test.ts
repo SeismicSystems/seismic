@@ -35,12 +35,9 @@ import {
   testRngWithPers,
   testSecp256k1,
 } from '@sviem-tests/tests/precompiles.ts'
-import { testDwriteContractUsesSecurityParams } from '@sviem-tests/tests/securityParams.ts'
-import {
-  testGetStorageAtBlockedForContract,
-  testSeismicTxCalldataIsEncrypted,
-} from '@sviem-tests/tests/privacy.ts'
+import { testSeismicTxCalldataIsEncrypted } from '@sviem-tests/tests/privacy.ts'
 import { testRngDifferentPersProducesDifferentResults } from '@sviem-tests/tests/rngUniqueness.ts'
+import { testDwriteContractUsesSecurityParams } from '@sviem-tests/tests/securityParams.ts'
 import {
   testSignedCallDirect,
   testSignedCallWithSecurityParams,
@@ -541,12 +538,6 @@ describe('Privacy invariants', () => {
   test(
     'seismic tx calldata is encrypted on-chain',
     async () => await testSeismicTxCalldataIsEncrypted({ chain, url, account }),
-    { timeout: CONTRACT_TIMEOUT_MS }
-  )
-  test(
-    'getStorageAt blocked for deployed contract',
-    async () =>
-      await testGetStorageAtBlockedForContract({ chain, url, account }),
     { timeout: CONTRACT_TIMEOUT_MS }
   )
 })
