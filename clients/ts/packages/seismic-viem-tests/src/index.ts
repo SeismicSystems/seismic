@@ -1,6 +1,12 @@
 export type { NodeConnection } from '@sviem-tests/connect.ts'
 export { connectToNode } from '@sviem-tests/connect.ts'
 
+export {
+  TEST_ACCOUNT_PRIVATE_KEY,
+  ENCRYPTION_SK,
+  ENCRYPTION_PK,
+} from '@sviem-tests/constants.ts'
+
 export { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'
 export { testSeismicTx } from '@sviem-tests/tests/contract/contract.ts'
 export { testDepositContract } from '@sviem-tests/tests/contract/depositContract.ts'
@@ -61,6 +67,49 @@ export {
   testSmartRoutingLifecycle,
   testSmartWalletActionsLifecycle,
 } from '@sviem-tests/tests/smartRouting/smartRouting.ts'
+
+export {
+  testGetExplorerUrlReturnsNullForUndefinedChain,
+  testGetExplorerUrlReturnsNullForChainWithoutExplorer,
+  testGetExplorerUrlReturnsBaseUrlWithoutOptions,
+  testGetExplorerUrlBuildsItemUrl,
+  testGetExplorerUrlBuildsItemUrlWithTab,
+  testTxExplorerUrlBuildsCorrectUrl,
+  testTxExplorerUrlWithTab,
+  testTxExplorerUrlReturnsNullWithoutChain,
+  testAddressExplorerUrlBuildsCorrectUrl,
+  testAddressExplorerUrlWithTab,
+  testAddressExplorerUrlReturnsNullWithoutExplorer,
+  testBlockExplorerUrlBuildsCorrectUrl,
+  testBlockExplorerUrlWithTab,
+  testTokenExplorerUrlBuildsCorrectUrl,
+  testTokenExplorerUrlWithTab,
+  testSanvilHasNoExplorer,
+} from '@sviem-tests/tests/explorerUrl.ts'
+
+export {
+  testSerializeMissingChainId,
+  testSerializeMissingNonce,
+  testSerializeMissingGasPrice,
+  testSerializeMissingGas,
+  testSerializeMissingTo,
+  testSerializeMissingEncryptionPubkey,
+  testSerializeMissingEncryptionNonce,
+  testSerializeMissingRecentBlockHash,
+  testSerializeMissingExpiresAtBlock,
+  testSerializeMissingData,
+  testSerializeValidTxDoesNotThrow,
+} from '@sviem-tests/tests/seismicTxValidation.ts'
+
+export {
+  testParseEncryptedDataThrowsOnEmpty,
+  testParseEncryptedDataThrowsOnEmptyString,
+  testParseEncryptedDataRoundtrip,
+  testParseEncryptedDataRoundtripLargeAmount,
+  testComputeKeyHashIsDeterministic,
+  testComputeKeyHashMatchesKeccak256,
+  testComputeKeyHashDifferentKeysProduceDifferentHashes,
+} from '@sviem-tests/tests/src20Crypto.ts'
 
 export { loadDotenv } from '@sviem-tests/util.ts'
 

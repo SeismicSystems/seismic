@@ -130,6 +130,7 @@ export type { CallClient, Precompile } from '@sviem/precompiles/precompile.ts'
 export { DEPOSIT_CONTRACT_ADDRESS } from '@sviem/extensions/depositContract.ts'
 
 // SRC20 event watching
+export { parseEncryptedData } from '@sviem/extensions/src20/crypto.ts'
 export { watchSRC20Events } from '@sviem/extensions/src20/watchSRC20Events.ts'
 export { watchSRC20EventsWithKey } from '@sviem/extensions/src20/watchSRC20EventsWithKey.ts'
 export {
