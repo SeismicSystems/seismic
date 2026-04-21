@@ -47,7 +47,7 @@ run = "bun run build"
 [tasks."test::unit"]
 description = "Run fast unit tests that do not require a node"
 depends = ["build"]
-run = "bun run encrypt:test"
+run = ["bun run encrypt:test", "bun run viem:unit:test"]
 
 # Useful if you want to run the test suite against a remote running node (e.g. testnet).
 [tasks."test::integration::remote-node"]

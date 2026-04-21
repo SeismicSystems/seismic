@@ -16,6 +16,7 @@
     "viem:build": "bun run --cwd packages/seismic-viem build",
     "viem:publish": "npm publish -w packages/seismic-viem",
     "viem:test": "bun run --cwd tests/seismic-viem test --bail",
+    "viem:unit:test": "bun run --cwd tests/seismic-viem test:unit",
     "encrypt:typecheck": "bun run --cwd packages/seismic-encrypt typecheck",
     "encrypt:build": "bun run --cwd packages/seismic-encrypt build",
     "encrypt:test": "bun run --cwd tests/seismic-encrypt-test test",

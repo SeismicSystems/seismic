@@ -5,7 +5,8 @@
   "scripts": {
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "test:unit": "bun test src/viem-unit.test.ts"
   },
   "devDependencies": {
     "viem": "2.x",
