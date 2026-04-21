@@ -103,7 +103,7 @@ export {
   testSerializeMissingExpiresAtBlock,
   testSerializeMissingData,
   testSerializeValidTxDoesNotThrow,
-} from '@sviem-tests/tests/serializationErrors.ts'
+} from '@sviem-tests/tests/seismicTxValidation.ts'
 
 export {
   testParseEncryptedDataThrowsOnEmpty,

@@ -58,7 +58,7 @@ import {
   testSerializeMissingRecentBlockHash,
   testSerializeMissingTo,
   testSerializeValidTxDoesNotThrow,
-} from '@sviem-tests/tests/serializationErrors.ts'
+} from '@sviem-tests/tests/seismicTxValidation.ts'
 import {
   testHasShieldedParamsDetectsShielded,
   testHasShieldedParamsDetectsTransparent,
