@@ -11,6 +11,8 @@ import { defineChain } from 'viem'
 
 const TEST_EXPLORER_URL = 'https://explorer.test'
 
+// The fixture chains below set rpcUrls because defineChain requires it,
+// but these tests only read chain.blockExplorers — the RPC is never called.
 const chainWithExplorer = defineChain({
   id: 99999,
   name: 'TestChain',
