@@ -15,7 +15,7 @@ const chainWithExplorer = defineChain({
   id: 99999,
   name: 'TestChain',
   nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
-  rpcUrls: { default: { http: ['http://localhost:8545'] } },
+  rpcUrls: { default: { http: ['http://unused.invalid'] } },
   blockExplorers: {
     default: { name: 'TestExplorer', url: TEST_EXPLORER_URL },
   },
@@ -25,7 +25,7 @@ const chainWithoutExplorer = defineChain({
   id: 99998,
   name: 'NoExplorerChain',
   nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
-  rpcUrls: { default: { http: ['http://localhost:8545'] } },
+  rpcUrls: { default: { http: ['http://unused.invalid'] } },
 })
 
 const SANVIL_TEST_ADDRESS = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
