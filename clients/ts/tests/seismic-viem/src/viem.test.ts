@@ -594,7 +594,6 @@ describe('Concurrent transactions', () => {
   )
 })
 
-
 describe('Faucet parseMinBalance', () => {
   test('defaults to 0.5 ether', testParseMinBalanceDefaultsToHalfEther)
   test('uses wei when provided', testParseMinBalanceUsesWeiWhenProvided)
@@ -636,7 +635,6 @@ describe('WebSocket extended', () => {
     { timeout: TIMEOUT_MS }
   )
 })
-
 
 // Typed Data tests are placed last because they use EIP-712 messageVersion=2
 // signing which may fail on older sreth versions, and a failure here would
