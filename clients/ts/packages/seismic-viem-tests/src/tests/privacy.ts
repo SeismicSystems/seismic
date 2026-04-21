@@ -9,7 +9,7 @@ import { http } from 'viem'
 
 import { STORAGE_SLOT_ZERO } from '@sviem-tests/constants.ts'
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
-import { seismicCounterBytecode } from '@sviem-tests/tests/contract/bytecode.ts'
+import { deploySeismicCounter } from '@sviem-tests/tests/contract/deploy.ts'
 
 type PrivacyTestArgs = {
   chain: Chain
@@ -34,21 +34,11 @@ export const testSeismicTxCalldataIsEncrypted = async ({
     transport: http(url),
     account,
   })
-
-  const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
-  const deployTx = await walletClient.deployContract({
-    abi: seismicCounterAbi,
-    bytecode,
-    chain: walletClient.chain,
-  })
-  const deployReceipt = await publicClient.waitForTransactionReceipt({
-    hash: deployTx,
-  })
-  const contractAddress = deployReceipt.contractAddress!
+  const address = await deploySeismicCounter({ publicClient, walletClient })
 
   const contract = getShieldedContract({
     abi: seismicCounterAbi,
-    address: contractAddress,
+    address,
     client: walletClient,
   })
 
@@ -83,21 +73,11 @@ export const testGetStorageAtBlockedForContract = async ({
     transport: http(url),
     account,
   })
-
-  const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
-  const deployTx = await walletClient.deployContract({
-    abi: seismicCounterAbi,
-    bytecode,
-    chain: walletClient.chain,
-  })
-  const deployReceipt = await publicClient.waitForTransactionReceipt({
-    hash: deployTx,
-  })
-  const contractAddress = deployReceipt.contractAddress!
+  const address = await deploySeismicCounter({ publicClient, walletClient })
 
   const contract = getShieldedContract({
     abi: seismicCounterAbi,
-    address: contractAddress,
+    address,
     client: walletClient,
   })
   const setTx = await contract.write.setNumber([COUNTER_VALUE_STORAGE])
@@ -105,7 +85,7 @@ export const testGetStorageAtBlockedForContract = async ({
 
   await expect(
     publicClient.getStorageAt({
-      address: contractAddress,
+      address,
       slot: STORAGE_SLOT_ZERO,
     })
   ).rejects.toThrow('Cannot call getStorageAt with a shielded public client')

@@ -8,7 +8,7 @@ import type { Account, Chain, Hex } from 'viem'
 import { http } from 'viem'
 
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
-import { seismicCounterBytecode } from '@sviem-tests/tests/contract/bytecode.ts'
+import { deploySeismicCounter } from '@sviem-tests/tests/contract/deploy.ts'
 
 type ConcurrencyTestArgs = {
   chain: Chain
@@ -34,21 +34,11 @@ export const testConcurrentShieldedTransactions = async ({
     transport: http(url),
     account,
   })
-
-  const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
-  const deployTx = await walletClient.deployContract({
-    abi: seismicCounterAbi,
-    bytecode,
-    chain: walletClient.chain,
-  })
-  const deployReceipt = await publicClient.waitForTransactionReceipt({
-    hash: deployTx,
-  })
-  const contractAddress = deployReceipt.contractAddress!
+  const address = await deploySeismicCounter({ publicClient, walletClient })
 
   const contract = getShieldedContract({
     abi: seismicCounterAbi,
-    address: contractAddress,
+    address,
     client: walletClient,
   })
 
@@ -93,21 +83,11 @@ export const testConcurrentReads = async ({
     transport: http(url),
     account,
   })
-
-  const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
-  const deployTx = await walletClient.deployContract({
-    abi: seismicCounterAbi,
-    bytecode,
-    chain: walletClient.chain,
-  })
-  const deployReceipt = await publicClient.waitForTransactionReceipt({
-    hash: deployTx,
-  })
-  const contractAddress = deployReceipt.contractAddress!
+  const address = await deploySeismicCounter({ publicClient, walletClient })
 
   const contract = getShieldedContract({
     abi: seismicCounterAbi,
-    address: contractAddress,
+    address,
     client: walletClient,
   })
 

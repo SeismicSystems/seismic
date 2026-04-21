@@ -8,7 +8,7 @@ import type { Account, Chain } from 'viem'
 import { encodeFunctionData, http } from 'viem'
 
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
-import { seismicCounterBytecode } from '@sviem-tests/tests/contract/bytecode.ts'
+import { deploySeismicCounter } from '@sviem-tests/tests/contract/deploy.ts'
 
 type SignedCallTestArgs = {
   chain: Chain
@@ -33,21 +33,11 @@ export const testSignedCallDirect = async ({
     transport: http(url),
     account,
   })
-
-  const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
-  const deployTx = await walletClient.deployContract({
-    abi: seismicCounterAbi,
-    bytecode,
-    chain: walletClient.chain,
-  })
-  const deployReceipt = await publicClient.waitForTransactionReceipt({
-    hash: deployTx,
-  })
-  const contractAddress = deployReceipt.contractAddress!
+  const address = await deploySeismicCounter({ publicClient, walletClient })
 
   const contract = getShieldedContract({
     abi: seismicCounterAbi,
-    address: contractAddress,
+    address,
     client: walletClient,
   })
   const setTx = await contract.write.setNumber([ODD_COUNTER_VALUE])
@@ -58,7 +48,7 @@ export const testSignedCallDirect = async ({
     functionName: 'isOdd',
   })
   const { data } = await walletClient.signedCall({
-    to: contractAddress,
+    to: address,
     data: calldata,
     account: account.address,
   })
@@ -81,17 +71,7 @@ export const testSignedCallWithSecurityParams = async ({
     transport: http(url),
     account,
   })
-
-  const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
-  const deployTx = await walletClient.deployContract({
-    abi: seismicCounterAbi,
-    bytecode,
-    chain: walletClient.chain,
-  })
-  const deployReceipt = await publicClient.waitForTransactionReceipt({
-    hash: deployTx,
-  })
-  const contractAddress = deployReceipt.contractAddress!
+  const address = await deploySeismicCounter({ publicClient, walletClient })
 
   const calldata = encodeFunctionData({
     abi: seismicCounterAbi,
@@ -100,7 +80,7 @@ export const testSignedCallWithSecurityParams = async ({
 
   const { data } = await walletClient.signedCall(
     {
-      to: contractAddress,
+      to: address,
       data: calldata,
       account: account.address,
     },
