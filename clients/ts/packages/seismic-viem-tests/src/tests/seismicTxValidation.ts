@@ -3,13 +3,13 @@ import type { TransactionSerializableSeismic } from 'seismic-viem'
 import { serializeSeismicTransaction } from 'seismic-viem'
 import type { Hex } from 'viem'
 
-import {
-  ENCODING_TEST_ENCRYPTION_NONCE,
-  ENCODING_TEST_RECENT_BLOCK_HASH,
-  ENCODING_TEST_TO,
-  ENCRYPTION_PK,
-  SANVIL_CHAIN_ID,
-} from '@sviem-tests/constants.ts'
+import { ENCRYPTION_PK } from '@sviem-tests/constants.ts'
+
+const SANVIL_CHAIN_ID = 31337
+const ENCODING_TEST_TO = '0xd3e8763675e4c425df46cc3b5c0f6cbdac396046' as const
+const ENCODING_TEST_ENCRYPTION_NONCE = '0x46a2b6020bba77fcb1e676a6' as Hex
+const ENCODING_TEST_RECENT_BLOCK_HASH =
+  '0x934207181885f6859ca848f5f01091d1957444a920a2bfb262fa043c6c239f90' as Hex
 
 const SAMPLE_GAS_PRICE = 1_000_000_000n // 1 gwei
 const SAMPLE_GAS_LIMIT = 100_000n

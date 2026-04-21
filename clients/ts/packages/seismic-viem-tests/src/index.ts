@@ -5,10 +5,6 @@ export {
   TEST_ACCOUNT_PRIVATE_KEY,
   ENCRYPTION_SK,
   ENCRYPTION_PK,
-  ENCODING_TEST_TO,
-  ENCODING_TEST_ENCRYPTION_NONCE,
-  ENCODING_TEST_RECENT_BLOCK_HASH,
-  SANVIL_CHAIN_ID,
 } from '@sviem-tests/constants.ts'
 
 export { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'
