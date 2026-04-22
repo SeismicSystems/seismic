@@ -5,6 +5,7 @@ export {
   TEST_ACCOUNT_PRIVATE_KEY,
   ENCRYPTION_SK,
   ENCRYPTION_PK,
+  ZERO_ADDRESS,
 } from '@sviem-tests/constants.ts'
 
 export { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'
@@ -110,6 +111,25 @@ export {
   testComputeKeyHashMatchesKeccak256,
   testComputeKeyHashDifferentKeysProduceDifferentHashes,
 } from '@sviem-tests/tests/src20Crypto.ts'
+
+export {
+  testGetStorageAtThrows,
+  testSignedCallWithoutToThrows,
+} from '@sviem-tests/tests/errorPaths.ts'
+
+export { testSeismicTxCalldataIsEncrypted } from '@sviem-tests/tests/privacy.ts'
+
+export { testRngDifferentPersProducesDifferentResults } from '@sviem-tests/tests/rngUniqueness.ts'
+
+export {
+  testSignedCallDirect,
+  testSignedCallWithSecurityParams,
+} from '@sviem-tests/tests/signedCallDirect.ts'
+
+export {
+  testConcurrentShieldedTransactions,
+  testConcurrentReads,
+} from '@sviem-tests/tests/concurrency.ts'
 
 export { loadDotenv } from '@sviem-tests/util.ts'
 
