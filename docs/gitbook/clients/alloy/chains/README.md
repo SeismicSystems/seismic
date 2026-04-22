@@ -19,7 +19,7 @@ let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::from(signer);
 
 // Testnet
-let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 let provider = sreth_signed_provider(wallet, url).await?;
 
 // Local (Sanvil)
@@ -31,7 +31,7 @@ let provider = sfoundry_signed_provider(wallet, url).await?;
 
 | Chain                                 | Chain ID | RPC URL                           | Network Type     | Description                                |
 | ------------------------------------- | -------- | --------------------------------- | ---------------- | ------------------------------------------ |
-| [Seismic Testnet](seismic-testnet.md) | `5124`   | `https://gcp-1.seismictest.net/rpc` | `SeismicReth`    | Public testnet for development and testing |
+| [Seismic Testnet](seismic-testnet.md) | `5124`   | `https://testnet-1.seismictest.net/rpc` | `SeismicReth`    | Public testnet for development and testing |
 | [Sanvil (local)](sanvil.md)           | `31337`  | `http://127.0.0.1:8545`           | `SeismicFoundry` | Local development node                     |
 
 ## Choosing a Chain
@@ -55,7 +55,7 @@ The Alloy provider automatically fetches the chain ID from the connected node vi
 ```rust
 use seismic_prelude::foundry::*;
 
-let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 let provider = sreth_unsigned_provider(url);
 
 // Chain ID is fetched from the node

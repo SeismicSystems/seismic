@@ -199,7 +199,7 @@ Deploy to the Seismic network using the same flow you would use for Ethereum, ju
 
 ```bash
 sforge create src/MyContract.sol:MyContract \
-    --rpc-url https://gcp-1.seismictest.net/rpc \
+    --rpc-url https://testnet-1.seismictest.net/rpc \
     --private-key $PRIVATE_KEY
 ```
 
@@ -207,7 +207,7 @@ sforge create src/MyContract.sol:MyContract \
 
 ```bash
 sforge script script/Deploy.s.sol \
-    --rpc-url https://gcp-1.seismictest.net/rpc \
+    --rpc-url https://testnet-1.seismictest.net/rpc \
     --private-key $PRIVATE_KEY \
     --broadcast
 ```

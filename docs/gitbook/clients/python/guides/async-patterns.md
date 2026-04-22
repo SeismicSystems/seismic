@@ -74,7 +74,7 @@ async def seismic_client(rpc_url: str, private_key: PrivateKey):
 async def main():
     pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
-    async with seismic_client("https://gcp-1.seismictest.net/rpc", pk) as w3:
+    async with seismic_client("https://testnet-1.seismictest.net/rpc", pk) as w3:
         chain_id = await w3.eth.chain_id
         print(f"Chain {chain_id}")
     # Client automatically disconnected
@@ -88,7 +88,7 @@ Use `ws=True` for event streaming:
 from seismic_web3 import create_async_wallet_client
 
 w3 = await create_async_wallet_client(
-    "wss://gcp-1.seismictest.net/ws",
+    "wss://testnet-1.seismictest.net/ws",
     private_key=pk,
     ws=True,
 )

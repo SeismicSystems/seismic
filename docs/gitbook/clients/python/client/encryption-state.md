@@ -158,7 +158,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
 private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
-w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
+w3 = create_wallet_client("https://testnet-1.seismictest.net/rpc", private_key=private_key)
 
 # Access encryption state
 encryption = w3.seismic.encryption

@@ -17,7 +17,7 @@ import { createSeismicDevnet } from "seismic-react/rainbowkit";
 
 | Parameter     | Type     | Required | Description                                          |
 | ------------- | -------- | -------- | ---------------------------------------------------- |
-| `nodeHost`    | `string` | Yes      | Hostname for the node (e.g. `gcp-1.seismictest.net`) |
+| `nodeHost`    | `string` | Yes      | Hostname for the node (e.g. `testnet-1.seismictest.net`) |
 | `explorerUrl` | `string` | No       | Block explorer URL                                   |
 
 ## Return Type

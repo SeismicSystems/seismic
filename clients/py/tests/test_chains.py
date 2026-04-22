@@ -45,10 +45,10 @@ class TestSeismicTestnet:
         assert SEISMIC_TESTNET.chain_id == 5124
 
     def test_rpc_url(self):
-        assert SEISMIC_TESTNET.rpc_url == "https://gcp-1.seismictest.net/rpc"
+        assert SEISMIC_TESTNET.rpc_url == "https://testnet-1.seismictest.net/rpc"
 
     def test_ws_url(self):
-        assert SEISMIC_TESTNET.ws_url == "wss://gcp-1.seismictest.net/ws"
+        assert SEISMIC_TESTNET.ws_url == "wss://testnet-1.seismictest.net/ws"
 
     def test_name(self):
         assert "Testnet" in SEISMIC_TESTNET.name
@@ -58,8 +58,8 @@ class TestMakeSeismicTestnet:
     def test_instance_2(self):
         cfg = make_seismic_testnet(2)
         assert cfg.chain_id == 5124
-        assert "gcp-2" in cfg.rpc_url
-        assert "gcp-2" in (cfg.ws_url or "")
+        assert "testnet-2" in cfg.rpc_url
+        assert "testnet-2" in (cfg.ws_url or "")
 
     def test_default_is_1(self):
         cfg = make_seismic_testnet()

@@ -53,7 +53,7 @@ from seismic_web3 import create_async_public_client, AsyncPublicContract
 async def main():
     # Create async client without private key
     w3 = create_async_public_client(
-        provider_url="https://gcp-1.seismictest.net/rpc",
+        provider_url="https://testnet-1.seismictest.net/rpc",
     )
 
     # Create read-only contract instance

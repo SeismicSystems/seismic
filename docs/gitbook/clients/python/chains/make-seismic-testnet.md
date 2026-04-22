@@ -70,7 +70,7 @@ from seismic_web3 import make_seismic_testnet
 # No argument defaults to GCP node 1
 testnet = make_seismic_testnet()
 
-print(testnet.rpc_url)  # "https://gcp-1.seismictest.net/rpc"
+print(testnet.rpc_url)  # "https://testnet-1.seismictest.net/rpc"
 ```
 
 ## Relationship to SEISMIC_TESTNET

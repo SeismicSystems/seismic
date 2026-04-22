@@ -17,7 +17,7 @@ from seismic_web3 import PrivateKey, create_public_client
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 from seismic_web3 import precompiles as sp
 
-w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
+w3 = create_public_client("https://testnet-1.seismictest.net/rpc")
 
 # 1) Random bytes as int
 random_val = sp.rng(w3, num_bytes=32)

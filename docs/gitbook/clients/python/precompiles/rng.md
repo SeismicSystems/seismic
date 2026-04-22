@@ -55,7 +55,7 @@ async def async_rng(
 from seismic_web3 import create_public_client
 from seismic_web3 import precompiles as sp
 
-w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
+w3 = create_public_client("https://testnet-1.seismictest.net/rpc")
 
 value = sp.rng(w3, num_bytes=32)
 print(value)
@@ -74,7 +74,7 @@ from seismic_web3 import create_async_public_client
 from seismic_web3 import precompiles as sp
 
 async def main():
-    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://testnet-1.seismictest.net/rpc")
     value = await sp.async_rng(w3, num_bytes=32)
     print(value)
 ```

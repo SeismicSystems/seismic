@@ -67,8 +67,8 @@ public = SEISMIC_TESTNET.public_client()
 from seismic_web3 import SEISMIC_TESTNET, SANVIL
 
 # Testnet properties
-SEISMIC_TESTNET.rpc_url   # "https://gcp-1.seismictest.net/rpc"
-SEISMIC_TESTNET.ws_url    # "wss://gcp-1.seismictest.net/ws"
+SEISMIC_TESTNET.rpc_url   # "https://testnet-1.seismictest.net/rpc"
+SEISMIC_TESTNET.ws_url    # "wss://testnet-1.seismictest.net/ws"
 SEISMIC_TESTNET.chain_id  # 5124
 SEISMIC_TESTNET.name      # "Seismic Testnet (GCP-1)"
 
@@ -85,8 +85,8 @@ SANVIL.name      # "Sanvil (local)"
 from seismic_web3 import make_seismic_testnet
 
 # Connect to different GCP testnet instances
-testnet_2 = make_seismic_testnet(2)  # gcp-2.seismictest.net
-testnet_3 = make_seismic_testnet(3)  # gcp-3.seismictest.net
+testnet_2 = make_seismic_testnet(2)  # testnet-2.seismictest.net
+testnet_3 = make_seismic_testnet(3)  # testnet-3.seismictest.net
 
 w3 = testnet_2.wallet_client(pk)
 ```
@@ -98,8 +98,8 @@ from seismic_web3 import ChainConfig, PrivateKey
 
 custom = ChainConfig(
     chain_id=5124,
-    rpc_url="https://gcp-1.seismictest.net/rpc",
-    ws_url="wss://gcp-1.seismictest.net/ws",
+    rpc_url="https://testnet-1.seismictest.net/rpc",
+    ws_url="wss://testnet-1.seismictest.net/ws",
     name="Seismic Testnet",
 )
 
