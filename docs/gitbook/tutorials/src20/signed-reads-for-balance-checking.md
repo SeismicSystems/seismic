@@ -77,7 +77,7 @@ import { privateKeyToAccount } from "viem/accounts";
 // Create a shielded wallet client
 const walletClient = await createShieldedWalletClient({
   chain: seismicTestnet,
-  transport: http("https://gcp-1.seismictest.net/rpc"),
+  transport: http("https://testnet-1.seismictest.net/rpc"),
   account: privateKeyToAccount(PRIVATE_KEY),
 });
 

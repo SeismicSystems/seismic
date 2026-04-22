@@ -57,7 +57,7 @@ import os
 from seismic_web3 import Bytes32, create_public_client
 from seismic_web3 import precompiles as sp
 
-w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
+w3 = create_public_client("https://testnet-1.seismictest.net/rpc")
 
 key = Bytes32(os.urandom(32))
 pt = b"secret"
@@ -85,7 +85,7 @@ from seismic_web3 import Bytes32
 from seismic_web3 import precompiles as sp
 
 async def main():
-    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://testnet-1.seismictest.net/rpc")
     key = Bytes32(os.urandom(32))
     ct = sp.aes_gcm_encrypt(w3, aes_key=key, nonce=1, plaintext=b"async secret")
     pt = await sp.async_aes_gcm_decrypt(w3, aes_key=key, nonce=1, ciphertext=bytes(ct))

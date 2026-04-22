@@ -25,7 +25,7 @@ This is a deliberate security measure — shielded storage values are flagged wi
 ## Example Request
 
 ```bash
-curl -X POST https://gcp-1.seismictest.net/rpc \
+curl -X POST https://testnet-1.seismictest.net/rpc \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",

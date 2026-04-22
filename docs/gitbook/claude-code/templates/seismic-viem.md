@@ -57,7 +57,7 @@ import { http } from "viem";
 
 const walletClient = await createShieldedWalletClient({
   chain: seismicTestnet,
-  transport: http("https://gcp-1.seismictest.net/rpc"),
+  transport: http("https://testnet-1.seismictest.net/rpc"),
   privateKey: "0xYOUR_PRIVATE_KEY",
 });
 ```
@@ -70,7 +70,7 @@ import { http } from "viem";
 
 const publicClient = await createShieldedPublicClient({
   chain: seismicTestnet,
-  transport: http("https://gcp-1.seismictest.net/rpc"),
+  transport: http("https://testnet-1.seismictest.net/rpc"),
 });
 ```
 
@@ -110,7 +110,7 @@ import { createPublicClient, http } from "viem";
 // Use a standard viem public client for receipt watching
 const publicClient = createPublicClient({
   chain: seismicTestnet,
-  transport: http("https://gcp-1.seismictest.net/rpc"),
+  transport: http("https://testnet-1.seismictest.net/rpc"),
 });
 
 const receipt = await publicClient.waitForTransactionReceipt({ hash });
@@ -128,8 +128,8 @@ const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
 | Network        | Chain ID | RPC URL                             | Chain export    |
 | -------------- | -------- | ----------------------------------- | --------------- |
-| Testnet         | 5124     | `https://gcp-1.seismictest.net/rpc` | `seismicTestnet` |
-| Testnet (WS)    | 5124     | `wss://gcp-1.seismictest.net/ws`    | `seismicTestnet` |
+| Testnet         | 5124     | `https://testnet-1.seismictest.net/rpc` | `seismicTestnet` |
+| Testnet (WS)    | 5124     | `wss://testnet-1.seismictest.net/ws`    | `seismicTestnet` |
 | Local (sanvil) | 31337    | `http://127.0.0.1:8545`             | —               |
 
 Faucet: https://faucet.seismictest.net/

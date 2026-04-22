@@ -48,8 +48,8 @@ from seismic_web3 import ChainConfig
 
 config = ChainConfig(
     chain_id=5124,
-    rpc_url="https://gcp-1.seismictest.net/rpc",
-    ws_url="wss://gcp-1.seismictest.net/ws",
+    rpc_url="https://testnet-1.seismictest.net/rpc",
+    ws_url="wss://testnet-1.seismictest.net/ws",
     name="Seismic Testnet",
 )
 ```
@@ -59,7 +59,7 @@ config = ChainConfig(
 ```python
 config = ChainConfig(
     chain_id=5124,
-    rpc_url="https://gcp-1.seismictest.net/rpc",
+    rpc_url="https://testnet-1.seismictest.net/rpc",
     name="Seismic Testnet",
 )
 ```

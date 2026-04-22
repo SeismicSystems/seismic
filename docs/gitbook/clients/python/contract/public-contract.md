@@ -51,7 +51,7 @@ from seismic_web3 import create_public_client, PublicContract
 
 # Create client without private key
 w3 = create_public_client(
-    rpc_url="https://gcp-1.seismictest.net/rpc",
+    rpc_url="https://testnet-1.seismictest.net/rpc",
 )
 
 # Create read-only contract instance

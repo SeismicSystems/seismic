@@ -49,7 +49,7 @@ Example output:
 | `--symbol` | Token symbol                                                   | prompted                            |
 | `--supply` | Initial supply in whole tokens (multiplied by 10¹⁸ internally) | prompted                            |
 | `--key`    | 0x-prefixed 64-character hex private key                       | prompted (hidden input)             |
-| `--rpc`    | Custom RPC URL                                                 | `https://gcp-2.seismictest.net/rpc` |
+| `--rpc`    | Custom RPC URL                                                 | `https://testnet-2.seismictest.net/rpc` |
 
 {% hint style="info" %}
 Supply is always treated as whole tokens. Passing `--supply 1000000` mints `1,000,000 × 10¹⁸` base units, using 18 decimals.

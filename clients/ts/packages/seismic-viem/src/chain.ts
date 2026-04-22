@@ -19,7 +19,7 @@ export type CreateSeismicTestnetParams = {
  * Creates a Seismic chain configuration.
  *
  * @param {CreateSeismicDevnetParams} params - The parameters for creating a Seismic chain.
- *   - `nodeHost` (string) - The hostname for the node (e.g. `gcp-1.seismictest.net`).
+ *   - `nodeHost` (string) - The hostname for the node (e.g. `testnet-1.seismictest.net`).
  *   - `explorerUrl` (string, optional) - Block explorer URL.
  *
  * @throws {Error} Throws if `nodeHost` is not provided.
@@ -34,7 +34,7 @@ export type CreateSeismicTestnetParams = {
  *
  * @example
  * ```typescript
- * const chain = createSeismicDevnet({ nodeHost: 'gcp-1.seismictest.net' });
+ * const chain = createSeismicDevnet({ nodeHost: 'testnet-1.seismictest.net' });
  * ```
  */
 export const createSeismicDevnet = /*#__PURE__*/ ({
@@ -42,7 +42,9 @@ export const createSeismicDevnet = /*#__PURE__*/ ({
   explorerUrl,
 }: CreateSeismicDevnetParams): Chain => {
   if (!nodeHost) {
-    throw new Error('Must set `nodeHost` argument, e.g. gcp-1.seismictest.net')
+    throw new Error(
+      'Must set `nodeHost` argument, e.g. testnet-1.seismictest.net'
+    )
   }
 
   return defineChain({
@@ -80,6 +82,12 @@ export const createSeismicGcpTestnet = (n: number) =>
     explorerUrl: 'https://seismic-testnet.socialscan.io',
   })
 
+export const createSeismicTestnet = (n: number) =>
+  createSeismicDevnet({
+    nodeHost: `testnet-${n}.seismictest.net`,
+    explorerUrl: 'https://seismic-testnet.socialscan.io',
+  })
+
 /**
  * The first seismic testnet
  *
@@ -89,8 +97,8 @@ export const createSeismicGcpTestnet = (n: number) =>
 export const seismicTestnetGcp1 = createSeismicGcpTestnet(1)
 export const seismicTestnetGcp2 = createSeismicGcpTestnet(2)
 
-export const seismicTestnet1 = seismicTestnetGcp1
-export const seismicTestnet2 = seismicTestnetGcp2
+export const seismicTestnet1 = createSeismicTestnet(1)
+export const seismicTestnet2 = createSeismicTestnet(2)
 
 export const seismicTestnet = seismicTestnet1
 

@@ -15,7 +15,7 @@ import { encryptSeismicTx } from 'seismic-encrypt'
 import { createPublicClient, encodeFunctionData, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
-const RPC_URL = 'https://gcp-1.seismictest.net/rpc'
+const RPC_URL = 'https://testnet-1.seismictest.net/rpc'
 
 const account = privateKeyToAccount('0xYourPrivateKey')
 const client = createPublicClient({ transport: http(RPC_URL) })
@@ -117,7 +117,7 @@ const { seismicTx, serialize } = await encryptSeismicTx({
     chainId: 5124,
   },
   sender: account.address,
-  rpcUrl: 'https://gcp-1.seismictest.net/rpc',
+  rpcUrl: 'https://testnet-1.seismictest.net/rpc',
 })
 ```
 

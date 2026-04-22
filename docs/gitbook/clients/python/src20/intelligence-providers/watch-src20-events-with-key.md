@@ -55,7 +55,7 @@ from web3 import Web3
 from seismic_web3 import Bytes32
 from seismic_web3.src20 import watch_src20_events_with_key
 
-w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
+w3 = Web3(Web3.HTTPProvider("https://testnet-1.seismictest.net/rpc"))
 viewing_key = Bytes32(bytes.fromhex(os.environ["VIEWING_KEY"].removeprefix("0x")))
 
 watcher = watch_src20_events_with_key(

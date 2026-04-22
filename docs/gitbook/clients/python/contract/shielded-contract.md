@@ -105,7 +105,7 @@ Like `.write` but returns debug information including plaintext and encrypted vi
 from seismic_web3 import create_wallet_client, ShieldedContract
 
 w3 = create_wallet_client(
-    rpc_url="https://gcp-1.seismictest.net/rpc",
+    rpc_url="https://testnet-1.seismictest.net/rpc",
     private_key=private_key,
 )
 
@@ -203,7 +203,7 @@ tx_hash = contract.write.setNumber(123)
 from seismic_web3 import create_wallet_client
 
 w3 = create_wallet_client(
-    rpc_url="https://gcp-1.seismictest.net/rpc",
+    rpc_url="https://testnet-1.seismictest.net/rpc",
     private_key=private_key,
 )
 

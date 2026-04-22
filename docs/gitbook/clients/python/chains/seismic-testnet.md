@@ -22,8 +22,8 @@ Internally, this is equivalent to:
 ```python
 ChainConfig(
     chain_id=5124,
-    rpc_url="https://gcp-1.seismictest.net/rpc",
-    ws_url="wss://gcp-1.seismictest.net/ws",
+    rpc_url="https://testnet-1.seismictest.net/rpc",
+    ws_url="wss://testnet-1.seismictest.net/ws",
     name="Seismic Testnet",
 )
 ```
@@ -33,8 +33,8 @@ ChainConfig(
 | Property | Value |
 |----------|-------|
 | `chain_id` | `5124` |
-| `rpc_url` | `"https://gcp-1.seismictest.net/rpc"` |
-| `ws_url` | `"wss://gcp-1.seismictest.net/ws"` |
+| `rpc_url` | `"https://testnet-1.seismictest.net/rpc"` |
+| `ws_url` | `"wss://testnet-1.seismictest.net/ws"` |
 | `name` | `"Seismic Testnet"` |
 
 ## Usage
@@ -45,8 +45,8 @@ ChainConfig(
 from seismic_web3 import SEISMIC_TESTNET
 
 # Access configuration
-print(SEISMIC_TESTNET.rpc_url)   # "https://gcp-1.seismictest.net/rpc"
-print(SEISMIC_TESTNET.ws_url)    # "wss://gcp-1.seismictest.net/ws"
+print(SEISMIC_TESTNET.rpc_url)   # "https://testnet-1.seismictest.net/rpc"
+print(SEISMIC_TESTNET.ws_url)    # "wss://testnet-1.seismictest.net/ws"
 print(SEISMIC_TESTNET.chain_id)  # 5124
 print(SEISMIC_TESTNET.name)      # "Seismic Testnet"
 ```
@@ -75,7 +75,7 @@ pk = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 # HTTP
 w3 = await SEISMIC_TESTNET.async_wallet_client(pk)
 
-# WebSocket (auto-selects wss://gcp-1.seismictest.net/ws)
+# WebSocket (auto-selects wss://testnet-1.seismictest.net/ws)
 w3 = await SEISMIC_TESTNET.async_wallet_client(pk, ws=True)
 ```
 

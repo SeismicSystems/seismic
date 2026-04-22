@@ -13,8 +13,8 @@ The Seismic public testnet is the primary network for development and testing. `
 | --------------- | --------------------------------------- |
 | Chain ID        | `5124`                                  |
 | Name            | `Seismic`                               |
-| RPC (HTTPS)     | `https://gcp-1.seismictest.net/rpc`     |
-| RPC (WSS)       | `wss://gcp-1.seismictest.net/ws`        |
+| RPC (HTTPS)     | `https://testnet-1.seismictest.net/rpc`     |
+| RPC (WSS)       | `wss://testnet-1.seismictest.net/ws`        |
 | Explorer        | `https://seismic-testnet.socialscan.io` |
 | Native Currency | ETH (18 decimals)                       |
 

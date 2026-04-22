@@ -46,7 +46,7 @@ async def async_hkdf(
 from seismic_web3 import create_public_client
 from seismic_web3 import precompiles as sp
 
-w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
+w3 = create_public_client("https://testnet-1.seismictest.net/rpc")
 
 key = sp.hkdf(w3, b"input key material")
 print(key.to_0x_hex())
@@ -68,7 +68,7 @@ from seismic_web3 import create_async_public_client
 from seismic_web3 import precompiles as sp
 
 async def main():
-    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://testnet-1.seismictest.net/rpc")
     key = await sp.async_hkdf(w3, b"async input")
     print(key.to_0x_hex())
 ```

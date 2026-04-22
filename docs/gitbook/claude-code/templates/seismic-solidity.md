@@ -119,12 +119,12 @@ sforge test --match-test testTransfer  # Run specific test
 ```bash
 # Deploy to testnet
 sforge create src/MyContract.sol:MyContract \
-    --rpc-url https://gcp-1.seismictest.net/rpc \
+    --rpc-url https://testnet-1.seismictest.net/rpc \
     --private-key $PRIVATE_KEY
 
 # Deploy with script
 sforge script script/Deploy.s.sol \
-    --rpc-url https://gcp-1.seismictest.net/rpc \
+    --rpc-url https://testnet-1.seismictest.net/rpc \
     --private-key $PRIVATE_KEY \
     --broadcast
 ```
@@ -147,8 +147,8 @@ sanvil  # Starts local Seismic node on http://127.0.0.1:8545
 
 | Network        | Chain ID | RPC URL                             |
 | -------------- | -------- | ----------------------------------- |
-| Testnet         | 5124     | `https://gcp-1.seismictest.net/rpc` |
-| Testnet (WS)    | 5124     | `wss://gcp-1.seismictest.net/ws`    |
+| Testnet         | 5124     | `https://testnet-1.seismictest.net/rpc` |
+| Testnet (WS)    | 5124     | `wss://testnet-1.seismictest.net/ws`    |
 | Local (sanvil) | 31337    | `http://127.0.0.1:8545`             |
 
 Faucet: https://faucet.seismictest.net/

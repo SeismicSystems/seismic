@@ -23,8 +23,8 @@ const toRainbowKitChain = (chain: ViemChain): RainbowKitChain => {
 }
 
 /** Seismic's testnet at:
- * - https: https://gcp-1.seismictest.net/rpc
- * - wss: wss://gcp-1.seismictest.net/ws
+ * - https: https://testnet-1.seismictest.net/rpc
+ * - wss: wss://testnet-1.seismictest.net/ws
  * - explorer: https://seismic-testnet.socialscan.io
  */
 export const seismicTestnet = toRainbowKitChain(seismicTestnetViem)
@@ -46,7 +46,7 @@ export const localSeismicDevnet = toRainbowKitChain(
  * Creates a Seismic chain configuration.
  *
  * @param {CreateSeismicDevnetParams} params - The parameters for creating a Seismic chain.
- *   - `nodeHost` (string) - The hostname for the node (e.g. `gcp-1.seismictest.net`).
+ *   - `nodeHost` (string) - The hostname for the node (e.g. `testnet-1.seismictest.net`).
  *   - `explorerUrl` (string, optional) - Block explorer URL.
  *
  * @throws {Error} Throws if `nodeHost` is not provided.
@@ -61,7 +61,7 @@ export const localSeismicDevnet = toRainbowKitChain(
  *
  * @example
  * ```typescript
- * const chain = createSeismicDevnet({ nodeHost: 'gcp-1.seismictest.net' });
+ * const chain = createSeismicDevnet({ nodeHost: 'testnet-1.seismictest.net' });
  * ```
  */
 export const createSeismicDevnet = (

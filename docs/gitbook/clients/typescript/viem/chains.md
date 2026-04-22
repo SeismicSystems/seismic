@@ -22,7 +22,7 @@ import {
 
 | Chain           | Export               | Chain ID | RPC URL                             | Description              |
 | --------------- | -------------------- | -------- | ----------------------------------- | ------------------------ |
-| Seismic Testnet | `seismicTestnet`     | 5124     | `https://gcp-1.seismictest.net/rpc` | Public testnet           |
+| Seismic Testnet | `seismicTestnet`     | 5124     | `https://testnet-1.seismictest.net/rpc` | Public testnet           |
 | Sanvil          | `sanvil`             | 31337    | `http://127.0.0.1:8545`             | Local Seismic Anvil      |
 | Local Devnet    | `localSeismicDevnet` | 5124     | `http://127.0.0.1:8545`             | Local seismic-reth --dev |
 

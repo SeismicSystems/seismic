@@ -47,7 +47,7 @@ Deploy a Seismic smart contract using sforge.
 
 4. **Choose network** — Ask which network to deploy to:
    - **Local (sanvil):** `http://127.0.0.1:8545` — start sanvil first with `sanvil`
-   - **Testnet:** `https://gcp-1.seismictest.net/rpc` — needs funded wallet from https://faucet.seismictest.net/
+   - **Testnet:** `https://testnet-1.seismictest.net/rpc` — needs funded wallet from https://faucet.seismictest.net/
 
 5. **Deploy** — Run the deployment:
 

@@ -14,7 +14,7 @@ cd packages/api
 cargo run
 ```
 
-The server starts on port **3001** and connects to Seismic testnet at `https://gcp-2.seismictest.net/rpc`.
+The server starts on port **3001** and connects to Seismic testnet at `https://testnet-2.seismictest.net/rpc`.
 
 ---
 

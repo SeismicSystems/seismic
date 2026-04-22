@@ -223,7 +223,7 @@ def make_seismic_testnet(
             "Provide either n or host, not both.",
         )
     if host is None:
-        host = f"gcp-{n}.seismictest.net"
+        host = f"testnet-{n}.seismictest.net"
     return ChainConfig(
         chain_id=SEISMIC_TESTNET_CHAIN_ID,
         rpc_url=f"https://{host}/rpc",
