@@ -78,6 +78,12 @@ export const createSeismicAzTestnet = (n: number) =>
 
 export const createSeismicGcpTestnet = (n: number) =>
   createSeismicDevnet({
+    nodeHost: `gcp-${n}.seismictest.net`,
+    explorerUrl: 'https://seismic-testnet.socialscan.io',
+  })
+
+export const createSeismicTestnet = (n: number) =>
+  createSeismicDevnet({
     nodeHost: `testnet-${n}.seismictest.net`,
     explorerUrl: 'https://seismic-testnet.socialscan.io',
   })
@@ -91,8 +97,8 @@ export const createSeismicGcpTestnet = (n: number) =>
 export const seismicTestnetGcp1 = createSeismicGcpTestnet(1)
 export const seismicTestnetGcp2 = createSeismicGcpTestnet(2)
 
-export const seismicTestnet1 = seismicTestnetGcp1
-export const seismicTestnet2 = seismicTestnetGcp2
+export const seismicTestnet1 = createSeismicTestnet(1)
+export const seismicTestnet2 = createSeismicTestnet(2)
 
 export const seismicTestnet = seismicTestnet1
 

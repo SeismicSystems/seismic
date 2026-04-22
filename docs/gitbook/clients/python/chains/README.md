@@ -31,7 +31,7 @@ w3 = SANVIL.wallet_client(pk)
 | Component | Description |
 |-----------|-------------|
 | [ChainConfig](chain-config.md) | Immutable dataclass for network configuration |
-| [SEISMIC_TESTNET](seismic-testnet.md) | Public testnet configuration (GCP-1) |
+| [SEISMIC_TESTNET](seismic-testnet.md) | Public testnet configuration (testnet-1) |
 | [SANVIL](sanvil.md) | Local development network configuration |
 | [make_seismic_testnet](make-seismic-testnet.md) | Factory for alternate testnet instances |
 
@@ -70,7 +70,7 @@ from seismic_web3 import SEISMIC_TESTNET, SANVIL
 SEISMIC_TESTNET.rpc_url   # "https://testnet-1.seismictest.net/rpc"
 SEISMIC_TESTNET.ws_url    # "wss://testnet-1.seismictest.net/ws"
 SEISMIC_TESTNET.chain_id  # 5124
-SEISMIC_TESTNET.name      # "Seismic Testnet (GCP-1)"
+SEISMIC_TESTNET.name      # "Seismic Testnet (testnet-1)"
 
 # Sanvil properties
 SANVIL.rpc_url   # "http://127.0.0.1:8545"
