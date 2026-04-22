@@ -23,6 +23,7 @@ export {
   createSeismicDevnet,
   createSeismicAzTestnet,
   createSeismicGcpTestnet,
+  createSeismicTestnet,
 } from '@sviem/chain.ts'
 export {
   SEISMIC_TX_TYPE,

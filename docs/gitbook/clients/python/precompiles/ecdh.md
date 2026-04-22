@@ -55,7 +55,7 @@ from seismic_web3 import PrivateKey, create_public_client
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 from seismic_web3 import precompiles as sp
 
-w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
+w3 = create_public_client("https://testnet-1.seismictest.net/rpc")
 
 alice_sk = PrivateKey(os.urandom(32))
 bob_sk = PrivateKey(os.urandom(32))
@@ -90,7 +90,7 @@ from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 from seismic_web3 import precompiles as sp
 
 async def main():
-    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://testnet-1.seismictest.net/rpc")
     alice_sk = PrivateKey(os.urandom(32))
     bob_sk = PrivateKey(os.urandom(32))
     bob_pk = private_key_to_compressed_public_key(bob_sk)

@@ -53,7 +53,7 @@ private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Create async wallet client
 w3 = await create_async_wallet_client(
-    "https://gcp-1.seismictest.net/rpc",
+    "https://testnet-1.seismictest.net/rpc",
     private_key=private_key,
 )
 
@@ -73,7 +73,7 @@ private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # WebSocket provider for persistent connection
 w3 = await create_async_wallet_client(
-    "wss://gcp-1.seismictest.net/ws",
+    "wss://testnet-1.seismictest.net/ws",
     private_key=private_key,
     ws=True,
 )
@@ -108,7 +108,7 @@ private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Use context manager to ensure cleanup
 async with create_async_wallet_client(
-    "wss://gcp-1.seismictest.net/ws",
+    "wss://testnet-1.seismictest.net/ws",
     private_key=private_key,
     ws=True,
 ) as w3:
@@ -128,7 +128,7 @@ async def main():
     private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
     w3 = await create_async_wallet_client(
-        "https://gcp-1.seismictest.net/rpc",
+        "https://testnet-1.seismictest.net/rpc",
         private_key=private_key,
     )
 
@@ -155,7 +155,7 @@ async def setup_client():
     encryption_key = PrivateKey(os.urandom(32))  # Custom encryption keypair
 
     w3 = await create_async_wallet_client(
-        "https://gcp-1.seismictest.net/rpc",
+        "https://testnet-1.seismictest.net/rpc",
         private_key=signing_key,
         encryption_sk=encryption_key,
     )

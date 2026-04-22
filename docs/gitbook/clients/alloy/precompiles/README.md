@@ -60,7 +60,7 @@ use alloy_rpc_types_eth::TransactionRequest;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://testnet-1.seismictest.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     // RNG precompile: request 32 random bytes

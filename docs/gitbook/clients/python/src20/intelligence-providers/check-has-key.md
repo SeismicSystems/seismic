@@ -37,7 +37,7 @@ async def async_get_key_hash(w3: AsyncWeb3, address: ChecksumAddress) -> bytes
 from web3 import Web3
 from seismic_web3.src20 import check_has_key, get_key_hash
 
-w3 = Web3(Web3.HTTPProvider("https://gcp-1.seismictest.net/rpc"))
+w3 = Web3(Web3.HTTPProvider("https://testnet-1.seismictest.net/rpc"))
 address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 if check_has_key(w3, address):

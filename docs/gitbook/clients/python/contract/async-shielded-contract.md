@@ -107,7 +107,7 @@ from seismic_web3 import create_async_wallet_client, AsyncShieldedContract
 
 async def main():
     w3 = await create_async_wallet_client(
-        provider_url="https://gcp-1.seismictest.net/rpc",
+        provider_url="https://testnet-1.seismictest.net/rpc",
         private_key=private_key,
     )
 
@@ -250,7 +250,7 @@ async def eip712_example():
 async def client_pattern():
     # Most common pattern - let the client create the contract
     w3 = await create_async_wallet_client(
-        provider_url="https://gcp-1.seismictest.net/rpc",
+        provider_url="https://testnet-1.seismictest.net/rpc",
         private_key=private_key,
     )
 

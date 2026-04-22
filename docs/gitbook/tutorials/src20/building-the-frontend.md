@@ -39,7 +39,7 @@ import { seismicTestnet } from "seismic-viem";
 const config = createConfig({
   chains: [seismicTestnet],
   transports: {
-    [seismicTestnet.id]: http("https://gcp-1.seismictest.net/rpc"),
+    [seismicTestnet.id]: http("https://testnet-1.seismictest.net/rpc"),
   },
 });
 

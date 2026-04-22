@@ -28,7 +28,7 @@ def create_wallet_client(
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `rpc_url` | `str` | Yes | HTTP(S) URL of the Seismic node (e.g., `"https://gcp-1.seismictest.net/rpc"`). WebSocket URLs are not supported — see note below |
+| `rpc_url` | `str` | Yes | HTTP(S) URL of the Seismic node (e.g., `"https://testnet-1.seismictest.net/rpc"`). WebSocket URLs are not supported — see note below |
 | `private_key` | [`PrivateKey`](../api-reference/types/private-key.md) | Yes | 32-byte secp256k1 private key for signing transactions |
 | `encryption_sk` | [`PrivateKey`](../api-reference/types/private-key.md) | No | Optional 32-byte key for ECDH. If `None`, a random ephemeral key is generated |
 
@@ -51,7 +51,7 @@ private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 
 # Create wallet client
 w3 = create_wallet_client(
-    "https://gcp-1.seismictest.net/rpc",
+    "https://testnet-1.seismictest.net/rpc",
     private_key=private_key,
 )
 
@@ -86,7 +86,7 @@ signing_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
 encryption_key = PrivateKey(os.urandom(32))  # Custom encryption keypair
 
 w3 = create_wallet_client(
-    "https://gcp-1.seismictest.net/rpc",
+    "https://testnet-1.seismictest.net/rpc",
     private_key=signing_key,
     encryption_sk=encryption_key,
 )
@@ -99,7 +99,7 @@ import os
 from seismic_web3 import create_wallet_client, PrivateKey
 
 private_key = PrivateKey.from_hex_str(os.environ["PRIVATE_KEY"])
-w3 = create_wallet_client("https://gcp-1.seismictest.net/rpc", private_key=private_key)
+w3 = create_wallet_client("https://testnet-1.seismictest.net/rpc", private_key=private_key)
 
 # All standard web3.py operations work
 block = w3.eth.get_block("latest")

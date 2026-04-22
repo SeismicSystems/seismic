@@ -135,7 +135,7 @@ use alloy_signer_local::PrivateKeySigner;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
     let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
 

@@ -82,7 +82,7 @@ use alloy_signer_local::PrivateKeySigner;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::from(signer);
-let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
 // SeismicGasFiller is set up automatically with the same URL
 let provider = sreth_signed_provider(wallet, url).await?;
@@ -95,7 +95,7 @@ If building a custom provider stack:
 ```rust
 use seismic_prelude::foundry::*;
 
-let rpc_url: reqwest::Url = "https://gcp-1.seismictest.net/rpc".parse()?;
+let rpc_url: reqwest::Url = "https://testnet-1.seismictest.net/rpc".parse()?;
 let gas_filler = SeismicGasFiller::with_url(rpc_url);
 ```
 

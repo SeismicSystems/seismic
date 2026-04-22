@@ -55,7 +55,7 @@ import os
 from seismic_web3 import PrivateKey, create_public_client
 from seismic_web3 import precompiles as sp
 
-w3 = create_public_client("https://gcp-1.seismictest.net/rpc")
+w3 = create_public_client("https://testnet-1.seismictest.net/rpc")
 
 sk = PrivateKey(os.urandom(32))
 sig = sp.secp256k1_sign(w3, sk=sk, message="hello")
@@ -85,7 +85,7 @@ from seismic_web3 import PrivateKey
 from seismic_web3 import precompiles as sp
 
 async def main():
-    w3 = create_async_public_client("https://gcp-1.seismictest.net/rpc")
+    w3 = create_async_public_client("https://testnet-1.seismictest.net/rpc")
     sk = PrivateKey(os.urandom(32))
     sig = await sp.async_secp256k1_sign(w3, sk=sk, message="async hello")
     print(sig.hex())

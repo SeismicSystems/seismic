@@ -269,7 +269,7 @@ use seismic_prelude::foundry::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://testnet-1.seismictest.net/rpc".parse()?;
     let provider = sreth_unsigned_provider(url);
 
     let tee_pubkey = provider.get_tee_pubkey().await?;
@@ -290,7 +290,7 @@ use alloy_primitives::address;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
     let wallet = SeismicWallet::from(signer);
-    let url = "https://gcp-1.seismictest.net/rpc".parse()?;
+    let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
     // Provider automatically:
     // 1. Generates ephemeral keypair
