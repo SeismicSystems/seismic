@@ -27,6 +27,17 @@ import {
   testWriteWithoutExplicitGasSucceeds,
 } from '@sviem-tests/tests/estimateGas.ts'
 import {
+  testParseFaucetResponseHashNoPrefix,
+  testParseFaucetResponseHashThrowsOnInvalidLength,
+  testParseFaucetResponseHashThrowsOnMissingHexPrefix,
+  testParseFaucetResponseHashValid,
+  testParseMinBalanceDefaultsToHalfEther,
+  testParseMinBalanceHandlesNumericWei,
+  testParseMinBalancePrefersWeiOverEther,
+  testParseMinBalanceUsesEtherWhenProvided,
+  testParseMinBalanceUsesWeiWhenProvided,
+} from '@sviem-tests/tests/faucet.ts'
+import {
   testAesGcm,
   testEcdh,
   testHkdfHex,
@@ -87,6 +98,11 @@ import {
   testSeismicTxTypedData,
 } from '@sviem-tests/tests/typedData.ts'
 import { testWsConnection } from '@sviem-tests/tests/ws.ts'
+import {
+  testWsBlockSubscription,
+  testWsPrecompileCall,
+  testWsRngCall,
+} from '@sviem-tests/tests/wsExtended.ts'
 import { sanvil } from '@sviem/chain.ts'
 
 const TIMEOUT_MS = 60_000
@@ -575,6 +591,48 @@ describe('Concurrent transactions', () => {
     'concurrent reads via different methods return consistent results',
     async () => await testConcurrentReads({ chain, url, account }),
     { timeout: CONTRACT_TIMEOUT_MS }
+  )
+})
+
+describe('Faucet parseMinBalance', () => {
+  test('defaults to 0.5 ether', testParseMinBalanceDefaultsToHalfEther)
+  test('uses wei when provided', testParseMinBalanceUsesWeiWhenProvided)
+  test('uses ether when provided', testParseMinBalanceUsesEtherWhenProvided)
+  test('prefers wei over ether', testParseMinBalancePrefersWeiOverEther)
+  test('handles numeric wei', testParseMinBalanceHandlesNumericWei)
+})
+
+describe('parseFaucetResponseHash', () => {
+  test('extracts valid hash', testParseFaucetResponseHashValid)
+  test(
+    'returns null when prefix is missing',
+    testParseFaucetResponseHashNoPrefix
+  )
+  test(
+    'throws on invalid hash length',
+    testParseFaucetResponseHashThrowsOnInvalidLength
+  )
+  test(
+    'throws when 0x prefix is missing',
+    testParseFaucetResponseHashThrowsOnMissingHexPrefix
+  )
+})
+
+describe('WebSocket extended', () => {
+  test(
+    'WS client can get block number',
+    async () => await testWsBlockSubscription({ chain, wsUrl }),
+    { timeout: TIMEOUT_MS }
+  )
+  test(
+    'WS client can call getTeePublicKey',
+    async () => await testWsPrecompileCall({ chain, wsUrl }),
+    { timeout: TIMEOUT_MS }
+  )
+  test(
+    'WS client can call RNG precompile',
+    async () => await testWsRngCall({ chain, wsUrl }),
+    { timeout: TIMEOUT_MS }
   )
 })
 

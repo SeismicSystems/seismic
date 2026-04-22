@@ -6,6 +6,7 @@ export {
   ENCRYPTION_SK,
   ENCRYPTION_PK,
   ZERO_ADDRESS,
+  SAMPLE_TX_HASH,
 } from '@sviem-tests/constants.ts'
 
 export { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'
@@ -130,6 +131,24 @@ export {
   testConcurrentShieldedTransactions,
   testConcurrentReads,
 } from '@sviem-tests/tests/concurrency.ts'
+
+export {
+  testParseMinBalanceDefaultsToHalfEther,
+  testParseMinBalanceUsesWeiWhenProvided,
+  testParseMinBalanceUsesEtherWhenProvided,
+  testParseMinBalancePrefersWeiOverEther,
+  testParseMinBalanceHandlesNumericWei,
+  testParseFaucetResponseHashValid,
+  testParseFaucetResponseHashNoPrefix,
+  testParseFaucetResponseHashThrowsOnInvalidLength,
+  testParseFaucetResponseHashThrowsOnMissingHexPrefix,
+} from '@sviem-tests/tests/faucet.ts'
+
+export {
+  testWsBlockSubscription,
+  testWsPrecompileCall,
+  testWsRngCall,
+} from '@sviem-tests/tests/wsExtended.ts'
 
 export { loadDotenv } from '@sviem-tests/util.ts'
 
