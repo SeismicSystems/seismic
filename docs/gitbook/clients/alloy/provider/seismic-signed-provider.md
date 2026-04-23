@@ -100,10 +100,10 @@ sol! {
 
 let contract = SeismicCounter::new(address, &provider);
 
-// Shielded read -- isOdd has no shielded params, use .seismic()
+// Shielded read — isOdd has no shielded params, use .seismic()
 let is_odd = contract.isOdd().seismic().call().await?;
 
-// Shielded write -- setNumber has suint256 param, auto-encrypts
+// Shielded write — setNumber has suint256 param, auto-encrypts
 let receipt = contract
     .setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
     .send()
@@ -154,7 +154,7 @@ let result = provider.seismic_call_with(addr, MyContract::isOddCall {},
 For wallets that cannot sign custom RLP-encoded transaction types (e.g., MetaMask):
 
 ```rust
-// setNumber auto-encrypts (shielded param) -- .eip712() available on ShieldedCallBuilder
+// setNumber auto-encrypts (shielded param) — .eip712() available on ShieldedCallBuilder
 contract.setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
     .eip712()
     .send()
@@ -184,7 +184,7 @@ let result = provider.seismic_call_with(addr, MyContract::isOddCall {},
 // Low-level (raw bytes, no ABI decoding)
 let raw_bytes = provider.seismic_call_raw(tx.into()).await?;
 
-// Transparent operations (SeismicProviderExt -- available on all providers)
+// Transparent operations (SeismicProviderExt — available on all providers)
 let result = provider.transparent_call(addr, MyContract::isOddCall {}).await?;
 
 // Fetch TEE public key (SeismicProviderExt)
@@ -313,7 +313,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url: reqwest::Url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
     // Fetch TEE pubkey once via an unsigned provider
-    // Unsigned provider -- connect_http is synchronous
+    // Unsigned provider — connect_http is synchronous
     let unsigned = SeismicProviderBuilder::new().connect_http(url.clone());
     let tee_pubkey = unsigned.get_tee_pubkey().await?;
 

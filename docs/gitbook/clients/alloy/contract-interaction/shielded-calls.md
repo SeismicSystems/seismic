@@ -54,7 +54,7 @@ A shielded write sends an encrypted transaction that modifies on-chain state. Th
 ```rust
 let contract = SeismicCounter::new(contract_address, &provider);
 
-// setNumber has a shielded param (suint256), so it auto-encrypts -- no .seismic() needed
+// setNumber has a shielded param (suint256), so it auto-encrypts — no .seismic() needed
 let receipt = contract
     .setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
     .send()
@@ -92,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let contract = SeismicCounter::new(contract_address, &provider);
 
-    // setNumber has a shielded param (suint256) -- auto-encrypts
+    // setNumber has a shielded param (suint256) — auto-encrypts
     let receipt = contract
         .setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
         .send()
@@ -188,13 +188,13 @@ let receipt = provider.seismic_send_with(addr, MyContract::setNumberCall { newNu
 For wallets that cannot sign custom RLP-encoded transaction types (e.g., MetaMask), use EIP-712 typed data signing:
 
 ```rust
-// EIP-712 shielded write -- setNumber auto-encrypts (shielded param)
+// EIP-712 shielded write — setNumber auto-encrypts (shielded param)
 contract.setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
     .eip712()
     .send()
     .await?;
 
-// EIP-712 shielded read -- isOdd needs .seismic() (no shielded params)
+// EIP-712 shielded read — isOdd needs .seismic() (no shielded params)
 let is_odd = contract.isOdd()
     .seismic()
     .eip712()
@@ -246,10 +246,10 @@ If you need direct control without the `#[sol(rpc)]` call builder pattern, use `
 ```rust
 // SignedProviderExt is included in the prelude
 
-// Shielded read (high-level -- ABI encodes/decodes automatically)
+// Shielded read (high-level — ABI encodes/decodes automatically)
 let is_odd: bool = provider.seismic_call(addr, SeismicCounter::isOddCall {}).await?;
 
-// Shielded write (high-level -- ABI encodes automatically)
+// Shielded write (high-level — ABI encodes automatically)
 let pending = provider.seismic_send(addr, SeismicCounter::setNumberCall {
     newNumber: alloy_primitives::aliases::SUInt(U256::from(42)),
 }).await?;

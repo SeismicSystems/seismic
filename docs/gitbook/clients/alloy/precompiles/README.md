@@ -71,7 +71,7 @@ use seismic_alloy_provider::precompiles;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    // Unsigned provider -- connect_http is synchronous
+    // Unsigned provider — connect_http is synchronous
     let provider = SeismicProviderBuilder::new().connect_http(url);
 
     // RNG: generate 32 random bytes with domain separation

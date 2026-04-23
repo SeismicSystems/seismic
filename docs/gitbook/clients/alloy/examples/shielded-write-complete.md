@@ -77,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Provider created. Block: {}", provider.get_block_number().await?);
 
     // -------------------------------------------------------
-    // 2. Deploy contract (transparent -- Create txs cannot be seismic)
+    // 2. Deploy contract (transparent — Create txs cannot be seismic)
     // -------------------------------------------------------
     println!("Deploying contract...");
     let contract = SeismicCounter::deploy(&provider).await?;
@@ -85,7 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Contract deployed at: {contract_address:?}");
 
     // -------------------------------------------------------
-    // 3. Shielded write -- setNumber has suint256 param, auto-encrypts
+    // 3. Shielded write — setNumber has suint256 param, auto-encrypts
     // -------------------------------------------------------
     println!("Sending shielded write (setNumber(42))...");
     let write_receipt = contract
@@ -100,19 +100,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Block: {:?}", write_receipt.block_number());
 
     // -------------------------------------------------------
-    // 4. Check receipt type -- should be SeismicReceiptEnvelope::Seismic
+    // 4. Check receipt type — should be SeismicReceiptEnvelope::Seismic
     // -------------------------------------------------------
     match write_receipt.inner {
         SeismicReceiptEnvelope::Seismic(_r) => {
-            println!("Receipt type: Seismic (0x4A) -- confirmed shielded transaction");
+            println!("Receipt type: Seismic (0x4A) — confirmed shielded transaction");
         }
         _ => {
-            println!("Receipt type: Standard -- not a seismic transaction");
+            println!("Receipt type: Standard — not a seismic transaction");
         }
     }
 
     // -------------------------------------------------------
-    // 5. Signed read -- encrypted isOdd()
+    // 5. Signed read — encrypted isOdd()
     // -------------------------------------------------------
     println!("Executing signed read (isOdd())...");
     let is_odd = contract.isOdd().seismic().call().await?;
@@ -123,7 +123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Verification passed: 42 is even");
 
     // -------------------------------------------------------
-    // 6. Shielded write -- increment to 43 (odd)
+    // 6. Shielded write — increment to 43 (odd)
     // -------------------------------------------------------
     println!("Sending shielded write (increment())...");
     let inc_receipt = contract
@@ -181,7 +181,7 @@ Contract deployed at: 0x5FbDB2315678afecb367f032d93F642f64180aa3
 Sending shielded write (setNumber(42))...
 Shielded write confirmed: 0xabc123...
 Block: Some(12346)
-Receipt type: Seismic (0x4A) -- confirmed shielded transaction
+Receipt type: Seismic (0x4A) — confirmed shielded transaction
 Executing signed read (isOdd())...
 isOdd() = false
 Verification passed: 42 is even

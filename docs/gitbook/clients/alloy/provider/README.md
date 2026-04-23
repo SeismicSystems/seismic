@@ -72,11 +72,11 @@ use seismic_prelude::client::*;
 
 let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
-// Read-only provider (HTTP) -- synchronous, no .await
+// Read-only provider (HTTP) — synchronous, no .await
 let provider = SeismicProviderBuilder::new()
     .connect_http(url);
 
-// Read-only provider (WebSocket) -- async due to WS handshake
+// Read-only provider (WebSocket) — async due to WS handshake
 let ws_url = "wss://testnet-1.seismictest.net/ws".parse()?;
 let provider = SeismicProviderBuilder::new()
     .connect_ws(ws_url)
@@ -120,23 +120,23 @@ Shown in **operational order** — what happens to a transaction as it flows out
 Request (TransactionRequest)
   |
   v
-NonceFiller           -- Fetches and sets the transaction nonce
-ChainIdFiller         -- Sets the chain ID
+NonceFiller           — Fetches and sets the transaction nonce
+ChainIdFiller         — Sets the chain ID
   |
   v
-SeismicElementsFiller -- Populates Seismic-specific fields AND encrypts
+SeismicElementsFiller — Populates Seismic-specific fields AND encrypts
   |                      calldata (AES-GCM with ECDH-derived key)
   v
-SeismicGasFiller      -- Signs the encrypted tx and calls eth_estimateGas
+SeismicGasFiller      — Signs the encrypted tx and calls eth_estimateGas
   |                      (so the node can authenticate msg.sender)
   v
-WalletFiller          -- Final signature over the fully-filled tx
+WalletFiller          — Final signature over the fully-filled tx
   |
   v
 Send to node
   |
   v
-(decrypt response)    -- AES-GCM decryption for seismic_call responses
+(decrypt response)    — AES-GCM decryption for seismic_call responses
 ```
 
 {% hint style="info" %}
@@ -149,11 +149,11 @@ In source (`crates/provider/src/builder.rs`) the chain is composed `Wallet → (
 Request (TransactionRequest)
   |
   v
-NonceFiller           -- Fetches and sets the transaction nonce
-ChainIdFiller         -- Sets the chain ID
+NonceFiller           — Fetches and sets the transaction nonce
+ChainIdFiller         — Sets the chain ID
   |
   v
-GasFiller             -- Estimates and sets gas parameters
+GasFiller             — Estimates and sets gas parameters
   |
   v
 Send to node

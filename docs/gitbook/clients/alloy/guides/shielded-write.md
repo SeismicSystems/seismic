@@ -70,7 +70,7 @@ Functions with shielded parameters (like `setNumber(suint256)`) auto-encrypt —
 ```rust
 let contract = SeismicCounter::new(contract_address, &provider);
 
-// setNumber has a shielded param (suint256) -- auto-encrypts
+// setNumber has a shielded param (suint256) — auto-encrypts
 let receipt = contract
     .setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
     .send()
@@ -78,7 +78,7 @@ let receipt = contract
     .get_receipt()
     .await?;
 
-// increment has no shielded params -- use .seismic() to encrypt
+// increment has no shielded params — use .seismic() to encrypt
 let receipt = contract
     .increment()
     .seismic()
@@ -115,7 +115,7 @@ Every shielded transaction includes a block-hash freshness check and an expiry w
 These values are set automatically by the filler pipeline. You can override them per-call:
 
 ```rust
-// setNumber auto-encrypts (shielded param) -- security params available directly
+// setNumber auto-encrypts (shielded param) — security params available directly
 let receipt = contract
     .setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
     .expires_at(current_block + 50)        // Custom expiration
@@ -251,7 +251,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect_http(url)
         .await?;
 
-    // 2. Shielded write -- setNumber auto-encrypts (shielded param)
+    // 2. Shielded write — setNumber auto-encrypts (shielded param)
     let contract_address = std::env::var("CONTRACT_ADDRESS")?.parse()?;
     let contract = SeismicCounter::new(contract_address, &provider);
 

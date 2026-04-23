@@ -133,7 +133,7 @@ use seismic_alloy_network::foundry::SeismicFoundry;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = std::env::var("PRIVATE_KEY")?.parse()?;
 
-    // For production / testnet (SeismicReth -- default)
+    // For production / testnet (SeismicReth — default)
     let wallet = SeismicWallet::from(signer.clone());
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
     let provider = SeismicProviderBuilder::new()

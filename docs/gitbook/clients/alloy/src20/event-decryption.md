@@ -108,7 +108,7 @@ sol! {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    // Unsigned provider -- connect_http is synchronous
+    // Unsigned provider — connect_http is synchronous
     let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
@@ -159,7 +159,7 @@ sol! {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    // Unsigned provider -- connect_http is synchronous
+    // Unsigned provider — connect_http is synchronous
     let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;

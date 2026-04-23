@@ -14,11 +14,11 @@ A signed read uses `.seismic().call()` (for functions without shielded params) o
 Any contract function that depends on `msg.sender` needs a signed read. A plain `eth_call` (transparent read) does not attach sender identity, so the contract sees the zero address as the caller.
 
 ```rust
-// Signed read -- proves your identity to the contract
+// Signed read — proves your identity to the contract
 // msg.sender = your wallet address
 let is_odd = contract.isOdd().seismic().call().await?;
 
-// Transparent read -- msg.sender is 0x0
+// Transparent read — msg.sender is 0x0
 // The contract does not know who is calling
 let is_odd = contract.isOdd().call().await?;
 ```
@@ -200,7 +200,7 @@ Not every read needs encryption. Use a transparent read (`.call()`) when:
 - You want to use an unsigned provider (no private key)
 
 ```rust
-// Transparent read -- works with any provider, including unsigned
+// Transparent read — works with any provider, including unsigned
 let is_odd = contract.isOdd().call().await?;
 ```
 

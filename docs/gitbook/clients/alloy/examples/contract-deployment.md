@@ -122,7 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect_http(url)
         .await?;
 
-    // Deploy contract (transparent -- Create txs cannot be seismic)
+    // Deploy contract (transparent — Create txs cannot be seismic)
     println!("Deploying SeismicCounter...");
     let contract = SeismicCounter::deploy(&provider).await?;
     println!("Deployed at: {:?}", contract.address());
@@ -141,7 +141,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Once deployed, interact with the contract using shielded calls:
 
 ```rust
-    // Shielded write -- setNumber has suint256 param, auto-encrypts
+    // Shielded write — setNumber has suint256 param, auto-encrypts
     println!("\nSending shielded write: setNumber(42)...");
     let write_receipt = contract
         .setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
@@ -152,7 +152,7 @@ Once deployed, interact with the contract using shielded calls:
     assert!(write_receipt.status());
     println!("Confirmed in block {:?}", write_receipt.block_number());
 
-    // Shielded write -- increment()
+    // Shielded write — increment()
     println!("Sending shielded write: increment()...");
     let inc_receipt = contract
         .increment()
@@ -163,7 +163,7 @@ Once deployed, interact with the contract using shielded calls:
         .await?;
     assert!(inc_receipt.status());
 
-    // Signed read -- isOdd()
+    // Signed read — isOdd()
     let is_odd = contract.isOdd().seismic().call().await?;
     println!("isOdd() = {is_odd} (43 is odd)");
     assert!(is_odd);
@@ -183,7 +183,7 @@ async fn subscribe_to_events(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let ws_url: reqwest::Url = std::env::var("WS_URL")?.parse()?;
 
-    // Create WebSocket provider (unsigned -- events are public)
+    // Create WebSocket provider (unsigned — events are public)
     let ws_provider = SeismicProviderBuilder::new()
         .connect_ws(ws_url)
         .await?;

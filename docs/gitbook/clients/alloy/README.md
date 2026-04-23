@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let is_odd = contract.isOdd().seismic().call().await?;
 
     // Shielded write (encrypted transaction)
-    // setNumber has a shielded param (suint256), so it auto-encrypts -- no .seismic() needed
+    // setNumber has a shielded param (suint256), so it auto-encrypts — no .seismic() needed
     contract.setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
         .send()
         .await?
@@ -63,7 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 ```rust
-// Unsigned provider -- read-only (no private key needed)
+// Unsigned provider — read-only (no private key needed)
 // Note: connect_http is synchronous for unsigned providers (no .await)
 let provider = SeismicProviderBuilder::new()
     .connect_http("https://testnet-1.seismictest.net/rpc".parse()?);
@@ -122,12 +122,12 @@ The SDK extends Alloy's provider model with a filler pipeline that automatically
 
 ```
 seismic-alloy (workspace)
-├── consensus    -- Seismic transaction types and consensus logic
-├── network      -- SeismicNetwork trait, SeismicReth, SeismicFoundry
-├── provider     -- SeismicProviderBuilder, fillers, precompile helpers
-├── rpc-types    -- Seismic-specific RPC request/response types
-├── genesis      -- Genesis configuration types
-└── prelude      -- Convenience re-exports from all crates
+├── consensus    — Seismic transaction types and consensus logic
+├── network      — SeismicNetwork trait, SeismicReth, SeismicFoundry
+├── provider     — SeismicProviderBuilder, fillers, precompile helpers
+├── rpc-types    — Seismic-specific RPC request/response types
+├── genesis      — Genesis configuration types
+└── prelude      — Convenience re-exports from all crates
 
 SeismicSignedProvider filler chain:
   WalletFiller

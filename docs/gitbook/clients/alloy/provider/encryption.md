@@ -272,7 +272,7 @@ use seismic_prelude::client::*;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    // Unsigned provider -- connect_http is synchronous
+    // Unsigned provider — connect_http is synchronous
     let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let tee_pubkey = provider.get_tee_pubkey().await?;

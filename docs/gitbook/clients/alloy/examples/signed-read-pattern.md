@@ -77,9 +77,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Contract deployed at: {:?}", contract.address());
 
     // -------------------------------------------------------
-    // 3. Write data (shielded) -- setNumber(42)
+    // 3. Write data (shielded) — setNumber(42)
     // -------------------------------------------------------
-    // setNumber has suint256 param -- auto-encrypts
+    // setNumber has suint256 param — auto-encrypts
     let write_receipt = contract
         .setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
         .send()
@@ -90,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Shielded write confirmed (setNumber(42))");
 
     // -------------------------------------------------------
-    // 4. Read it back (signed read) -- isOdd()
+    // 4. Read it back (signed read) — isOdd()
     // -------------------------------------------------------
     println!("\n--- Signed Read (.seismic().call()) ---");
     let signed_result = contract.isOdd().seismic().call().await?;
@@ -100,7 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  - Response was encrypted, then decrypted by provider");
 
     // -------------------------------------------------------
-    // 5. Compare with transparent read -- .call()
+    // 5. Compare with transparent read — .call()
     // -------------------------------------------------------
     println!("\n--- Transparent Read (.call()) ---");
     let transparent_result = contract.isOdd().call().await?;
@@ -121,9 +121,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // For functions that check msg.sender (e.g., balanceOf()),
     // the transparent read would return the zero address's data.
     if signed_result == transparent_result {
-        println!("Results match -- isOdd() does not depend on msg.sender");
+        println!("Results match — isOdd() does not depend on msg.sender");
     } else {
-        println!("Results differ -- the function depends on msg.sender");
+        println!("Results differ — the function depends on msg.sender");
     }
 
     Ok(())
@@ -189,7 +189,7 @@ isOdd() via transparent read: false
 --- Comparison ---
 Signed read result:      false
 Transparent read result:  false
-Results match -- isOdd() does not depend on msg.sender
+Results match — isOdd() does not depend on msg.sender
 ```
 
 ## Next Steps

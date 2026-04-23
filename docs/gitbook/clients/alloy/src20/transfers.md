@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let amount = U256::from(100);
     let contract = ISRC20::new(token, &provider);
 
-    // transfer has suint256 param -- auto-encrypts
+    // transfer has suint256 param — auto-encrypts
     let pending_tx = contract.transfer(recipient, amount).send().await?;
     let receipt = pending_tx.get_receipt().await?;
 
@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let approval_amount = U256::from(1000);
     let contract = ISRC20::new(token, &owner_provider);
 
-    // approve has suint256 param -- auto-encrypts
+    // approve has suint256 param — auto-encrypts
     let pending_tx = contract.approve(spender, approval_amount).send().await?;
     let receipt = pending_tx.get_receipt().await?;
 
@@ -118,7 +118,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let amount = U256::from(250);
     let contract = ISRC20::new(token, &spender_provider);
 
-    // transferFrom has suint256 param -- auto-encrypts
+    // transferFrom has suint256 param — auto-encrypts
     let pending_tx = contract.transferFrom(owner, recipient, amount).send().await?;
     let receipt = pending_tx.get_receipt().await?;
 

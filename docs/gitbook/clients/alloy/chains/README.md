@@ -64,7 +64,7 @@ The Alloy provider automatically fetches the chain ID from the connected node vi
 use seismic_prelude::client::*;
 
 let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-// Unsigned provider -- connect_http is synchronous
+// Unsigned provider — connect_http is synchronous
 let provider = SeismicProviderBuilder::new()
     .connect_http(url);
 

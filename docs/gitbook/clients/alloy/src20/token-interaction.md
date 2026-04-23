@@ -59,7 +59,7 @@ sol! {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    // Unsigned provider -- connect_http is synchronous
+    // Unsigned provider — connect_http is synchronous
     let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let token: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
@@ -196,7 +196,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let amount = U256::from(100);
     let contract = ISRC20::new(token, &provider);
 
-    // transfer has suint256 param -- auto-encrypts
+    // transfer has suint256 param — auto-encrypts
     let pending_tx = contract.transfer(recipient, amount).send().await?;
     let receipt = pending_tx.get_receipt().await?;
     println!("Transfer tx: {:?}", receipt.transaction_hash);
@@ -233,7 +233,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let amount = U256::from(500);
     let contract = ISRC20::new(token, &provider);
 
-    // approve has suint256 param -- auto-encrypts
+    // approve has suint256 param — auto-encrypts
     let pending_tx = contract.approve(spender, amount).send().await?;
     let receipt = pending_tx.get_receipt().await?;
     println!("Approve tx: {:?}", receipt.transaction_hash);

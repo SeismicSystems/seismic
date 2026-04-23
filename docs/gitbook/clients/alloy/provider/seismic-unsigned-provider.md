@@ -59,7 +59,7 @@ Use `.foundry()` to select the `SeismicFoundry` network type:
 use seismic_prelude::client::*;
 
 let url = "http://localhost:8545".parse()?;
-// Synchronous -- no .await
+// Synchronous — no .await
 let provider = SeismicProviderBuilder::new()
     .foundry()
     .connect_http(url);

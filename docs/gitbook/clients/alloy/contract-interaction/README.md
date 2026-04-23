@@ -90,10 +90,10 @@ let provider = SeismicProviderBuilder::new()
 
 let contract = SeismicCounter::new(address, &provider);
 
-// Shielded read -- isOdd() has no shielded params, so use .seismic()
+// Shielded read — isOdd() has no shielded params, so use .seismic()
 let is_odd = contract.isOdd().seismic().call().await?;
 
-// Shielded write -- setNumber has a shielded param (suint256), auto-encrypts
+// Shielded write — setNumber has a shielded param (suint256), auto-encrypts
 contract.setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
     .send()
     .await?

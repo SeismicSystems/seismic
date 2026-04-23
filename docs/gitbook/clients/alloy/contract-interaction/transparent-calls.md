@@ -64,7 +64,7 @@ sol! {
 
 let contract = MyContract::new(contract_address, &provider);
 
-// No .seismic() -- sent as standard Ethereum transaction
+// No .seismic() — sent as standard Ethereum transaction
 let receipt = contract
     .setPublicValue(U256::from(100))
     .send()
@@ -87,7 +87,7 @@ sol! {
 
 let contract = MyContract::new(contract_address, &provider);
 
-// Standard eth_call -- no encryption
+// Standard eth_call — no encryption
 let value = contract.getPublicValue().call().await?;
 ```
 
@@ -96,7 +96,7 @@ let value = contract.getPublicValue().call().await?;
 Transparent reads do not require a private key, so you can use an unsigned provider:
 
 ```rust
-// No private key needed -- connect_http is synchronous for unsigned providers
+// No private key needed — connect_http is synchronous for unsigned providers
 let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 let provider = SeismicProviderBuilder::new().connect_http(url);
 
@@ -131,11 +131,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect_http(url)
         .await?;
 
-    // 1. Deploy contract (transparent -- Create txs cannot be seismic)
+    // 1. Deploy contract (transparent — Create txs cannot be seismic)
     let contract = SeismicCounter::deploy(&provider).await?;
     println!("Deployed to: {:?}", contract.address());
 
-    // 2. Shielded write -- setNumber has a shielded param (suint256), auto-encrypts
+    // 2. Shielded write — setNumber has a shielded param (suint256), auto-encrypts
     contract.setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
         .send()
         .await?
