@@ -14,7 +14,7 @@ export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4
 export RPC_URL="https://testnet-1.seismictest.net/rpc"
 ```
 
-`Cargo.toml` -- see [Installation](../installation.md) for the full template including the required `[patch.crates-io]` block:
+`Cargo.toml` — see [Installation](../installation.md) for the full template including the required `[patch.crates-io]` block:
 
 ```toml
 [package]

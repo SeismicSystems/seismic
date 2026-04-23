@@ -148,7 +148,7 @@ Client                          TEE (Node)
 
 ### encryption_pubkey
 
-The compressed secp256k1 public key (33 bytes) used in the ECDH key exchange. For client-initiated transactions, this is the **client's provider-scoped public key** -- the TEE uses its own private key combined with this public key to derive the shared encryption secret.
+The compressed secp256k1 public key (33 bytes) used in the ECDH key exchange. For client-initiated transactions, this is the **client's provider-scoped public key** — the TEE uses its own private key combined with this public key to derive the shared encryption secret.
 
 ### encryption_nonce
 
@@ -158,8 +158,8 @@ A 12-byte (96-bit) random value used as the nonce for AES-GCM encryption. Must b
 
 Controls the signing method:
 
-- **`0`** -- Raw signing: the signing hash is computed from the RLP encoding of the unsigned transaction
-- **`2` or higher** -- EIP-712 signing: the signing hash is computed from structured typed data
+- **`0`** — Raw signing: the signing hash is computed from the RLP encoding of the unsigned transaction
+- **`2` or higher** — EIP-712 signing: the signing hash is computed from structured typed data
 
 The default value is `0` (raw RLP signing). Set `message_version = 2` for EIP-712 typed data signing.
 
@@ -173,8 +173,8 @@ The block number after which the transaction is rejected by the node. Typically 
 
 ### signed_read
 
-- **`false`** -- This is a write transaction that will be broadcast and modify state
-- **`true`** -- This is a signed `eth_call` for reading private state without state modification
+- **`false`** — This is a write transaction that will be broadcast and modify state
+- **`true`** — This is a signed `eth_call` for reading private state without state modification
 
 The filler pipeline sets this based on whether you call `send_transaction()` or `seismic_call()`.
 
@@ -215,14 +215,14 @@ let elements = TxSeismicElements {
 
 ## Notes
 
-- **Auto-populated by fillers.** In normal usage, you never construct `TxSeismicElements` manually -- the `SeismicElementsFiller` fills all fields from the network state.
+- **Auto-populated by fillers.** In normal usage, you never construct `TxSeismicElements` manually — the `SeismicElementsFiller` fills all fields from the network state.
 - **Nonce uniqueness is critical.** Reusing an AES-GCM nonce with the same key breaks confidentiality. The random nonce generator provides sufficient entropy.
 - **Part of AAD.** All fields in `TxSeismicElements` are included in the Additional Authenticated Data for AES-GCM, binding the ciphertext to these parameters.
 - **RLP-encoded.** Elements are included in the RLP encoding of `TxSeismic` for hashing and signing.
 
 ## See Also
 
-- [TxSeismic](tx-seismic.md) -- Parent struct containing `TxSeismicElements`
-- [TxSeismicMetadata](tx-seismic-metadata.md) -- Uses elements for AAD construction
-- [Encryption](../provider/encryption.md) -- Full encryption pipeline documentation
-- [Shielded Calls](../contract-interaction/shielded-calls.md) -- How encryption is used in practice
+- [TxSeismic](tx-seismic.md) — Parent struct containing `TxSeismicElements`
+- [TxSeismicMetadata](tx-seismic-metadata.md) — Uses elements for AAD construction
+- [Encryption](../provider/encryption.md) — Full encryption pipeline documentation
+- [Shielded Calls](../contract-interaction/shielded-calls.md) — How encryption is used in practice

@@ -249,20 +249,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Hash message** -- You apply the EIP-191 personal-sign prefix and keccak256 hash:
+1. **Hash message** — You apply the EIP-191 personal-sign prefix and keccak256 hash:
 
    ```
    prefix = "\x19Ethereum Signed Message:\n" + len(message)
    message_hash = keccak256(prefix + message)
    ```
 
-2. **Encode parameters** -- Concatenate the 32-byte private key and 32-byte message hash
+2. **Encode parameters** — Concatenate the 32-byte private key and 32-byte message hash
 
-3. **Call precompile** -- Issues an `eth_call` to address `0x69` with 3000 gas
+3. **Call precompile** — Issues an `eth_call` to address `0x69` with 3000 gas
 
-4. **Sign hash** -- Precompile performs ECDSA signing on the secp256k1 curve
+4. **Sign hash** — Precompile performs ECDSA signing on the secp256k1 curve
 
-5. **Return signature** -- Returns 65-byte signature (r + s + v)
+5. **Return signature** — Returns 65-byte signature (r + s + v)
 
 ## Gas Cost
 
@@ -303,13 +303,13 @@ This format is compatible with `ecrecover` and standard Ethereum signature verif
 
 ## Warnings
 
-- **Private key security** -- Never expose or log private keys
-- **Message format** -- Ensure messages are hashed correctly with EIP-191 prefix before sending to the precompile
-- **Signature malleability** -- Standard ECDSA signatures are malleable (use EIP-2098 compact signatures if needed)
-- **Non-deterministic** -- Multiple signatures of the same message will differ due to random `k` values
+- **Private key security** — Never expose or log private keys
+- **Message format** — Ensure messages are hashed correctly with EIP-191 prefix before sending to the precompile
+- **Signature malleability** — Standard ECDSA signatures are malleable (use EIP-2098 compact signatures if needed)
+- **Non-deterministic** — Multiple signatures of the same message will differ due to random `k` values
 
 ## See Also
 
-- [Precompiles Overview](./) -- All precompile reference
-- [ecdh](ecdh.md) -- ECDH key exchange
-- [EIP-191](https://eips.ethereum.org/EIPS/eip-191) -- Signed data standard
+- [Precompiles Overview](./) — All precompile reference
+- [ecdh](ecdh.md) — ECDH key exchange
+- [EIP-191](https://eips.ethereum.org/EIPS/eip-191) — Signed data standard

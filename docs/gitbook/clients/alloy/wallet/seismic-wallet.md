@@ -56,7 +56,7 @@ let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::new(signer);
 ```
 
-This is equivalent to using `From` -- the signer is registered and set as the default.
+This is equivalent to using `From` — the signer is registered and set as the default.
 
 ## Methods
 
@@ -122,7 +122,7 @@ Get an `Arc` reference to the default signer.
 pub fn default_signer(&self) -> Arc<dyn TxSigner<Signature> + Send + Sync>
 ```
 
-**Returns:** `Arc<dyn TxSigner<Signature> + Send + Sync>` -- The default signer.
+**Returns:** `Arc<dyn TxSigner<Signature> + Send + Sync>` — The default signer.
 
 ### `signer_by_address`
 
@@ -139,7 +139,7 @@ pub fn signer_by_address(
 | --------- | --------- | -------- | ---------------------- |
 | `address` | `Address` | Yes      | The address to look up |
 
-**Returns:** `Option<Arc<dyn TxSigner<Signature> + Send + Sync>>` -- The signer if registered, `None` otherwise.
+**Returns:** `Option<Arc<dyn TxSigner<Signature> + Send + Sync>>` — The signer if registered, `None` otherwise.
 
 ## Trait Implementations
 
@@ -147,9 +147,9 @@ pub fn signer_by_address(
 
 `SeismicWallet<N>` implements Alloy's `NetworkWallet<N>` trait, which is how the `WalletFiller` interacts with it during the filler pipeline:
 
-- `default_signer_address()` -- returns the default signer's address
-- `has_signer_for(address)` -- checks if a signer is registered for the given address
-- `signer_addresses()` -- returns an iterator over all registered signer addresses
+- `default_signer_address()` — returns the default signer's address
+- `has_signer_for(address)` — checks if a signer is registered for the given address
+- `signer_addresses()` — returns an iterator over all registered signer addresses
 
 ### `From<S> for SeismicWallet<N>`
 
@@ -240,9 +240,9 @@ let provider = SeismicProviderBuilder::new()
 
 - `SeismicWallet` is generic over `N: SeismicNetwork` so the same API works for both production and testing networks
 - Signers are stored as `Arc<dyn TxSigner<Signature>>`, allowing heterogeneous signer types in a single wallet
-- The `PhantomData<N>` field ensures type safety -- a `SeismicWallet<SeismicReth>` cannot be used with a `SeismicSignedProvider<SeismicFoundry>`
+- The `PhantomData<N>` field ensures type safety — a `SeismicWallet<SeismicReth>` cannot be used with a `SeismicSignedProvider<SeismicFoundry>`
 - `set_default_signer` panics on unregistered addresses; check with `signer_by_address` first if unsure
-- The wallet does not handle encryption -- that is the responsibility of `SeismicElementsFiller`
+- The wallet does not handle encryption — that is the responsibility of `SeismicElementsFiller`
 
 ## See Also
 

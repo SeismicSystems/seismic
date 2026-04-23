@@ -89,7 +89,7 @@ pub struct TxLegacyFields {
 | `value`    | `U256`            | Amount of wei to transfer                                          |
 
 {% hint style="info" %}
-`TxLegacyFields` is a subset of the full transaction fields. It contains only the fields needed for AAD construction -- gas-related fields (`gas_price`, `gas_limit`) are intentionally excluded because they may change during filling without invalidating the encryption.
+`TxLegacyFields` is a subset of the full transaction fields. It contains only the fields needed for AAD construction — gas-related fields (`gas_price`, `gas_limit`) are intentionally excluded because they may change during filling without invalidating the encryption.
 {% endhint %}
 
 ## Examples
@@ -188,14 +188,14 @@ With AAD binding:
 
 ## Notes
 
-- **Automatically constructed** by the provider during the encryption step -- most users never interact with this type directly
-- **Critical for security** -- the AAD binding is what prevents replay and parameter-tampering attacks
-- **Gas fields excluded** -- `gas_price` and `gas_limit` are intentionally not part of the AAD, allowing gas estimation to change without invalidating the encryption
-- **RLP-encoded** -- the `encode_as_aad()` method produces a deterministic RLP encoding that both client and TEE compute identically
+- **Automatically constructed** by the provider during the encryption step — most users never interact with this type directly
+- **Critical for security** — the AAD binding is what prevents replay and parameter-tampering attacks
+- **Gas fields excluded** — `gas_price` and `gas_limit` are intentionally not part of the AAD, allowing gas estimation to change without invalidating the encryption
+- **RLP-encoded** — the `encode_as_aad()` method produces a deterministic RLP encoding that both client and TEE compute identically
 
 ## See Also
 
-- [TxSeismic](tx-seismic.md) -- Transaction struct that provides `tx_metadata()` method
-- [TxSeismicElements](tx-seismic-elements.md) -- Encryption metadata included in AAD
-- [Encryption](../provider/encryption.md) -- Full encryption pipeline documentation
-- [Shielded Calls](../contract-interaction/shielded-calls.md) -- How AAD is used in practice
+- [TxSeismic](tx-seismic.md) — Transaction struct that provides `tx_metadata()` method
+- [TxSeismicElements](tx-seismic-elements.md) — Encryption metadata included in AAD
+- [Encryption](../provider/encryption.md) — Full encryption pipeline documentation
+- [Shielded Calls](../contract-interaction/shielded-calls.md) — How AAD is used in practice

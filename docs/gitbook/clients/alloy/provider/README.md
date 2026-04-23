@@ -7,8 +7,8 @@ icon: server
 
 The `seismic-alloy` provider crate exposes two provider types for interacting with Seismic nodes:
 
-- **[SeismicSignedProvider](seismic-signed-provider.md)** -- Full capabilities (shielded writes, signed reads, response decryption). Requires a wallet.
-- **[SeismicUnsignedProvider](seismic-unsigned-provider.md)** -- Read-only (public queries, block data). No wallet needed.
+- **[SeismicSignedProvider](seismic-signed-provider.md)** — Full capabilities (shielded writes, signed reads, response decryption). Requires a wallet.
+- **[SeismicUnsignedProvider](seismic-unsigned-provider.md)** — Read-only (public queries, block data). No wallet needed.
 
 Both are constructed using `SeismicProviderBuilder` and are generic over `N: SeismicNetwork`, which determines the network-specific transaction and receipt types.
 
@@ -114,7 +114,7 @@ Both providers use Alloy's filler pipeline to automatically populate transaction
 
 ### Signed Provider Filler Chain
 
-Shown in **operational order** -- what happens to a transaction as it flows out to the node.
+Shown in **operational order** — what happens to a transaction as it flows out to the node.
 
 ```
 Request (TransactionRequest)
@@ -140,7 +140,7 @@ Send to node
 ```
 
 {% hint style="info" %}
-In source (`crates/provider/src/builder.rs`) the chain is composed `Wallet → (Nonce + ChainId) → SeismicElements → Gas`. Chain position doesn't equal execution order: each filler's `status()` gate decides when it fires, and `WalletFiller` only reports ready once all the other fields are populated -- so signing ends up last in practice.
+In source (`crates/provider/src/builder.rs`) the chain is composed `Wallet → (Nonce + ChainId) → SeismicElements → Gas`. Chain position doesn't equal execution order: each filler's `status()` gate decides when it fires, and `WalletFiller` only reports ready once all the other fields are populated — so signing ends up last in practice.
 {% endhint %}
 
 ### Unsigned Provider Filler Chain
@@ -180,7 +180,7 @@ pub trait SeismicProviderExt<N: SeismicNetwork>: Provider<N> {
 | Method               | Description                                    |
 | -------------------- | ---------------------------------------------- |
 | `transparent_call()` | Standard `eth_call` without encryption         |
-| `transparent_send()` | Standard transaction without encryption. **Requires a wallet** -- calling on `SeismicUnsignedProvider` fails at runtime. |
+| `transparent_send()` | Standard transaction without encryption. **Requires a wallet** — calling on `SeismicUnsignedProvider` fails at runtime. |
 | `get_tee_pubkey()`   | Fetch the TEE public key from the node         |
 
 ### SignedProviderExt (sealed trait, signed provider only)
@@ -219,7 +219,7 @@ Provider methods return `TransportResult<_>`, but the underlying `TransportError
 | Variant                     | When it fires                                                                                     |
 | --------------------------- | ------------------------------------------------------------------------------------------------- |
 | `AbiDecode(err)`            | Response decoded past decryption but the bytes didn't match the call's return type                |
-| `Decryption(msg)`           | ECDH / AES-GCM decrypt failed -- AAD mismatch, wrong key, or corrupted ciphertext                 |
+| `Decryption(msg)`           | ECDH / AES-GCM decrypt failed — AAD mismatch, wrong key, or corrupted ciphertext                 |
 | `MissingSender`             | A filled transaction reached the decryption layer without a `from` field                          |
 | `MetadataCreation(msg)`     | Couldn't build `TxSeismicMetadata` for AAD construction from the filled transaction               |
 | `NotSeismicEnvelope`        | Decryption asked for a seismic envelope but got a non-seismic transaction type                    |
@@ -229,7 +229,7 @@ Provider methods return `TransportResult<_>`, but the underlying `TransportError
 
 Typical mitigation:
 
-- `AbiDecode` and `Decryption` usually mean a provider/wallet mismatch or a tampered ciphertext -- rebuild the provider against the same node and retry.
+- `AbiDecode` and `Decryption` usually mean a provider/wallet mismatch or a tampered ciphertext — rebuild the provider against the same node and retry.
 - `MissingSender` / `MetadataCreation` / `NotSeismicEnvelope` signal a filler pipeline misconfiguration; check that you built the provider via `SeismicProviderBuilder` rather than assembling fillers by hand.
 - `Eip712*` errors only surface in the `eip712_send` path and usually mean the tx wasn't flagged as EIP-712 (missing `message_version >= 2` or missing `.eip712()` on the call builder).
 
@@ -252,6 +252,6 @@ Both types implement `SeismicNetwork`, which extends Alloy's `Network` trait wit
 
 ## See Also
 
-- [Installation](../installation.md) -- Add seismic-alloy to your project
-- [Encryption](encryption.md) -- How calldata encryption works
-- [seismic-alloy Overview](../) -- SDK architecture and crate structure
+- [Installation](../installation.md) — Add seismic-alloy to your project
+- [Encryption](encryption.md) — How calldata encryption works
+- [seismic-alloy Overview](../) — SDK architecture and crate structure

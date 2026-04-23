@@ -165,8 +165,8 @@ let tx = contract.setValue(U256::from(42)).seismic();
 | ----------------------------- | ------------------------------------------ |
 | Local testing with Sanvil     | Yes                                        |
 | Integration tests in CI       | Yes (if using Sanvil)                      |
-| Connecting to Seismic testnet | No -- use [`SeismicReth`](seismic-reth.md) |
-| Connecting to Seismic mainnet | No -- use [`SeismicReth`](seismic-reth.md) |
+| Connecting to Seismic testnet | No — use [`SeismicReth`](seismic-reth.md) |
+| Connecting to Seismic mainnet | No — use [`SeismicReth`](seismic-reth.md) |
 
 ## Notes
 

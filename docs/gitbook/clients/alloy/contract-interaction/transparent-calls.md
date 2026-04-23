@@ -9,7 +9,7 @@ Non-encrypted contract interactions using standard Ethereum transaction types. U
 
 ## Overview
 
-Transparent calls are standard Ethereum operations that do not use Seismic encryption. Calldata and return values are visible on-chain, just like any regular Ethereum transaction. For functions without shielded parameters, simply use `.call()` or `.send()` directly (without `.seismic()`). Note that functions with shielded parameters (e.g., `suint256`) auto-encrypt by default -- see [Shielded Calls](shielded-calls.md) for details.
+Transparent calls are standard Ethereum operations that do not use Seismic encryption. Calldata and return values are visible on-chain, just like any regular Ethereum transaction. For functions without shielded parameters, simply use `.call()` or `.send()` directly (without `.seismic()`). Note that functions with shielded parameters (e.g., `suint256`) auto-encrypt by default — see [Shielded Calls](shielded-calls.md) for details.
 
 ## When to Use Transparent Calls
 
@@ -177,7 +177,7 @@ When neither auto-encryption nor `.seismic()` is used:
 
 ## See Also
 
-- [Shielded Calls](shielded-calls.md) -- Encrypted contract interactions
-- [Contract Interaction Overview](./) -- Comparison of all interaction patterns
-- [SeismicUnsignedProvider](../provider/seismic-unsigned-provider.md) -- Read-only provider for transparent operations
-- [SeismicSignedProvider](../provider/seismic-signed-provider.md) -- Full-featured provider
+- [Shielded Calls](shielded-calls.md) — Encrypted contract interactions
+- [Contract Interaction Overview](./) — Comparison of all interaction patterns
+- [SeismicUnsignedProvider](../provider/seismic-unsigned-provider.md) — Read-only provider for transparent operations
+- [SeismicSignedProvider](../provider/seismic-signed-provider.md) — Full-featured provider

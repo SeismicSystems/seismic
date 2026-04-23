@@ -11,9 +11,9 @@ Detailed documentation of the encryption flow used by `SeismicSignedProvider` to
 
 Seismic uses end-to-end encryption between the client and the node's Trusted Execution Environment (TEE). The encryption ensures that:
 
-1. **Calldata confidentiality** -- Transaction input data is encrypted before leaving the client
-2. **Context binding** -- Ciphertext is cryptographically bound to the transaction context (sender, nonce, chain ID) via Additional Authenticated Data (AAD)
-3. **Response privacy** -- `seismic_call` responses are encrypted by the TEE and only the requesting client can decrypt them
+1. **Calldata confidentiality** — Transaction input data is encrypted before leaving the client
+2. **Context binding** — Ciphertext is cryptographically bound to the transaction context (sender, nonce, chain ID) via Additional Authenticated Data (AAD)
+3. **Response privacy** — `seismic_call` responses are encrypted by the TEE and only the requesting client can decrypt them
 
 The encryption scheme uses ECDH key agreement to derive a shared AES-GCM key, which is then used for symmetric encryption of calldata and decryption of responses.
 
@@ -71,7 +71,7 @@ This keypair is:
 - Generated once per provider instance
 - Used for all ECDH key agreements with the TEE
 - Not related to the wallet's signing key
-- Provider-scoped -- lives for the lifetime of the provider, then discarded when the provider is dropped
+- Provider-scoped — lives for the lifetime of the provider, then discarded when the provider is dropped
 
 ### TEE Public Key
 
@@ -141,8 +141,8 @@ ciphertext || auth_tag = AES-GCM-Encrypt(aes_key, nonce, plaintext, aad)
 
 The output is the concatenation of:
 
-- **Ciphertext** -- same length as the plaintext
-- **Authentication tag** -- 16 bytes (AES-GCM standard)
+- **Ciphertext** — same length as the plaintext
+- **Authentication tag** — 16 bytes (AES-GCM standard)
 
 ### Decryption Operation
 
@@ -161,9 +161,9 @@ Decryption fails (raises an error) if:
 
 The AAD cryptographically binds the ciphertext to the transaction context. This prevents:
 
-- **Replay attacks** -- Ciphertext cannot be reused in a different transaction
-- **Context manipulation** -- Changing any transaction field invalidates the ciphertext
-- **Cross-chain attacks** -- Ciphertext is bound to a specific chain ID
+- **Replay attacks** — Ciphertext cannot be reused in a different transaction
+- **Context manipulation** — Changing any transaction field invalidates the ciphertext
+- **Cross-chain attacks** — Ciphertext is bound to a specific chain ID
 
 ### AAD Composition
 
@@ -179,7 +179,7 @@ The AAD is constructed from the following transaction fields, RLP-encoded:
 | `seismic_elements` | RLP-encoded | Seismic-specific transaction fields (encryption nonce, block hash, expiry, etc.) |
 
 {% hint style="info" %}
-If any AAD field changes between encryption and decryption, the authentication tag verification will fail and decryption will return an error. This is a security feature -- it ensures the ciphertext can only be used in the exact transaction context it was encrypted for.
+If any AAD field changes between encryption and decryption, the authentication tag verification will fail and decryption will return an error. This is a security feature — it ensures the ciphertext can only be used in the exact transaction context it was encrypted for.
 {% endhint %}
 
 ### AAD Construction
@@ -194,7 +194,7 @@ The `seismic_elements` field itself contains:
 
 - Client's provider public key (`encryption_pubkey`, 33 bytes compressed secp256k1)
 - Encryption nonce (`encryption_nonce`, 12 bytes)
-- Message version (`message_version`, `u8` -- `0` for RLP signing, `>= 2` for EIP-712)
+- Message version (`message_version`, `u8` — `0` for RLP signing, `>= 2` for EIP-712)
 - Recent block hash (`recent_block_hash`)
 - Expiry block number (`expires_at_block`)
 - Signed-read flag (`signed_read`, `true` for encrypted `eth_call`, `false` for writes)
@@ -245,7 +245,7 @@ Each `SeismicSignedProvider` instance generates a fresh provider-scoped keypair.
 AES-GCM requires unique nonces for each encryption under the same key. The Seismic filler pipeline generates fresh 12-byte nonces for each transaction, ensuring nonce uniqueness.
 
 {% hint style="warning" %}
-Reusing an AES-GCM nonce with the same key is catastrophic -- it allows an attacker to recover the plaintext. The SDK handles nonce generation automatically. Do not manually set encryption nonces unless you have a strong reason and understand the implications.
+Reusing an AES-GCM nonce with the same key is catastrophic — it allows an attacker to recover the plaintext. The SDK handles nonce generation automatically. Do not manually set encryption nonces unless you have a strong reason and understand the implications.
 {% endhint %}
 
 ### Authentication
@@ -330,7 +330,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Notes
 
-- Encryption is handled automatically by the filler pipeline -- you do not need to encrypt calldata manually
+- Encryption is handled automatically by the filler pipeline — you do not need to encrypt calldata manually
 - The provider keypair is generated per provider instance, not per transaction
 - The TEE public key is assumed to be static for the lifetime of a provider instance
 - All encryption uses AES-256-GCM (256-bit key, 96-bit nonce, 128-bit authentication tag)
@@ -339,7 +339,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## See Also
 
-- [SeismicSignedProvider](seismic-signed-provider.md) -- Provider with full encryption capabilities
-- [SeismicUnsignedProvider](seismic-unsigned-provider.md) -- Provider without encryption
-- [Provider Overview](./) -- Comparison of provider types and filler pipelines
-- [Installation](../installation.md) -- Add seismic-alloy to your project
+- [SeismicSignedProvider](seismic-signed-provider.md) — Provider with full encryption capabilities
+- [SeismicUnsignedProvider](seismic-unsigned-provider.md) — Provider without encryption
+- [Provider Overview](./) — Comparison of provider types and filler pipelines
+- [Installation](../installation.md) — Add seismic-alloy to your project

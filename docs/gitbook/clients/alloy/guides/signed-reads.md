@@ -23,7 +23,7 @@ let is_odd = contract.isOdd().seismic().call().await?;
 let is_odd = contract.isOdd().call().await?;
 ```
 
-A common example: a contract with a `balanceOf()` function that takes no arguments and uses `msg.sender` internally to look up the caller's balance. If you call it with a transparent read, the contract sees the zero address and returns its balance -- which is almost certainly zero.
+A common example: a contract with a `balanceOf()` function that takes no arguments and uses `msg.sender` internally to look up the caller's balance. If you call it with a transparent read, the contract sees the zero address and returns its balance — which is almost certainly zero.
 
 ---
 
@@ -77,14 +77,14 @@ let is_odd = contract.isOdd().seismic().call().await?;
 println!("Is odd: {is_odd}");
 ```
 
-The return value is already decoded -- no manual ABI decoding needed.
+The return value is already decoded — no manual ABI decoding needed.
 
 {% hint style="info" %}
 Use `.seismic().call()` for signed reads on functions without shielded params, and `.seismic().send()` or direct `.send()` for shielded writes. Both encrypt calldata, but `.call()` also decrypts the response and does not modify on-chain state. Functions with shielded parameters auto-encrypt, so `.seismic()` is not needed for those.
 {% endhint %}
 
 {% hint style="warning" %}
-Calling `.seismic()` on a function that already has shielded parameters is `#[deprecated]` and produces a compiler warning -- it's redundant because the call builder is already a `ShieldedCallBuilder`. Call `.call()` or `.send()` directly on those functions.
+Calling `.seismic()` on a function that already has shielded parameters is `#[deprecated]` and produces a compiler warning — it's redundant because the call builder is already a `ShieldedCallBuilder`. Call `.call()` or `.send()` directly on those functions.
 {% endhint %}
 
 ---

@@ -19,7 +19,7 @@ export RPC_URL="https://testnet-1.seismictest.net/rpc"
 export WS_URL="wss://testnet-1.seismictest.net/ws"
 ```
 
-`Cargo.toml` -- see [Installation](../installation.md) for the full template including the required `[patch.crates-io]` block:
+`Cargo.toml` — see [Installation](../installation.md) for the full template including the required `[patch.crates-io]` block:
 
 ```toml
 [package]

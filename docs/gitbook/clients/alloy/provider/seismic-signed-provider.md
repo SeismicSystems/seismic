@@ -214,7 +214,7 @@ let chain_id = provider.get_chain_id().await?;
 
 ## Filler Chain
 
-Listed in **operational order** -- what actually happens to the transaction as it's prepared:
+Listed in **operational order** — what actually happens to the transaction as it's prepared:
 
 | Step | Filler                  | Purpose                                                                                                    |
 | ---- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -334,26 +334,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Construction** -- Generates a provider-scoped secp256k1 keypair (the "provider keypair") and fetches (or accepts) the TEE public key. Computes the ECDH shared secret between the provider key and the TEE pubkey.
+1. **Construction** — Generates a provider-scoped secp256k1 keypair (the "provider keypair") and fetches (or accepts) the TEE public key. Computes the ECDH shared secret between the provider key and the TEE pubkey.
 
-2. **Transaction building** -- The filler chain populates all transaction fields: nonce, chain ID, Seismic elements (encryption nonce, block hash, expiry), and gas.
+2. **Transaction building** — The filler chain populates all transaction fields: nonce, chain ID, Seismic elements (encryption nonce, block hash, expiry), and gas.
 
-3. **Encryption** -- Before sending, calldata is encrypted using AES-GCM. The encryption key is derived from the ECDH shared secret. Additional Authenticated Data (AAD) binds the ciphertext to the transaction context.
+3. **Encryption** — Before sending, calldata is encrypted using AES-GCM. The encryption key is derived from the ECDH shared secret. Additional Authenticated Data (AAD) binds the ciphertext to the transaction context.
 
-4. **Sending** -- The encrypted transaction is signed by the wallet and sent to the node.
+4. **Sending** — The encrypted transaction is signed by the wallet and sent to the node.
 
-5. **Response decryption** -- For `seismic_call()` / `seismic_call_raw()` requests, the response is decrypted using the same ECDH shared secret.
+5. **Response decryption** — For `seismic_call()` / `seismic_call_raw()` requests, the response is decrypted using the same ECDH shared secret.
 
 ## Notes
 
 - The provider keypair is generated once at provider creation and reused for all operations (it is provider-scoped, not per-message)
 - The TEE public key is cached after the initial fetch
-- All standard Alloy `Provider` methods work unchanged -- only transactions with calldata are encrypted
+- All standard Alloy `Provider` methods work unchanged — only transactions with calldata are encrypted
 - Both HTTP and WebSocket transports are supported
 
 ## See Also
 
-- [SeismicUnsignedProvider](seismic-unsigned-provider.md) -- Read-only provider without wallet
-- [Encryption](encryption.md) -- Detailed encryption flow and ECDH key exchange
-- [Provider Overview](./) -- Comparison of provider types and filler pipeline
-- [Installation](../installation.md) -- Add seismic-alloy to your project
+- [SeismicUnsignedProvider](seismic-unsigned-provider.md) — Read-only provider without wallet
+- [Encryption](encryption.md) — Detailed encryption flow and ECDH key exchange
+- [Provider Overview](./) — Comparison of provider types and filler pipeline
+- [Installation](../installation.md) — Add seismic-alloy to your project

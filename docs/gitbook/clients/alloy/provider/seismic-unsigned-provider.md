@@ -20,7 +20,7 @@ For full capabilities (shielded writes, signed reads, response decryption), use 
 
 ## Construction
 
-All unsigned providers are created via `SeismicProviderBuilder` -- simply omit `.wallet()`:
+All unsigned providers are created via `SeismicProviderBuilder` — simply omit `.wallet()`:
 
 ### HTTP
 
@@ -85,7 +85,7 @@ Unlike `SeismicSignedProvider`, the unsigned provider does **not** cache the TEE
 {% endhint %}
 
 {% hint style="warning" %}
-`SeismicProviderExt::transparent_send` is visible on this type for trait-bound reasons, but calling it fails at runtime -- there is no wallet to sign with. Use `SeismicSignedProvider` whenever you need to broadcast a transaction, transparent or shielded.
+`SeismicProviderExt::transparent_send` is visible on this type for trait-bound reasons, but calling it fails at runtime — there is no wallet to sign with. Use `SeismicSignedProvider` whenever you need to broadcast a transaction, transparent or shielded.
 {% endhint %}
 
 ### Via Standard Alloy `Provider`
@@ -205,7 +205,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | Limitation                    | Details                                                                  |
 | ----------------------------- | ------------------------------------------------------------------------ |
 | **No shielded call builder**  | `.seismic()` and auto-encryption are compile-time restricted to signed providers |
-| **No transaction signing**    | Cannot send transactions -- use `SeismicSignedProvider`                  |
+| **No transaction signing**    | Cannot send transactions — use `SeismicSignedProvider`                  |
 | **No shielded calls**         | `SignedProviderExt` methods (`seismic_call`, `seismic_send`, etc.) are not available |
 | **No TEE pubkey caching**     | Each `get_tee_pubkey()` call makes a fresh RPC request                   |
 
@@ -217,7 +217,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## See Also
 
-- [SeismicSignedProvider](seismic-signed-provider.md) -- Full-featured provider with wallet and encryption
-- [Encryption](encryption.md) -- How calldata encryption works (signed provider only)
-- [Provider Overview](./) -- Comparison of provider types
-- [Installation](../installation.md) -- Add seismic-alloy to your project
+- [SeismicSignedProvider](seismic-signed-provider.md) — Full-featured provider with wallet and encryption
+- [Encryption](encryption.md) — How calldata encryption works (signed provider only)
+- [Provider Overview](./) — Comparison of provider types
+- [Installation](../installation.md) — Add seismic-alloy to your project

@@ -110,7 +110,7 @@ Access the provider secret key generated at construction time.
 pub fn provider_secret_key(&self) -> &SecretKey
 ```
 
-**Returns:** `&SecretKey` -- Reference to the provider secret key.
+**Returns:** `&SecretKey` — Reference to the provider secret key.
 
 ## Two-Phase Design
 
@@ -120,8 +120,8 @@ pub fn provider_secret_key(&self) -> &SecretKey
 
 The prepare phase is async. It fetches external data needed for encryption:
 
-1. **TEE public key** -- Fetched from the node via `seismic_getTeePublicKey` RPC call (or uses cached value)
-2. **Latest block number** -- Fetched to calculate the expiration block
+1. **TEE public key** — Fetched from the node via `seismic_getTeePublicKey` RPC call (or uses cached value)
+2. **Latest block number** — Fetched to calculate the expiration block
 
 These values are returned as a "fillable" that is passed to the fill phase.
 
@@ -206,7 +206,7 @@ let filler = SeismicElementsFiller::new()
 ## Notes
 
 - The provider secret key is generated once at construction and reused for all transactions through this filler instance
-- The TEE public key is fetched lazily and cached -- only one RPC call is made per filler instance
+- The TEE public key is fetched lazily and cached — only one RPC call is made per filler instance
 - For non-Seismic transactions, the filler does nothing (no encryption, no elements)
 - The encryption uses `seismic-enclave` under the hood for ECDH and AES-GCM operations
 - If the TEE public key changes (e.g., node rotation), you need a new filler or provider instance

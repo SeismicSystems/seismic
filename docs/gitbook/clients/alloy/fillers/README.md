@@ -11,8 +11,8 @@ Fillers are Alloy's middleware pattern for preparing transactions before they ar
 
 When you call a method that sends a transaction through `SeismicSignedProvider`, the transaction request passes through a chain of fillers before it reaches the network. Each filler has two phases:
 
-1. **Prepare** -- Check what data is needed and fetch it (async). For example, fetch the TEE public key from the node.
-2. **Fill** -- Apply the prepared data to the transaction request. For example, encrypt the calldata and attach seismic elements.
+1. **Prepare** — Check what data is needed and fetch it (async). For example, fetch the TEE public key from the node.
+2. **Fill** — Apply the prepared data to the transaction request. For example, encrypt the calldata and attach seismic elements.
 
 The full filler chain for `SeismicSignedProvider` is:
 

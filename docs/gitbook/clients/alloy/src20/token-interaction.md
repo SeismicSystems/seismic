@@ -11,9 +11,9 @@ Read shielded balances and write shielded state changes on SRC20 tokens using se
 
 SRC20 token interaction in Rust follows the same builder pattern as all seismic-alloy contract calls:
 
-- **Transparent reads** (metadata) -- Use `contract.name().call()` without `.seismic()`
-- **Signed reads** (balances, allowances) -- Use `contract.balanceOf(addr).seismic().call()` with `.seismic()` (no shielded params in arguments)
-- **Shielded writes** (transfers, approvals) -- Use `contract.transfer(to, amount).send()` directly (auto-encrypts because `suint256` is a shielded param)
+- **Transparent reads** (metadata) — Use `contract.name().call()` without `.seismic()`
+- **Signed reads** (balances, allowances) — Use `contract.balanceOf(addr).seismic().call()` with `.seismic()` (no shielded params in arguments)
+- **Shielded writes** (transfers, approvals) — Use `contract.transfer(to, amount).send()` directly (auto-encrypts because `suint256` is a shielded param)
 
 ## Defining the Interface
 
@@ -123,7 +123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 {% hint style="warning" %}
-`balanceOf()` requires a **signed read** via `.seismic().call()`. A plain `.call()` without `.seismic()` zeros out the `from` field, causing the contract to see the zero address as the sender and return its balance -- which is almost certainly zero.
+`balanceOf()` requires a **signed read** via `.seismic().call()`. A plain `.call()` without `.seismic()` zeros out the `from` field, causing the contract to see the zero address as the sender and return its balance — which is almost certainly zero.
 {% endhint %}
 
 ## Reading Allowances
@@ -262,7 +262,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## See Also
 
-- [Transfers](transfers.md) -- Shielded transfer patterns and multi-step workflows
-- [Event Decryption](event-decryption.md) -- Decrypting SRC20 events
-- [Contract Interaction](../contract-interaction/) -- General shielded and transparent call patterns
-- [SeismicSignedProvider](../provider/seismic-signed-provider.md) -- Provider with signing capabilities
+- [Transfers](transfers.md) — Shielded transfer patterns and multi-step workflows
+- [Event Decryption](event-decryption.md) — Decrypting SRC20 events
+- [Contract Interaction](../contract-interaction/) — General shielded and transparent call patterns
+- [SeismicSignedProvider](../provider/seismic-signed-provider.md) — Provider with signing capabilities

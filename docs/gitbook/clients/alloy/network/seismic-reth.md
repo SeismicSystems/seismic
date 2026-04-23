@@ -135,7 +135,7 @@ let provider = SeismicProviderBuilder::new()
 | Connecting to Seismic testnet | Yes                                              |
 | Connecting to Seismic devnet  | Yes                                              |
 | Connecting to Seismic mainnet | Yes                                              |
-| Local testing with Sanvil     | No -- use [`SeismicFoundry`](seismic-foundry.md) |
+| Local testing with Sanvil     | No — use [`SeismicFoundry`](seismic-foundry.md) |
 
 ## Notes
 

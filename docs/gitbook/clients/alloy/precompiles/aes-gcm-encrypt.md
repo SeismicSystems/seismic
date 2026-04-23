@@ -263,10 +263,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Encode parameters** -- Concatenates 32-byte key + 12-byte nonce + plaintext
-2. **Call precompile** -- Issues an `eth_call` to address `0x66` with estimated gas
-3. **Encrypt data** -- Precompile performs AES-256-GCM encryption
-4. **Return ciphertext** -- Returns encrypted data with 16-byte authentication tag appended
+1. **Encode parameters** — Concatenates 32-byte key + 12-byte nonce + plaintext
+2. **Call precompile** — Issues an `eth_call` to address `0x66` with estimated gas
+3. **Encrypt data** — Precompile performs AES-256-GCM encryption
+4. **Return ciphertext** — Returns encrypted data with 16-byte authentication tag appended
 
 ## Gas Cost
 
@@ -297,14 +297,14 @@ For example:
 
 ## Warnings
 
-- **Nonce reuse** -- NEVER reuse the same nonce with the same key. This breaks confidentiality and can leak the plaintext.
-- **Key security** -- Keep AES keys secure and never expose them in logs or error messages
-- **Authentication tag** -- The 16-byte tag is appended to the ciphertext and must be included when decrypting
-- **Counter management** -- When using integer nonces, ensure they are sequential and never repeated
+- **Nonce reuse** — NEVER reuse the same nonce with the same key. This breaks confidentiality and can leak the plaintext.
+- **Key security** — Keep AES keys secure and never expose them in logs or error messages
+- **Authentication tag** — The 16-byte tag is appended to the ciphertext and must be included when decrypting
+- **Counter management** — When using integer nonces, ensure they are sequential and never repeated
 
 ## See Also
 
-- [Precompiles Overview](./) -- All precompile reference
-- [aes-gcm-decrypt](aes-gcm-decrypt.md) -- Decrypt AES-GCM ciphertext
-- [ecdh](ecdh.md) -- Derive shared encryption keys
-- [Encryption](../provider/encryption.md) -- How the provider uses AES-GCM internally
+- [Precompiles Overview](./) — All precompile reference
+- [aes-gcm-decrypt](aes-gcm-decrypt.md) — Decrypt AES-GCM ciphertext
+- [ecdh](ecdh.md) — Derive shared encryption keys
+- [Encryption](../provider/encryption.md) — How the provider uses AES-GCM internally

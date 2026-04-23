@@ -105,7 +105,7 @@ use seismic_alloy_network::reth::SeismicReth;
 ```
 
 {% hint style="info" %}
-The prelude also has `seismic_prelude::foundry::*` and `seismic_prelude::reth::*` modules designed for Seismic's internal forks of Foundry and Reth. These re-export Seismic types under upstream naming conventions to minimize merge conflicts. **Do not use them in application code** -- they pull in revm internals and aliases that are confusing outside of the fork context. Use `seismic_prelude::client::*` instead.
+The prelude also has `seismic_prelude::foundry::*` and `seismic_prelude::reth::*` modules designed for Seismic's internal forks of Foundry and Reth. These re-export Seismic types under upstream naming conventions to minimize merge conflicts. **Do not use them in application code** — they pull in revm internals and aliases that are confusing outside of the fork context. Use `seismic_prelude::client::*` instead.
 {% endhint %}
 
 ## Key Dependencies
@@ -115,10 +115,10 @@ The prelude also has `seismic_prelude::foundry::*` and `seismic_prelude::reth::*
 | Dependency         | Version | Purpose                                                |
 | ------------------ | ------- | ------------------------------------------------------ |
 | `alloy`            | 1.1.0   | Core Ethereum toolkit (providers, signers, transports) |
-| `alloy-primitives` | --      | With `"seismic"` feature flag enabled                  |
+| `alloy-primitives` | —      | With `"seismic"` feature flag enabled                  |
 | `seismic-enclave`  | 0.1.0   | TEE key exchange and AES-GCM encryption                |
 | `tokio`            | 1.x     | Async runtime                                          |
-| `reqwest`          | --      | HTTP transport for RPC calls                           |
+| `reqwest`          | —      | HTTP transport for RPC calls                           |
 
 ## Minimal Working Example
 
@@ -223,14 +223,14 @@ seismic-prelude = { git = "https://github.com/SeismicSystems/seismic-alloy.git" 
 
 ## Notes
 
-- The workspace version is `0.0.1` -- the API may change before a stable release
+- The workspace version is `0.0.1` — the API may change before a stable release
 - The Rust edition is 2021
 - `alloy-primitives` is used with the `"seismic"` feature flag, which adds Seismic-specific primitive types
 - All provider operations are async and require a Tokio runtime
 
 ## See Also
 
-- [Provider Overview](provider/) -- Signed and unsigned provider types
-- [SeismicSignedProvider](provider/seismic-signed-provider.md) -- Full-featured provider
-- [SeismicUnsignedProvider](provider/seismic-unsigned-provider.md) -- Read-only provider
-- [Encryption](provider/encryption.md) -- How calldata encryption works
+- [Provider Overview](provider/) — Signed and unsigned provider types
+- [SeismicSignedProvider](provider/seismic-signed-provider.md) — Full-featured provider
+- [SeismicUnsignedProvider](provider/seismic-unsigned-provider.md) — Read-only provider
+- [Encryption](provider/encryption.md) — How calldata encryption works

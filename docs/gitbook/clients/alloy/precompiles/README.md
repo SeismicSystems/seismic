@@ -5,15 +5,15 @@ icon: microchip
 
 # Precompiles
 
-Mercury EVM ships with six cryptographic precompiles at fixed addresses. They are callable via `eth_call` from any provider connected to a Seismic node -- no encryption state or wallet is required.
+Mercury EVM ships with six cryptographic precompiles at fixed addresses. They are callable via `eth_call` from any provider connected to a Seismic node — no encryption state or wallet is required.
 
 ## Convenience Helpers
 
 The `seismic_alloy_provider::precompiles` module provides three layers of helpers:
 
-1. **Address constants** -- `precompiles::addresses::RNG`, `precompiles::addresses::ECDH`, etc.
-2. **Encode/decode functions** -- `precompiles::encode_rng()`, `precompiles::decode_secp256k1_sign()`, etc.
-3. **Async call wrappers** -- `precompiles::call::rng()`, `precompiles::call::ecdh()`, etc.
+1. **Address constants** — `precompiles::addresses::RNG`, `precompiles::addresses::ECDH`, etc.
+2. **Encode/decode functions** — `precompiles::encode_rng()`, `precompiles::decode_secp256k1_sign()`, etc.
+3. **Async call wrappers** — `precompiles::call::rng()`, `precompiles::call::ecdh()`, etc.
 
 ```rust
 use seismic_alloy_provider::precompiles;
@@ -30,7 +30,7 @@ let plaintext = precompiles::call::aes_decrypt::<SeismicFoundry, _>(&provider, &
 ```
 
 {% hint style="info" %}
-Precompile calls are read-only `eth_call` operations. They do not require a `SeismicSignedProvider` -- an unsigned provider works fine. However, if you use a signed provider, the call will still succeed.
+Precompile calls are read-only `eth_call` operations. They do not require a `SeismicSignedProvider` — an unsigned provider works fine. However, if you use a signed provider, the call will still succeed.
 {% endhint %}
 
 ## Manual Calling Pattern
@@ -94,15 +94,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 The `SeismicSignedProvider` uses several of these precompiles internally as part of the filler pipeline:
 
-- **ECDH** (`0x65`) -- Used during TEE key exchange to derive a shared secret between the client and the Seismic node's TEE
-- **AES-GCM Encrypt** (`0x66`) -- Used to encrypt calldata before sending shielded transactions
-- **AES-GCM Decrypt** (`0x67`) -- Used to decrypt responses from signed reads
-- **HKDF** (`0x68`) -- Used to derive AES keys from ECDH shared secrets
+- **ECDH** (`0x65`) — Used during TEE key exchange to derive a shared secret between the client and the Seismic node's TEE
+- **AES-GCM Encrypt** (`0x66`) — Used to encrypt calldata before sending shielded transactions
+- **AES-GCM Decrypt** (`0x67`) — Used to decrypt responses from signed reads
+- **HKDF** (`0x68`) — Used to derive AES keys from ECDH shared secrets
 
 You can also call these precompiles directly for custom cryptographic workflows.
 
 ## See Also
 
-- [Provider Overview](../provider/) -- Signed and unsigned provider types
-- [Encryption](../provider/encryption.md) -- How the provider uses precompiles internally
-- [Contract Interaction](../contract-interaction/) -- Shielded and transparent calls
+- [Provider Overview](../provider/) — Signed and unsigned provider types
+- [Encryption](../provider/encryption.md) — How the provider uses precompiles internally
+- [Contract Interaction](../contract-interaction/) — Shielded and transparent calls

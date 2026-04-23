@@ -9,12 +9,12 @@ Privacy-preserving contract interactions where calldata (and optionally return d
 
 ## Overview
 
-Shielded calls use the Seismic transaction type (`0x4A`) to encrypt calldata before it reaches the network. Functions with shielded parameters (e.g., `suint256`, `saddress`) auto-encrypt via `ShieldedCallBuilder` -- you can call `.send()` or `.call()` directly. For non-shielded functions that still need encryption (e.g., `isOdd()`, `increment()`), use `.seismic()` to opt in.
+Shielded calls use the Seismic transaction type (`0x4A`) to encrypt calldata before it reaches the network. Functions with shielded parameters (e.g., `suint256`, `saddress`) auto-encrypt via `ShieldedCallBuilder` — you can call `.send()` or `.call()` directly. For non-shielded functions that still need encryption (e.g., `isOdd()`, `increment()`), use `.seismic()` to opt in.
 
 There are two shielded operations:
 
-- **Shielded Write** -- Encrypted `send_transaction` that modifies on-chain state
-- **Signed Read** -- Encrypted `eth_call` that reads state without modification
+- **Shielded Write** — Encrypted `send_transaction` that modifies on-chain state
+- **Signed Read** — Encrypted `eth_call` that reads state without modification
 
 Both require a `SeismicSignedProvider` because they need a private key for ECDH key derivation and transaction signing.
 
@@ -44,7 +44,7 @@ sol! {
 This generates type-safe call builders for each function. The `#[sol(rpc)]` attribute adds `.call()` and `.send()` methods. Functions with shielded parameters (like `setNumber(suint256)`) automatically return a `ShieldedCallBuilder` that encrypts on `.call()` or `.send()`. For functions without shielded parameters (like `isOdd()` and `increment()`), use `SeismicCallExt` to call `.seismic()` and opt into encryption.
 
 {% hint style="warning" %}
-Calling `.seismic()` on a function that already has shielded parameters is `#[deprecated]` and produces a compiler warning -- it's redundant because the call builder is already a `ShieldedCallBuilder`. Call `.call()` or `.send()` directly on those functions.
+Calling `.seismic()` on a function that already has shielded parameters is `#[deprecated]` and produces a compiler warning — it's redundant because the call builder is already a `ShieldedCallBuilder`. Call `.call()` or `.send()` directly on those functions.
 {% endhint %}
 
 ## Shielded Write
@@ -236,7 +236,7 @@ You never need to call encryption functions manually. The provider's filler pipe
 | `signed_read` flag | `false`               | `true`               |
 
 {% hint style="info" %}
-For functions with shielded parameters (e.g., `suint256`, `saddress`), the `sol!` macro automatically returns a `ShieldedCallBuilder` -- you can call `.send()` or `.call()` directly without `.seismic()`. Use `.seismic()` only for functions without shielded parameters that still need encryption.
+For functions with shielded parameters (e.g., `suint256`, `saddress`), the `sol!` macro automatically returns a `ShieldedCallBuilder` — you can call `.send()` or `.call()` directly without `.seismic()`. Use `.seismic()` only for functions without shielded parameters that still need encryption.
 {% endhint %}
 
 ## Low-Level Alternative
@@ -269,13 +269,13 @@ let result = provider.seismic_call_with(addr, SeismicCounter::isOddCall {},
 - **Create transactions cannot be seismic.** Contract deployment must use standard (non-seismic) transactions. Deploy first, then interact with shielded calls. See [Transparent Calls](transparent-calls.md) for deployment patterns.
 - **Signed provider required.** Both shielded writes and signed reads need a `SeismicSignedProvider`. An unsigned provider cannot perform shielded operations.
 - **Automatic response decryption.** When using `.call()` on a `ShieldedCallBuilder`, the provider automatically decrypts the TEE's encrypted response.
-- **Shielded types in ABI.** The `sol!` macro handles shielded Solidity types (`suint256`, `sbool`, `saddress`) -- they map to their standard ABI counterparts for encoding. Functions with shielded types in their arguments automatically return a `ShieldedCallBuilder`, so no `.seismic()` is needed.
+- **Shielded types in ABI.** The `sol!` macro handles shielded Solidity types (`suint256`, `sbool`, `saddress`) — they map to their standard ABI counterparts for encoding. Functions with shielded types in their arguments automatically return a `ShieldedCallBuilder`, so no `.seismic()` is needed.
 
 ## See Also
 
-- [Transparent Calls](transparent-calls.md) -- Non-encrypted contract interactions
-- [Contract Interaction Overview](./) -- Comparison of all interaction patterns
-- [SeismicSignedProvider](../provider/seismic-signed-provider.md) -- Provider required for shielded operations
-- [TxSeismic](../transaction-types/tx-seismic.md) -- Underlying transaction type
-- [TxSeismicElements](../transaction-types/tx-seismic-elements.md) -- Encryption metadata
-- [Encryption](../provider/encryption.md) -- Detailed encryption pipeline
+- [Transparent Calls](transparent-calls.md) — Non-encrypted contract interactions
+- [Contract Interaction Overview](./) — Comparison of all interaction patterns
+- [SeismicSignedProvider](../provider/seismic-signed-provider.md) — Provider required for shielded operations
+- [TxSeismic](../transaction-types/tx-seismic.md) — Underlying transaction type
+- [TxSeismicElements](../transaction-types/tx-seismic-elements.md) — Encryption metadata
+- [Encryption](../provider/encryption.md) — Detailed encryption pipeline

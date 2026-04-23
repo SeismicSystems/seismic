@@ -9,16 +9,16 @@ Patterns for calling and transacting with smart contracts on Seismic using the R
 
 ## Overview
 
-seismic-alloy uses Alloy's `sol!` macro with `#[sol(rpc)]` to define contract interfaces and generate type-safe call builders. Functions with shielded parameters (e.g., `suint256`, `saddress`, `sbool`) auto-encrypt via `ShieldedCallBuilder` -- you can call `.send()` or `.call()` directly without `.seismic()`. For non-shielded functions that still need encryption, use `.seismic()` to opt in. Omit `.seismic()` entirely for transparent (unencrypted) operations.
+seismic-alloy uses Alloy's `sol!` macro with `#[sol(rpc)]` to define contract interfaces and generate type-safe call builders. Functions with shielded parameters (e.g., `suint256`, `saddress`, `sbool`) auto-encrypt via `ShieldedCallBuilder` — you can call `.send()` or `.call()` directly without `.seismic()`. For non-shielded functions that still need encryption, use `.seismic()` to opt in. Omit `.seismic()` entirely for transparent (unencrypted) operations.
 
 ### Key Concepts
 
-- **`sol!` macro with `#[sol(rpc)]`** -- Define contract interfaces with Solidity syntax, generate call builders and deploy methods
-- **Auto-encryption for shielded params** -- Functions with shielded types in their arguments return a `ShieldedCallBuilder` automatically; call `.send()` or `.call()` directly
-- **`.seismic()` call builder** -- For non-shielded functions that need encryption; converts a `SolCallBuilder` into a `ShieldedCallBuilder`
-- **Two traits** -- `SeismicCallExt` adds `.seismic()` to `SolCallBuilder`; `ShieldedCallExt` adds `.call()`, `.send()`, and builder methods to `ShieldedCallBuilder`
-- **SecurityParams** -- Per-call overrides for expiration, block hash, and encryption nonce
-- **EIP-712** -- `.eip712()` on `ShieldedCallBuilder` for browser wallet compatibility
+- **`sol!` macro with `#[sol(rpc)]`** — Define contract interfaces with Solidity syntax, generate call builders and deploy methods
+- **Auto-encryption for shielded params** — Functions with shielded types in their arguments return a `ShieldedCallBuilder` automatically; call `.send()` or `.call()` directly
+- **`.seismic()` call builder** — For non-shielded functions that need encryption; converts a `SolCallBuilder` into a `ShieldedCallBuilder`
+- **Two traits** — `SeismicCallExt` adds `.seismic()` to `SolCallBuilder`; `ShieldedCallExt` adds `.call()`, `.send()`, and builder methods to `ShieldedCallBuilder`
+- **SecurityParams** — Per-call overrides for expiration, block hash, and encryption nonce
+- **EIP-712** — `.eip712()` on `ShieldedCallBuilder` for browser wallet compatibility
 
 ## Shielded vs. Transparent Operations
 
@@ -112,7 +112,7 @@ let is_odd = contract.isOdd().call().await?;
 | `contract.read.isOdd()`         | `contract.isOdd().seismic().call().await?`             |
 | `contract.twrite.setNumber(42)` | N/A (use transparent provider or skip `.seismic()` on non-shielded fn) |
 | `contract.tread.isOdd()`        | `contract.isOdd().call().await?`                       |
-| `ShieldedContract` wrapper      | No wrapper -- auto-encryption for shielded params, `.seismic()` for others |
+| `ShieldedContract` wrapper      | No wrapper — auto-encryption for shielded params, `.seismic()` for others |
 
 ## Navigation
 
@@ -123,7 +123,7 @@ let is_odd = contract.isOdd().call().await?;
 
 ## See Also
 
-- [SeismicSignedProvider](../provider/seismic-signed-provider.md) -- Required for shielded operations
-- [SeismicUnsignedProvider](../provider/seismic-unsigned-provider.md) -- Sufficient for transparent reads
-- [Transaction Types](../transaction-types/) -- Underlying transaction structs
-- [Encryption](../provider/encryption.md) -- How calldata encryption works
+- [SeismicSignedProvider](../provider/seismic-signed-provider.md) — Required for shielded operations
+- [SeismicUnsignedProvider](../provider/seismic-unsigned-provider.md) — Sufficient for transparent reads
+- [Transaction Types](../transaction-types/) — Underlying transaction structs
+- [Encryption](../provider/encryption.md) — How calldata encryption works

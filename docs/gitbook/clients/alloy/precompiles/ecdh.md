@@ -214,10 +214,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Encode parameters** -- Concatenates 32-byte private key and 33-byte compressed public key
-2. **Call precompile** -- Issues an `eth_call` to address `0x65` with 3120 gas
-3. **Compute ECDH** -- Precompile performs scalar multiplication on the secp256k1 curve
-4. **Derive key** -- Applies HKDF to the ECDH point to produce a 32-byte uniform secret
+1. **Encode parameters** — Concatenates 32-byte private key and 33-byte compressed public key
+2. **Call precompile** — Issues an `eth_call` to address `0x65` with 3120 gas
+3. **Compute ECDH** — Precompile performs scalar multiplication on the secp256k1 curve
+4. **Derive key** — Applies HKDF to the ECDH point to produce a 32-byte uniform secret
 
 ## Gas Cost
 
@@ -236,14 +236,14 @@ Fixed gas cost: **3120 gas**
 
 ## Warnings
 
-- **Private key security** -- Never expose or log private keys
-- **Public key validation** -- Invalid public keys will cause the precompile to revert
-- **Key reuse** -- Using the same keypair for multiple sessions reduces forward secrecy
+- **Private key security** — Never expose or log private keys
+- **Public key validation** — Invalid public keys will cause the precompile to revert
+- **Key reuse** — Using the same keypair for multiple sessions reduces forward secrecy
 
 ## See Also
 
-- [Precompiles Overview](./) -- All precompile reference
-- [aes-gcm-encrypt](aes-gcm-encrypt.md) -- Encrypt with derived key
-- [aes-gcm-decrypt](aes-gcm-decrypt.md) -- Decrypt with derived key
-- [hkdf](hkdf.md) -- Key derivation function
-- [Encryption](../provider/encryption.md) -- How the provider uses ECDH internally
+- [Precompiles Overview](./) — All precompile reference
+- [aes-gcm-encrypt](aes-gcm-encrypt.md) — Encrypt with derived key
+- [aes-gcm-decrypt](aes-gcm-decrypt.md) — Decrypt with derived key
+- [hkdf](hkdf.md) — Key derivation function
+- [Encryption](../provider/encryption.md) — How the provider uses ECDH internally

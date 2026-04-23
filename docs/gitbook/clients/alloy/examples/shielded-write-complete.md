@@ -15,7 +15,7 @@ export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4
 export RPC_URL="https://testnet-1.seismictest.net/rpc"
 ```
 
-`Cargo.toml` -- see [Installation](../installation.md) for the full template including the required `[patch.crates-io]` block:
+`Cargo.toml` — see [Installation](../installation.md) for the full template including the required `[patch.crates-io]` block:
 
 ```toml
 [package]
@@ -158,11 +158,11 @@ The `SeismicProviderBuilder` creates a signed provider with a wallet and RPC URL
 
 ### 2. Contract deployment (transparent)
 
-Contract deployment uses the generated `deploy()` method. Create transactions cannot be seismic -- the Seismic protocol does not support encrypting deployment bytecode.
+Contract deployment uses the generated `deploy()` method. Create transactions cannot be seismic — the Seismic protocol does not support encrypting deployment bytecode.
 
 ### 3. Shielded write
 
-The `setNumber` call has a shielded parameter (`suint256`), so the `sol!` macro wraps it in a `ShieldedCallBuilder` that auto-encrypts. Just call `.send()` directly -- no `.seismic()` needed. The filler pipeline encrypts the calldata before broadcast.
+The `setNumber` call has a shielded parameter (`suint256`), so the `sol!` macro wraps it in a `ShieldedCallBuilder` that auto-encrypts. Just call `.send()` directly — no `.seismic()` needed. The filler pipeline encrypts the calldata before broadcast.
 
 ### 4. Receipt inspection
 

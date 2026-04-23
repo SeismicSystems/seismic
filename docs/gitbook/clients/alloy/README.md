@@ -105,16 +105,16 @@ let block = provider.get_block_number().await?;
 
 ## Features
 
-- **Shielded Transactions** -- Encrypt calldata with TEE public key via AES-GCM
-- **Signed Reads** -- Prove identity in `eth_call` with `seismic_call()`
-- **Auto-Encryption for Shielded Params** -- Functions with shielded types (`suint256`, `saddress`, etc.) in their arguments auto-encrypt via `ShieldedCallBuilder` -- no `.seismic()` needed
-- **`.seismic()` Call Builder** -- `contract.method().seismic().call()` / `.send()` for non-shielded functions that need encryption
-- **EIP-712 Support** -- `.eip712()` on `ShieldedCallBuilder` for browser wallet compatibility (MetaMask)
-- **SecurityParams** -- Per-call `.expires_at()`, `.recent_block_hash()`, `.encryption_nonce()` overrides
-- **Builder Pattern** -- `SeismicProviderBuilder` with typestate for signed/unsigned HTTP/WS providers
-- **Precompile Helpers** -- Encode/decode/call wrappers for Seismic's 6 custom precompiles
-- **Type 0x4A Transactions** -- Native support for Seismic transaction type
-- **Full Alloy Compatibility** -- All standard Alloy `Provider` methods work unchanged
+- **Shielded Transactions** — Encrypt calldata with TEE public key via AES-GCM
+- **Signed Reads** — Prove identity in `eth_call` with `seismic_call()`
+- **Auto-Encryption for Shielded Params** — Functions with shielded types (`suint256`, `saddress`, etc.) in their arguments auto-encrypt via `ShieldedCallBuilder` — no `.seismic()` needed
+- **`.seismic()` Call Builder** — `contract.method().seismic().call()` / `.send()` for non-shielded functions that need encryption
+- **EIP-712 Support** — `.eip712()` on `ShieldedCallBuilder` for browser wallet compatibility (MetaMask)
+- **SecurityParams** — Per-call `.expires_at()`, `.recent_block_hash()`, `.encryption_nonce()` overrides
+- **Builder Pattern** — `SeismicProviderBuilder` with typestate for signed/unsigned HTTP/WS providers
+- **Precompile Helpers** — Encode/decode/call wrappers for Seismic's 6 custom precompiles
+- **Type 0x4A Transactions** — Native support for Seismic transaction type
+- **Full Alloy Compatibility** — All standard Alloy `Provider` methods work unchanged
 
 ## Architecture
 
@@ -169,9 +169,9 @@ Both implement the `SeismicNetwork` trait and can be used as the generic paramet
 
 ## Next Steps
 
-1. **[Install seismic-alloy](installation.md)** -- Add the crate to your project
-2. **[Create a signed provider](provider/seismic-signed-provider.md)** -- Connect with full capabilities
-3. **[Understand encryption](provider/encryption.md)** -- Learn how calldata encryption works
-4. **[Explore unsigned providers](provider/seismic-unsigned-provider.md)** -- Read-only access
-5. **[Follow a guide](guides/)** -- Step-by-step shielded write or signed read tutorial
-6. **[Run an example](examples/)** -- Complete, runnable code examples
+1. **[Install seismic-alloy](installation.md)** — Add the crate to your project
+2. **[Create a signed provider](provider/seismic-signed-provider.md)** — Connect with full capabilities
+3. **[Understand encryption](provider/encryption.md)** — Learn how calldata encryption works
+4. **[Explore unsigned providers](provider/seismic-unsigned-provider.md)** — Read-only access
+5. **[Follow a guide](guides/)** — Step-by-step shielded write or signed read tutorial
+6. **[Run an example](examples/)** — Complete, runnable code examples

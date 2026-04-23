@@ -9,7 +9,7 @@ Send SRC20 tokens privately using shielded transfers, approvals, and `transferFr
 
 ## Overview
 
-SRC20 transfers work similarly to ERC20 transfers, but with calldata encryption to hide amounts from observers. Functions like `transfer`, `approve`, and `transferFrom` have shielded parameters (`suint256`), so the `sol!` macro wraps them in a `ShieldedCallBuilder` that auto-encrypts -- just call `.send()` directly.
+SRC20 transfers work similarly to ERC20 transfers, but with calldata encryption to hide amounts from observers. Functions like `transfer`, `approve`, and `transferFrom` have shielded parameters (`suint256`), so the `sol!` macro wraps them in a `ShieldedCallBuilder` that auto-encrypts — just call `.send()` directly.
 
 ## Prerequisites
 
@@ -272,19 +272,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 - All transfer amounts are auto-encrypted because `transfer`, `approve`, and `transferFrom` have shielded parameters (`suint256`)
 - The provider's filler pipeline handles calldata encryption automatically
-- Transaction receipts are returned as normal -- only the calldata is encrypted
+- Transaction receipts are returned as normal — only the calldata is encrypted
 - `transferFrom` requires prior approval from the token owner
 - Each transaction has its own encryption nonce managed by the filler pipeline
 
 ## Warnings
 
-- **Insufficient balance** -- The transaction will revert on-chain if the sender does not have enough tokens. Check the balance first to avoid wasted gas.
-- **Insufficient allowance** -- `transferFrom` reverts if the spender's allowance is less than the transfer amount
-- **Nonce management** -- When sending multiple transactions rapidly, the `NonceFiller` handles nonce assignment. Await each transaction's receipt before sending the next to avoid nonce conflicts.
+- **Insufficient balance** — The transaction will revert on-chain if the sender does not have enough tokens. Check the balance first to avoid wasted gas.
+- **Insufficient allowance** — `transferFrom` reverts if the spender's allowance is less than the transfer amount
+- **Nonce management** — When sending multiple transactions rapidly, the `NonceFiller` handles nonce assignment. Await each transaction's receipt before sending the next to avoid nonce conflicts.
 
 ## See Also
 
-- [Token Interaction](token-interaction.md) -- Reading balances and metadata
-- [Event Decryption](event-decryption.md) -- Decrypting Transfer events
-- [Contract Interaction](../contract-interaction/) -- General call patterns
-- [SeismicSignedProvider](../provider/seismic-signed-provider.md) -- Required provider type
+- [Token Interaction](token-interaction.md) — Reading balances and metadata
+- [Event Decryption](event-decryption.md) — Decrypting Transfer events
+- [Contract Interaction](../contract-interaction/) — General call patterns
+- [SeismicSignedProvider](../provider/seismic-signed-provider.md) — Required provider type

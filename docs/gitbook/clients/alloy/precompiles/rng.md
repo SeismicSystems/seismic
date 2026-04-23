@@ -197,10 +197,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Encode parameters** -- `num_bytes` is encoded as a 4-byte big-endian integer, followed by optional `personalization` bytes
-2. **Call precompile** -- Issues an `eth_call` to address `0x64` with estimated gas
-3. **Generate randomness** -- The precompile uses Strobe128 internally for cryptographic security
-4. **Decode result** -- Result bytes are padded to 32 bytes and returned as big-endian
+1. **Encode parameters** — `num_bytes` is encoded as a 4-byte big-endian integer, followed by optional `personalization` bytes
+2. **Call precompile** — Issues an `eth_call` to address `0x64` with estimated gas
+3. **Generate randomness** — The precompile uses Strobe128 internally for cryptographic security
+4. **Decode result** — Result bytes are padded to 32 bytes and returned as big-endian
 
 ## Gas Cost
 
@@ -224,12 +224,12 @@ The base cost is **3500 gas**, with 5 gas per 136-byte block for personalization
 
 ## Warnings
 
-- **Range validation** -- `num_bytes` outside 1--32 will cause the precompile to revert
-- **Node connectivity** -- Requires a working connection to a Seismic node
-- **Not for consensus** -- Results may differ across nodes due to timing
+- **Range validation** — `num_bytes` outside 1--32 will cause the precompile to revert
+- **Node connectivity** — Requires a working connection to a Seismic node
+- **Not for consensus** — Results may differ across nodes due to timing
 
 ## See Also
 
-- [Precompiles Overview](./) -- All precompile reference
-- [ecdh](ecdh.md) -- On-chain ECDH key exchange
-- [hkdf](hkdf.md) -- On-chain HKDF key derivation
+- [Precompiles Overview](./) — All precompile reference
+- [ecdh](ecdh.md) — On-chain ECDH key exchange
+- [hkdf](hkdf.md) — On-chain HKDF key derivation

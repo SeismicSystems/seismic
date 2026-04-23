@@ -5,20 +5,20 @@ icon: coins
 
 # SRC20 Tokens
 
-SRC20 is Seismic's privacy-preserving ERC20 standard. Balances and transfer amounts use shielded types (`suint256`), so they are hidden from external observers. The protocol ensures that only authorized parties -- the token holder or those with a viewing key -- can read balances and decode transfer events.
+SRC20 is Seismic's privacy-preserving ERC20 standard. Balances and transfer amounts use shielded types (`suint256`), so they are hidden from external observers. The protocol ensures that only authorized parties — the token holder or those with a viewing key — can read balances and decode transfer events.
 
 ## What Makes SRC20 Different from ERC20
 
 | Feature              | ERC20                           | SRC20                                                            |
 | -------------------- | ------------------------------- | ---------------------------------------------------------------- |
-| **Balances**         | Public (anyone can read)        | Shielded (`suint256`) -- only the owner can read via signed read |
+| **Balances**         | Public (anyone can read)        | Shielded (`suint256`) — only the owner can read via signed read |
 | **Transfer amounts** | Public in transaction data      | Encrypted calldata via shielded writes                           |
-| **Events**           | Public (Transfer, Approval)     | Encrypted -- require viewing key to decrypt                      |
+| **Events**           | Public (Transfer, Approval)     | Encrypted — require viewing key to decrypt                      |
 | **Allowances**       | Public                          | Shielded (`suint256`)                                            |
 | **Token metadata**   | Public (name, symbol, decimals) | Public (not shielded)                                            |
 
 {% hint style="info" %}
-SRC20 contracts are deployed like any other contract on Seismic. The shielding is handled at the EVM level -- the contract uses `suint256` for sensitive fields, and the Seismic node's TEE ensures values are encrypted in storage and transit.
+SRC20 contracts are deployed like any other contract on Seismic. The shielding is handled at the EVM level — the contract uses `suint256` for sensitive fields, and the Seismic node's TEE ensures values are encrypted in storage and transit.
 {% endhint %}
 
 ## Contract Interface
@@ -128,11 +128,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Signed Reads for Balances
 
-Unlike ERC20 where `balanceOf()` is a simple public read, SRC20's `balanceOf()` uses `msg.sender` to authenticate the caller. This means you must use `seismic_call()` (a signed read) rather than a plain `eth_call`. A plain `eth_call` zeros out the `from` field, so the contract sees the zero address as the sender and returns its balance -- which is almost certainly zero.
+Unlike ERC20 where `balanceOf()` is a simple public read, SRC20's `balanceOf()` uses `msg.sender` to authenticate the caller. This means you must use `seismic_call()` (a signed read) rather than a plain `eth_call`. A plain `eth_call` zeros out the `from` field, so the contract sees the zero address as the sender and returns its balance — which is almost certainly zero.
 
 ### Shielded Writes
 
-Transfers and approvals have shielded parameters (`suint256`), so the `sol!` macro wraps them in a `ShieldedCallBuilder` that auto-encrypts -- just call `.send()` directly. The `SeismicProviderBuilder`-created provider's filler pipeline automatically handles the encryption before the transaction reaches the node.
+Transfers and approvals have shielded parameters (`suint256`), so the `sol!` macro wraps them in a `ShieldedCallBuilder` that auto-encrypts — just call `.send()` directly. The `SeismicProviderBuilder`-created provider's filler pipeline automatically handles the encryption before the transaction reaches the node.
 
 ### Encrypted Events
 
@@ -140,6 +140,6 @@ SRC20 Transfer and Approval events contain encrypted `suint256` values. To decod
 
 ## See Also
 
-- [Contract Interaction](../contract-interaction/) -- General shielded and transparent call patterns
-- [SeismicSignedProvider](../provider/seismic-signed-provider.md) -- Required for shielded operations
-- [Encryption](../provider/encryption.md) -- How calldata encryption works
+- [Contract Interaction](../contract-interaction/) — General shielded and transparent call patterns
+- [SeismicSignedProvider](../provider/seismic-signed-provider.md) — Required for shielded operations
+- [Encryption](../provider/encryption.md) — How calldata encryption works

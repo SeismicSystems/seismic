@@ -13,7 +13,7 @@ Complete, runnable code examples demonstrating common Seismic Alloy (Rust) SDK p
 
 | Example                       | Description                                                                                                           |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| [Basic Setup](basic-setup.md) | Create providers, verify connection, check balance, and fetch the TEE public key -- both signed and unsigned variants |
+| [Basic Setup](basic-setup.md) | Create providers, verify connection, check balance, and fetch the TEE public key — both signed and unsigned variants |
 
 ### Core Workflows
 
@@ -82,7 +82,7 @@ export PRIVATE_KEY="0x..."
 export RPC_URL="https://testnet-1.seismictest.net/rpc"
 ```
 
-And your `Cargo.toml` follows the layout documented in [Installation](../installation.md) -- `seismic-prelude`, `seismic-alloy-network`, `seismic-alloy-provider` from git plus `alloy-provider`, `alloy-signer-local`, `alloy-primitives`, `alloy-sol-types`, `tokio`, `reqwest`, and the required `[patch.crates-io]` block.
+And your `Cargo.toml` follows the layout documented in [Installation](../installation.md) — `seismic-prelude`, `seismic-alloy-network`, `seismic-alloy-provider` from git plus `alloy-provider`, `alloy-signer-local`, `alloy-primitives`, `alloy-sol-types`, `tokio`, `reqwest`, and the required `[patch.crates-io]` block.
 
 ## See Also
 

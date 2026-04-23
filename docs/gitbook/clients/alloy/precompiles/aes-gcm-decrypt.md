@@ -279,10 +279,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Encode parameters** -- Concatenates 32-byte key + 12-byte nonce + ciphertext (with tag)
-2. **Call precompile** -- Issues an `eth_call` to address `0x67` with estimated gas
-3. **Decrypt and verify** -- Precompile performs AES-256-GCM decryption and verifies the authentication tag
-4. **Return plaintext** -- Returns decrypted data if tag verification succeeds; reverts otherwise
+1. **Encode parameters** — Concatenates 32-byte key + 12-byte nonce + ciphertext (with tag)
+2. **Call precompile** — Issues an `eth_call` to address `0x67` with estimated gas
+3. **Decrypt and verify** — Precompile performs AES-256-GCM decryption and verifies the authentication tag
+4. **Return plaintext** — Returns decrypted data if tag verification succeeds; reverts otherwise
 
 ## Gas Cost
 
@@ -307,14 +307,14 @@ The gas cost is proportional to ciphertext length (including the 16-byte tag).
 
 ## Warnings
 
-- **Authentication failure** -- If the tag does not verify, the precompile reverts. This can happen with a wrong key, wrong nonce, or tampered ciphertext.
-- **Nonce mismatch** -- Using a different nonce than the one used for encryption will cause decryption to fail
-- **Key mismatch** -- Using a different key than the one used for encryption will cause authentication failure
-- **Ciphertext integrity** -- Any modification to the ciphertext (including the tag) causes authentication failure
+- **Authentication failure** — If the tag does not verify, the precompile reverts. This can happen with a wrong key, wrong nonce, or tampered ciphertext.
+- **Nonce mismatch** — Using a different nonce than the one used for encryption will cause decryption to fail
+- **Key mismatch** — Using a different key than the one used for encryption will cause authentication failure
+- **Ciphertext integrity** — Any modification to the ciphertext (including the tag) causes authentication failure
 
 ## See Also
 
-- [Precompiles Overview](./) -- All precompile reference
-- [aes-gcm-encrypt](aes-gcm-encrypt.md) -- Encrypt with AES-GCM
-- [ecdh](ecdh.md) -- Derive shared decryption keys
-- [Encryption](../provider/encryption.md) -- How the provider uses AES-GCM internally
+- [Precompiles Overview](./) — All precompile reference
+- [aes-gcm-encrypt](aes-gcm-encrypt.md) — Encrypt with AES-GCM
+- [ecdh](ecdh.md) — Derive shared decryption keys
+- [Encryption](../provider/encryption.md) — How the provider uses AES-GCM internally

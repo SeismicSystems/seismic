@@ -12,13 +12,13 @@ icon: gas-pump
 Gas estimation for shielded transactions presents two challenges:
 
 1. The node needs to estimate gas on the **encrypted calldata** (because that is what will actually be executed), but the calldata is not encrypted until `SeismicElementsFiller` runs.
-2. When the contract's gas cost depends on private state gated by `msg.sender`, the node must be able to **authenticate the sender** during estimation -- an anonymous `eth_estimateGas` would execute against a zero-address caller and produce an incorrect estimate.
+2. When the contract's gas cost depends on private state gated by `msg.sender`, the node must be able to **authenticate the sender** during estimation — an anonymous `eth_estimateGas` would execute against a zero-address caller and produce an incorrect estimate.
 
 `SeismicGasFiller` addresses both:
 
-1. **For Seismic transactions with a wallet** -- Defers gas estimation to the `fill()` phase, signs the transaction, and submits the signed envelope to `eth_estimateGas` over a fresh RPC client using the stored URL.
-2. **For Seismic transactions without a wallet** -- Falls back to Alloy's standard unsigned `GasFiller`. This is the default `RecommendedFillers` path for unsigned providers.
-3. **For standard (non-Seismic) transactions** -- Always delegates to the inner `GasFiller` for normal prepare-phase estimation.
+1. **For Seismic transactions with a wallet** — Defers gas estimation to the `fill()` phase, signs the transaction, and submits the signed envelope to `eth_estimateGas` over a fresh RPC client using the stored URL.
+2. **For Seismic transactions without a wallet** — Falls back to Alloy's standard unsigned `GasFiller`. This is the default `RecommendedFillers` path for unsigned providers.
+3. **For standard (non-Seismic) transactions** — Always delegates to the inner `GasFiller` for normal prepare-phase estimation.
 
 Additionally, `SeismicGasFiller` rejects Seismic CREATE transactions (no `to` address), which are not supported for the Seismic transaction type.
 

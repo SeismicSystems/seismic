@@ -43,7 +43,7 @@ pub const TX_TYPE: u8 = 0x4A;
 | `gas_limit`        | `u64`                                         | Maximum gas allowed for execution                                  |
 | `to`               | `TxKind`                                      | `TxKind::Call(Address)` for calls, `TxKind::Create` for deployment |
 | `value`            | `U256`                                        | Amount of wei to transfer                                          |
-| `input`            | `Bytes`                                       | Calldata -- encrypted after filler processing                      |
+| `input`            | `Bytes`                                       | Calldata — encrypted after filler processing                      |
 | `seismic_elements` | [`TxSeismicElements`](tx-seismic-elements.md) | Encryption metadata, block hash, expiry, and read flag             |
 | `authorization_list` | `Vec<SignedAuthorization>`                  | EIP-7702 authorizations. Empty vector is valid (unlike `TxEip7702`) |
 
@@ -215,22 +215,22 @@ The type prefix `0x4A` is prepended for EIP-2718 envelope encoding.
 
 When `message_version >= 2`, the transaction uses EIP-712 typed data signing instead of raw RLP hash signing. This provides:
 
-- **Structured data** -- Wallets can display human-readable transaction details
-- **Domain separation** -- Signatures are bound to a specific chain and contract
-- **Better UX** -- Hardware wallets and browser extensions can show meaningful information
+- **Structured data** — Wallets can display human-readable transaction details
+- **Domain separation** — Signatures are bound to a specific chain and contract
+- **Better UX** — Hardware wallets and browser extensions can show meaningful information
 
 ## Notes
 
 - **Type 0x4A** is the Seismic-specific transaction type, distinct from all standard Ethereum types
 - **`input` contains encrypted data** after the filler pipeline processes the transaction
-- **Cannot be used for Create transactions** -- `to` must be `TxKind::Call(address)` for seismic transactions
+- **Cannot be used for Create transactions** — `to` must be `TxKind::Call(address)` for seismic transactions
 - **`to_legacy_tx()`** is used internally for gas estimation, since the RPC expects legacy format
 - **Validation methods** are primarily used by the node/TEE, not by client code
 
 ## See Also
 
-- [TxSeismicElements](tx-seismic-elements.md) -- Encryption metadata struct
-- [TxSeismicMetadata](tx-seismic-metadata.md) -- AAD construction from transaction fields
-- [SeismicTxEnvelope](seismic-tx-envelope.md) -- Signed wrapper containing `Signed<TxSeismic>`
-- [Shielded Calls](../contract-interaction/shielded-calls.md) -- How to use TxSeismic in practice
-- [Encryption](../provider/encryption.md) -- Detailed encryption pipeline
+- [TxSeismicElements](tx-seismic-elements.md) — Encryption metadata struct
+- [TxSeismicMetadata](tx-seismic-metadata.md) — AAD construction from transaction fields
+- [SeismicTxEnvelope](seismic-tx-envelope.md) — Signed wrapper containing `Signed<TxSeismic>`
+- [Shielded Calls](../contract-interaction/shielded-calls.md) — How to use TxSeismic in practice
+- [Encryption](../provider/encryption.md) — Detailed encryption pipeline

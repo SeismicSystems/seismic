@@ -284,13 +284,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Warnings
 
-- **Privacy limitations** -- While transfer amounts are encrypted, the sender and recipient addresses are still visible as indexed topics. Transaction metadata (gas, block number, etc.) is also public.
-- **Viewing key management** -- Protect your viewing key private key. Anyone with access to it can decrypt your token events.
-- **Block range limits** -- Some RPC providers limit the block range for `get_logs` queries. Use pagination for large historical ranges.
+- **Privacy limitations** — While transfer amounts are encrypted, the sender and recipient addresses are still visible as indexed topics. Transaction metadata (gas, block number, etc.) is also public.
+- **Viewing key management** — Protect your viewing key private key. Anyone with access to it can decrypt your token events.
+- **Block range limits** — Some RPC providers limit the block range for `get_logs` queries. Use pagination for large historical ranges.
 
 ## See Also
 
-- [Token Interaction](token-interaction.md) -- Reading balances and metadata
-- [Transfers](transfers.md) -- Shielded transfer patterns
-- [Precompiles Overview](../precompiles/) -- Cryptographic operations used in decryption
-- [Provider Overview](../provider/) -- WebSocket and HTTP providers
+- [Token Interaction](token-interaction.md) — Reading balances and metadata
+- [Transfers](transfers.md) — Shielded transfer patterns
+- [Precompiles Overview](../precompiles/) — Cryptographic operations used in decryption
+- [Provider Overview](../provider/) — WebSocket and HTTP providers

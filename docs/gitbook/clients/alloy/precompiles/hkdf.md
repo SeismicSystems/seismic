@@ -27,7 +27,7 @@ The `SeismicSignedProvider` uses this precompile internally to derive AES keys f
 | ----- | -------- | ------------------------------------ |
 | `ikm` | Variable | Input key material (arbitrary bytes) |
 
-The input is the raw IKM bytes -- no additional encoding is needed.
+The input is the raw IKM bytes — no additional encoding is needed.
 
 ## Output Format
 
@@ -280,10 +280,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Encode parameters** -- Passes input key material as-is
-2. **Call precompile** -- Issues an `eth_call` to address `0x68` with gas proportional to input length
-3. **HKDF derivation** -- Precompile performs HKDF-SHA256 extract and expand phases
-4. **Return key** -- Returns first 32 bytes of derived key material
+1. **Encode parameters** — Passes input key material as-is
+2. **Call precompile** — Issues an `eth_call` to address `0x68` with gas proportional to input length
+3. **HKDF derivation** — Precompile performs HKDF-SHA256 extract and expand phases
+4. **Return key** — Returns first 32 bytes of derived key material
 
 ## Gas Cost
 
@@ -327,13 +327,13 @@ For example:
 
 ## Warnings
 
-- **Not for password hashing** -- Use proper password hashing algorithms (bcrypt, argon2) for passwords
-- **Input entropy** -- Output security depends entirely on input entropy
-- **Deterministic** -- Same input always yields the same output (no salt or randomness is added)
+- **Not for password hashing** — Use proper password hashing algorithms (bcrypt, argon2) for passwords
+- **Input entropy** — Output security depends entirely on input entropy
+- **Deterministic** — Same input always yields the same output (no salt or randomness is added)
 
 ## See Also
 
-- [Precompiles Overview](./) -- All precompile reference
-- [ecdh](ecdh.md) -- Often used before HKDF to derive keys
-- [aes-gcm-encrypt](aes-gcm-encrypt.md) -- Use derived keys for encryption
-- [rng](rng.md) -- Generate random input material
+- [Precompiles Overview](./) — All precompile reference
+- [ecdh](ecdh.md) — Often used before HKDF to derive keys
+- [aes-gcm-encrypt](aes-gcm-encrypt.md) — Use derived keys for encryption
+- [rng](rng.md) — Generate random input material

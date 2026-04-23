@@ -1,5 +1,5 @@
 ---
-description: Encrypted transactions -- lifecycle, security parameters, and the filler pipeline
+description: Encrypted transactions — lifecycle, security parameters, and the filler pipeline
 icon: shield-halved
 ---
 
@@ -65,7 +65,7 @@ This generates type-safe call builders with `.call()` and `.send()` methods.
 
 #### 3. Build and send
 
-Functions with shielded parameters (like `setNumber(suint256)`) auto-encrypt -- just call `.send()` directly. For functions without shielded parameters (like `increment()`), use `.seismic().send()` to opt into encryption:
+Functions with shielded parameters (like `setNumber(suint256)`) auto-encrypt — just call `.send()` directly. For functions without shielded parameters (like `increment()`), use `.seismic().send()` to opt into encryption:
 
 ```rust
 let contract = SeismicCounter::new(contract_address, &provider);
@@ -161,13 +161,13 @@ The filler pipeline processes your transaction in this order:
 ```
 
 {% hint style="info" %}
-In source the chain is composed `Wallet → (Nonce + ChainId) → SeismicElements → Gas`. Chain position doesn't equal execution order -- `WalletFiller`'s `status()` only reports ready after the other fillers populate the tx, so signing ends up last in practice.
+In source the chain is composed `Wallet → (Nonce + ChainId) → SeismicElements → Gas`. Chain position doesn't equal execution order — `WalletFiller`'s `status()` only reports ready after the other fillers populate the tx, so signing ends up last in practice.
 {% endhint %}
 
 You never call encryption functions manually. For functions with shielded parameters, the `ShieldedCallBuilder` handles everything automatically. For other functions, the `.seismic()` marker tells the filler pipeline to handle everything.
 
 {% hint style="info" %}
-You never need to call encryption functions manually. The provider's filler pipeline handles all cryptographic operations -- either automatically for functions with shielded parameters, or when you use `.seismic()`.
+You never need to call encryption functions manually. The provider's filler pipeline handles all cryptographic operations — either automatically for functions with shielded parameters, or when you use `.seismic()`.
 {% endhint %}
 
 ---
