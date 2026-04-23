@@ -5,7 +5,7 @@ icon: server
 
 # Provider
 
-The `seismic-alloy` provider crate provides two provider types for interacting with Seismic nodes:
+The `seismic-alloy` provider crate exposes two provider types for interacting with Seismic nodes:
 
 - **[SeismicSignedProvider](seismic-signed-provider.md)** -- Full capabilities (shielded writes, signed reads, response decryption). Requires a wallet.
 - **[SeismicUnsignedProvider](seismic-unsigned-provider.md)** -- Read-only (public queries, block data). No wallet needed.
