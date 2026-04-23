@@ -104,16 +104,6 @@ contract.setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
 let is_odd = contract.isOdd().call().await?;
 ```
 
-## Quick Comparison with Python SDK
-
-| Python SDK                      | Rust SDK (seismic-alloy)                              |
-| ------------------------------- | ----------------------------------------------------- |
-| `contract.write.setNumber(42)`  | `contract.setNumber(42).send().await?` (auto-encrypts, shielded param) |
-| `contract.read.isOdd()`         | `contract.isOdd().seismic().call().await?`             |
-| `contract.twrite.setNumber(42)` | N/A (use transparent provider or skip `.seismic()` on non-shielded fn) |
-| `contract.tread.isOdd()`        | `contract.isOdd().call().await?`                       |
-| `ShieldedContract` wrapper      | No wrapper — auto-encryption for shielded params, `.seismic()` for others |
-
 ## Navigation
 
 | Page                                      | Description                                          |

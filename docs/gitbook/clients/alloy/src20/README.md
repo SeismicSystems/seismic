@@ -7,20 +7,6 @@ icon: coins
 
 SRC20 is Seismic's privacy-preserving ERC20 standard. Balances and transfer amounts use shielded types (`suint256`), so they are hidden from external observers. The protocol ensures that only authorized parties — the token holder or those with a viewing key — can read balances and decode transfer events.
 
-## What Makes SRC20 Different from ERC20
-
-| Feature              | ERC20                           | SRC20                                                            |
-| -------------------- | ------------------------------- | ---------------------------------------------------------------- |
-| **Balances**         | Public (anyone can read)        | Shielded (`suint256`) — only the owner can read via signed read |
-| **Transfer amounts** | Public in transaction data      | Encrypted calldata via shielded writes                           |
-| **Events**           | Public (Transfer, Approval)     | Encrypted — require viewing key to decrypt                      |
-| **Allowances**       | Public                          | Shielded (`suint256`)                                            |
-| **Token metadata**   | Public (name, symbol, decimals) | Public (not shielded)                                            |
-
-{% hint style="info" %}
-SRC20 contracts are deployed like any other contract on Seismic. The shielding is handled at the EVM level — the contract uses `suint256` for sensitive fields, and the Seismic node's TEE ensures values are encrypted in storage and transit.
-{% endhint %}
-
 ## Contract Interface
 
 Define the SRC20 interface using Alloy's `sol!` macro:

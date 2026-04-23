@@ -9,7 +9,7 @@ The `seismic-alloy` SDK supports multiple Seismic networks. Each chain has a spe
 
 ## Overview
 
-Unlike the Python SDK, `seismic-alloy` does not use pre-configured chain objects. Instead, you pass the RPC URL directly to the `SeismicProviderBuilder` and select the appropriate network type (`SeismicReth` or `SeismicFoundry`). The chain ID is fetched automatically from the node.
+`seismic-alloy` does not use pre-configured chain objects. Pass the RPC URL directly to `SeismicProviderBuilder` and select the appropriate network type (`SeismicReth` or `SeismicFoundry`); the chain ID is fetched automatically from the node.
 
 ```rust
 use seismic_prelude::client::*;

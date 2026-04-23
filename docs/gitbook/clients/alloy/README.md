@@ -88,37 +88,7 @@ let block = provider.get_block_number().await?;
 | **[SeismicUnsignedProvider](provider/seismic-unsigned-provider.md)** | Read-only provider for public operations                                |
 | **[Encryption](provider/encryption.md)**                             | TEE key exchange, ECDH, AES-GCM calldata encryption                     |
 
-## Quick Links
-
-### By Task
-
-- **Create a signed provider** -> [SeismicSignedProvider](provider/seismic-signed-provider.md)
-- **Create a read-only provider** -> [SeismicUnsignedProvider](provider/seismic-unsigned-provider.md)
-- **Understand calldata encryption** -> [Encryption](provider/encryption.md)
-- **Install the crate** -> [Installation](installation.md)
-
-### By Component
-
-- **Provider types** -> [SeismicSignedProvider](provider/seismic-signed-provider.md), [SeismicUnsignedProvider](provider/seismic-unsigned-provider.md)
-- **Builder** -> `SeismicProviderBuilder::new().wallet(wallet).connect_http(url)`
-- **Encryption** -> [Encryption](provider/encryption.md)
-
-## Features
-
-- **Shielded Transactions** — Encrypt calldata with TEE public key via AES-GCM
-- **Signed Reads** — Prove identity in `eth_call` with `seismic_call()`
-- **Auto-Encryption for Shielded Params** — Functions with shielded types (`suint256`, `saddress`, etc.) in their arguments auto-encrypt via `ShieldedCallBuilder` — no `.seismic()` needed
-- **`.seismic()` Call Builder** — `contract.method().seismic().call()` / `.send()` for non-shielded functions that need encryption
-- **EIP-712 Support** — `.eip712()` on `ShieldedCallBuilder` for browser wallet compatibility (MetaMask)
-- **SecurityParams** — Per-call `.expires_at()`, `.recent_block_hash()`, `.encryption_nonce()` overrides
-- **Builder Pattern** — `SeismicProviderBuilder` with typestate for signed/unsigned HTTP/WS providers
-- **Precompile Helpers** — Encode/decode/call wrappers for Seismic's 6 custom precompiles
-- **Type 0x4A Transactions** — Native support for Seismic transaction type
-- **Full Alloy Compatibility** — All standard Alloy `Provider` methods work unchanged
-
-## Architecture
-
-The SDK extends Alloy's provider model with a filler pipeline that automatically handles Seismic-specific transaction fields and encryption:
+## Workspace Layout
 
 ```
 seismic-alloy (workspace)
@@ -128,20 +98,9 @@ seismic-alloy (workspace)
 ├── rpc-types    — Seismic-specific RPC request/response types
 ├── genesis      — Genesis configuration types
 └── prelude      — Convenience re-exports from all crates
-
-SeismicSignedProvider filler chain:
-  WalletFiller
-  -> NonceFiller + ChainIdFiller
-  -> SeismicElementsFiller
-  -> SeismicGasFiller
-  -> (encrypt calldata)
-  -> send transaction
-  -> (decrypt response)
-
-SeismicUnsignedProvider filler chain:
-  NonceFiller + ChainIdFiller
-  -> GasFiller
 ```
+
+The provider wraps Alloy's provider with a filler pipeline that handles seismic-specific fields and calldata encryption. See [Provider](provider/) for the full filler chain and per-trait API.
 
 ## Network Types
 
@@ -154,7 +113,7 @@ The SDK defines two network configurations:
 
 Both implement the `SeismicNetwork` trait and can be used as the generic parameter `N` in provider types.
 
-### Guides & Examples
+## Guides & Examples
 
 | Section                                                            | Description                                             |
 | ------------------------------------------------------------------ | ------------------------------------------------------- |
