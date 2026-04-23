@@ -23,6 +23,7 @@ pub struct TxSeismic {
     pub value: U256,
     pub input: Bytes,
     pub seismic_elements: TxSeismicElements,
+    pub authorization_list: Vec<SignedAuthorization>,
 }
 ```
 
@@ -44,6 +45,7 @@ pub const TX_TYPE: u8 = 0x4A;
 | `value`            | `U256`                                        | Amount of wei to transfer                                          |
 | `input`            | `Bytes`                                       | Calldata -- encrypted after filler processing                      |
 | `seismic_elements` | [`TxSeismicElements`](tx-seismic-elements.md) | Encryption metadata, block hash, expiry, and read flag             |
+| `authorization_list` | `Vec<SignedAuthorization>`                  | EIP-7702 authorizations. Empty vector is valid (unlike `TxEip7702`) |
 
 ## Trait Implementations
 
@@ -120,6 +122,7 @@ let tx = TxSeismic {
         expires_at_block: current_block + 100,
         signed_read: false,
     },
+    authorization_list: vec![],
 };
 ```
 
@@ -194,13 +197,15 @@ RLP([
     gas_limit,
     to,
     value,
-    input,
+    // seismic_elements (flattened, no inner list)
     encryption_pubkey,
     encryption_nonce,
     message_version,
     recent_block_hash,
     expires_at_block,
     signed_read,
+    input,
+    authorization_list,
 ])
 ```
 

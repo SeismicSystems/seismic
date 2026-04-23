@@ -14,7 +14,7 @@ export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4
 export RPC_URL="https://testnet-1.seismictest.net/rpc"
 ```
 
-`Cargo.toml`:
+`Cargo.toml` -- see [Installation](../installation.md) for the full template including the required `[patch.crates-io]` block:
 
 ```toml
 [package]
@@ -24,12 +24,18 @@ edition = "2021"
 rust-version = "1.82"
 
 [dependencies]
-seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
-alloy-signer-local = "1.1"
-alloy-primitives = "1.1"
-alloy-sol-types = "1.1"
-alloy-network = "1.1"
-tokio = { version = "1", features = ["full"] }
+seismic-prelude        = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+seismic-alloy-network  = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+alloy-provider         = "1.1"
+alloy-signer-local     = "1.1"
+alloy-primitives       = "1.1"
+alloy-sol-types        = "1.1"
+alloy-network          = "1.1"
+tokio                  = { version = "1", features = ["full"] }
+reqwest                = "0.12"
+
+# [patch.crates-io] block required — see Installation.
 ```
 
 ## Complete Example
@@ -38,6 +44,7 @@ tokio = { version = "1", features = ["full"] }
 use seismic_prelude::client::*;
 use seismic_alloy_network::reth::SeismicReth;
 use alloy_network::ReceiptResponse;
+use alloy_provider::Provider;
 
 sol! {
     #[sol(rpc, bytecode = "6080604052...")]
@@ -74,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // -------------------------------------------------------
     // setNumber has suint256 param -- auto-encrypts
     let write_receipt = contract
-        .setNumber(U256::from(42).into())
+        .setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
         .send()
         .await?
         .get_receipt()

@@ -18,7 +18,7 @@ export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4
 export RPC_URL="https://testnet-1.seismictest.net/rpc"
 ```
 
-`Cargo.toml`:
+`Cargo.toml` -- see [Installation](../installation.md) for the full template including the required `[patch.crates-io]` block:
 
 ```toml
 [package]
@@ -28,10 +28,16 @@ edition = "2021"
 rust-version = "1.82"
 
 [dependencies]
-seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
-alloy-signer-local = "1.1"
-alloy-primitives = "1.1"
-tokio = { version = "1", features = ["full"] }
+seismic-prelude        = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+seismic-alloy-network  = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+alloy-provider         = "1.1"
+alloy-signer-local     = "1.1"
+alloy-primitives       = "1.1"
+tokio                  = { version = "1", features = ["full"] }
+reqwest                = "0.12"
+
+# [patch.crates-io] block required — see Installation.
 ```
 
 ## Signed Provider (Full Capabilities)
@@ -41,11 +47,13 @@ A signed provider can send shielded writes, perform signed reads, and execute al
 ```rust
 use seismic_prelude::client::*;
 use seismic_alloy_network::reth::SeismicReth;
+use alloy_provider::Provider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load private key from environment
     let signer: PrivateKeySigner = std::env::var("PRIVATE_KEY")?.parse()?;
+    let address = signer.address();
     let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
 
@@ -67,8 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tee_pubkey = provider.get_tee_pubkey().await?;
     println!("TEE public key: {:?}", tee_pubkey);
 
-    // Check balance
-    let address = provider.get_accounts().await?[0];
+    // Check balance of the wallet address (derived from the signer)
     let balance = provider.get_balance(address).await?;
     println!("Address: {address}");
     println!("Balance: {balance} wei");
@@ -83,6 +90,7 @@ An unsigned provider does not require a private key. It can query chain state, r
 
 ```rust
 use seismic_prelude::client::*;
+use alloy_provider::Provider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -154,6 +162,7 @@ For local testing using Sanvil (Seismic Anvil):
 use seismic_prelude::client::*;
 use seismic_alloy_network::foundry::SeismicFoundry;
 use alloy_node_bindings::Anvil;
+use alloy_provider::Provider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -190,6 +199,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```rust
 use seismic_prelude::client::*;
 use seismic_alloy_network::reth::SeismicReth;
+use alloy_provider::Provider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -232,7 +242,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```
 Block number: 12345
-Chain ID: 1946
+Chain ID: 5124
 TEE public key: PublicKey(028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0)
 Address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 Balance: 10000000000000000000 wei

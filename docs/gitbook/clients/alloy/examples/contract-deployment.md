@@ -19,7 +19,7 @@ export RPC_URL="https://testnet-1.seismictest.net/rpc"
 export WS_URL="wss://testnet-1.seismictest.net/ws"
 ```
 
-`Cargo.toml`:
+`Cargo.toml` -- see [Installation](../installation.md) for the full template including the required `[patch.crates-io]` block:
 
 ```toml
 [package]
@@ -29,14 +29,20 @@ edition = "2021"
 rust-version = "1.82"
 
 [dependencies]
-seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
-alloy-signer-local = "1.1"
-alloy-primitives = "1.1"
-alloy-sol-types = "1.1"
-alloy-network = "1.1"
-alloy-rpc-types-eth = "1.1"
-futures-util = "0.3"
-tokio = { version = "1", features = ["full"] }
+seismic-prelude        = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+seismic-alloy-network  = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+alloy-provider         = "1.1"
+alloy-signer-local     = "1.1"
+alloy-primitives       = "1.1"
+alloy-sol-types        = "1.1"
+alloy-network          = "1.1"
+alloy-rpc-types-eth    = "1.1"
+futures-util           = "0.3"
+tokio                  = { version = "1", features = ["full"] }
+reqwest                = "0.12"
+
+# [patch.crates-io] block required — see Installation.
 ```
 
 ## Step 1: Compile the Contract
@@ -90,6 +96,7 @@ Use `#[sol(rpc, bytecode = "...")]` to generate a `deploy()` method and type-saf
 use seismic_prelude::client::*;
 use seismic_alloy_network::reth::SeismicReth;
 use alloy_network::ReceiptResponse;
+use alloy_provider::Provider;
 
 sol! {
     #[sol(rpc, bytecode = "6080604052...")]
@@ -137,7 +144,7 @@ Once deployed, interact with the contract using shielded calls:
     // Shielded write -- setNumber has suint256 param, auto-encrypts
     println!("\nSending shielded write: setNumber(42)...");
     let write_receipt = contract
-        .setNumber(U256::from(42).into())
+        .setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
         .send()
         .await?
         .get_receipt()
@@ -216,6 +223,7 @@ Combining all steps into one program:
 use seismic_prelude::client::*;
 use seismic_alloy_network::reth::SeismicReth;
 use alloy_network::ReceiptResponse;
+use alloy_provider::Provider;
 
 sol! {
     #[sol(rpc, bytecode = "6080604052...")]
@@ -252,7 +260,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Verified: {} bytes of runtime code", code.len());
 
     // 4. Shielded write: setNumber auto-encrypts (suint256 param)
-    contract.setNumber(U256::from(42).into())
+    contract.setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
         .send()
         .await?
         .get_receipt()

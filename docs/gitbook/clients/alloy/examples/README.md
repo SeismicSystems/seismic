@@ -51,6 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect_http(url)
         .await?;
 
+    let contract_address: Address = std::env::var("CONTRACT_ADDRESS")?.parse()?;
     let contract = MyContract::new(contract_address, &provider);
 
     // 2. Shielded write
@@ -81,16 +82,7 @@ export PRIVATE_KEY="0x..."
 export RPC_URL="https://testnet-1.seismictest.net/rpc"
 ```
 
-And your `Cargo.toml` includes:
-
-```toml
-[dependencies]
-seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
-alloy-signer-local = "1.1"
-alloy-primitives = "1.1"
-alloy-sol-types = "1.1"
-tokio = { version = "1", features = ["full"] }
-```
+And your `Cargo.toml` follows the layout documented in [Installation](../installation.md) -- `seismic-prelude`, `seismic-alloy-network`, `seismic-alloy-provider` from git plus `alloy-provider`, `alloy-signer-local`, `alloy-primitives`, `alloy-sol-types`, `tokio`, `reqwest`, and the required `[patch.crates-io]` block.
 
 ## See Also
 

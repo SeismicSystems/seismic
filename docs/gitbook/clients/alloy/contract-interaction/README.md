@@ -94,7 +94,7 @@ let contract = SeismicCounter::new(address, &provider);
 let is_odd = contract.isOdd().seismic().call().await?;
 
 // Shielded write -- setNumber has a shielded param (suint256), auto-encrypts
-contract.setNumber(U256::from(42).into())
+contract.setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
     .send()
     .await?
     .get_receipt()
