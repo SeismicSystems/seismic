@@ -18,7 +18,7 @@ export PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4
 export RPC_URL="https://testnet-1.seismictest.net/rpc"
 ```
 
-`Cargo.toml`:
+`Cargo.toml` — see [Installation](../installation.md) for the full template including the required `[patch.crates-io]` block:
 
 ```toml
 [package]
@@ -28,10 +28,16 @@ edition = "2021"
 rust-version = "1.82"
 
 [dependencies]
-seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
-alloy-signer-local = "1.1"
-alloy-primitives = "1.1"
-tokio = { version = "1", features = ["full"] }
+seismic-prelude        = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+seismic-alloy-network  = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+alloy-provider         = "1.1"
+alloy-signer-local     = "1.1"
+alloy-primitives       = "1.1"
+tokio                  = { version = "1", features = ["full"] }
+reqwest                = "0.12"
+
+# [patch.crates-io] block required — see Installation.
 ```
 
 ## Signed Provider (Full Capabilities)
@@ -39,18 +45,23 @@ tokio = { version = "1", features = ["full"] }
 A signed provider can send shielded writes, perform signed reads, and execute all standard Alloy provider operations.
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
+use alloy_provider::Provider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load private key from environment
     let signer: PrivateKeySigner = std::env::var("PRIVATE_KEY")?.parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let address = signer.address();
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
 
     // Create signed provider (fetches TEE pubkey automatically)
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
     // Verify connection
     let block_number = provider.get_block_number().await?;
@@ -64,8 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tee_pubkey = provider.get_tee_pubkey().await?;
     println!("TEE public key: {:?}", tee_pubkey);
 
-    // Check balance
-    let address = provider.get_accounts().await?[0];
+    // Check balance of the wallet address (derived from the signer)
     let balance = provider.get_balance(address).await?;
     println!("Address: {address}");
     println!("Balance: {balance} wei");
@@ -79,14 +89,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 An unsigned provider does not require a private key. It can query chain state, read public data, and subscribe to events (via WebSocket), but cannot send transactions or perform signed reads.
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use alloy_provider::Provider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
 
     // Create unsigned provider (no private key needed)
-    let provider = sreth_unsigned_provider(url);
+    // connect_http is synchronous for unsigned providers
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     // Verify connection
     let block_number = provider.get_block_number().await?;
@@ -109,27 +121,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## Using Convenience Constructors
+## Network Selection
 
-The SDK provides shorthand functions that select the correct network type automatically:
+The builder defaults to `SeismicReth` (production). Use `.foundry()` for local development:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::foundry::SeismicFoundry;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = std::env::var("PRIVATE_KEY")?.parse()?;
-    let wallet = SeismicWallet::from(signer);
-    let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
 
-    // For production / testnet (SeismicReth)
-    let provider = sreth_signed_provider(wallet.clone(), url.clone()).await?;
+    // For production / testnet (SeismicReth — default)
+    let wallet = SeismicWallet::from(signer.clone());
+    let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
     println!("Production block: {}", provider.get_block_number().await?);
 
     // For local development (SeismicFoundry)
-    // let local_url: reqwest::Url = "http://127.0.0.1:8545".parse()?;
-    // let provider = sfoundry_signed_provider(wallet, local_url).await?;
+    // let local_wallet = SeismicWallet::<SeismicFoundry>::from(signer);
+    // let provider = SeismicProviderBuilder::new()
+    //     .foundry()
+    //     .wallet(local_wallet)
+    //     .connect_http("http://127.0.0.1:8545".parse()?)
+    //     .await?;
 
     Ok(())
 }
@@ -140,9 +159,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 For local testing using Sanvil (Seismic Anvil):
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::foundry::SeismicFoundry;
 use alloy_node_bindings::Anvil;
+use alloy_provider::Provider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -151,13 +171,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Use one of the pre-funded accounts
     let signer: PrivateKeySigner = anvil.keys()[0].clone().into();
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicFoundry>::from(signer);
 
     // Connect to the local instance
-    let provider = SeismicSignedProvider::<SeismicFoundry>::new(
-        wallet,
-        anvil.endpoint_url(),
-    ).await?;
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(wallet)
+        .connect_http(anvil.endpoint_url())
+        .await?;
 
     let block = provider.get_block_number().await?;
     println!("Local Sanvil block: {block}");
@@ -176,18 +197,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## Error Handling
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
+use alloy_provider::Provider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = std::env::var("PRIVATE_KEY")?.parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url: reqwest::Url = std::env::var("RPC_URL")?.parse()?;
 
     // Provider creation can fail if the node is unreachable
     // or the TEE pubkey fetch times out
-    let provider = match SeismicSignedProvider::<SeismicReth>::new(wallet, url).await {
+    let provider = match SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await
+    {
         Ok(p) => {
             println!("Provider created successfully");
             p
@@ -216,7 +242,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```
 Block number: 12345
-Chain ID: 1946
+Chain ID: 5124
 TEE public key: PublicKey(028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0)
 Address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 Balance: 10000000000000000000 wei

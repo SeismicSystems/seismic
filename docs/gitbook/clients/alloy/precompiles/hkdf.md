@@ -27,7 +27,7 @@ The `SeismicSignedProvider` uses this precompile internally to derive AES keys f
 | ----- | -------- | ------------------------------------ |
 | `ikm` | Variable | Input key material (arbitrary bytes) |
 
-The input is the raw IKM bytes -- no additional encoding is needed.
+The input is the raw IKM bytes — no additional encoding is needed.
 
 ## Output Format
 
@@ -46,16 +46,22 @@ The input is the raw IKM bytes -- no additional encoding is needed.
 ### Basic Usage
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
+    // Using convenience helpers
+    let derived_key = precompiles::call::hkdf(&provider, b"my-input-key-material").await?;
+    println!("Derived key (convenience): 0x{}", hex::encode(&derived_key));
+
+    // Manual approach
     let hkdf_address: Address =
         "0x0000000000000000000000000000000000000068".parse()?;
 
@@ -81,15 +87,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Derive Multiple Keys by Context
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let hkdf_address: Address =
         "0x0000000000000000000000000000000000000068".parse()?;
@@ -124,15 +130,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Use as AES Key
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     // Step 1: Derive AES key via HKDF
     let hkdf_address: Address =
@@ -178,15 +184,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Derive from ECDH Output
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     // Step 1: Perform ECDH
     let ecdh_address: Address =
@@ -232,15 +238,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Deterministic Key Derivation
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let hkdf_address: Address =
         "0x0000000000000000000000000000000000000068".parse()?;
@@ -274,10 +280,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Encode parameters** -- Passes input key material as-is
-2. **Call precompile** -- Issues an `eth_call` to address `0x68` with gas proportional to input length
-3. **HKDF derivation** -- Precompile performs HKDF-SHA256 extract and expand phases
-4. **Return key** -- Returns first 32 bytes of derived key material
+1. **Encode parameters** — Passes input key material as-is
+2. **Call precompile** — Issues an `eth_call` to address `0x68` with gas proportional to input length
+3. **HKDF derivation** — Precompile performs HKDF-SHA256 extract and expand phases
+4. **Return key** — Returns first 32 bytes of derived key material
 
 ## Gas Cost
 
@@ -321,13 +327,13 @@ For example:
 
 ## Warnings
 
-- **Not for password hashing** -- Use proper password hashing algorithms (bcrypt, argon2) for passwords
-- **Input entropy** -- Output security depends entirely on input entropy
-- **Deterministic** -- Same input always yields the same output (no salt or randomness is added)
+- **Not for password hashing** — Use proper password hashing algorithms (bcrypt, argon2) for passwords
+- **Input entropy** — Output security depends entirely on input entropy
+- **Deterministic** — Same input always yields the same output (no salt or randomness is added)
 
 ## See Also
 
-- [Precompiles Overview](./) -- All precompile reference
-- [ecdh](ecdh.md) -- Often used before HKDF to derive keys
-- [aes-gcm-encrypt](aes-gcm-encrypt.md) -- Use derived keys for encryption
-- [rng](rng.md) -- Generate random input material
+- [Precompiles Overview](./) — All precompile reference
+- [ecdh](ecdh.md) — Often used before HKDF to derive keys
+- [aes-gcm-encrypt](aes-gcm-encrypt.md) — Use derived keys for encryption
+- [rng](rng.md) — Generate random input material

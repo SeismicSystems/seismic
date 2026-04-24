@@ -37,8 +37,8 @@ where
 The most common pattern is to create a wallet from a `PrivateKeySigner`:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::from(signer);
@@ -49,14 +49,14 @@ The `From` implementation is available for any type that implements `TxSigner<Si
 ### With `new()`
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::new(signer);
 ```
 
-This is equivalent to using `From` -- the signer is registered and set as the default.
+This is equivalent to using `From` — the signer is registered and set as the default.
 
 ## Methods
 
@@ -122,7 +122,7 @@ Get an `Arc` reference to the default signer.
 pub fn default_signer(&self) -> Arc<dyn TxSigner<Signature> + Send + Sync>
 ```
 
-**Returns:** `Arc<dyn TxSigner<Signature> + Send + Sync>` -- The default signer.
+**Returns:** `Arc<dyn TxSigner<Signature> + Send + Sync>` — The default signer.
 
 ### `signer_by_address`
 
@@ -139,7 +139,7 @@ pub fn signer_by_address(
 | --------- | --------- | -------- | ---------------------- |
 | `address` | `Address` | Yes      | The address to look up |
 
-**Returns:** `Option<Arc<dyn TxSigner<Signature> + Send + Sync>>` -- The signer if registered, `None` otherwise.
+**Returns:** `Option<Arc<dyn TxSigner<Signature> + Send + Sync>>` — The signer if registered, `None` otherwise.
 
 ## Trait Implementations
 
@@ -147,9 +147,9 @@ pub fn signer_by_address(
 
 `SeismicWallet<N>` implements Alloy's `NetworkWallet<N>` trait, which is how the `WalletFiller` interacts with it during the filler pipeline:
 
-- `default_signer_address()` -- returns the default signer's address
-- `has_signer_for(address)` -- checks if a signer is registered for the given address
-- `signer_addresses()` -- returns an iterator over all registered signer addresses
+- `default_signer_address()` — returns the default signer's address
+- `has_signer_for(address)` — checks if a signer is registered for the given address
+- `signer_addresses()` — returns an iterator over all registered signer addresses
 
 ### `From<S> for SeismicWallet<N>`
 
@@ -166,22 +166,25 @@ This is the most ergonomic way to create a wallet from a single signer.
 ### Basic Wallet Creation
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
 let wallet = SeismicWallet::<SeismicReth>::from(signer);
 
 // Use with a provider
 let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-let provider = SeismicSignedProvider::new(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 ### Multi-Account Wallet
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let deployer: PrivateKeySigner = "0xDEPLOYER_KEY".parse()?;
 let user: PrivateKeySigner = "0xUSER_KEY".parse()?;
@@ -196,8 +199,8 @@ wallet.register_signer(user);
 ### Switching Default Signer
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let alice: PrivateKeySigner = "0xALICE_KEY".parse()?;
 let bob: PrivateKeySigner = "0xBOB_KEY".parse()?;
@@ -215,8 +218,8 @@ wallet.set_default_signer(bob_addr);
 ### Local Development with SeismicFoundry
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::foundry::SeismicFoundry;
 
 // Well-known Anvil test key
 let signer: PrivateKeySigner =
@@ -226,16 +229,20 @@ let signer: PrivateKeySigner =
 let wallet = SeismicWallet::<SeismicFoundry>::from(signer);
 
 let url = "http://127.0.0.1:8545".parse()?;
-let provider = sfoundry_signed_provider(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .foundry()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 ## Notes
 
 - `SeismicWallet` is generic over `N: SeismicNetwork` so the same API works for both production and testing networks
 - Signers are stored as `Arc<dyn TxSigner<Signature>>`, allowing heterogeneous signer types in a single wallet
-- The `PhantomData<N>` field ensures type safety -- a `SeismicWallet<SeismicReth>` cannot be used with a `SeismicSignedProvider<SeismicFoundry>`
+- The `PhantomData<N>` field ensures type safety — a `SeismicWallet<SeismicReth>` cannot be used with a `SeismicSignedProvider<SeismicFoundry>`
 - `set_default_signer` panics on unregistered addresses; check with `signer_by_address` first if unsure
-- The wallet does not handle encryption -- that is the responsibility of `SeismicElementsFiller`
+- The wallet does not handle encryption — that is the responsibility of `SeismicElementsFiller`
 
 ## See Also
 

@@ -106,7 +106,7 @@ fn get_seismic_elements(
 | --------- | --------------------------- | -------- | ------------------------------------ |
 | `req`     | `&Self::TransactionRequest` | Yes      | Reference to the transaction request |
 
-**Returns:** `Option<TxSeismicElements>` -- `Some` if elements are present, `None` otherwise.
+**Returns:** `Option<TxSeismicElements>` — `Some` if elements are present, `None` otherwise.
 
 ### `get_request_input`
 
@@ -122,7 +122,7 @@ fn get_request_input(
 | --------- | --------------------------- | -------- | ------------------------------------ |
 | `req`     | `&Self::TransactionRequest` | Yes      | Reference to the transaction request |
 
-**Returns:** `Option<&Bytes>` -- The calldata bytes, if present.
+**Returns:** `Option<&Bytes>` — The calldata bytes, if present.
 
 ### `get_envelope_input`
 
@@ -138,7 +138,7 @@ fn get_envelope_input(
 | --------- | ------------------- | -------- | -------------------------------------------- |
 | `req`     | `&Self::TxEnvelope` | Yes      | Reference to the signed transaction envelope |
 
-**Returns:** `&Bytes` -- The calldata bytes.
+**Returns:** `&Bytes` — The calldata bytes.
 
 ### `set_request_input`
 
@@ -156,7 +156,7 @@ fn set_request_input(
 | `req`     | `&mut Self::TransactionRequest` | Yes      | Mutable reference to the transaction request |
 | `input`   | `Bytes`                         | Yes      | The calldata to set (typically encrypted)    |
 
-**Returns:** `Result<(), InputDecryptionElementsError>` -- `Ok(())` on success, or an error if the operation fails.
+**Returns:** `Result<(), InputDecryptionElementsError>` — `Ok(())` on success, or an error if the operation fails.
 
 ### `set_envelope_input`
 
@@ -174,7 +174,7 @@ fn set_envelope_input(
 | `req`     | `&mut Self::TxEnvelope` | Yes      | Mutable reference to the signed envelope  |
 | `input`   | `Bytes`                 | Yes      | The calldata to set (typically decrypted) |
 
-**Returns:** `Result<(), InputDecryptionElementsError>` -- `Ok(())` on success, or an error if the operation fails.
+**Returns:** `Result<(), InputDecryptionElementsError>` — `Ok(())` on success, or an error if the operation fails.
 
 ### `sign_transaction_from`
 
@@ -194,7 +194,7 @@ async fn sign_transaction_from(
 | `sender`  | `Address`              | Yes      | Address of the signer to use     |
 | `tx`      | `Self::UnsignedTx`     | Yes      | The unsigned transaction to sign |
 
-**Returns:** `Result<Self::TxEnvelope, alloy_signer::Error>` -- The signed transaction envelope, or a signing error.
+**Returns:** `Result<Self::TxEnvelope, alloy_signer::Error>` — The signed transaction envelope, or a signing error.
 
 ### `is_seismic_tx_type`
 
@@ -208,7 +208,7 @@ fn is_seismic_tx_type(ty: Self::TxType) -> bool;
 | --------- | -------------- | -------- | ----------------------------- |
 | `ty`      | `Self::TxType` | Yes      | The transaction type to check |
 
-**Returns:** `bool` -- `true` if this is a Seismic transaction type.
+**Returns:** `bool` — `true` if this is a Seismic transaction type.
 
 ### `extract_seismic_metadata`
 
@@ -224,7 +224,7 @@ fn extract_seismic_metadata(
 | ---------- | ------------------- | -------- | ------------------------------- |
 | `envelope` | `&Self::TxEnvelope` | Yes      | The signed transaction envelope |
 
-**Returns:** `Option<TxSeismicMetadata>` -- Seismic metadata if present, `None` for non-Seismic transactions.
+**Returns:** `Option<TxSeismicMetadata>` — Seismic metadata if present, `None` for non-Seismic transactions.
 
 ## Implementations
 

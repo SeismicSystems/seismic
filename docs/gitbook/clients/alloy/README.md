@@ -9,37 +9,64 @@ Rust SDK for [Seismic](https://seismic.systems), built on [Alloy](https://github
 
 ```toml
 [dependencies]
-seismic-alloy = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+seismic-prelude        = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+seismic-alloy-network  = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+seismic-alloy-provider = { git = "https://github.com/SeismicSystems/seismic-alloy" }
+alloy-provider         = "1.1"
+# ... plus the [patch.crates-io] block documented in Installation
 ```
+
+See [Installation](installation.md) for the full `Cargo.toml`, including the required `[patch.crates-io]` block.
 
 ## Quick Example
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
+use alloy_provider::Provider;
+
+sol! {
+    #[sol(rpc)]
+    contract SeismicCounter {
+        function setNumber(suint256 newNumber) public;
+        function isOdd() public view returns (bool);
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
-    let url = "https://testnet-1.seismictest.net/rpc".parse()?;
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
+    let url: reqwest::Url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
-    // All standard Alloy provider methods work
-    let block_number = provider.get_block_number().await?;
-    println!("Block number: {block_number}");
+    let contract_address: Address = "0xYourContractAddress".parse()?;
+    let contract = SeismicCounter::new(contract_address, &provider);
+
+    // Shielded read (encrypted call + response decryption)
+    let is_odd = contract.isOdd().seismic().call().await?;
+
+    // Shielded write (encrypted transaction)
+    // setNumber has a shielded param (suint256), so it auto-encrypts — no .seismic() needed
+    contract.setNumber(alloy_primitives::aliases::SUInt(U256::from(42)))
+        .send()
+        .await?
+        .get_receipt()
+        .await?;
 
     Ok(())
 }
 ```
 
 ```rust
-// Unsigned provider -- read-only (no private key needed)
-use seismic_prelude::foundry::*;
-
-let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-let provider = sreth_unsigned_provider(url);
+// Unsigned provider — read-only (no private key needed)
+// Note: connect_http is synchronous for unsigned providers (no .await)
+let provider = SeismicProviderBuilder::new()
+    .connect_http("https://testnet-1.seismictest.net/rpc".parse()?);
 
 let block = provider.get_block_number().await?;
 ```
@@ -61,52 +88,19 @@ let block = provider.get_block_number().await?;
 | **[SeismicUnsignedProvider](provider/seismic-unsigned-provider.md)** | Read-only provider for public operations                                |
 | **[Encryption](provider/encryption.md)**                             | TEE key exchange, ECDH, AES-GCM calldata encryption                     |
 
-## Quick Links
-
-### By Task
-
-- **Create a signed provider** -> [SeismicSignedProvider](provider/seismic-signed-provider.md)
-- **Create a read-only provider** -> [SeismicUnsignedProvider](provider/seismic-unsigned-provider.md)
-- **Understand calldata encryption** -> [Encryption](provider/encryption.md)
-- **Install the crate** -> [Installation](installation.md)
-
-### By Component
-
-- **Provider types** -> [SeismicSignedProvider](provider/seismic-signed-provider.md), [SeismicUnsignedProvider](provider/seismic-unsigned-provider.md)
-- **Encryption** -> [Encryption](provider/encryption.md)
-- **Convenience constructors** -> `sreth_signed_provider()`, `sfoundry_signed_provider()`
-
-## Features
-
-- **Shielded Transactions** -- Encrypt calldata with TEE public key via AES-GCM
-- **Signed Reads** -- Prove identity in `eth_call` with `seismic_call()`
-- **Two Provider Types** -- `SeismicSignedProvider` (full capabilities) and `SeismicUnsignedProvider` (read-only)
-- **Automatic Encryption Pipeline** -- Filler chain handles encryption transparently
-- **Type 0x4A Transactions** -- Native support for Seismic transaction type
-- **Full Alloy Compatibility** -- All standard Alloy `Provider` methods work unchanged
-
-## Architecture
-
-The SDK extends Alloy's provider model with a filler pipeline that automatically handles Seismic-specific transaction fields and encryption:
+## Workspace Layout
 
 ```
 seismic-alloy (workspace)
-├── consensus    -- Seismic transaction types and consensus logic
-├── network      -- SeismicNetwork trait, SeismicReth, SeismicFoundry
-├── provider     -- SeismicSignedProvider, SeismicUnsignedProvider, fillers
-├── rpc-types    -- Seismic-specific RPC request/response types
-├── genesis      -- Genesis configuration types
-└── prelude      -- Convenience re-exports from all crates
-
-SeismicSignedProvider filler chain:
-  WalletFiller
-  -> NonceFiller + ChainIdFiller
-  -> SeismicElementsFiller
-  -> SeismicGasFiller
-  -> (encrypt calldata)
-  -> send transaction
-  -> (decrypt response)
+├── consensus    — Seismic transaction types and consensus logic
+├── network      — SeismicNetwork trait, SeismicReth, SeismicFoundry
+├── provider     — SeismicProviderBuilder, fillers, precompile helpers
+├── rpc-types    — Seismic-specific RPC request/response types
+├── genesis      — Genesis configuration types
+└── prelude      — Convenience re-exports from all crates
 ```
+
+The provider wraps Alloy's provider with a filler pipeline that handles seismic-specific fields and calldata encryption. See [Provider](provider/) for the full filler chain and per-trait API.
 
 ## Network Types
 
@@ -115,11 +109,11 @@ The SDK defines two network configurations:
 | Network          | Type        | Description                                |
 | ---------------- | ----------- | ------------------------------------------ |
 | `SeismicReth`    | Production  | Seismic devnet/testnet/mainnet             |
-| `SeismicFoundry` | Development | Local Seismic Foundry (sfoundry) instances |
+| `SeismicFoundry` | Development | Local Seismic Foundry (sanvil) instances   |
 
 Both implement the `SeismicNetwork` trait and can be used as the generic parameter `N` in provider types.
 
-### Guides & Examples
+## Guides & Examples
 
 | Section                                                            | Description                                             |
 | ------------------------------------------------------------------ | ------------------------------------------------------- |
@@ -134,9 +128,9 @@ Both implement the `SeismicNetwork` trait and can be used as the generic paramet
 
 ## Next Steps
 
-1. **[Install seismic-alloy](installation.md)** -- Add the crate to your project
-2. **[Create a signed provider](provider/seismic-signed-provider.md)** -- Connect with full capabilities
-3. **[Understand encryption](provider/encryption.md)** -- Learn how calldata encryption works
-4. **[Explore unsigned providers](provider/seismic-unsigned-provider.md)** -- Read-only access
-5. **[Follow a guide](guides/)** -- Step-by-step shielded write or signed read tutorial
-6. **[Run an example](examples/)** -- Complete, runnable code examples
+1. **[Install seismic-alloy](installation.md)** — Add the crate to your project
+2. **[Create a signed provider](provider/seismic-signed-provider.md)** — Connect with full capabilities
+3. **[Understand encryption](provider/encryption.md)** — Learn how calldata encryption works
+4. **[Explore unsigned providers](provider/seismic-unsigned-provider.md)** — Read-only access
+5. **[Follow a guide](guides/)** — Step-by-step shielded write or signed read tutorial
+6. **[Run an example](examples/)** — Complete, runnable code examples

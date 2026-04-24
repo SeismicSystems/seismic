@@ -44,16 +44,23 @@ The input is the concatenation of `num_bytes` followed by the optional `personal
 ### Basic Usage
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, U256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
+    // Using convenience helpers
+    let random = precompiles::call::rng(&provider, 32, b"").await?;
+    let random_value = U256::from_be_slice(&random);
+    println!("Random value (convenience): {random_value}");
+
+    // Manual approach
     let rng_address: Address =
         "0x0000000000000000000000000000000000000064".parse()?;
 
@@ -79,15 +86,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### With Personalization
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, U256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let rng_address: Address =
         "0x0000000000000000000000000000000000000064".parse()?;
@@ -118,15 +126,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Generate Multiple Random Values
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, U256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let rng_address: Address =
         "0x0000000000000000000000000000000000000064".parse()?;
@@ -154,15 +162,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Convert to Fixed-Size Array
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let rng_address: Address =
         "0x0000000000000000000000000000000000000064".parse()?;
@@ -189,10 +197,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Encode parameters** -- `num_bytes` is encoded as a 4-byte big-endian integer, followed by optional `personalization` bytes
-2. **Call precompile** -- Issues an `eth_call` to address `0x64` with estimated gas
-3. **Generate randomness** -- The precompile uses Strobe128 internally for cryptographic security
-4. **Decode result** -- Result bytes are padded to 32 bytes and returned as big-endian
+1. **Encode parameters** — `num_bytes` is encoded as a 4-byte big-endian integer, followed by optional `personalization` bytes
+2. **Call precompile** — Issues an `eth_call` to address `0x64` with estimated gas
+3. **Generate randomness** — The precompile uses Strobe128 internally for cryptographic security
+4. **Decode result** — Result bytes are padded to 32 bytes and returned as big-endian
 
 ## Gas Cost
 
@@ -216,12 +224,12 @@ The base cost is **3500 gas**, with 5 gas per 136-byte block for personalization
 
 ## Warnings
 
-- **Range validation** -- `num_bytes` outside 1--32 will cause the precompile to revert
-- **Node connectivity** -- Requires a working connection to a Seismic node
-- **Not for consensus** -- Results may differ across nodes due to timing
+- **Range validation** — `num_bytes` outside 1--32 will cause the precompile to revert
+- **Node connectivity** — Requires a working connection to a Seismic node
+- **Not for consensus** — Results may differ across nodes due to timing
 
 ## See Also
 
-- [Precompiles Overview](./) -- All precompile reference
-- [ecdh](ecdh.md) -- On-chain ECDH key exchange
-- [hkdf](hkdf.md) -- On-chain HKDF key derivation
+- [Precompiles Overview](./) — All precompile reference
+- [ecdh](ecdh.md) — On-chain ECDH key exchange
+- [hkdf](hkdf.md) — On-chain HKDF key derivation

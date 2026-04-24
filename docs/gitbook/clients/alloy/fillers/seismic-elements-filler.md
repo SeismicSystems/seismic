@@ -13,9 +13,9 @@ When a Seismic transaction (type `0x4A`) passes through the filler pipeline, `Se
 
 1. **Fetches the TEE public key** from the Seismic node (cached after first call)
 2. **Fetches the latest block number** to calculate the transaction expiration
-3. **Generates an encryption nonce** using ECDH between the ephemeral secret key and the TEE public key
+3. **Generates an encryption nonce** using ECDH between the provider secret key and the TEE public key
 4. **Encrypts the calldata** using AES-GCM
-5. **Attaches `TxSeismicElements`** (nonce, ephemeral public key, expiration block) to the transaction request
+5. **Attaches `TxSeismicElements`** (nonce, provider public key, expiration block) to the transaction request
 
 For non-Seismic transactions, the filler is a no-op.
 
@@ -25,7 +25,7 @@ For non-Seismic transactions, the filler is a no-op.
 pub struct SeismicElementsFiller {
     tee_pubkey: Option<PublicKey>,
     blocks_window: Option<u64>,
-    ephemeral_secret_key: SecretKey,
+    provider_secret_key: SecretKey,
     signed_read: bool,
 }
 ```
@@ -34,7 +34,7 @@ pub struct SeismicElementsFiller {
 | ---------------------- | ------------------- | ------------------------------------------------- |
 | `tee_pubkey`           | `Option<PublicKey>` | Cached TEE public key (fetched lazily if `None`)  |
 | `blocks_window`        | `Option<u64>`       | Custom expiration window in blocks (default: 100) |
-| `ephemeral_secret_key` | `SecretKey`         | Randomly generated ephemeral key for ECDH         |
+| `provider_secret_key`  | `SecretKey`         | Randomly generated provider-scoped key for ECDH   |
 | `signed_read`          | `bool`              | Whether to enable signed read mode                |
 
 ## Constructors
@@ -51,15 +51,15 @@ pub fn new() -> Self
 
 - No cached TEE public key (will be fetched from the node)
 - Default blocks window (100)
-- A freshly generated ephemeral secret key
+- A freshly generated provider secret key
 - Signed read disabled
 
-### `with_tee_pubkey_and_url`
+### `with_tee_pubkey`
 
 Create a filler with a pre-cached TEE public key. This avoids the initial RPC call to fetch the key.
 
 ```rust
-pub fn with_tee_pubkey_and_url(tee_pubkey: PublicKey) -> Self
+pub fn with_tee_pubkey(tee_pubkey: PublicKey) -> Self
 ```
 
 | Parameter    | Type        | Required | Description                 |
@@ -102,15 +102,15 @@ pub fn with_blocks_window(self, blocks_window: u64) -> Self
 The default `BLOCKS_WINDOW` is **100 blocks**. In most cases, you do not need to change this. Increase it if transactions are expiring before confirmation on a congested network.
 {% endhint %}
 
-### `ephemeral_secret_key`
+### `provider_secret_key`
 
-Access the ephemeral secret key generated at construction time.
+Access the provider secret key generated at construction time.
 
 ```rust
-pub fn ephemeral_secret_key(&self) -> &SecretKey
+pub fn provider_secret_key(&self) -> &SecretKey
 ```
 
-**Returns:** `&SecretKey` -- Reference to the ephemeral secret key.
+**Returns:** `&SecretKey` — Reference to the provider secret key.
 
 ## Two-Phase Design
 
@@ -120,8 +120,8 @@ pub fn ephemeral_secret_key(&self) -> &SecretKey
 
 The prepare phase is async. It fetches external data needed for encryption:
 
-1. **TEE public key** -- Fetched from the node via `seismic_getTeePublicKey` RPC call (or uses cached value)
-2. **Latest block number** -- Fetched to calculate the expiration block
+1. **TEE public key** — Fetched from the node via `seismic_getTeePublicKey` RPC call (or uses cached value)
+2. **Latest block number** — Fetched to calculate the expiration block
 
 These values are returned as a "fillable" that is passed to the fill phase.
 
@@ -130,23 +130,23 @@ These values are returned as a "fillable" that is passed to the fill phase.
 The fill phase is synchronous. It uses the prepared data to:
 
 1. Calculate the expiration block: `latest_block + blocks_window`
-2. Generate the encryption nonce via ECDH between the ephemeral secret key and the TEE public key
+2. Generate the encryption nonce via ECDH between the provider secret key and the TEE public key
 3. Encrypt the calldata using AES-GCM with the derived shared secret
-4. Create `TxSeismicElements` containing the nonce, ephemeral public key, and expiration
+4. Create `TxSeismicElements` containing the nonce, provider public key, and expiration
 5. Call `N::set_seismic_elements()` to attach elements to the request
 6. Call `N::set_request_input()` to replace plaintext calldata with encrypted calldata
 
 ## Encryption Flow
 
 ```
-ephemeral_secret_key + tee_public_key
+provider_secret_key + tee_public_key
   -> ECDH shared secret
   -> HKDF key derivation
   -> AES-GCM encryption of calldata
   -> encrypted calldata + nonce stored in transaction
 ```
 
-The node's TEE can reverse this process because it holds the private key corresponding to `tee_public_key`. It uses the ephemeral public key (included in `TxSeismicElements`) to derive the same shared secret.
+The node's TEE can reverse this process because it holds the private key corresponding to `tee_public_key`. It uses the provider's public key (included in `TxSeismicElements`) to derive the same shared secret.
 
 ## Constants
 
@@ -161,15 +161,18 @@ The node's TEE can reverse this process because it holds the private key corresp
 In most cases, you do not interact with `SeismicElementsFiller` directly. It is automatically included in the provider's filler pipeline:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
+let wallet = SeismicWallet::<SeismicReth>::from(signer);
 let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
 // SeismicElementsFiller is configured automatically
-let provider = sreth_signed_provider(wallet, url).await?;
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
 ### With Pre-Cached TEE Key
@@ -177,15 +180,15 @@ let provider = sreth_signed_provider(wallet, url).await?;
 If you already know the TEE public key (e.g., from a previous session):
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::fillers::SeismicElementsFiller;
 
-let filler = SeismicElementsFiller::with_tee_pubkey_and_url(known_tee_pubkey);
+let filler = SeismicElementsFiller::with_tee_pubkey(known_tee_pubkey);
 ```
 
 ### With Custom Expiration Window
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::fillers::SeismicElementsFiller;
 
 let filler = SeismicElementsFiller::new()
     .with_blocks_window(200);  // Expire after 200 blocks instead of 100
@@ -194,7 +197,7 @@ let filler = SeismicElementsFiller::new()
 ### With Signed Reads
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_provider::fillers::SeismicElementsFiller;
 
 let filler = SeismicElementsFiller::new()
     .with_signed_read(true);
@@ -202,8 +205,8 @@ let filler = SeismicElementsFiller::new()
 
 ## Notes
 
-- The ephemeral secret key is generated once at construction and reused for all transactions through this filler instance
-- The TEE public key is fetched lazily and cached -- only one RPC call is made per filler instance
+- The provider secret key is generated once at construction and reused for all transactions through this filler instance
+- The TEE public key is fetched lazily and cached — only one RPC call is made per filler instance
 - For non-Seismic transactions, the filler does nothing (no encryption, no elements)
 - The encryption uses `seismic-enclave` under the hood for ECDH and AES-GCM operations
 - If the TEE public key changes (e.g., node rotation), you need a new filler or provider instance

@@ -86,7 +86,7 @@ The signing flow for a Seismic transaction:
 ### Matching on Envelope Variants
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{SeismicTxEnvelope, TxSeismic};
 
 fn inspect_envelope(envelope: &SeismicTxEnvelope) {
     match envelope {
@@ -112,7 +112,7 @@ fn inspect_envelope(envelope: &SeismicTxEnvelope) {
 ### Accessing the Transaction Hash
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_alloy_consensus::{SeismicTxEnvelope, TxSeismic};
 
 let envelope: SeismicTxEnvelope = /* from provider */;
 
@@ -145,7 +145,7 @@ Alloy defines a standard `TxEnvelope` for Ethereum transaction types (Legacy, EI
 | `Eip1559`          | `Eip1559`               |
 | `Eip4844`          | `Eip4844`               |
 | `Eip7702`          | `Eip7702`               |
-| --                 | `Seismic` (type `0x4A`) |
+| —                 | `Seismic` (type `0x4A`) |
 
 This design allows seismic-alloy to handle all standard Ethereum transactions plus the Seismic type through a single unified type. Standard Alloy operations (sending legacy or EIP-1559 transactions) work normally.
 
@@ -191,14 +191,14 @@ For the Seismic variant:
 
 ## Notes
 
-- **Internal type.** Most users do not construct `SeismicTxEnvelope` directly -- the provider and wallet handle signing and wrapping automatically.
+- **Internal type.** Most users do not construct `SeismicTxEnvelope` directly — the provider and wallet handle signing and wrapping automatically.
 - **Unified handling.** RPC response parsing and block processing use `SeismicTxEnvelope` to handle all transaction types in a single code path.
 - **Hash caching.** The `Signed<T>` wrapper caches the transaction hash, so repeated access is efficient.
 - **Recoverable signature.** The ECDSA signature in `Signed<T>` is recoverable, allowing the sender's address to be derived from the hash and signature.
 
 ## See Also
 
-- [TxSeismic](tx-seismic.md) -- The unsigned Seismic transaction type inside the `Seismic` variant
-- [TxSeismicElements](tx-seismic-elements.md) -- Encryption metadata within `TxSeismic`
-- [Transaction Types Overview](./) -- All transaction types and their relationships
-- [Shielded Calls](../contract-interaction/shielded-calls.md) -- How transactions are built and sent
+- [TxSeismic](tx-seismic.md) — The unsigned Seismic transaction type inside the `Seismic` variant
+- [TxSeismicElements](tx-seismic-elements.md) — Encryption metadata within `TxSeismic`
+- [Transaction Types Overview](./) — All transaction types and their relationships
+- [Shielded Calls](../contract-interaction/shielded-calls.md) — How transactions are built and sent

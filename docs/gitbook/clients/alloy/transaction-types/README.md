@@ -17,14 +17,14 @@ seismic-alloy defines several transaction types that extend Alloy's standard Eth
 | --------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------- |
 | [`TxSeismic`](tx-seismic.md)                              | Encrypted Seismic transaction (type `0x4A`) | Privacy-preserving contract calls and state changes                  |
 | [`TxSeismicElements`](tx-seismic-elements.md)             | Encryption metadata and security parameters | Attached to every `TxSeismic` for key exchange, nonce, and expiry    |
-| [`TxSeismicMetadata`](tx-seismic-metadata.md)             | Additional Authenticated Data (AAD) context | AEAD encryption binding -- ensures ciphertext is tied to tx params   |
+| [`TxSeismicMetadata`](tx-seismic-metadata.md)             | Additional Authenticated Data (AAD) context | AEAD encryption binding — ensures ciphertext is tied to tx params   |
 | [`TxLegacyFields`](tx-seismic-metadata.md#txlegacyfields) | Standard EVM transaction fields             | Subset of tx fields used in AAD construction                         |
-| [`SeismicTxEnvelope`](seismic-tx-envelope.md)             | Signed transaction wrapper enum             | Network submission -- wraps all supported tx types including Seismic |
+| [`SeismicTxEnvelope`](seismic-tx-envelope.md)             | Signed transaction wrapper enum             | Network submission — wraps all supported tx types including Seismic |
 
 ## Transaction Lifecycle
 
 ```
-TransactionRequest           Build with seismic_foundry_tx_builder()
+TransactionRequest           Build with SeismicTransactionRequest::default()
        |
        v
 SeismicTransactionRequest    Mark as seismic with .seismic()
@@ -79,8 +79,6 @@ SeismicTxEnvelope (signed wrapper)
 These types are defined in `seismic-alloy-consensus` and re-exported through `seismic-alloy-prelude`:
 
 ```rust
-use seismic_prelude::foundry::*;
-// or directly:
 use seismic_alloy_consensus::{TxSeismic, TxSeismicElements, TxSeismicMetadata};
 ```
 
@@ -95,6 +93,6 @@ use seismic_alloy_consensus::{TxSeismic, TxSeismicElements, TxSeismicMetadata};
 
 ## See Also
 
-- [Contract Interaction](../contract-interaction/) -- How to use these types in practice
-- [Shielded Calls](../contract-interaction/shielded-calls.md) -- Building transactions with `.seismic()`
-- [Encryption](../provider/encryption.md) -- How encryption uses these types
+- [Contract Interaction](../contract-interaction/) — How to use these types in practice
+- [Shielded Calls](../contract-interaction/shielded-calls.md) — Building transactions with `.seismic()`
+- [Encryption](../provider/encryption.md) — How encryption uses these types

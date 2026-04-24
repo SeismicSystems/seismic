@@ -43,21 +43,24 @@ The `Network` implementation for `SeismicReth` defines the following associated 
 
 ## Usage
 
-### With SeismicSignedProvider
+### With SeismicProviderBuilder (Signed)
 
-The most common way to use `SeismicReth` is as the type parameter for `SeismicSignedProvider`:
+The most common way to use `SeismicReth` is via `SeismicProviderBuilder`. Since `SeismicReth` is the default network type, you do not need to specify it explicitly:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
 
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
     let block_number = provider.get_block_number().await?;
     println!("Block number: {block_number}");
@@ -66,72 +69,64 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### With Convenience Constructor
-
-The `sreth_signed_provider` function creates a `SeismicSignedProvider<SeismicReth>` without needing to specify the type parameter:
-
-```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
-
-let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
-let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-
-let provider = sreth_signed_provider(wallet, url).await?;
-```
-
 ### Unsigned Provider (Read-Only)
 
 For read-only access without a private key:
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-let provider = sreth_unsigned_provider(url);
+let provider = SeismicProviderBuilder::new()
+    .connect_http(url)
+    .await?;
 
 let block = provider.get_block_number().await?;
 ```
 
-## Convenience Functions
+## SeismicProviderBuilder
 
-These functions are re-exported through the prelude and select `SeismicReth` as the network type automatically:
+`SeismicProviderBuilder` provides a fluent API for constructing providers. It defaults to `SeismicReth` as the network type.
 
-| Function                             | Description                                                        |
-| ------------------------------------ | ------------------------------------------------------------------ |
-| `sreth_signed_provider(wallet, url)` | Create a signed provider with `SeismicReth` network                |
-| `sreth_unsigned_provider(url)`       | Create an unsigned (read-only) provider with `SeismicReth` network |
+| Method              | Description                                        |
+| ------------------- | -------------------------------------------------- |
+| `.wallet(wallet)`   | Set the wallet for signing transactions            |
+| `.connect_http(url)`| Connect to an HTTP RPC endpoint and build provider |
 
-### `sreth_signed_provider`
-
-```rust
-pub async fn sreth_signed_provider(
-    wallet: SeismicWallet<SeismicReth>,
-    url: reqwest::Url,
-) -> Result<SeismicSignedProvider<SeismicReth>, Box<dyn std::error::Error>>
-```
-
-| Parameter | Type                         | Required | Description               |
-| --------- | ---------------------------- | -------- | ------------------------- |
-| `wallet`  | `SeismicWallet<SeismicReth>` | Yes      | Wallet containing signers |
-| `url`     | `reqwest::Url`               | Yes      | RPC endpoint URL          |
-
-**Returns:** A fully configured `SeismicSignedProvider` with the filler pipeline set up.
-
-### `sreth_unsigned_provider`
+### Signed Provider
 
 ```rust
-pub fn sreth_unsigned_provider(
-    url: reqwest::Url,
-) -> SeismicUnsignedProvider<SeismicReth>
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
+
+let provider = SeismicProviderBuilder::new()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
-| Parameter | Type           | Required | Description      |
-| --------- | -------------- | -------- | ---------------- |
-| `url`     | `reqwest::Url` | Yes      | RPC endpoint URL |
+| Builder Step        | Required | Description                       |
+| ------------------- | -------- | --------------------------------- |
+| `.wallet(wallet)`   | Yes      | Wallet containing signers         |
+| `.connect_http(url)`| Yes      | RPC endpoint URL                  |
 
-**Returns:** A read-only `SeismicUnsignedProvider` with no wallet or encryption.
+**Returns:** A fully configured signed provider with the filler pipeline set up.
+
+### Unsigned Provider
+
+```rust
+use seismic_prelude::client::*;
+
+let provider = SeismicProviderBuilder::new()
+    .connect_http(url)
+    .await?;
+```
+
+| Builder Step        | Required | Description      |
+| ------------------- | -------- | ---------------- |
+| `.connect_http(url)`| Yes      | RPC endpoint URL |
+
+**Returns:** A read-only unsigned provider with no wallet or encryption.
 
 ## When to Use SeismicReth
 
@@ -140,7 +135,7 @@ pub fn sreth_unsigned_provider(
 | Connecting to Seismic testnet | Yes                                              |
 | Connecting to Seismic devnet  | Yes                                              |
 | Connecting to Seismic mainnet | Yes                                              |
-| Local testing with Sanvil     | No -- use [`SeismicFoundry`](seismic-foundry.md) |
+| Local testing with Sanvil     | No — use [`SeismicFoundry`](seismic-foundry.md) |
 
 ## Notes
 

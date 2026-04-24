@@ -56,19 +56,23 @@ The Foundry-compatible types handle differences in how Sanvil serializes and des
 
 ## Usage
 
-### With SeismicSignedProvider
+### With SeismicProviderBuilder (Signed)
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::foundry::SeismicFoundry;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicFoundry>::from(signer);
     let url = "http://127.0.0.1:8545".parse()?;
 
-    let provider = SeismicSignedProvider::<SeismicFoundry>::new(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .foundry()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
     let block_number = provider.get_block_number().await?;
     println!("Local block: {block_number}");
@@ -77,86 +81,82 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### With Convenience Constructor
-
-The `sfoundry_signed_provider` function creates a `SeismicSignedProvider<SeismicFoundry>` without needing to specify the type parameter:
-
-```rust
-use seismic_prelude::foundry::*;
-use alloy_signer_local::PrivateKeySigner;
-
-let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-let wallet = SeismicWallet::from(signer);
-let url = "http://127.0.0.1:8545".parse()?;
-
-let provider = sfoundry_signed_provider(wallet, url).await?;
-```
-
 ### Unsigned Provider (Read-Only)
 
 ```rust
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 let url = "http://127.0.0.1:8545".parse()?;
-let provider = sfoundry_unsigned_provider(url);
+let provider = SeismicProviderBuilder::new()
+    .foundry()
+    .connect_http(url)
+    .await?;
 
 let block = provider.get_block_number().await?;
 ```
 
-## Convenience Functions
+## SeismicProviderBuilder with Foundry
 
-| Function                                | Description                                                           |
-| --------------------------------------- | --------------------------------------------------------------------- |
-| `sfoundry_signed_provider(wallet, url)` | Create a signed provider with `SeismicFoundry` network                |
-| `sfoundry_unsigned_provider(url)`       | Create an unsigned (read-only) provider with `SeismicFoundry` network |
+To use `SeismicFoundry`, call `.foundry()` on the builder to switch from the default `SeismicReth` network:
 
-### `sfoundry_signed_provider`
+| Method              | Description                                            |
+| ------------------- | ------------------------------------------------------ |
+| `.foundry()`        | Switch to `SeismicFoundry` network type                |
+| `.wallet(wallet)`   | Set the wallet for signing transactions                |
+| `.connect_http(url)`| Connect to an HTTP RPC endpoint and build the provider |
+
+### Signed Provider
 
 ```rust
-pub async fn sfoundry_signed_provider(
-    wallet: SeismicWallet<SeismicFoundry>,
-    url: reqwest::Url,
-) -> Result<SeismicSignedProvider<SeismicFoundry>, Box<dyn std::error::Error>>
+let provider = SeismicProviderBuilder::new()
+    .foundry()
+    .wallet(wallet)
+    .connect_http(url)
+    .await?;
 ```
 
-| Parameter | Type                            | Required | Description                                          |
-| --------- | ------------------------------- | -------- | ---------------------------------------------------- |
-| `wallet`  | `SeismicWallet<SeismicFoundry>` | Yes      | Wallet containing signers                            |
-| `url`     | `reqwest::Url`                  | Yes      | RPC endpoint URL (typically `http://127.0.0.1:8545`) |
+| Builder Step        | Required | Description                                          |
+| ------------------- | -------- | ---------------------------------------------------- |
+| `.foundry()`        | Yes      | Selects SeismicFoundry network                       |
+| `.wallet(wallet)`   | Yes      | Wallet containing signers                            |
+| `.connect_http(url)`| Yes      | RPC endpoint URL (typically `http://127.0.0.1:8545`) |
 
-**Returns:** A fully configured `SeismicSignedProvider` for Sanvil.
+**Returns:** A fully configured signed provider for Sanvil.
 
-### `sfoundry_unsigned_provider`
+### Unsigned Provider
 
 ```rust
-pub fn sfoundry_unsigned_provider(
-    url: reqwest::Url,
-) -> SeismicUnsignedProvider<SeismicFoundry>
+let provider = SeismicProviderBuilder::new()
+    .foundry()
+    .connect_http(url)
+    .await?;
 ```
 
-| Parameter | Type           | Required | Description      |
-| --------- | -------------- | -------- | ---------------- |
-| `url`     | `reqwest::Url` | Yes      | RPC endpoint URL |
+| Builder Step        | Required | Description      |
+| ------------------- | -------- | ---------------- |
+| `.foundry()`        | Yes      | Selects SeismicFoundry network |
+| `.connect_http(url)`| Yes      | RPC endpoint URL |
 
-**Returns:** A read-only `SeismicUnsignedProvider` for Sanvil.
+**Returns:** A read-only unsigned provider for Sanvil.
 
-## Transaction Builder
+## Transaction Building
 
-`SeismicFoundry` provides a dedicated transaction builder function:
-
-```rust
-let tx_request = seismic_foundry_tx_builder();
-```
-
-This returns a `SeismicFoundryTransactionRequest` pre-configured with the Seismic transaction type. You can then set fields like `to`, `value`, `input`, etc.
+With `#[sol(rpc)]`, you can build Seismic transactions directly from contract instances. Functions with shielded parameters auto-encrypt; for others, use `.seismic()`:
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy_primitives::{address, U256};
+use seismic_prelude::client::*;
+use alloy_primitives::address;
 
-let tx = seismic_foundry_tx_builder()
-    .to(address!("0x1234567890abcdef1234567890abcdef12345678"))
-    .value(U256::from(1_000_000_000));
+sol!(
+    #[sol(rpc)]
+    contract MyContract {
+        function setValue(uint256 value) external;
+    }
+);
+
+let contract = MyContract::new(contract_address, &provider);
+// setValue has no shielded params, so use .seismic() to opt into encryption
+let tx = contract.setValue(U256::from(42)).seismic();
 ```
 
 ## When to Use SeismicFoundry
@@ -165,8 +165,8 @@ let tx = seismic_foundry_tx_builder()
 | ----------------------------- | ------------------------------------------ |
 | Local testing with Sanvil     | Yes                                        |
 | Integration tests in CI       | Yes (if using Sanvil)                      |
-| Connecting to Seismic testnet | No -- use [`SeismicReth`](seismic-reth.md) |
-| Connecting to Seismic mainnet | No -- use [`SeismicReth`](seismic-reth.md) |
+| Connecting to Seismic testnet | No — use [`SeismicReth`](seismic-reth.md) |
+| Connecting to Seismic mainnet | No — use [`SeismicReth`](seismic-reth.md) |
 
 ## Notes
 

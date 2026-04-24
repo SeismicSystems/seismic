@@ -48,24 +48,30 @@ The input is the concatenation of `secret_key` (32 bytes) followed by `public_ke
 ### Basic Usage
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
-
-    let ecdh_address: Address =
-        "0x0000000000000000000000000000000000000065".parse()?;
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     // Alice's secret key (32 bytes)
     let alice_sk: [u8; 32] = [/* your private key bytes */; 32];
 
     // Bob's compressed public key (33 bytes, starting with 0x02 or 0x03)
     let bob_pk: [u8; 33] = [/* Bob's compressed public key */; 33];
+
+    // Using convenience helpers
+    let shared_secret = precompiles::call::ecdh(&provider, &alice_sk, &bob_pk).await?;
+    println!("Shared secret (convenience): 0x{}", hex::encode(&shared_secret));
+
+    // Manual approach
+    let ecdh_address: Address =
+        "0x0000000000000000000000000000000000000065".parse()?;
 
     // Concatenate sk + pk
     let mut input_bytes = Vec::with_capacity(65);
@@ -91,15 +97,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Two-Party Key Exchange
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let ecdh_address: Address =
         "0x0000000000000000000000000000000000000065".parse()?;
@@ -149,15 +155,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Use with AES Encryption
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     // Step 1: Derive shared key via ECDH
     let ecdh_address: Address =
@@ -208,10 +214,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Encode parameters** -- Concatenates 32-byte private key and 33-byte compressed public key
-2. **Call precompile** -- Issues an `eth_call` to address `0x65` with 3120 gas
-3. **Compute ECDH** -- Precompile performs scalar multiplication on the secp256k1 curve
-4. **Derive key** -- Applies HKDF to the ECDH point to produce a 32-byte uniform secret
+1. **Encode parameters** — Concatenates 32-byte private key and 33-byte compressed public key
+2. **Call precompile** — Issues an `eth_call` to address `0x65` with 3120 gas
+3. **Compute ECDH** — Precompile performs scalar multiplication on the secp256k1 curve
+4. **Derive key** — Applies HKDF to the ECDH point to produce a 32-byte uniform secret
 
 ## Gas Cost
 
@@ -230,14 +236,14 @@ Fixed gas cost: **3120 gas**
 
 ## Warnings
 
-- **Private key security** -- Never expose or log private keys
-- **Public key validation** -- Invalid public keys will cause the precompile to revert
-- **Key reuse** -- Using the same keypair for multiple sessions reduces forward secrecy
+- **Private key security** — Never expose or log private keys
+- **Public key validation** — Invalid public keys will cause the precompile to revert
+- **Key reuse** — Using the same keypair for multiple sessions reduces forward secrecy
 
 ## See Also
 
-- [Precompiles Overview](./) -- All precompile reference
-- [aes-gcm-encrypt](aes-gcm-encrypt.md) -- Encrypt with derived key
-- [aes-gcm-decrypt](aes-gcm-decrypt.md) -- Decrypt with derived key
-- [hkdf](hkdf.md) -- Key derivation function
-- [Encryption](../provider/encryption.md) -- How the provider uses ECDH internally
+- [Precompiles Overview](./) — All precompile reference
+- [aes-gcm-encrypt](aes-gcm-encrypt.md) — Encrypt with derived key
+- [aes-gcm-decrypt](aes-gcm-decrypt.md) — Decrypt with derived key
+- [hkdf](hkdf.md) — Key derivation function
+- [Encryption](../provider/encryption.md) — How the provider uses ECDH internally

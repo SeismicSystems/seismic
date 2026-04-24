@@ -16,7 +16,7 @@ Complete guide to sending shielded transactions with encrypted calldata. Covers:
 - Setting up a signed provider
 - Defining contract interfaces with the `sol!` macro
 - Encoding calldata and building transactions
-- Marking transactions as seismic with `.seismic()`
+- Auto-encryption for functions with shielded parameters, and `.seismic()` for others
 - Sending and confirming transactions
 - Security parameters and expiration windows
 
@@ -42,7 +42,3 @@ Guide to executing signed reads (encrypted `eth_call`). Covers:
 - [Examples](../examples/) - Runnable code examples
 - [Provider](../provider/) - Provider setup and configuration
 - [Installation](../installation.md) - Cargo setup and dependencies
-
-## Contributing
-
-Have a guide you'd like to see? Open an issue or submit a PR!

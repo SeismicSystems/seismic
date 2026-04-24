@@ -5,30 +5,17 @@ icon: coins
 
 # SRC20 Tokens
 
-SRC20 is Seismic's privacy-preserving ERC20 standard. Balances and transfer amounts use shielded types (`suint256`), so they are hidden from external observers. The protocol ensures that only authorized parties -- the token holder or those with a viewing key -- can read balances and decode transfer events.
-
-## What Makes SRC20 Different from ERC20
-
-| Feature              | ERC20                           | SRC20                                                            |
-| -------------------- | ------------------------------- | ---------------------------------------------------------------- |
-| **Balances**         | Public (anyone can read)        | Shielded (`suint256`) -- only the owner can read via signed read |
-| **Transfer amounts** | Public in transaction data      | Encrypted calldata via shielded writes                           |
-| **Events**           | Public (Transfer, Approval)     | Encrypted -- require viewing key to decrypt                      |
-| **Allowances**       | Public                          | Shielded (`suint256`)                                            |
-| **Token metadata**   | Public (name, symbol, decimals) | Public (not shielded)                                            |
-
-{% hint style="info" %}
-SRC20 contracts are deployed like any other contract on Seismic. The shielding is handled at the EVM level -- the contract uses `suint256` for sensitive fields, and the Seismic node's TEE ensures values are encrypted in storage and transit.
-{% endhint %}
+SRC20 is Seismic's privacy-preserving ERC20 standard. Balances and transfer amounts use shielded types (`suint256`), so they are hidden from external observers. The protocol ensures that only authorized parties — the token holder or those with a viewing key — can read balances and decode transfer events.
 
 ## Contract Interface
 
 Define the SRC20 interface using Alloy's `sol!` macro:
 
 ```rust
-use alloy::sol;
+use seismic_prelude::client::*;
 
 sol! {
+    #[sol(rpc)]
     interface ISRC20 {
         function name() public view returns (string);
         function symbol() public view returns (string);
@@ -56,11 +43,11 @@ SRC20 Token Contract (on-chain, Mercury EVM)
   |     -> Transparent reads (no encryption needed)
   |
   |-- Shielded balances: balanceOf(address)
-  |     -> Signed reads via seismic_call() (identity-proven eth_call)
+  |     -> Signed reads via .seismic().call() or seismic_call() (identity-proven eth_call)
   |     -> Contract uses msg.sender to gate access
   |
   |-- Shielded writes: transfer(), approve(), transferFrom()
-  |     -> Calldata encrypted via .seismic() builder
+  |     -> Calldata auto-encrypted (shielded params) or via .seismic() builder
   |     -> Amounts invisible to observers
   |
   |-- Encrypted events: Transfer, Approval
@@ -71,13 +58,11 @@ SRC20 Token Contract (on-chain, Mercury EVM)
 ## Quick Start
 
 ```rust
-use seismic_prelude::foundry::*;
-use alloy::sol;
-use alloy::providers::Provider;
-use alloy_primitives::{Address, U256};
-use alloy_signer_local::PrivateKeySigner;
+use seismic_prelude::client::*;
+use seismic_alloy_network::reth::SeismicReth;
 
 sol! {
+    #[sol(rpc)]
     interface ISRC20 {
         function name() public view returns (string);
         function symbol() public view returns (string);
@@ -91,34 +76,27 @@ sol! {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let signer: PrivateKeySigner = "0xYOUR_PRIVATE_KEY".parse()?;
-    let wallet = SeismicWallet::from(signer);
+    let wallet = SeismicWallet::<SeismicReth>::from(signer);
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = SeismicSignedProvider::<SeismicReth>::new(wallet, url).await?;
+    let provider = SeismicProviderBuilder::new()
+        .wallet(wallet)
+        .connect_http(url)
+        .await?;
 
     let token_address: Address = "0xYOUR_TOKEN_ADDRESS".parse()?;
+    let contract = ISRC20::new(token_address, &provider);
 
     // Read public metadata (transparent read)
-    let name_call = ISRC20::nameCall {};
-    let name_result = provider
-        .call(
-            &alloy_rpc_types_eth::TransactionRequest::default()
-                .to(token_address)
-                .input(name_call.abi_encode().into()),
-        )
-        .await?;
-    println!("Token name: {:?}", String::from_utf8_lossy(&name_result));
+    let name = contract.name().call().await?;
+    println!("Token name: {}", name._0);
 
     // Read shielded balance (signed read)
-    let balance_call = ISRC20::balanceOfCall {
-        account: provider.default_signer_address(),
-    };
-    let tx = alloy_rpc_types_eth::TransactionRequest::default()
-        .to(token_address)
-        .input(balance_call.abi_encode().into())
-        .seismic();
-    let balance_result = provider.seismic_call(tx.into()).await?;
-    let balance = U256::from_be_slice(&balance_result);
-    println!("Balance: {balance}");
+    let balance = contract
+        .balanceOf(provider.default_signer_address())
+        .seismic()
+        .call()
+        .await?;
+    println!("Balance: {}", balance._0);
 
     Ok(())
 }
@@ -136,11 +114,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Signed Reads for Balances
 
-Unlike ERC20 where `balanceOf()` is a simple public read, SRC20's `balanceOf()` uses `msg.sender` to authenticate the caller. This means you must use `seismic_call()` (a signed read) rather than a plain `eth_call`. A plain `eth_call` zeros out the `from` field, so the contract sees the zero address as the sender and returns its balance -- which is almost certainly zero.
+Unlike ERC20 where `balanceOf()` is a simple public read, SRC20's `balanceOf()` uses `msg.sender` to authenticate the caller. This means you must use `seismic_call()` (a signed read) rather than a plain `eth_call`. A plain `eth_call` zeros out the `from` field, so the contract sees the zero address as the sender and returns its balance — which is almost certainly zero.
 
 ### Shielded Writes
 
-Transfers and approvals use `.seismic()` to mark the transaction for calldata encryption. The `SeismicSignedProvider` filler pipeline automatically handles the encryption before the transaction reaches the node.
+Transfers and approvals have shielded parameters (`suint256`), so the `sol!` macro wraps them in a `ShieldedCallBuilder` that auto-encrypts — just call `.send()` directly. The `SeismicProviderBuilder`-created provider's filler pipeline automatically handles the encryption before the transaction reaches the node.
 
 ### Encrypted Events
 
@@ -148,6 +126,6 @@ SRC20 Transfer and Approval events contain encrypted `suint256` values. To decod
 
 ## See Also
 
-- [Contract Interaction](../contract-interaction/) -- General shielded and transparent call patterns
-- [SeismicSignedProvider](../provider/seismic-signed-provider.md) -- Required for shielded operations
-- [Encryption](../provider/encryption.md) -- How calldata encryption works
+- [Contract Interaction](../contract-interaction/) — General shielded and transparent call patterns
+- [SeismicSignedProvider](../provider/seismic-signed-provider.md) — Required for shielded operations
+- [Encryption](../provider/encryption.md) — How calldata encryption works

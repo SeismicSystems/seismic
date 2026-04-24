@@ -53,18 +53,16 @@ Total output: 65 bytes.
 ### Basic Usage
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
+use seismic_alloy_provider::precompiles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
-
-    let sign_address: Address =
-        "0x0000000000000000000000000000000000000069".parse()?;
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     // Private key (32 bytes)
     let secret_key: [u8; 32] = [/* your private key */; 32];
@@ -75,6 +73,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let message_hash = keccak256(
         [prefix.as_bytes(), message.as_bytes()].concat(),
     );
+
+    // Using convenience helpers
+    let signature = precompiles::call::secp256k1_sign(&provider, &secret_key, message_hash.as_slice()).await?;
+    println!("Signature (convenience): 0x{}", hex::encode(&signature));
+
+    // Manual approach
+    let sign_address: Address =
+        "0x0000000000000000000000000000000000000069".parse()?;
 
     // Build precompile input: sk (32) + message_hash (32)
     let mut input = Vec::with_capacity(64);
@@ -98,15 +104,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Extract Signature Components
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let sign_address: Address =
         "0x0000000000000000000000000000000000000069".parse()?;
@@ -146,15 +152,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Sign Multiple Messages
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let sign_address: Address =
         "0x0000000000000000000000000000000000000069".parse()?;
@@ -194,16 +200,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Sign Structured Data
 
 ```rust
-use alloy::providers::Provider;
+use alloy_provider::Provider;
 use alloy_primitives::{Address, Bytes, keccak256};
 use alloy_rpc_types_eth::TransactionRequest;
-use seismic_prelude::foundry::*;
+use seismic_prelude::client::*;
 use serde_json::json;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let url = "https://testnet-1.seismictest.net/rpc".parse()?;
-    let provider = sreth_unsigned_provider(url);
+    let provider = SeismicProviderBuilder::new().connect_http(url);
 
     let sign_address: Address =
         "0x0000000000000000000000000000000000000069".parse()?;
@@ -243,20 +249,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## How It Works
 
-1. **Hash message** -- You apply the EIP-191 personal-sign prefix and keccak256 hash:
+1. **Hash message** — You apply the EIP-191 personal-sign prefix and keccak256 hash:
 
    ```
    prefix = "\x19Ethereum Signed Message:\n" + len(message)
    message_hash = keccak256(prefix + message)
    ```
 
-2. **Encode parameters** -- Concatenate the 32-byte private key and 32-byte message hash
+2. **Encode parameters** — Concatenate the 32-byte private key and 32-byte message hash
 
-3. **Call precompile** -- Issues an `eth_call` to address `0x69` with 3000 gas
+3. **Call precompile** — Issues an `eth_call` to address `0x69` with 3000 gas
 
-4. **Sign hash** -- Precompile performs ECDSA signing on the secp256k1 curve
+4. **Sign hash** — Precompile performs ECDSA signing on the secp256k1 curve
 
-5. **Return signature** -- Returns 65-byte signature (r + s + v)
+5. **Return signature** — Returns 65-byte signature (r + s + v)
 
 ## Gas Cost
 
@@ -297,13 +303,13 @@ This format is compatible with `ecrecover` and standard Ethereum signature verif
 
 ## Warnings
 
-- **Private key security** -- Never expose or log private keys
-- **Message format** -- Ensure messages are hashed correctly with EIP-191 prefix before sending to the precompile
-- **Signature malleability** -- Standard ECDSA signatures are malleable (use EIP-2098 compact signatures if needed)
-- **Non-deterministic** -- Multiple signatures of the same message will differ due to random `k` values
+- **Private key security** — Never expose or log private keys
+- **Message format** — Ensure messages are hashed correctly with EIP-191 prefix before sending to the precompile
+- **Signature malleability** — Standard ECDSA signatures are malleable (use EIP-2098 compact signatures if needed)
+- **Non-deterministic** — Multiple signatures of the same message will differ due to random `k` values
 
 ## See Also
 
-- [Precompiles Overview](./) -- All precompile reference
-- [ecdh](ecdh.md) -- ECDH key exchange
-- [EIP-191](https://eips.ethereum.org/EIPS/eip-191) -- Signed data standard
+- [Precompiles Overview](./) — All precompile reference
+- [ecdh](ecdh.md) — ECDH key exchange
+- [EIP-191](https://eips.ethereum.org/EIPS/eip-191) — Signed data standard
