@@ -1,4 +1,7 @@
 {
     // Get vscode to use the uv venv so imports resolve. Run `make install` in clients/py/ first.
-    "python.defaultInterpreterPath": "clients/py/.venv/bin/python",
+    // To disable auto-activation of this venv in new terminals, add
+    // `"python-envs.terminal.autoActivationType": "off"` to your user settings
+    // (the setting is machine-scoped and can't live here).
+    "python.defaultInterpreterPath": "${workspaceFolder}/clients/py/.venv/bin/python",
 }
