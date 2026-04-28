@@ -46,6 +46,9 @@
 		{
 			"path": "../../deploy"
 		},
+		{
+			"path": "../../enclave"
+		},
 	],
 	"settings": {
 		// We ignore all contract submodules because we basically never make changes to them.
