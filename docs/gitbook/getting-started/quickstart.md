@@ -1,6 +1,9 @@
 ---
 description: You're two commands away from running an encrypted protocol
 icon: bullseye-arrow
+metaLinks:
+  alternates:
+    - quickstart.md
 ---
 
 # Quickstart
@@ -12,4 +15,4 @@ You can play around with shielded types using our [starter repository](https://g
 </strong><strong>sforge test -vv
 </strong></code></pre>
 
-Or if you prefer a more detailed walkthrough of building on Seismic, check out our [Tutorials](../tutorials/src20/README.md) section.
+Or if you prefer a more detailed walkthrough of building on Seismic, check out our [Tutorials](../tutorials/src20/) section.

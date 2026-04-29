@@ -1,5 +1,8 @@
 ---
 icon: database
+metaLinks:
+  alternates:
+    - storage.md
 ---
 
 # Storage
@@ -23,17 +26,17 @@ When you declare a shielded variable (e.g., `suint256`), the compiler generates 
 
 The FlaggedStorage model enforces strict separation between public and confidential data:
 
-| Operation                          | Result                                  |
-| ---------------------------------- | --------------------------------------- |
-| `SLOAD` on a public slot           | Returns the value                       |
-| `SLOAD` on a private slot          | Reverts                                 |
-| `CLOAD` on a private slot          | Returns the value                       |
-| `CLOAD` on a public slot           | Returns the value                       |
-| `SSTORE` to a public slot          | Marks the slot as public                |
-| `SSTORE` to a private slot         | Reverts                                 |
-| `CSTORE` to a private slot         | Marks the slot as private               |
-| `CSTORE` to a zero-value public slot | Claims the slot as private            |
-| `CSTORE` to a non-zero public slot | Reverts                                 |
+| Operation                            | Result                     |
+| ------------------------------------ | -------------------------- |
+| `SLOAD` on a public slot             | Returns the value          |
+| `SLOAD` on a private slot            | Reverts                    |
+| `CLOAD` on a private slot            | Returns the value          |
+| `CLOAD` on a public slot             | Returns the value          |
+| `SSTORE` to a public slot            | Marks the slot as public   |
+| `SSTORE` to a private slot           | Reverts                    |
+| `CSTORE` to a private slot           | Marks the slot as private  |
+| `CSTORE` to a zero-value public slot | Claims the slot as private |
+| `CSTORE` to a non-zero public slot   | Reverts                    |
 
 This means that if an external contract or observer uses `SLOAD` to read a shielded storage slot, the operation will revert. `CLOAD` can access both private and public slots — the compiler generates `CLOAD` for all shielded type access.
 
@@ -41,7 +44,7 @@ This means that if an external contract or observer uses `SLOAD` to read a shiel
 
 Shielded types consume an **entire 32-byte storage slot**, regardless of their actual size. A `suint64`, which only needs 8 bytes, still occupies a full slot.
 
-This is a deliberate design choice. In standard Solidity, the compiler packs multiple small variables into a single slot to save gas. With shielded types, packing is not done for two reasons: a storage slot must be entirely private or entirely public (mixing would break the confidentiality model), and packing would leak the size of the shielded value (see [Gas Considerations](#gas-considerations) below).
+This is a deliberate design choice. In standard Solidity, the compiler packs multiple small variables into a single slot to save gas. With shielded types, packing is not done for two reasons: a storage slot must be entirely private or entirely public (mixing would break the confidentiality model), and packing would leak the size of the shielded value (see [Gas Considerations](storage.md#gas-considerations) below).
 
 ### Storage Layout Comparison
 

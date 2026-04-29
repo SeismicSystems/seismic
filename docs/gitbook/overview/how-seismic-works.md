@@ -8,11 +8,11 @@ Seismic adds on-chain privacy to the EVM through three layers: a modified Solidi
 
 ## Three pillars
 
-| Layer                                 | What it does                                                                                     |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Layer                                 | What it does                                                                                               |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | **Seismic Solidity compiler**         | Adds shielded types (`suint`, `sint`, `sbool`, `sbytes`, `saddress`) that compile to privacy-aware opcodes |
-| **Seismic network**                   | EVM-compatible L1 where nodes run inside Trusted Execution Environments (TEEs)                   |
-| **Shielded storage (FlaggedStorage)** | Storage model where each slot carries an `is_private` flag, enforced at the opcode level         |
+| **Seismic network**                   | EVM-compatible L1 where nodes run inside Trusted Execution Environments (TEEs)                             |
+| **Shielded storage (FlaggedStorage)** | Storage model where each slot carries an `is_private` flag, enforced at the opcode level                   |
 
 ## The Seismic Solidity compiler
 
@@ -47,7 +47,7 @@ Key network properties:
 
 The diagram below shows the block structure, state tries, and the Seismic transaction format (`TxSeismic`). Note how each storage slot in the Account Storage trie carries a boolean flag -- `(u256, true)` for private slots and `(u256, false)` for public slots.
 
-<figure><img src="../.gitbook/assets/tries.png" alt="Block structure, state tries, and TxSeismic transaction format"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/tries (1).png" alt="Block structure, state tries, and TxSeismic transaction format"><figcaption></figcaption></figure>
 
 Standard Ethereum transactions send calldata in plaintext. The Seismic transaction type encrypts calldata before it leaves the user's machine.
 
@@ -59,13 +59,13 @@ The encryption flow:
 4. The encrypted transaction is broadcast to the network.
 5. Inside the TEE, the node decrypts the calldata, executes the transaction, and writes results to shielded storage.
 
-At no point is the plaintext calldata visible outside the TEE -- not in the mempool, not in block data, not in transaction traces. For a deeper dive, see [The Seismic Transaction](../reference/seismic-transaction/README.md).
+At no point is the plaintext calldata visible outside the TEE -- not in the mempool, not in block data, not in transaction traces. For a deeper dive, see [The Seismic Transaction](../reference/seismic-transaction/).
 
 ## Shielded storage (FlaggedStorage)
 
 The diagram below shows how the RPC layer, EVM, and storage interact. Notice that `eth_getStorageAt` is blocked for shielded slots, and cross-contract reads of private storage return zero.
 
-<figure><img src="../.gitbook/assets/rpc-evm-storage.png" alt="RPC, EVM, and storage interaction diagram showing how shielded slots are protected"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/rpc-evm-storage (1).png" alt="RPC, EVM, and storage interaction diagram showing how shielded slots are protected"><figcaption></figcaption></figure>
 
 Seismic extends the EVM storage model with **FlaggedStorage**. Each storage slot is a tuple:
 
@@ -109,14 +109,14 @@ function transfer(address to, suint256 amount) public {
 
 Seismic adds six precompiled contracts to the EVM, giving smart contracts access to cryptographic primitives that would be prohibitively expensive to implement in Solidity:
 
-| Address | Name            | Purpose                                                                                     |
-| ------- | --------------- | ------------------------------------------------------------------------------------------- |
-| `0x64`  | [RNG](../reference/precompiles/rng.md)             | Securely generate a random number                                                           |
-| `0x65`  | [ECDH](../reference/precompiles/ecdh.md)            | Elliptic Curve Diffie-Hellman -- derive a shared secret from a public key and a private key |
+| Address | Name                                                           | Purpose                                                                                     |
+| ------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `0x64`  | [RNG](../reference/precompiles/rng.md)                         | Securely generate a random number                                                           |
+| `0x65`  | [ECDH](../reference/precompiles/ecdh.md)                       | Elliptic Curve Diffie-Hellman -- derive a shared secret from a public key and a private key |
 | `0x66`  | [AES-GCM Encrypt](../reference/precompiles/aes-gcm-encrypt.md) | Encrypt data with AES-GCM                                                                   |
 | `0x67`  | [AES-GCM Decrypt](../reference/precompiles/aes-gcm-decrypt.md) | Decrypt data with AES-GCM                                                                   |
-| `0x68`  | [HKDF](../reference/precompiles/hkdf.md)            | Derive cryptographic keys from a parent key                                                 |
-| `0x69`  | [secp256k1 Sign](../reference/precompiles/secp256k1-sign.md)  | Sign a message with a secret key                                                            |
+| `0x68`  | [HKDF](../reference/precompiles/hkdf.md)                       | Derive cryptographic keys from a parent key                                                 |
+| `0x69`  | [secp256k1 Sign](../reference/precompiles/secp256k1-sign.md)   | Sign a message with a secret key                                                            |
 
 These precompiles enable contracts to perform on-chain encryption, key derivation, and random number generation without relying on external oracles or off-chain computation.
 
@@ -124,15 +124,15 @@ These precompiles enable contracts to perform on-chain encryption, key derivatio
 
 The diagram below shows the full Seismic node architecture inside the TEE boundary. Encrypted transactions flow from the client through the RPC layer, into the transaction pool, through consensus, and into the block executor where calldata is decrypted and executed. Shielded results are written to storage.
 
-<figure><img src="../.gitbook/assets/seismic-node.png" alt="Seismic node architecture showing components inside the TEE boundary"><figcaption></figcaption></figure>
+<figure><img src="../.gitbook/assets/seismic-node (1).png" alt="Seismic node architecture showing components inside the TEE boundary"><figcaption></figcaption></figure>
 
 The system is composed of three components that work together to provide confidential smart contract execution:
 
-| Component        | Role                                                               |
-| ---------------- | ------------------------------------------------------------------ |
-| [**Seismic Reth**](https://github.com/SeismicSystems/seismic-reth) | Transaction processing, state management, RPC |
-| [**Summit**](https://github.com/SeismicSystems/summit)       | Consensus and block production                                     |
-| **Enclave**      | TEE operations: key management, encryption/decryption, attestation |
+| Component                                                          | Role                                                               |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| [**Seismic Reth**](https://github.com/SeismicSystems/seismic-reth) | Transaction processing, state management, RPC                      |
+| [**Summit**](https://github.com/SeismicSystems/summit)             | Consensus and block production                                     |
+| **Enclave**                                                        | TEE operations: key management, encryption/decryption, attestation |
 
 All three components are designed so that private data is only ever accessible inside the Trusted Execution Environment. No plaintext shielded data leaves the TEE boundary at any point in the pipeline.
 
@@ -141,7 +141,7 @@ All three components are designed so that private data is only ever accessible i
 The Seismic node is a fork of [reth](https://github.com/paradigmxyz/reth) (the Rust Ethereum execution client). It handles:
 
 * **RPC**: Accepts incoming transactions and read requests. Serves responses to clients, redacting shielded data from public queries.
-* **EVM execution**: Runs a modified EVM that supports `CLOAD`/`CSTORE` opcodes and the six Seismic [precompiles](../reference/precompiles/README.md). This is built on a forked version of `revm`.
+* **EVM execution**: Runs a modified EVM that supports `CLOAD`/`CSTORE` opcodes and the six Seismic [precompiles](../reference/precompiles/). This is built on a forked version of `revm`.
 * **State management**: Maintains the world state using FlaggedStorage, where each storage slot is tagged as public or private.
 * **Transaction pool**: Receives both standard Ethereum transactions and Seismic transactions. Encrypted calldata in Seismic transactions is decrypted inside the TEE before execution.
 

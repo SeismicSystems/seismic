@@ -1,5 +1,8 @@
 ---
 icon: wave-sine
+metaLinks:
+  alternates:
+    - opcodes.md
 ---
 
 # Opcodes
@@ -123,14 +126,14 @@ Every storage slot is a pair: `(value: U256, is_private: bool)`. The flag is set
 
 ### Store
 
-| Operation                         | Result                     |
-| --------------------------------- | -------------------------- |
-| `CSTORE` to a private slot        | Writes, stays private      |
-| `CSTORE` to a public slot         | Reverts                    |
-| `CSTORE` to an uninitialized slot | Writes, marks as private   |
-| `SSTORE` to a public slot         | Writes, stays public       |
-| `SSTORE` to a private slot        | Reverts                    |
-| `SSTORE` to an uninitialized slot | Writes, marks as public    |
+| Operation                         | Result                   |
+| --------------------------------- | ------------------------ |
+| `CSTORE` to a private slot        | Writes, stays private    |
+| `CSTORE` to a public slot         | Reverts                  |
+| `CSTORE` to an uninitialized slot | Writes, marks as private |
+| `SSTORE` to a public slot         | Writes, stays public     |
+| `SSTORE` to a private slot        | Reverts                  |
+| `SSTORE` to an uninitialized slot | Writes, marks as public  |
 
 ## Example: Mixed Public and Private Storage
 
@@ -159,6 +162,6 @@ An external observer calling `eth_getStorageAt` can read `totalDeposits` (slot 0
 
 ## Related
 
-- [Storage](../seismic-solidity/storage.md) — FlaggedStorage model, slot packing, gas details
-- [Shielded Types](../seismic-solidity/shielded-types.md) — `suint`, `sint`, `saddress`, `sbool`
-- [eth_getStorageAt](rpc-methods/eth-get-storage-at.md) — RPC behavior for private slots
+* [Storage](../seismic-solidity/storage.md) — FlaggedStorage model, slot packing, gas details
+* [Shielded Types](../seismic-solidity/shielded-types.md) — `suint`, `sint`, `saddress`, `sbool`
+* [eth\_getStorageAt](rpc-methods/eth-get-storage-at.md) — RPC behavior for private slots

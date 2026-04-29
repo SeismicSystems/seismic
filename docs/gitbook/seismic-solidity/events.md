@@ -1,10 +1,9 @@
 ---
 icon: tower-broadcast
+metaLinks:
+  alternates:
+    - events.md
 ---
-
-<!-- TODO: Once secp256k1_pubkey precompile lands (seismic-revm#207, seismic-solidity#225),
-     update the PrivateToken example to generate its keypair on-chain with rng256() +
-     secp256k1_pubkey() instead of requiring setContractKey(). -->
 
 # Events
 
@@ -34,12 +33,12 @@ Here is the general flow:
 
 ### Precompile Reference
 
-| Precompile      | Address | Purpose                           |
-| --------------- | ------- | --------------------------------- |
-| ECDH            | [`0x65`](../reference/precompiles/ecdh.md)  | Shared secret generation          |
-| AES-GCM Encrypt | [`0x66`](../reference/precompiles/aes-gcm-encrypt.md)  | Encrypt data with AES-GCM         |
-| AES-GCM Decrypt | [`0x67`](../reference/precompiles/aes-gcm-decrypt.md)  | Decrypt data with AES-GCM         |
-| HKDF            | [`0x68`](../reference/precompiles/hkdf.md)  | Key derivation from shared secret |
+| Precompile      | Address                                               | Purpose                           |
+| --------------- | ----------------------------------------------------- | --------------------------------- |
+| ECDH            | [`0x65`](../reference/precompiles/ecdh.md)            | Shared secret generation          |
+| AES-GCM Encrypt | [`0x66`](../reference/precompiles/aes-gcm-encrypt.md) | Encrypt data with AES-GCM         |
+| AES-GCM Decrypt | [`0x67`](../reference/precompiles/aes-gcm-decrypt.md) | Decrypt data with AES-GCM         |
+| HKDF            | [`0x68`](../reference/precompiles/hkdf.md)            | Key derivation from shared secret |
 
 ## Code Example
 
@@ -102,7 +101,7 @@ contract PrivateToken {
 }
 ```
 
-The built-in helpers `ecdh()`, `hkdf()`, and `aes_gcm_encrypt()` are compiler-provided globals — no imports needed. See the [Precompiles reference](../reference/precompiles/README.md) for details on each.
+The built-in helpers `ecdh()`, `hkdf()`, and `aes_gcm_encrypt()` are compiler-provided globals — no imports needed. See the [Precompiles reference](../reference/precompiles/) for details on each.
 
 ### Decryption (Off-Chain)
 
@@ -110,9 +109,8 @@ The recipient reconstructs the shared secret off-chain using their own private k
 
 The client libraries provide built-in helpers for this:
 
-<!-- TODO: add Alloy (Rust) link once docs/gitbook/clients/alloy/src20/event-decryption.md is finalized -->
-- [**Python**](../clients/python/src20/event-watching/README.md) — `watch_src20_events_with_key` and `SRC20EventWatcher`
-- [**TypeScript (viem)**](../clients/typescript/viem/shielded-public-client.md) — `watchSRC20EventsWithKey()` action
+* [**Python**](../clients/python/src20/event-watching/) — `watch_src20_events_with_key` and `SRC20EventWatcher`
+* [**TypeScript (viem)**](../clients/typescript/viem/shielded-public-client.md) — `watchSRC20EventsWithKey()` action
 
 ## What Not to Do
 
