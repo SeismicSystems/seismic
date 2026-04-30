@@ -268,3 +268,4 @@
 * [Migrating from Ethereum](reference/migrating-from-ethereum.md)
 * [Repos](reference/repos.md)
 * [Node Operator FAQ](reference/node-operator-faq.md)
+* [Terms of Service](reference/terms-of-service.md)
