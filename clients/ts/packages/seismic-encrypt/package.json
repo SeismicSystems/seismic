@@ -1,6 +1,6 @@
 {
   "name": "seismic-encrypt",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Standalone Seismic transaction encryption — no ShieldedWalletClient needed",
   "type": "module",
   "main": "./dist/_cjs/index.js",
