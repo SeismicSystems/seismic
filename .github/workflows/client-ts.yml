@@ -25,7 +25,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('clients/ts/bun.lock') }}
+          key: bun-${{ runner.os }}-${{ hashFiles('clients/ts/bun.lock', 'clients/ts/bunfig.toml') }}
           restore-keys: |
             bun-${{ runner.os }}-
       - run: mise run lint::check
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('clients/ts/bun.lock') }}
+          key: bun-${{ runner.os }}-${{ hashFiles('clients/ts/bun.lock', 'clients/ts/bunfig.toml') }}
           restore-keys: |
             bun-${{ runner.os }}-
       - run: mise run test::integration::sanvil
@@ -68,7 +68,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('seismic/clients/ts/bun.lock') }}
+          key: bun-${{ runner.os }}-${{ hashFiles('seismic/clients/ts/bun.lock', 'seismic/clients/ts/bunfig.toml') }}
           restore-keys: |
             bun-${{ runner.os }}-
 
