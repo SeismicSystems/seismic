@@ -2,7 +2,3 @@
 line_width = 80
 indent_width = 2
 semicolons = false
-
-[install]
-# This ensures Bun installs packages in a way compatible with workspaces
-linker = "hoisted"
