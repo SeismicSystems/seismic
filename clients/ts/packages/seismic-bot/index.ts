@@ -1,7 +1,7 @@
-import { Address, Chain } from 'viem'
-import { Hex } from 'viem'
+import type { Chain, Hex } from 'viem'
 
 import { checkAllFaucets } from '@sbot/faucetChecker.ts'
+import type { FaucetConfig, Faucets } from '@sbot/types.ts'
 import { createSeismicDevnet, seismicTestnet } from '@sviem/chain.ts'
 
 const seismicInternalTestnet = createSeismicDevnet({
@@ -16,14 +16,6 @@ const PUMP_DEPLOYER_ADDRESS = '0x000a2466401BE2B1090cB17fb51dD601C0642AFc'
 
 const POKER_DEPLOYER_ADDRESS = '0x8f1641811950318E4Dd2B3ab08571125dA51787c'
 const POKER_RELAYER_ADDRESS = '0x6D7E58BC9CB7e69117bDB3ccbE495560cDD2434F'
-
-export type Key = { pk: Hex; silent?: boolean }
-export type FaucetConfig = {
-  chain: Chain
-  privateKeys: Key[]
-  extraAddresses: Address[]
-}
-export type Faucets = Record<string, FaucetConfig>
 
 const getTestnetConfig = (chain: Chain): FaucetConfig => ({
   chain,
