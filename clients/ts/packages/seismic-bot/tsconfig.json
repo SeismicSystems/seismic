@@ -7,12 +7,10 @@
       "@sviem/*": ["../seismic-viem/src/*"],
       "@sbot/*": ["./src/*"]
     },
-    "composite": true,
     "downlevelIteration": true,
     "noEmit": false,
     "declaration": true,
     "emitDeclarationOnly": true,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "types": ["bun-types"],
     "baseUrl": ".",
     "rootDir": "../.."

@@ -6,9 +6,7 @@
     "paths": {
       "@sviem-tests/*": ["./src/*"]
     },
-    "composite": true,
     "baseUrl": ".",
-    "rootDir": "../..",
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "rootDir": "../.."
   }
 }

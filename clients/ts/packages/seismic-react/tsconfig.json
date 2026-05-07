@@ -8,8 +8,6 @@
       "@sreact/*": ["./src/*"]
     },
     "baseUrl": ".",
-    "rootDir": "../..",
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
-  },
-  "references": [{ "path": "../seismic-viem/tsconfig.json" }]
+    "rootDir": "../.."
+  }
 }

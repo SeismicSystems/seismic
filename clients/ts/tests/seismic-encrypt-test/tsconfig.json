@@ -12,9 +12,7 @@
       "seismic-encrypt": ["../../packages/seismic-encrypt/src/index.ts"],
       "seismic-viem": ["../../packages/seismic-viem/src/index.ts"]
     },
-    "composite": true,
     "baseUrl": ".",
-    "rootDir": "../..",
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "rootDir": "../.."
   }
 }

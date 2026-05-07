@@ -42,7 +42,6 @@
     "build:cjs": "BUN_ENV=production bun build src/index.ts src/rainbowkit/index.ts --outdir dist/_cjs --target browser --format cjs --external react --external wagmi --external @rainbow-me/rainbowkit --external viem --external seismic-viem",
     "build:esm": "BUN_ENV=production bun build src/index.ts src/rainbowkit/index.ts --outdir dist/_esm --target browser --format esm --external react --external wagmi --external @rainbow-me/rainbowkit --external viem --external seismic-viem",
     "build:types": "tsc --project tsconfig.types.json && tsc-alias --project tsconfig.types.json",
-    "postbuild": "rm -f ./dist/tsconfig.types.tsbuildinfo",
     "test": "bun test"
   },
   "peerDependencies": {

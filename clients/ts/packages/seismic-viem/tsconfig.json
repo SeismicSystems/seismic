@@ -6,7 +6,6 @@
     "paths": {
       "@sviem/*": ["./*"]
     },
-    "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "rootDir": ".",
     "baseUrl": "src"
   }

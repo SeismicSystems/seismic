@@ -16,7 +16,6 @@
       "DOM" // We are adding `DOM` here to get the `fetch`, etc. types. This should be removed once these types are available via DefinitelyTyped.
     ],
     "sourceMap": true,
-    "composite": true,
     "baseUrl": ".",
     "types": ["bun-types"],
     "jsx": "preserve"
