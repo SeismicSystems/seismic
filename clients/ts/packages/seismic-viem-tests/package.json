@@ -30,11 +30,11 @@
     "@types/bun": "^1.2.5"
   },
   "scripts": {
-    "clean": "rimraf dist",
+    "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit --project tsconfig.types.json",
     "build": "bun build:esm && bun build:types",
     "build:esm": "BUN_ENV=production bun build src/index.ts --outdir dist/_esm --target bun --format esm --external viem --external seismic-viem",
     "build:types": "tsc --project tsconfig.types.json && tsc-alias --project tsconfig.types.json",
-    "postbuild": "rimraf ./dist/tsconfig.types.tsbuildinfo"
+    "postbuild": "rm -f ./dist/tsconfig.types.tsbuildinfo"
   }
 }

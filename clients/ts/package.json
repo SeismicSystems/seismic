@@ -7,7 +7,7 @@
   ],
   "type": "module",
   "scripts": {
-    "clean": "rimraf packages/*/dist -g; rimraf tests/*/dist -g",
+    "clean": "rm -rf packages/*/dist tests/*/dist",
     "typecheck": "bun run viem:build && bun run --filter '*' typecheck",
     "build": "bun run viem:build; bun run encrypt:build; bun run react:build; bun run tests:build",
     "lint": "eslint ./packages --fix; eslint ./tests --fix; prettier ./packages --write; prettier ./tests --write",
@@ -38,7 +38,6 @@
     "eslint-plugin-no-relative-import-paths": "^1.5.5",
     "eslint-plugin-unused-imports": "^4.1.4",
     "prettier": "^3.4.2",
-    "rimraf": "^6.0.1",
     "tsc-alias": "^1.8.10"
   },
   "dependencies": {

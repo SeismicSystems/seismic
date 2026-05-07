@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "clean": "rimraf dist",
+    "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "test:unit": "bun test src/viem-unit.test.ts"
