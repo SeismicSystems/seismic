@@ -1,8 +1,8 @@
-import { Faucets } from 'index.ts'
+import { Faucets } from '../index.ts'
 import type { Hex } from 'viem'
 
-import { FaucetManager } from '@sbot/faucetManager'
-import SlackNotifier from '@sbot/slack'
+import { FaucetManager } from '@sbot/faucetManager.ts'
+import SlackNotifier from '@sbot/slack.ts'
 
 const faucetReservePrivateKey = process.env.FAUCET_RESERVE_PRIVATE_KEY! as Hex
 

@@ -1,8 +1,8 @@
 import { Address, Chain } from 'viem'
 import { Hex } from 'viem'
 
-import { checkAllFaucets } from '@sbot/faucetChecker'
-import { createSeismicDevnet, seismicTestnet } from '@sviem/chain'
+import { checkAllFaucets } from '@sbot/faucetChecker.ts'
+import { createSeismicDevnet, seismicTestnet } from '@sviem/chain.ts'
 
 const seismicInternalTestnet = createSeismicDevnet({
   nodeHost: 'internal-1.seismictest.net',

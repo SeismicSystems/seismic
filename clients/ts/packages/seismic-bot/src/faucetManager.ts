@@ -11,11 +11,8 @@ import type {
 import { createPublicClient, formatUnits, http, parseEther } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
-import SlackNotifier from '@sbot/slack'
-import {
-  type ShieldedWalletClient,
-  createShieldedWalletClient,
-} from '@sviem/client'
+import SlackNotifier from '@sbot/slack.ts'
+import { createShieldedWalletClient } from '@sviem/client.ts'
 
 const stringifyBigInt = (_: unknown, v: unknown) =>
   typeof v === 'bigint' ? v.toString() : v
@@ -104,7 +101,7 @@ export class FaucetManager {
   /**
    * Returns a wallet client using the faucet private key.
    */
-  private async getFaucetWallet(): Promise<ShieldedWalletClient> {
+  private async getFaucetWallet() {
     return createShieldedWalletClient({
       chain: this.chain,
       transport: http(),
@@ -115,7 +112,7 @@ export class FaucetManager {
   /**
    * Returns a wallet client using the reserve private key.
    */
-  private async getReserveWallet(): Promise<ShieldedWalletClient> {
+  private async getReserveWallet() {
     return createShieldedWalletClient({
       chain: this.chain,
       transport: http(),

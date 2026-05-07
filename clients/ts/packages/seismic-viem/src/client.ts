@@ -68,12 +68,12 @@ export type ShieldedPublicClient<
     chain,
     accountOrAddress,
     rpcSchema extends RpcSchema
-      ? [...PublicRpcSchema, ...rpcSchema]
-      : PublicRpcSchema,
+    ? [...PublicRpcSchema, ...rpcSchema]
+    : PublicRpcSchema,
     PublicActions<transport, chain> &
-      ShieldedPublicActions &
-      DepositContractPublicActions &
-      SRC20PublicActions
+    ShieldedPublicActions &
+    DepositContractPublicActions &
+    SRC20PublicActions
   >
 >
 
@@ -112,6 +112,14 @@ export type ShieldedPublicClient<
  *     behavior separately from the transparent send override above.
  *   - `watchSRC20Events`: watch SRC20 events for the connected wallet
  */
+// TODO(types): the default `account extends Account = Account` constraint here is
+// incompatible with what `createShieldedWalletClient` actually returns: viem's
+// `LocalAccount` has `signTransaction?: ...` (optional), while `Account` requires
+// it to be a function. As a result, code like
+//   `const x: ShieldedWalletClient = createShieldedWalletClient(...)`
+// fails to typecheck. Consumers currently work around this by dropping the
+// annotation, supplying explicit generics, or using `@ts-expect-error`. Fixing
+// this likely means relaxing the default `account` bound to a `LocalAccount`-compatible shape.
 export type ShieldedWalletClient<
   transport extends Transport = Transport,
   chain extends Chain | undefined = Chain | undefined,
@@ -123,13 +131,13 @@ export type ShieldedWalletClient<
   account,
   RpcSchema,
   PublicActions<transport, chain, account> &
-    WalletActions<chain, account> &
-    EncryptionActions &
-    ShieldedPublicActions<TRpcSchema> &
-    ShieldedWalletActions<chain, account> &
-    DepositContractPublicActions &
-    DepositContractWalletActions &
-    SRC20WalletActions
+  WalletActions<chain, account> &
+  EncryptionActions &
+  ShieldedPublicActions<TRpcSchema> &
+  ShieldedWalletActions<chain, account> &
+  DepositContractPublicActions &
+  DepositContractWalletActions &
+  SRC20WalletActions
 >
 
 type SeismicClients<

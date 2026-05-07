@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "bun build src/index.ts --outdir dist",
-    "start": "bun src/index.ts"
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "viem": "^2.21.50",
