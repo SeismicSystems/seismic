@@ -5,7 +5,7 @@
   "scripts": {
     "build": "bun build src/index.ts --outdir dist",
     "start": "bun src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bunx tsc --noEmit"
   },
   "dependencies": {
     "viem": "^2.21.50",
