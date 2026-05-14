@@ -178,8 +178,8 @@ If you encounter React version conflicts in a monorepo, ensure all packages reso
 ```json
 {
   "resolutions": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
   }
 }
 ```

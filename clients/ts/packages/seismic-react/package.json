@@ -47,8 +47,8 @@
   },
   "peerDependencies": {
     "@rainbow-me/rainbowkit": "^2.0.0",
-    "react": "^18",
-    "react-dom": "^18",
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19",
     "typescript": ">=5.0.4",
     "viem": "2.x",
     "wagmi": "^2.0.0",
