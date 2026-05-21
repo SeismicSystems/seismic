@@ -6,7 +6,8 @@ icon: dollar-sign
 
 <figure><img src="../../.gitbook/assets/seismic-tx-format.png" alt=""><figcaption></figcaption></figure>
 
-Seismic extends Ethereum's transaction model with encrypted calldata and authenticated reads. This section covers the two core mechanisms:
+Seismic extends Ethereum's transaction model with encrypted calldata and authenticated reads. This section covers:
 
-* [**Tx Lifecycle**](tx-lifecycle.md) — How a Seismic transaction is constructed, encrypted, sent, decrypted, and executed. Covers key management, the `SeismicElements` metadata fields, AES encryption with AEAD, node-side decryption, and shielded storage via `CLOAD`/`CSTORE`.
-* [**Signed Reads**](signed-reads.md) — How users make authenticated `eth_call` requests that prove `msg.sender` identity. Covers the motivation (preventing from-address spoofing), how signed reads are sent and validated, and the `signed_read` field that prevents replay as write transactions.
+* [**Cryptography**](cryptography.md) — The encryption scheme (ECIES on secp256k1), key derivation, AEAD construction, and client key-management strategies
+* [**Tx Lifecycle**](tx-lifecycle.md) — How a Seismic transaction is built, signed, submitted, validated, and executed; the `SeismicElements` metadata fields; wire vs. signing format; tx-pool validation rules
+* [**Signed Reads**](signed-reads.md) — The read variant: Seismic txs sent to `eth_call`, with `msg.sender` recovered from the signature

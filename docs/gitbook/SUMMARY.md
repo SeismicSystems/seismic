@@ -250,6 +250,7 @@
 ## Reference
 
 * [The Seismic Transaction](reference/seismic-transaction/README.md)
+  * [Cryptography](reference/seismic-transaction/cryptography.md)
   * [Tx Lifecycle](reference/seismic-transaction/tx-lifecycle.md)
   * [Signed Reads](reference/seismic-transaction/signed-reads.md)
 * [Opcodes](reference/opcodes.md)
