@@ -15,34 +15,27 @@ This page describes the cryptographic primitives and key material underlying Sei
 
 ## Client keys
 
-For each transaction the client uses a secp256k1 encryption keypair to encrypt calldata to `tx_io_pk`. The client's encryption public key is sent on-chain as part of `TxSeismicMetadata`. Two strategies are supported, with different convenience/privacy trade-offs:
+For each transaction the client uses a secp256k1 encryption keypair to encrypt calldata to `tx_io_pk`. The client's encryption public key is sent on-chain as part of `TxSeismicMetadata`. A client's key strategy is two independent choices:
 
-### Strategy 1 — ephemeral key per tx (default, recommended)
+### Axis 1 — Rotation frequency
 
-* Generate a fresh secp256k1 keypair for each transaction; use it once; discard `eph_sk` after submission
-* Each tx has its own AES key — a different `eph_sk` produces a different ECDH output, a different `shared_secret`, and therefore a different `K`. The AES-GCM `encryptionNonce` can be a **fixed constant** (the reference clients use all-zeros) because `(K, nonce)` pairs are unique by construction, never reused
-* **Self-decryption is unavailable once `eph_sk` is discarded** — the client can no longer reproduce `K` for that tx, and the protocol exposes no validator-side recovery mechanism. Clients that want to view their own historical calldata must persist `eph_sk` (or `K`) per tx in wallet-side storage at submission time
-* **Privacy benefit:** a discarded `eph_sk` removes the client's *own* ability to recover the plaintext from the on-chain ciphertext. Reduces blast-radius of a wallet compromise (only txs whose ephemerals are still cached are decryptable), and provides strong forward deniability — even the client themselves cannot prove what was in past calldata
+* **Per-tx (ephemeral)** — fresh keypair per tx, discarded after submission. Each tx has its own AES key, so the `encryptionNonce` can be a fixed constant (the reference clients use all-zeros). Strongest forward deniability — the client itself cannot recover past plaintext once the key is discarded. No offline self-decryption: wallets wanting to view tx history must cache the key per tx
+* **Long-lived (per-session or longer)** — same keypair reused across many txs. The `encryptionNonce` **must** be unique per tx under this key (incrementing counter or random 12-byte value; birthday-bound at ~2⁴⁸ random nonces) — same AES key + same nonce breaks AES-GCM. Enables offline self-decryption: the client recomputes `K` once and decrypts any past tx
 
-### Strategy 2 — long-lived client key
+### Axis 2 — Key source
 
-* Use a persistent secp256k1 keypair across many transactions
-* `(client_sk, tx_io_pk)` produces the same `shared_secret` and therefore the same `K` for every tx the client sends; the `encryptionNonce` **must** be unique per tx under this `K`. Use an incrementing counter, or a freshly random 12-byte value (birthday-bound — collision-probable after ~2⁴⁸ txs)
-* **Self-decryption is offline and free:** the client recomputes `K` once from `(client_sk, tx_io_pk)` and decrypts any of their past transactions directly from on-chain data. Useful for wallets that want to display a user's tx history without round-tripping a validator
-* **Trade-off:** loss of `client_sk` exposes every transaction ever encrypted under it. Strategy 1 doesn't have this exposure by construction
+* **Random (CSPRNG)** — `client_sk = OsRng(32)`. The key must be persisted out-of-band to reuse it; lost key = lost access
+* **Derived from signing key (direct)** — `client_sk = HKDF(signing_sk, info)`. Requires the dApp/SDK to have raw access to `signing_sk` (mnemonic-based JS wallets, server-side signers, programmatic test setups). No extra backup needed beyond the wallet seed; forward deniability is lost — signing-key compromise exposes the encryption key
+* **Derived from a wallet signature** — for wallets that hide `signing_sk` (MetaMask, Ledger, Trezor, Fireblocks, KMS, etc.): ask the wallet to sign a fixed message and use the signature (or `SHA-256(signature)`) as the seed. RFC 6979-deterministic ECDSA makes re-signing reproducible. The signature must be kept secret — sharing it reveals every derived encryption key
 
-### Strategy 3 — deterministic derivation from the signing key
+### Common combinations
 
-Derive each per-tx encryption key deterministically from a seed bound to the user's wallet. Gives offline self-decryption without managing a separate encryption key — the only thing the user needs to back up is their normal signing seed.
+* **Ephemeral × random** — recommended default, used by the seismic-viem and seismic_web3 reference clients. Privacy-maxing; no self-decryption without explicit per-tx caching
+* **Ephemeral × derived (direct)** — fresh keypair per tx, deterministically derived from `signing_sk`. Combines "no separate backup" with "fresh K per tx (no nonce-reuse concern)." Suitable when the dApp has direct access to `signing_sk`
+* **Long-lived × random** — single CSPRNG key reused. Enables offline self-decryption; the encryption key must be backed up separately from the wallet seed
+* **Long-lived × signature-derived** — single key derived from one wallet signature at session start. **Used by the [Fireblocks SDK](https://github.com/fireblocks/seismic-sdk)**: signs a fixed seed via Fireblocks RAW signing, hashes the signature into a session-scoped encryption key. Re-derives on session restart without user re-approval (MPC signatures are deterministic); no out-of-band backup needed — the wallet covers both signing and encryption
 
-* `eph_sk = HKDF(seed, chain_id, tx_nonce)`; `seed` source depends on the wallet (see below)
-* **Self-decryption is offline:** any past `eph_sk` re-derives from the seed plus on-chain `(chain_id, tx_nonce)`. No per-tx storage required
-* **Trade-off:** loss of the wallet's signing material exposes every past Seismic tx (no forward deniability)
-
-Two sub-cases depending on what the wallet exposes:
-
-* **(a) Direct** — if the dApp can access `signing_sk` (mnemonic-based JS wallets, server-side signers, programmatic test setups): `seed = signing_sk`
-* **(b) Session signature** — if the wallet only exposes signing (MetaMask, Ledger, Trezor, KMS): prompt the user once at session start to `personal_sign` a fixed message (e.g., `"Seismic encryption session for {address}"`); use the resulting signature as `seed`, cached in dApp memory for the session lifetime. The same prompt always yields the same signature (deterministic ECDSA), so refresh-recovery works. The signature must not be exposed — sharing it grants offline decryption of every past tx
+Other combinations (e.g., per-tx × signature-derived, which would require a wallet-signature prompt per tx) are valid but operationally rare.
 
 ## Encryption scheme
 
