@@ -4,15 +4,20 @@ icon: file-signature
 
 # Signed Reads
 
-* The Seismic transaction has a counterpart, which we call "signed reads"
-* The motivation for a signed read is: in the EVM, users can make an `eth_call` and set the "from" field to any address they'd like to spoof
-* We want to give contract developers the ability to validate contract reads against msg.sender. For example, a user could implement an ERC20 token where only the owner can view their balance
-* To solve this, we do two things: (1) we zero out the "from" field when users make a vanilla `eth_call` and (2) we created the "signed read" to allow users to make a call with a specific `from` address
-* Signed reads are sent to Seismic's `eth_call` endpoint in the same way we would send a signed Seismic transaction to `eth_sendRawTransaction`. This can be either with a normal raw transaction, or an EIP-712 transaction
-* Signed reads must be a valid Seismic transaction (type `0x4a`). They cannot be made with any other transaction type
-* The response to a signed read will be encrypted to the encryption public key included in the transaction's Seismic elements. Therefore anyone who manages to intercept the response still cannot decrypt the response to the signed read.
-* Users can set the `signed_read` field in SeismicElements to `true`. We encourage this, and it is the default behaviour in our client implementations. The purpose of this is to prevent anyone who has managed to intercept this `eth_call` from sending that same payload to `eth_sendRawTransaction`, which would otherwise trigger a write transaction. When validating a transaction before it hits the pool, we check if the `signed_read` field is set to true; if it is, the transaction is rejected
-  * This does not apply the other way around. Meaning, if `signed_read` is `false` (and the user wants to create a transaction), it can still be passed to `eth_call`. We think this validation is unnecessary because:
-    * For an attacker to decrypt the response to a signed read, they'd need the user's secret encryption key
-    * The account's transaction nonce will increment right after their Seismic transaction is included in a block, after which the read will fail
-    * This also allows `eth_estimateGas` to function properly; otherwise it would not pass validation on the `signed_read` field
+A signed read is a Seismic transaction (type `0x4a`) sent to `eth_call` instead of `eth_sendRawTransaction`. It lets contracts authenticate the reader's `msg.sender` for read-only queries — e.g., "only the owner can view their balance."
+
+## Why signed reads exist
+
+In the EVM, anyone can set the `from` field of an `eth_call` to spoof any address. Seismic closes this in two parts:
+
+1. Vanilla `eth_call` has its `from` field **zeroed out** by the node — `msg.sender == 0` inside contract code
+2. A signed read is a Seismic tx where the validator recovers the signer from the signature and uses *that* address as `msg.sender`
+
+## How signed reads differ from write txs
+
+A signed read is built exactly like a write tx (same `SeismicElements`, same encryption flow — see [Tx Lifecycle](tx-lifecycle.md) and [Cryptography](cryptography.md)). The differences are:
+
+* **Sent to `eth_call`**, not `eth_sendRawTransaction`. Either a raw tx or an EIP-712 envelope (`message_version = 2`)
+* The **`signed_read`** field should be set to `true` (default in our clients). The tx-pool rejects `signed_read = true` at write submission, so an intercepted signed read can't be replayed as a write tx
+* The validator decrypts the calldata, runs the call inside the EVM, and returns the result **encrypted to the client's `encryption_pubkey`** — an on-path interceptor can't read the response either
+* `signed_read = false` is also valid for `eth_call` — the same tx body can be passed to either endpoint. This is intentional so that `eth_estimateGas` works on **write** txs: gas estimation simulates the tx via the same `eth_call` path internally, so if `eth_call` rejected `signed_read = false`, clients couldn't estimate gas on a normal write tx without building a separate tx variant. Safety still holds: decrypting the response requires the client's `eph_sk`, and once the account's tx nonce increments, a captured `eth_call` payload can no longer execute as a write

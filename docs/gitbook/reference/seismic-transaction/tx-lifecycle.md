@@ -4,52 +4,65 @@ icon: arrows-spin
 
 # Tx Lifecycle
 
-## Key management
+How a Seismic transaction is built, signed, submitted, validated, and executed. For the encryption primitives themselves (ECIES on secp256k1, KDF, AEAD, AAD binding), see [Cryptography](cryptography.md).
 
-* The network manages its keys through the [`seismic-enclave-server`](https://github.com/SeismicSystems/enclave/tree/seismic/crates/enclave-server) crate. Reth (and Summit) can make RPC calls to this server. One such call is to get the network keys
-* Enclave can boot in either `--genesis-node` or `--peers <ip>` mode. The former generates its own root key and shares it with peers after they pass validation. The latter loops through its peer IPs until it receives the root key from one of them
-* Enclave then derives a few different keys from that root key. Most importantly, it derives the encryption secret key. This is the key used to decrypt Seismic transaction calldata
-* When [`seismic-reth`](https://github.com/SeismicSystems/seismic-reth/tree/seismic/bin/seismic-reth) boots, it requests the derived keys from the enclave and keeps them in memory
-* We exposed a new RPC method, [`seismic_getTeePublicKey`](../rpc-methods/seismic-get-tee-public-key.md). Its response is the public key of the aforementioned secret key that decrypts Seismic transactions. Calling this endpoint is the first step that a client takes to build a Seismic transaction
-* Clients also generate their own secret key, which can be either ephemeral (default) or long-lived, if they prefer to manage this themselves
-* Their secret key and the network public key combine to create an AES key, which is used to encrypt calldata
+## Building a Seismic transaction
 
-## Encryption & Metadata
+A Seismic transaction is a legacy Ethereum tx with two additions: encrypted calldata in the `data` field, and a metadata struct called **`SeismicElements`**. The tx type is `74` / `0x4a`.
 
-* The client will include their encryption public key in the transaction, along with four other parameters to tighten the security of encryption. These are:
-  * a 12-byte `encryptionNonce`
-  * `recentBlockHash`, which must be within 100 blocks of the latest block
-  * an `expiresAtBlock` number, after which this transaction is invalid
-  * optionally, a boolean `signedRead`. If set, it only allows the transaction to be used for signed reads. Otherwise, it will be rejected by transaction pool validation
-* There is one other field in Seismic transaction metadata: an integer called `messageVersion`. This field is a hack to allow browser extension wallets (e.g. MetaMask) to support the Seismic transaction type. Message version 0, the default, means a standard Seismic transaction as described above. Message version 2 corresponds to a transaction sent as EIP-712 typed data, which browser extension wallets can sign. There is no message version 1, but we reserved this for implementing Seismic transactions via `eth_personalSign`
-* These six Seismic-specific fields are called `SeismicElements`: the client encryption public key, the four security fields above, and the message version. They are combined with the EOA address (`sender`), `chainId`, `nonce`, `to` address, and `value`. The full set of 11 fields is referred to as the Seismic transaction metadata (`TxSeismicMetadata`) in [`seismic-alloy-consensus`](https://github.com/SeismicSystems/seismic-alloy/tree/seismic/crates/consensus)
-* To encrypt calldata, we use AES with AEAD. The AEAD is an RLP encoding of the `TxSeismicMetadata`. The nonce for this encryption is the same 12-byte encryption nonce as we included in the metadata
-* The encrypted calldata is then passed to a Seismic transaction in the data/input field. Seismic transactions work just like Legacy Ethereum transactions, except:
-  * they have a tx type of `74` or `0x4a`
-  * they have these `SeismicElements` attached as well
+`SeismicElements` consists of six Seismic-specific fields:
 
-## Decryption
+* **`encryption_pubkey`** — the client's encryption pubkey for this tx (see [Cryptography → Client keys](cryptography.md#client-keys) for the available strategies)
+* **`encryption_nonce`** — 12-byte AES-GCM nonce
+* **`recentBlockHash`** — must be within 100 blocks of the latest block
+* **`expires_at_block`** — block number after which the tx is invalid
+* **`signed_read`** — boolean (defaults to `true` in our client implementations); if `true`, restricts the tx to signed-read use only — see [Signed reads](#signed-reads-read-variant)
+* **`message_version`** — integer controlling the signing format; see [Wire vs. signing format](#wire-vs-signing-format)
 
-* Transactions sent with type `0x4a` but incomplete Seismic elements are rejected from the tx pool, as are transactions not marked as `0x4a` but do contain Seismic elements
-* Nodes will decrypt Seismic transactions by:
-  * decoding the transaction
-  * recovering the signer
-  * assembling the metadata
-  * encoding it as AEAD via RLP
-  * generating the AES key by combining the network's secret key with the transaction's encryption public key
-* If transaction decryption fails, the transaction is removed from the transaction pool
-* If it succeeds, it passes to the revm transaction environment _as plaintext_
-* Calls to get transaction information after they have landed on chain should return input as the encrypted calldata, and not the plaintext
-* A note on calldata encoding: s-types are encoded the same way as their public analogues. The consequence is an interesting artifact of the Seismic protocol (and maybe a security concern): Solidity has no clue whether functions are called with Seismic transactions or not. As a result, it's totally allowed to alter shielded state with vanilla Ethereum transactions. It's also allowed to do the reverse, by altering public state with Seismic transactions
+Combined with the standard Ethereum fields (`sender`, `chain_id`, `nonce`, `to`, `value`), the full 11-field bundle is **`TxSeismicMetadata`**, which is RLP-encoded and used as AAD when the AEAD seals the calldata (see [Cryptography → Encryption scheme](cryptography.md#encryption-scheme)). Definitions in [`seismic-alloy-consensus`](https://github.com/SeismicSystems/seismic-alloy/tree/seismic/crates/consensus).
 
-## Shielded storage
+The encrypted calldata is placed in the standard `data` / `input` field of the tx envelope.
 
-* Inside Solidity, we've defined two new opcodes: `CLOAD` and `CSTORE`. These are the shielded analogues to `SLOAD` and `SSTORE`. We use `CLOAD`/`CSTORE` when the underlying type is an s-type.
-* Importantly, we maintain only one state tree, as you can see in [`seismic-trie`](https://github.com/SeismicSystems/seismic-trie/) (a fork of alloy-trie). We modified the state tree by adding an extra boolean flag, `is_private`, to leaves. This is wrapped inside the struct called `FlaggedStorage`, which replaces `StorageValue` (a plain `U256`). We use this flag to validate `CLOAD`/`CSTORE` calls, and to know whether we can expose this piece of storage, via e.g. `eth_getStorageAt`
-* When we see a `CLOAD` opcode inside [`seismic-revm`](https://github.com/SeismicSystems/seismic-revm), we load the storage slot and validate that it either has `is_private` set to `true` or is an uninitialized slot. For `CSTORE`, we write the storage value with `is_private = true`. We throw errors when trying to `CLOAD`/`CSTORE` a `FlaggedStorage` that has `is_private = false` ("Invalid public storage access"). Similarly, we throw errors when trying to `SLOAD`/`SSTORE` on `FlaggedStorage` that has `is_private = true` ("Invalid private storage access"). These errors are thrown inside `seismic-revm`.
-* Unlike SSTORE/SLOAD, the gas cost of CLOAD/CSTORE does not change based on the length of the word stored. This is to prevent attackers from deducing information about shielded storage values
+## Wire vs. signing format
 
-## Notes
+A Seismic transaction has the same **wire format** in every case: an RLP-encoded type-`0x4a` envelope containing the tx fields, the encrypted calldata, and a signature. What can differ is the **signing format** — the bytes the ECDSA signature actually covers. This is controlled by the `message_version` field in `SeismicElements`:
 
-* Outside of `SeismicElements` and the encrypted calldata, Seismic transactions have the same fields as legacy transactions. In particular, they use the same gas parameters: `gasPrice` and `gasLimit`
-* Seismic transactions cannot be used to deploy bytecode via `Create` calls. Instead, we only allow Seismic transactions to be sent to a specific address. We did this to make metadata validation easier, and we can't see a good reason to deploy encrypted bytecode
+* **`message_version = 0`** — Standard. Signature covers the RLP-encoded preimage of the tx (same shape as other Ethereum typed txs, e.g. EIP-2930, EIP-1559). The validator re-RLP-encodes the preimage and recovers the signer from the signature.
+* **`message_version = 2`** — EIP-712 typed-data form. Signature covers an EIP-712 hash of the tx as a structured-data message. **This is what makes Seismic txs signable by MetaMask and other browser-extension wallets**, which don't natively understand tx type `0x4a` but do support `eth_signTypedData`. The validator reconstructs the typed-data hash and recovers the signer accordingly.
+* **`message_version = 1`** — Reserved (originally planned for `eth_personalSign`-style signing; not implemented).
+
+The wire-level type byte is always `0x4a`; only how the signer was authenticated differs.
+
+## Submission and validation
+
+Send to `eth_sendRawTransaction` like any Ethereum tx. Tx-pool validation rejects:
+
+* Txs of type `0x4a` with incomplete or malformed `SeismicElements`
+* Txs not marked `0x4a` but containing `SeismicElements`
+* Txs with `signed_read = true` (those are for `eth_call`, not write txs)
+* Calldata that fails to decrypt (see below)
+
+Validated txs land in the pool and are included in blocks as usual.
+
+## Node-side decryption
+
+For each Seismic tx in the pool, the validator:
+
+1. Decodes the tx and recovers the signer (using the `message_version`-appropriate signing format)
+2. Assembles the metadata, RLP-encodes it — this is the AAD
+3. Derives the AES key from `tx_io_sk` and the client's `encryption_pubkey` via ECDH + HKDF (see [Cryptography](cryptography.md))
+4. AEAD-opens the ciphertext with the derived key, the `encryption_nonce`, and the AAD
+
+On decryption failure, the tx is removed from the pool. On success, the plaintext calldata is passed to revm for execution inside the validator.
+
+**`eth_getTransactionByHash` returns the on-chain ciphertext form, not the plaintext.** Clients that want to view their own historical calldata must arrange this client-side — see [Cryptography → Client keys](cryptography.md#client-keys) for the available strategies.
+
+## Read variant
+
+For authenticated reads — `eth_call` requests that prove `msg.sender` identity to a contract — Seismic uses **signed reads**: the same Seismic tx protocol, sent to `eth_call` instead of `eth_sendRawTransaction`. See [Signed Reads](signed-reads.md) for the specifics.
+
+## Other notes
+
+* Seismic txs use the same gas parameters as legacy txs: `gasPrice` and `gasLimit`
+* Seismic txs cannot deploy bytecode. They must be sent to a specific address; `CREATE` / `CREATE2` from a Seismic tx is rejected. This simplifies metadata validation, and there's no useful reason to deploy encrypted bytecode
+* **Calldata encoding subtlety:** shielded types (`suint`, `sbool`, etc.) are encoded the same way as their public analogues. Solidity has no idea whether a function is called with a Seismic tx or a plain tx — so it's legal (though usually wrong) to alter shielded state via a plain tx, or to alter public state via a Seismic tx. Be deliberate about which kind of tx your contract accepts
