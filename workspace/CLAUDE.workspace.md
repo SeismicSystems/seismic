@@ -12,7 +12,7 @@ See [seismic/docs/glossary.md](../docs/glossary.md) for full definitions. Quick 
 - **Shielded Types** — `suint`, `sint`, `sbool`, `saddress` compile to `CLOAD`/`CSTORE` instead of `SLOAD`/`SSTORE`.
 - **Mercury Spec** — modified EVM: CLOAD/CSTORE opcodes + 6 precompiles (RNG, ECDH, AES-GCM, HKDF, secp256k1 Sign).
 - **TxSeismic** — transaction type `74` with encrypted calldata (ECDH + AEAD).
-- **TEE Integration** — nodes run in a TEE; calldata decrypted at RPC layer before EVM execution.
+- **TEE Integration** — nodes run in a TEE. Encrypted calldata is decrypted in-enclave at execution time: in the **block executor** for state-changing txs (so txs stay encrypted in the mempool and over gossip), and at the **RPC layer** for reads (`eth_call`/signed reads).
 
 ## Docs
 
