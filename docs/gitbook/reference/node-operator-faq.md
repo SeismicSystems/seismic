@@ -99,6 +99,18 @@ No rate limits are currently imposed by the protocol itself, though node operato
 
 <details>
 
+<summary>Are transactions submitted over RPC treated as "local" (exempt from mempool limits)?</summary>
+
+No. Seismic tags RPC-submitted transactions with `external` origin, whereas upstream reth and geth tag them `local`. Local origin would exempt a transaction from the per-sender slot cap (`max_account_slots`), minimum-price rules, and stale-queued eviction — privileges meant for a node operator submitting their own transactions.
+
+That assumption fits Ethereum's run-your-own-node-at-home model, but not Seismic: because nodes must run inside a TEE (proof of cloud), most users submit to a public RPC they do not operate. Those submitters are untrusted, so granting them the local exemptions would be a mempool-bloat / DoS vector. Treating RPC submissions as external holds every sender to the same limits. Transactions are still propagated to peers as usual.
+
+Operators with special requirements — e.g. exempting their own relayer address via `--txpool.locals` — should reach out; see the General section above on running custom settings.
+
+</details>
+
+<details>
+
 <summary>Is there an RPC parameter to set the maximum fee cap?</summary>
 
 Yes, `--rpc.txfeecap`. We use reth's default, which is 1.0 units of the native token (e.g. 1.0 ETH on testnet).
