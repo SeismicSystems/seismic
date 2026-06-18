@@ -160,6 +160,22 @@ suint256 shieldedStatus = suint256(uint256(Status.Active));
 
 **What to do instead:** Consider whether the limited range of possible values undermines the privacy guarantee. Shielding an enum with 3 members is not meaningfully private.
 
+### Low-Entropy Shielded Storage Values
+
+**The problem:** Shielding hides a slot's _value_ from RPC reads, but the value still participates in the storage Merkle trie that backs the account's `storageHash`. The trie key (the storage slot) is public, and the value is committed into the trie through a plain keccak hash with no per-slot salt. If a shielded value has low entropy — a boolean, a small enum, a value drawn from a known set — an attacker who knows the slot can guess candidate values, recompute the commitment, and confirm a match. The value is recovered without ever being read directly.
+
+```solidity
+// The storage layout is public, so the slot is known, and an `sbool`
+// has only two possible values — trivially guessable from the trie.
+sbool private isWhitelisted;
+```
+
+**Why it leaks:** A storage value enters the trie as roughly `keccak256(RLP([slot_path, value]))`. With no salt, that commitment is a deterministic function of `(slot, value)`, and the slot is known — so the only unknown is the value. The account's `storageHash` always exposes this commitment, but on its own it commits to the whole trie at once, so it is only practical to attack on freshly deployed or sparsely shielded contracts where the root covers just a handful of leaves.
+
+Endpoints that return Merkle proofs (such as `eth_getProof`) make this much worse, and **non-inclusion proofs are the sharpest case**. A proof that a slot does _not_ exist still returns the intermediate trie nodes along that slot's path. Because the trie key is `keccak256(slot)`, an attacker can search for a junk, non-existent slot whose hash sits right next to your target's, request a non-inclusion proof for it, and pull back the branch node that _directly_ commits to your private leaf. This isolates a single target leaf and makes it brute-forceable regardless of how full the trie is and without needing a conveniently located public slot nearby — defeating the intuition that a contract holding lots of shielded state is automatically safer. This is the same root cause as the [Enums](#enums) footgun, generalized to any low-entropy value.
+
+**What to do instead:** Do not rely on shielding alone to protect a low-entropy secret stored at a known slot. If a value is sensitive and has a small domain, mix in high entropy before storing it — for example store `keccak256(abi.encode(secret, salt))`, where `salt` is itself a high-entropy shielded value, and compare against that commitment rather than the raw secret. This only works for values you check by equality, not ones you do arithmetic on. High-entropy shielded values — balances that accumulate over many transactions, for instance — are not practically guessable and need no special handling.
+
 ### `immutable` and `constant` Shielded Variables
 
 Shielded types **cannot** be declared as `immutable` or `constant`. The compiler will reject both with an error. Constants are embedded in bytecode (publicly visible), and immutables are stored in bytecode after construction — neither is compatible with the confidential storage model.
