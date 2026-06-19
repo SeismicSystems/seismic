@@ -77,6 +77,7 @@
     * [Precompiles](clients/typescript/viem/precompiles.md)
     * [Deposit Contract](clients/typescript/viem/deposit-contract.md)
     * [SRC20 Event Watching](clients/typescript/viem/src20.md)
+    * [Event Decryption](clients/typescript/viem/event-decryption.md)
   * [seismic-react](clients/typescript/react/README.md)
     * [Installation](clients/typescript/react/installation.md)
     * [Shielded Wallet Provider](clients/typescript/react/shielded-wallet-provider.md)
