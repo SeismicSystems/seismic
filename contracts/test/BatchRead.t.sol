@@ -17,6 +17,32 @@ contract TestSRC20 is SRC20 {
     }
 }
 
+/// @notice Answers balanceOfSigned without reverting but returns fewer than 32 bytes.
+contract ShortReturnToken {
+    fallback() external {
+        assembly {
+            return(0, 16)
+        }
+    }
+}
+
+/// @notice Answers balanceOfSigned without reverting but returns more than 32 bytes.
+contract LongReturnToken {
+    fallback() external {
+        assembly {
+            mstore(0, 42)
+            return(0, 48)
+        }
+    }
+}
+
+/// @notice Reverts on any call.
+contract RevertingToken {
+    fallback() external {
+        revert("RevertingToken: always reverts");
+    }
+}
+
 contract BatchReadTest is Test {
     SRC20Multicall multicall;
     TestSRC20[] tokens;
@@ -157,6 +183,37 @@ contract BatchReadTest is Test {
             assertEq(results[i].token, address(tokens[i]));
             assertEq(results[i].balance, (i + 1) * 1e18);
         }
+    }
+
+    // Zellic 3.6: a non-reverting token that returns a payload other than 32 bytes
+    // must be reported as a failure, not as a successful zero balance.
+    function test_batchBalancesDetailedMalformedReturn() public {
+        uint256 expiry = block.timestamp + 1 hours;
+        bytes memory sig = _signBalanceRead(USER_PRIVATE_KEY, user, expiry);
+
+        address[] memory testTokens = new address[](4);
+        testTokens[0] = address(tokens[0]);
+        testTokens[1] = address(new ShortReturnToken());
+        testTokens[2] = address(new LongReturnToken());
+        testTokens[3] = address(new RevertingToken());
+
+        SRC20Multicall.BalanceResult[] memory results = multicall.batchBalancesDetailed(user, testTokens, expiry, sig);
+
+        assertEq(results.length, 4);
+
+        // (a) well-formed token: success with the real balance
+        assertTrue(results[0].success);
+        assertEq(results[0].balance, 1e18);
+
+        // (b) malformed returns (16 and 48 bytes): must not look like a real zero balance
+        assertFalse(results[1].success);
+        assertEq(results[1].balance, 0);
+        assertFalse(results[2].success);
+        assertEq(results[2].balance, 0);
+
+        // (c) reverting token: failure
+        assertFalse(results[3].success);
+        assertEq(results[3].balance, 0);
     }
 
     function test_staticcallErrorHandling() public {
