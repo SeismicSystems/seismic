@@ -27,10 +27,13 @@ contract SRC20Multicall {
 
             (bool success, bytes memory returnData) = tokens[i].staticcall(data);
 
-            results[i].success = success;
-            if (success && returnData.length >= 32) {
+            // A non-reverting call that doesn't return exactly one word is malformed:
+            // reporting it as success would make it indistinguishable from a real zero balance.
+            if (success && returnData.length == 32) {
+                results[i].success = true;
                 results[i].balance = abi.decode(returnData, (uint256));
             } else {
+                results[i].success = false;
                 results[i].balance = 0;
             }
 
