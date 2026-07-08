@@ -4,8 +4,6 @@ pragma solidity ^0.8.13;
 interface IDirectory {
     event KeySet(address indexed addr);
 
-    function nonce() external view returns (uint96);
-
     function setKey(suint256 _key) external;
 
     function getKey() external view returns (uint256);
