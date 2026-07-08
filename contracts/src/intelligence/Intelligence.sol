@@ -55,6 +55,7 @@ contract Intelligence is IIntelligence {
     }
 
     function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "ZERO_OWNER");
         owner = newOwner;
         emit OwnershipTransferred(newOwner);
     }
