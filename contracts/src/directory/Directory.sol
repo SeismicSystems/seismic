@@ -7,7 +7,6 @@ import {IDirectory} from "seismic-std-lib/interfaces/IDirectory.sol";
 
 contract Directory is IDirectory {
     mapping(address => suint256) private keys;
-    uint96 public nonce;
 
     function setKey(suint256 _key) public {
         keys[msg.sender] = _key;
@@ -30,11 +29,9 @@ contract Directory is IDirectory {
     function encrypt(address to, bytes memory _plaintext) public returns (bytes memory) {
         suint256 key = keys[to];
 
-        bytes memory ciphertext = CryptoUtils.encrypt(key, nonce, _plaintext);
-        bytes memory encryptedData = packEncryptedData(ciphertext, nonce);
-
-        nonce++;
-        return encryptedData;
+        uint96 n = CryptoUtils.generateRandomNonce();
+        bytes memory ciphertext = CryptoUtils.encrypt(key, n, _plaintext);
+        return packEncryptedData(ciphertext, n);
     }
 
     function decrypt(bytes memory _encryptedData) public view returns (bytes memory) {
