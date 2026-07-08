@@ -119,4 +119,25 @@ contract IntelligenceTest is Test {
         intelligence.addProvider(charlie);
         assertEq(intelligence.numProviders(), 3);
     }
+
+    function test_RevertWhen_TransferOwnershipToZeroAddress() public {
+        vm.prank(intelligence.owner());
+        vm.expectRevert("ZERO_OWNER");
+        intelligence.transferOwnership(address(0));
+    }
+
+    function test_OwnerNotDisplacedByZeroAddressTransfer() public {
+        vm.prank(intelligence.owner());
+        intelligence.transferOwnership(alice);
+
+        vm.prank(alice);
+        vm.expectRevert("ZERO_OWNER");
+        intelligence.transferOwnership(address(0));
+        assertEq(intelligence.owner(), alice);
+
+        address charlie = makeAddr("charlie");
+        vm.prank(intelligence.INITIAL_OWNER());
+        vm.expectRevert("UNAUTHORIZED");
+        intelligence.addProvider(charlie);
+    }
 }
