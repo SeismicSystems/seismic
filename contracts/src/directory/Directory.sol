@@ -9,6 +9,7 @@ contract Directory is IDirectory {
     mapping(address => suint256) private keys;
 
     function setKey(suint256 _key) public {
+        require(_key != suint256(0), "ZERO_KEY");
         keys[msg.sender] = _key;
 
         emit KeySet(msg.sender);
@@ -28,6 +29,7 @@ contract Directory is IDirectory {
 
     function encrypt(address to, bytes memory _plaintext) public returns (bytes memory) {
         suint256 key = keys[to];
+        require(key != suint256(0), "ZERO_KEY");
 
         uint96 n = CryptoUtils.generateRandomNonce();
         bytes memory ciphertext = CryptoUtils.encrypt(key, n, _plaintext);
