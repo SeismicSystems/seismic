@@ -1,8 +1,13 @@
 """Integration tests for the DepositContract (Eth2 validator staking)."""
 
+import json
+from pathlib import Path
+from typing import Any
+
 import pytest
 from hexbytes import HexBytes
 from web3 import Web3
+from web3.contract import Contract
 
 from seismic_web3.abis.deposit_contract import compute_deposit_data_root
 from seismic_web3.contract.shielded import ShieldedContract
@@ -10,6 +15,10 @@ from tests.integration.contracts import (
     DEPOSIT_CONTRACT_ABI,
     DEPOSIT_CONTRACT_BYTECODE,
     deploy_contract,
+)
+
+DEPOSIT_VECTORS_PATH = (
+    Path(__file__).parent.parent / "fixtures" / "deposit_requests.json"
 )
 
 # ---------------------------------------------------------------------------
@@ -318,3 +327,96 @@ class TestDepositActions:
             address=deposit_address,
         )
         assert root_before != root_after
+
+
+# ---------------------------------------------------------------------------
+# Tests — Summit golden vectors
+# ---------------------------------------------------------------------------
+
+
+def _unhex(value: str) -> bytes:
+    return bytes.fromhex(value.removeprefix("0x"))
+
+
+class TestDepositRequestVectors:
+    """Replay Summit's golden deposit-request vectors through the client.
+
+    The vectors (``tests/fixtures/deposit_requests.json``, canonical copy in
+    the summit repo at ``types/fixtures/deposit_requests.json``) carry valid
+    Ed25519 + BLS signatures and the exact 288-byte execution-layer request
+    that Summit parses and validates. Submitting each vector and reassembling
+    the emitted ``DepositEvent`` must reproduce ``expected_request`` byte for
+    byte, proving the client transports deposit data unmangled into the
+    format the consensus layer accepts.
+
+    The vectors are submitted in file order onto a fresh contract so the
+    contract assigns the deposit indices the fixtures were frozen with.
+    """
+
+    def _submit_and_check_event(
+        self,
+        w3: Web3,
+        plain_contract: Contract,
+        deposit_address: str,
+        vector: dict[str, Any],
+    ) -> None:
+        deposit_data_root = compute_deposit_data_root(
+            node_pubkey=_unhex(vector["node_pubkey"]),
+            consensus_pubkey=_unhex(vector["consensus_pubkey"]),
+            withdrawal_credentials=_unhex(vector["withdrawal_credentials"]),
+            node_signature=_unhex(vector["node_signature"]),
+            consensus_signature=_unhex(vector["consensus_signature"]),
+            amount_gwei=vector["amount_gwei"],
+        )
+        tx_hash = w3.seismic.deposit(
+            node_pubkey=_unhex(vector["node_pubkey"]),
+            consensus_pubkey=_unhex(vector["consensus_pubkey"]),
+            withdrawal_credentials=_unhex(vector["withdrawal_credentials"]),
+            node_signature=_unhex(vector["node_signature"]),
+            consensus_signature=_unhex(vector["consensus_signature"]),
+            deposit_data_root=deposit_data_root,
+            value=vector["amount_gwei"] * 10**9,
+            address=deposit_address,
+        )
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
+        assert receipt["status"] == 1, f"{vector['name']}: deposit failed"
+
+        events = plain_contract.events.DepositEvent().process_receipt(receipt)
+        assert len(events) == 1, f"{vector['name']}: expected one DepositEvent"
+        args = events[0]["args"]
+
+        emitted_request = b"".join(
+            [
+                args["node_pubkey"],
+                args["consensus_pubkey"],
+                args["withdrawal_credentials"],
+                args["amount"],
+                args["node_signature"],
+                args["consensus_signature"],
+                args["index"],
+            ]
+        )
+        assert emitted_request == _unhex(vector["expected_request"]), (
+            f"{vector['name']}: emitted DepositEvent does not reassemble to "
+            "Summit's expected execution-layer request"
+        )
+        assert int.from_bytes(args["index"], "little") == vector["index"]
+
+    def test_deposit_events_match_summit_vectors(
+        self,
+        w3: Web3,
+        plain_w3: Web3,
+        deposit_address: str,
+    ) -> None:
+        vectors = json.loads(DEPOSIT_VECTORS_PATH.read_text())["vectors"]
+        plain_contract = plain_w3.eth.contract(
+            address=Web3.to_checksum_address(deposit_address),
+            abi=DEPOSIT_CONTRACT_ABI,
+        )
+        for vector in vectors:
+            self._submit_and_check_event(
+                w3,
+                plain_contract,
+                deposit_address,
+                vector,
+            )

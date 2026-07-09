@@ -14,7 +14,10 @@ import {
   testConcurrentShieldedTransactions,
 } from '@sviem-tests/tests/concurrency.ts'
 import { testSeismicTx } from '@sviem-tests/tests/contract/contract.ts'
-import { testDepositContract } from '@sviem-tests/tests/contract/depositContract.ts'
+import {
+  testDepositContract,
+  testDepositEventsMatchSummitVectors,
+} from '@sviem-tests/tests/contract/depositContract.ts'
 import { testSeismicTxEncoding } from '@sviem-tests/tests/encoding.ts'
 import {
   testGetStorageAtThrows,
@@ -198,6 +201,14 @@ describe('Deposit Contract', async () => {
   test(
     'deploy & test deposit contract functionality',
     async () => await testDepositContract({ chain, url, account }),
+    {
+      timeout: CONTRACT_TIMEOUT_MS,
+    }
+  )
+  test(
+    'deposit events match summit golden vectors',
+    async () =>
+      await testDepositEventsMatchSummitVectors({ chain, url, account }),
     {
       timeout: CONTRACT_TIMEOUT_MS,
     }
