@@ -16,16 +16,17 @@ import { assertRequest, getAction, getTransactionError } from 'viem/utils'
 
 import { ShieldedWalletClient } from '@sviem/client.ts'
 import { AccountNotFoundError } from '@sviem/error/account.ts'
-
-const DEFAULT_SIGNED_ESTIMATE_GAS_LIMIT = 30_000_000n
+import { buildTxSeismicMetadata } from '@sviem/tx/metadata.ts'
+import { estimateShieldedGas } from '@sviem/tx/sendShielded.ts'
 
 /**
  * Executes the transparent transaction path for Seismic wallet clients.
  *
  * This is still an Ethereum-style send, but Seismic needs authenticated gas
- * estimation for some transactions. When the account is `local`, the client can
- * sign a provisional raw transaction and send those bytes to `eth_estimateGas`
- * so the node simulates execution with the real caller context.
+ * estimation for some transactions. When the account is `local`, the client
+ * estimates gas via a provisional Seismic (0x4a) transaction carrying the
+ * same sender, to, value, and (encrypted) calldata, so the node simulates
+ * execution with the real caller context.
  *
  * For `json-rpc` accounts, the SDK does not have the signing key locally, so
  * this falls back to viem's standard `sendTransaction` flow and its unsigned
@@ -109,30 +110,37 @@ export async function sendTransparentTransaction<
     } as any)
 
     const serializer = chain?.serializers?.transaction
+
+    // Estimate gas via a provisional Seismic (0x4a) transaction carrying the
+    // same sender, to, value, and calldata (encrypted), so the node simulates
+    // with authenticated caller context. The node's raw-bytes estimate path
+    // only accepts Seismic envelopes (signed reads must carry
+    // seismic_elements), so a signed *plain* tx is rejected there; unsigned
+    // estimation is no substitute because the node strips `from` and `value`
+    // from unsigned requests, which breaks payable and sender-dependent
+    // calls. Execution after decryption matches the transparent tx; the
+    // ciphertext's slightly higher intrinsic calldata cost can only
+    // overestimate, which is the safe direction.
     const gasEstimate =
       gas ??
-      BigInt(
-        await client.request(
-          {
-            // Estimate gas from a signed raw transaction so the node can
-            // recover the real sender and simulate execution with authenticated
-            // caller context. We use a large temporary gas limit here only for
-            // the estimation request; the final tx is re-signed below with the
-            // actual estimated gas.
-            method: 'eth_estimateGas',
-            params: [
-              await account.signTransaction(
-                {
-                  ...request,
-                  gas: DEFAULT_SIGNED_ESTIMATE_GAS_LIMIT,
-                },
-                { serializer }
-              ),
-            ],
-          } as any,
-          { retryCount: 0 }
-        )
-      )
+      (await (async () => {
+        const metadata = await buildTxSeismicMetadata(client, {
+          account,
+          nonce: request.nonce,
+          to: to!,
+          value,
+          signedRead: false,
+        })
+        const encryptedData = await client.encrypt(data, metadata)
+        const gasPrice_ = (request.gasPrice ??
+          request.maxFeePerGas ??
+          (await client.getGasPrice())) as bigint
+        return estimateShieldedGas(client, {
+          encryptedData,
+          metadata,
+          gasPrice: gasPrice_,
+        })
+      })())
 
     // Re-sign the final transparent transaction with the resolved gas limit
     // and submit it normally as a raw transaction.

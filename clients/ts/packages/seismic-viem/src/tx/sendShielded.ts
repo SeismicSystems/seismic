@@ -261,7 +261,7 @@ export async function sendShieldedTransaction<
  * Signs a temporary shielded transaction and sends it to `eth_estimateGas`
  * so the node can authenticate the sender during simulation.
  */
-async function estimateShieldedGas<
+export async function estimateShieldedGas<
   TTransport extends Transport,
   TChain extends Chain | undefined,
   TAccount extends Account,
