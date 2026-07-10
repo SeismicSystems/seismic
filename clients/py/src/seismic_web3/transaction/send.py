@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from eth_account import Account as EthAccount
 from eth_keys.main import KeyAPI as eth_keys
 from hexbytes import HexBytes
 from web3.types import RPCEndpoint
@@ -209,31 +208,41 @@ def estimate_transparent_gas(
     data: str,
     value: int,
     private_key: PrivateKey,
+    encryption: EncryptionState,
 ) -> int:
-    """Estimate gas for a transparent tx by signing it first (sync).
+    """Estimate gas for a transparent tx via a provisional shielded tx (sync).
 
-    Signs a temporary standard transaction using the block gas limit as
-    a placeholder and sends the signed bytes to ``eth_estimateGas``.
-    This prevents the node from zeroing ``msg.value`` during simulation.
+    The node's raw-bytes ``eth_estimateGas`` path only accepts Seismic
+    transactions (a signed read must carry ``seismic_elements``), so a
+    signed plain transaction is rejected there.  Unsigned estimation is
+    no substitute: the node strips ``from`` and ``value`` from unsigned
+    requests, which breaks payable calls and misestimates
+    sender-dependent gas paths.  Instead, estimate a provisional
+    ``TxSeismic`` carrying the same sender, ``to``, ``value``, and
+    (encrypted) calldata: after decryption the node executes the same
+    call with authenticated caller context, and the ciphertext's
+    slightly higher intrinsic calldata cost can only overestimate.
     """
-    acct = EthAccount.from_key(private_key)
-    block_gas_limit = w3.eth.get_block("latest")["gasLimit"]
-    tx = {
-        "to": to,
-        "data": data,
-        "value": value,
-        "gas": block_gas_limit,
-        "gasPrice": w3.eth.gas_price,
-        "nonce": w3.eth.get_transaction_count(acct.address),
-        "chainId": w3.eth.chain_id,
-    }
-    signed = acct.sign_transaction(tx)
-
-    response = w3.provider.make_request(
-        RPCEndpoint("eth_estimateGas"),
-        [signed.raw_transaction.to_0x_hex()],
+    params = _build_metadata_params(
+        private_key,
+        encryption,
+        cast("ChecksumAddress", to),
+        value,
+        None,
     )
-    return int(_check_rpc_response(response), 16)
+    metadata = build_metadata(w3, params)
+    encrypted = encryption.encrypt(
+        HexBytes(data),
+        metadata.seismic_elements.encryption_nonce,
+        metadata,
+    )
+    return estimate_shielded_gas(
+        w3,
+        encrypted_data=HexBytes(encrypted),
+        metadata=metadata,
+        gas_price=w3.eth.gas_price,
+        private_key=private_key,
+    )
 
 
 async def async_estimate_transparent_gas(
@@ -243,29 +252,32 @@ async def async_estimate_transparent_gas(
     data: str,
     value: int,
     private_key: PrivateKey,
+    encryption: EncryptionState,
 ) -> int:
-    """Estimate gas for a transparent tx by signing it first (async).
+    """Estimate gas for a transparent tx via a provisional shielded tx (async).
 
     Async variant of :func:`estimate_transparent_gas`.
     """
-    acct = EthAccount.from_key(private_key)
-    block_gas_limit = (await w3.eth.get_block("latest"))["gasLimit"]
-    tx = {
-        "to": to,
-        "data": data,
-        "value": value,
-        "gas": block_gas_limit,
-        "gasPrice": await w3.eth.gas_price,
-        "nonce": await w3.eth.get_transaction_count(acct.address),
-        "chainId": await w3.eth.chain_id,
-    }
-    signed = acct.sign_transaction(tx)
-
-    response = await w3.provider.make_request(
-        RPCEndpoint("eth_estimateGas"),
-        [signed.raw_transaction.to_0x_hex()],
+    params = _build_metadata_params(
+        private_key,
+        encryption,
+        cast("ChecksumAddress", to),
+        value,
+        None,
     )
-    return int(_check_rpc_response(response), 16)
+    metadata = await async_build_metadata(w3, params)
+    encrypted = encryption.encrypt(
+        HexBytes(data),
+        metadata.seismic_elements.encryption_nonce,
+        metadata,
+    )
+    return await async_estimate_shielded_gas(
+        w3,
+        encrypted_data=HexBytes(encrypted),
+        metadata=metadata,
+        gas_price=await w3.eth.gas_price,
+        private_key=private_key,
+    )
 
 
 # ---------------------------------------------------------------------------

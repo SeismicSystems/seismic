@@ -469,6 +469,7 @@ class SeismicNamespace(SeismicPublicNamespace):
             data=data.to_0x_hex(),
             value=value,
             private_key=self._private_key,
+            encryption=self.encryption,
         )
         return self._w3.eth.send_transaction(
             {"to": address, "data": data.to_0x_hex(), "value": value, "gas": gas},
@@ -717,6 +718,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
             data=data.to_0x_hex(),
             value=value,
             private_key=self._private_key,
+            encryption=self.encryption,
         )
         return await self._w3.eth.send_transaction(
             {"to": address, "data": data.to_0x_hex(), "value": value, "gas": gas},
