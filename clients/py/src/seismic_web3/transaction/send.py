@@ -229,6 +229,12 @@ def estimate_transparent_gas(
         cast("ChecksumAddress", to),
         value,
         None,
+        # signed_read=True makes the provisional tx a non-broadcastable
+        # simulation: the consensus/pooled decoders reject signed reads as state
+        # transitions, so an intercepted estimate payload cannot be replayed via
+        # eth_sendRawTransaction. Gas is unchanged (flag never reaches EVM
+        # execution); the final transparent tx is signed separately.
+        signed_read=True,
     )
     metadata = build_metadata(w3, params)
     encrypted = encryption.encrypt(
@@ -264,6 +270,12 @@ async def async_estimate_transparent_gas(
         cast("ChecksumAddress", to),
         value,
         None,
+        # signed_read=True makes the provisional tx a non-broadcastable
+        # simulation: the consensus/pooled decoders reject signed reads as state
+        # transitions, so an intercepted estimate payload cannot be replayed via
+        # eth_sendRawTransaction. Gas is unchanged (flag never reaches EVM
+        # execution); the final transparent tx is signed separately.
+        signed_read=True,
     )
     metadata = await async_build_metadata(w3, params)
     encrypted = encryption.encrypt(
@@ -369,10 +381,27 @@ def _prepare_shielded_transaction(
     if gas is not None:
         resolved_gas = gas
     else:
+        # Non-broadcastable signed-read twin for the estimate: separate metadata
+        # with signed_read=True and a fresh encryption nonce (avoids AES-GCM
+        # nonce reuse vs the write). Signed reads are rejected by the
+        # consensus/pooled decoders, so an intercepted estimate payload cannot be
+        # replayed via eth_sendRawTransaction. The tx signed below still uses
+        # `metadata`/`encrypted_data` (signed_read=False), unchanged.
+        estimate_params = _build_metadata_params(
+            private_key, encryption, to, value, None, signed_read=True, eip712=eip712
+        )
+        estimate_metadata = build_metadata(w3, estimate_params)
+        estimate_encrypted = HexBytes(
+            encryption.encrypt(
+                data,
+                estimate_metadata.seismic_elements.encryption_nonce,
+                estimate_metadata,
+            )
+        )
         resolved_gas = estimate_shielded_gas(
             w3,
-            encrypted_data=encrypted_data,
-            metadata=metadata,
+            encrypted_data=estimate_encrypted,
+            metadata=estimate_metadata,
             gas_price=resolved_gas_price,
             private_key=private_key,
         )
@@ -418,10 +447,27 @@ async def _async_prepare_shielded_transaction(
     if gas is not None:
         resolved_gas = gas
     else:
+        # Non-broadcastable signed-read twin for the estimate: separate metadata
+        # with signed_read=True and a fresh encryption nonce (avoids AES-GCM
+        # nonce reuse vs the write). Signed reads are rejected by the
+        # consensus/pooled decoders, so an intercepted estimate payload cannot be
+        # replayed via eth_sendRawTransaction. The tx signed below still uses
+        # `metadata`/`encrypted_data` (signed_read=False), unchanged.
+        estimate_params = _build_metadata_params(
+            private_key, encryption, to, value, None, signed_read=True, eip712=eip712
+        )
+        estimate_metadata = await async_build_metadata(w3, estimate_params)
+        estimate_encrypted = HexBytes(
+            encryption.encrypt(
+                data,
+                estimate_metadata.seismic_elements.encryption_nonce,
+                estimate_metadata,
+            )
+        )
         resolved_gas = await async_estimate_shielded_gas(
             w3,
-            encrypted_data=encrypted_data,
-            metadata=metadata,
+            encrypted_data=estimate_encrypted,
+            metadata=estimate_metadata,
             gas_price=resolved_gas_price,
             private_key=private_key,
         )

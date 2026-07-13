@@ -124,12 +124,18 @@ export async function sendTransparentTransaction<
     const gasEstimate =
       gas ??
       (await (async () => {
+        // signedRead: true makes the provisional tx a non-broadcastable
+        // simulation: the consensus/pooled decoders reject signed reads as
+        // state transitions, so an intercepted estimate payload cannot be
+        // replayed via eth_sendRawTransaction. The gas result is unchanged
+        // (the flag never reaches EVM execution); the final transparent tx
+        // below is a separate standard transaction.
         const metadata = await buildTxSeismicMetadata(client, {
           account,
           nonce: request.nonce,
           to: to!,
           value,
-          signedRead: false,
+          signedRead: true,
         })
         const encryptedData = await client.encrypt(data, metadata)
         const gasPrice_ = (request.gasPrice ??
