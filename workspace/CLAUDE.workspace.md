@@ -20,6 +20,7 @@ Detailed docs live in the [seismic](https://github.com/SeismicSystems/seismic) m
 
 - [seismic/docs/architecture.md](../docs/architecture.md) — diagrams: Seismic node, RPC/EVM/storage interactions, tries + SeismicTx
 - [seismic/docs/glossary.md](../docs/glossary.md) — key concepts: FlaggedStorage, TxSeismic, Mercury Spec, SeismicHost
+- [seismic/docs/key-schedule.md](../docs/key-schedule.md) — every key derivation and its domain-separation label, by layer
 - [seismic/docs/language-and-vm.md](../docs/language-and-vm.md) — Mercury EVM spec: shielded types, CLOAD/CSTORE, FlaggedStorage, arrays, casting
 - [seismic/docs/gitbook/reference/repos.md](../docs/gitbook/reference/repos.md) — all repos, fork management, dependency flow
 
