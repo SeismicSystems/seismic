@@ -6,6 +6,7 @@ This is seismic's monorepo, targeting Seismic developers and contributors. It co
 
 - [docs/architecture.md](docs/architecture.md) — diagrams: Seismic node, RPC/EVM/storage interactions, tries + SeismicTx
 - [docs/glossary.md](docs/glossary.md) — key concepts: FlaggedStorage, TxSeismic, Mercury Spec, SeismicHost
+- [docs/key-schedule.md](docs/key-schedule.md) — every key derivation and its domain-separation label, by layer
 - [docs/language-and-vm.md](docs/language-and-vm.md) — Mercury EVM spec: shielded types, CLOAD/CSTORE, FlaggedStorage, arrays, casting
 - [docs/gitbook/reference/repos.md](docs/gitbook/reference/repos.md) — all repos, fork management, dependency flow
 - [docs/claude-code-setup.md](docs/claude-code-setup.md) — Claude Code skills setup and symlink instructions
