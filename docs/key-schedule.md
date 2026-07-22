@@ -37,18 +37,19 @@ the ECDH precompile evaluates the `EcdhPrecompile` row for **caller-chosen
 keys**, so no other row may reuse its label — otherwise contracts could
 compute that row's keys.
 
-- **Code**: `enclave/crates/enclave-crypto/src/lib.rs` (`AesKeyDomain`),
+- **Code**: `enclave/crates/crypto/src/lib.rs` (`AesKeyDomain`),
   mirrored in `seismic-viem` (`crypto/aes.ts`) and `seismic_web3`
   (`crypto/ecdh.py`)
 - **KDF**: HKDF-SHA256, no salt (the IKM is already a SHA-256 output;
   permitted by RFC 5869 §3.1), info = label below
 - **Cross-language enforcement**: known-answer tests in all three languages
-  pin identical key bytes for the same ECDH inputs (`d958b9…`, `974b31…`,
-  `bf0dd6…`; Rust additionally pins `f48820…` for `RootKeyWrap`)
+  pin identical key bytes for the same ECDH inputs (`bf0dd6…` for both
+  `TxRequest` and `EcdhPrecompile` — same original label — and `974b31…` for
+  `TxResponse`; Rust additionally pins `f48820…` for `RootKeyWrap`)
 
 | Domain | Label | Output | Consumers |
 | --- | --- | --- | --- |
-| `TxRequest` | `seismic/request/aes-256-gcm/v1` | AES-256-GCM request traffic key | clients encrypt calldata / signed-read requests; TEE decrypts |
+| `TxRequest` | `aes-gcm key` (original label) | AES-256-GCM request traffic key | clients encrypt calldata / signed-read requests; TEE decrypts |
 | `TxResponse` | `seismic/response/aes-256-gcm/v1` | AES-256-GCM response traffic key | TEE encrypts signed-read results; clients decrypt |
 | `EcdhPrecompile` | `aes-gcm key` | AES-256 key returned on-chain — **consensus-frozen** | ECDH precompile (0x65) |
 | `RootKeyWrap` | `seismic/root-key-wrap/aes-256-gcm/v1` | AES-256-GCM handshake key for root-key bootstrap | key-custodian wrap/unwrap |
@@ -58,10 +59,14 @@ public nonce that is used in both directions: independent keys keep every
 AES-GCM `(key, nonce)` pair unique. Nonces must still be unique per
 transaction when an ECDH keypair is reused across transactions.
 
-Every label in this layer is unique; the pre-versioning `aes-gcm key` label
-is owned solely by the precompile, which cannot change it. `RootKeyWrap` can
-rotate its label with a coordinated custodian release: the handshake uses
-fresh ephemeral keypairs, encrypts one message per key, and persists nothing.
+`TxRequest` keeps `aes-gcm key`, the original label every ECDH-derived key used
+before they were split by domain. The request path is decrypted in the block
+executor, so changing its label is a consensus break; the nonce-reuse fix only
+needs the response key to differ, so only `TxResponse` took a fresh label.
+`EcdhPrecompile` stays on the same original label (consensus-frozen).
+`RootKeyWrap` can rotate its label with a coordinated custodian release — the
+handshake uses fresh ephemeral keypairs, one message per key, and persists
+nothing.
 
 ## Layer 3 — On-chain precompile KDFs (consensus-frozen)
 
