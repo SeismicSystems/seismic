@@ -53,7 +53,8 @@ The returned dictionary follows the `eth_signTypedData_v4` format:
       { "name": "messageVersion",   "type": "uint8"    },
       { "name": "recentBlockHash",  "type": "bytes32"  },
       { "name": "expiresAtBlock",   "type": "uint64"   },
-      { "name": "signedRead",       "type": "bool"     }
+      { "name": "signedRead",       "type": "bool"     },
+      { "name": "authorizationListHash", "type": "bytes32" }
     ]
   },
   "primaryType": "TxSeismic",
@@ -76,7 +77,8 @@ The returned dictionary follows the `eth_signTypedData_v4` format:
     "messageVersion": 2,
     "recentBlockHash": "0x1234...",
     "expiresAtBlock": 12345678,
-    "signedRead": false
+    "signedRead": false,
+    "authorizationListHash": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"
   }
 }
 ```
@@ -87,9 +89,10 @@ The returned dictionary follows the `eth_signTypedData_v4` format:
 
 - **Numeric fields** — integers (not hex strings)
 - **Address fields** — checksummed `0x`-prefixed hex strings
-- **Bytes fields** (`input`, `encryptionPubkey`, `recentBlockHash`) — `0x`-prefixed hex strings
+- **Bytes fields** (`input`, `encryptionPubkey`, `recentBlockHash`, `authorizationListHash`) — `0x`-prefixed hex strings
 - **`encryptionNonce`** — the 12-byte nonce converted to an integer via `int.from_bytes(…, "big")`
 - **`to`** — becomes the zero address when `tx.to is None`
+- **`authorizationListHash`** — `keccak256(rlp(tx.authorization_list))`; for an empty list this is `0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347`
 
 ### `domain`
 

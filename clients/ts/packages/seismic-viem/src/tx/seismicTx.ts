@@ -148,6 +148,7 @@ export type TxSeismic = {
   recentBlockHash: Hex
   expiresAtBlock: bigint
   signedRead: boolean
+  authorizationListHash?: Hex
   authorizationList?: {
     chainId: bigint
     contractAddress: `0x${string}`
@@ -157,6 +158,22 @@ export type TxSeismic = {
     s: `0x${string}`
   }[]
 }
+
+const authorizationListRlpItems = (
+  authorizationList: TxSeismic['authorizationList'] = []
+): Hex[][] =>
+  authorizationList.map((auth) => [
+    auth.chainId ? toHex(auth.chainId) : '0x',
+    auth.contractAddress,
+    auth.nonce ? toHex(auth.nonce) : '0x',
+    auth.yParity ? toHex(auth.yParity) : '0x',
+    auth.r,
+    auth.s,
+  ])
+
+export const encodeAuthorizationList = (
+  authorizationList: TxSeismic['authorizationList'] = []
+): Hex => toRlp(authorizationListRlpItems(authorizationList))
 
 export type SeismicTxSerializer = SerializeTransactionFn<
   TransactionSerializableSeismic,
@@ -229,15 +246,8 @@ export const serializeSeismicTransaction: SeismicTxSerializer = (
     toHex(expiresAtBlock),
     signedRead ? '0x01' : '0x',
     data ?? '0x',
-    ((authorizationList ?? []) as TxSeismic['authorizationList'] & []).map(
-      (auth) => [
-        auth.chainId ? toHex(auth.chainId) : '0x',
-        auth.contractAddress,
-        auth.nonce ? toHex(auth.nonce) : '0x',
-        auth.yParity ? toHex(auth.yParity) : '0x',
-        auth.r,
-        auth.s,
-      ]
+    authorizationListRlpItems(
+      authorizationList as TxSeismic['authorizationList']
     ),
     ...toYParitySignatureArray(tx as TransactionSerializableLegacy, signature),
   ]
