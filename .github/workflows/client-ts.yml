@@ -3,9 +3,19 @@ name: Typescript Client
 on:
   push:
     branches: ["main"]
-    paths: ["clients/ts/**"]
+    paths:
+      - "clients/ts/**"
+      - "mise.toml"
+      - "pitchfork.toml"
+      - ".github/workflows/client-ts.yml"
+      - ".github/actions/setup-sfoundry/**"
   pull_request:
-    paths: ["clients/ts/**"]
+    paths:
+      - "clients/ts/**"
+      - "mise.toml"
+      - "pitchfork.toml"
+      - ".github/workflows/client-ts.yml"
+      - ".github/actions/setup-sfoundry/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,6 +32,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v2
+        with:
+          install_args: bun
       - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
@@ -40,12 +52,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v2
+        with:
+          install_args: bun pitchfork
       - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('clients/ts/bun.lock') }}
           restore-keys: |
             bun-${{ runner.os }}-
+      - uses: ./.github/actions/setup-sfoundry
+        with:
+          channel: nightly
       - run: mise run test::integration::sanvil
 
   test-sreth:
@@ -65,6 +82,7 @@ jobs:
       - uses: jdx/mise-action@v2
         with:
           working_directory: seismic
+          install_args: bun pitchfork
       - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache

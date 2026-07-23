@@ -64,7 +64,7 @@ mise run test::integration::sreth   # builds & starts reth, runs tests, stops re
 
 ```bash
 # Terminal 1: start a node
-sanvil                    # or: mise run anvil::start (from seismic/ root)
+sanvil                    # or: mise run sanvil::start (from seismic/ root)
 
 # Terminal 2: run tests
 bun run viem:test         # connects to http://127.0.0.1:8545 by default
@@ -74,7 +74,7 @@ bun run viem:test         # connects to http://127.0.0.1:8545 by default
 - `RPC_URL` — HTTP RPC URL (default: `http://127.0.0.1:8545`)
 - `WS_URL` — WebSocket URL (default: derived from `RPC_URL` by replacing `http` with `ws`)
 
-**Anvil tests** require `sanvil` on PATH (install via `mise` or `sfoundryup`).
+**Anvil tests** require `sanvil` on PATH (install via `sfoundryup`).
 
 **Reth tests** require `SRETH_ROOT` pointing to a [seismic-reth](https://github.com/SeismicSystems/seismic-reth) checkout (or defaulting to `../../seismic-reth`).
 

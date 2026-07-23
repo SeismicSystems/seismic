@@ -58,7 +58,7 @@ code seismic/workspace/seismic.code-workspace
 
 ### Dev Env
 
-We use mise to manage our dev environment, including dependency version management and running common tasks. It is not mandatory to use mise, but we recommend it for ease of use and consistency. Start by [installing mise](https://mise.jdx.dev/getting-started.html), and then run `mise install`. This will install the latest version of the Seismic Dev Environment, which includes all the tools you need to build and test Seismic (sforge, sanvil, scast, ssolc, etc.). It will also set up your PATH so that you can run these tools from anywhere inside the repo. Make sure to take a look at comments inside the various `mise.toml` files across the repos, and run `mise run` from anywhere to see the tasks available in that subdir.
+We use mise to manage supporting tools and run common tasks. It is not mandatory to use mise, but we recommend it for ease of use and consistency. Start by [installing mise](https://mise.jdx.dev/getting-started.html), then run `mise install`. Install the Seismic Foundry toolchain (`sforge`, `sanvil`, and `scast`) separately with [`sfoundryup`](docs/gitbook/getting-started/installation.md). Both installers set up your PATH so the tools are available inside the repo. Make sure to take a look at comments inside the various `mise.toml` files across the repos, and run `mise run` from anywhere to see the tasks available in that subdir.
 
 ![](assets/mise-demo.gif)
 
