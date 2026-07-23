@@ -1,0 +1,37 @@
+name: Setup sfoundry
+description: Install an sfoundry release channel with sfoundryup
+
+inputs:
+  channel:
+    description: sfoundry release channel to install
+    required: false
+    default: nightly
+
+outputs:
+  sanvil-path:
+    description: Absolute path to the installed sanvil binary
+    value: ${{ steps.install.outputs.sanvil-path }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      name: Install sfoundry (${{ inputs.channel }})
+      shell: bash
+      env:
+        SFOUNDRY_CHANNEL: ${{ inputs.channel }}
+      run: |
+        case "$SFOUNDRY_CHANNEL" in
+          stable|nightly) ;;
+          *)
+            echo "Unsupported sfoundry channel: $SFOUNDRY_CHANNEL" >&2
+            exit 1
+            ;;
+        esac
+
+        curl -fsSL https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/foundryup/install | bash
+        SEISMIC_BIN="${XDG_CONFIG_HOME:-$HOME}/.seismic/bin"
+        "$SEISMIC_BIN/sfoundryup" --install "$SFOUNDRY_CHANNEL"
+        "$SEISMIC_BIN/sanvil" --version
+        echo "$SEISMIC_BIN" >> "$GITHUB_PATH"
+        echo "sanvil-path=$SEISMIC_BIN/sanvil" >> "$GITHUB_OUTPUT"

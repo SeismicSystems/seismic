@@ -3,9 +3,15 @@ name: Python Client
 on:
   push:
     branches: [main]
-    paths: ["clients/py/**"]
+    paths:
+      - "clients/py/**"
+      - ".github/workflows/client-py.yml"
+      - ".github/actions/setup-sfoundry/**"
   pull_request:
-    paths: ["clients/py/**"]
+    paths:
+      - "clients/py/**"
+      - ".github/workflows/client-py.yml"
+      - ".github/actions/setup-sfoundry/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -69,19 +75,12 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --dev
 
-      - name: Download sanvil from seismic-foundry nightly
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release download nightly \
-            -R SeismicSystems/seismic-foundry \
-            -p 'sfoundry_nightly_linux_amd64.tar.gz' \
-            -D /tmp
-          mkdir -p "$HOME/.seismic/bin"
-          tar xzf /tmp/sfoundry_nightly_linux_amd64.tar.gz -C "$HOME/.seismic/bin" sanvil
-          chmod +x "$HOME/.seismic/bin/sanvil"
+      - id: sfoundry
+        uses: ./.github/actions/setup-sfoundry
+        with:
+          channel: nightly
 
       - name: Run integration tests
         env:
-          SANVIL_BIN: ~/.seismic/bin/sanvil
+          SANVIL_BIN: ${{ steps.sfoundry.outputs.sanvil-path }}
         run: uv run pytest tests/integration/ -v
