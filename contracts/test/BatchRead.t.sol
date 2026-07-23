@@ -17,6 +17,32 @@ contract TestSRC20 is SRC20 {
     }
 }
 
+/// @notice Answers balanceOfSigned without reverting but returns fewer than 32 bytes.
+contract ShortReturnToken {
+    fallback() external {
+        assembly {
+            return(0, 16)
+        }
+    }
+}
+
+/// @notice Answers balanceOfSigned without reverting but returns more than 32 bytes.
+contract LongReturnToken {
+    fallback() external {
+        assembly {
+            mstore(0, 42)
+            return(0, 48)
+        }
+    }
+}
+
+/// @notice Reverts on any call.
+contract RevertingToken {
+    fallback() external {
+        revert("RevertingToken: always reverts");
+    }
+}
+
 contract BatchReadTest is Test {
     SRC20Multicall multicall;
     TestSRC20[] tokens;
@@ -25,6 +51,14 @@ contract BatchReadTest is Test {
     address user;
 
     uint256 constant NUM_TOKENS = 10;
+
+    // EIP-712 chainId-bound balance-read domain (mirrors SRC20.balanceOfSigned).
+    // Token-agnostic on purpose: binds name/version/chainId but NOT verifyingContract,
+    // so one signature stays valid across SRC20 deployments on the same chain (which is
+    // what SRC20Multicall relies on) while cross-chain replay is blocked.
+    bytes32 constant BALANCE_READ_DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId)");
+    bytes32 constant BALANCE_READ_TYPEHASH = keccak256("BalanceRead(address owner,uint256 expiry)");
 
     function setUp() public {
         user = vm.addr(USER_PRIVATE_KEY);
@@ -47,9 +81,14 @@ contract BatchReadTest is Test {
     }
 
     function _signBalanceRead(uint256 privateKey, address owner, uint256 expiry) internal returns (bytes memory) {
-        bytes32 messageHash = keccak256(abi.encodePacked("SRC20_BALANCE_READ", owner, expiry));
-        bytes32 ethSignedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, ethSignedHash);
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                BALANCE_READ_DOMAIN_TYPEHASH, keccak256(bytes("SRC20BalanceRead")), keccak256(bytes("1")), block.chainid
+            )
+        );
+        bytes32 structHash = keccak256(abi.encode(BALANCE_READ_TYPEHASH, owner, expiry));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);
     }
 
@@ -108,6 +147,35 @@ contract BatchReadTest is Test {
         assertEq(tokens[9].balanceOfSigned(user, expiry, sig), 10e18);
     }
 
+    // Zellic 3.3: a signed balance read must be bound to the chain it was minted on.
+    // Before the fix the digest carried no chainId, so one signature was a durable
+    // cross-chain viewing key on balances[owner]; a leak on any chain read the balance
+    // on every chain. After the fix the digest binds block.chainid.
+    function test_signatureDoesNotReplayAcrossChains() public {
+        uint256 expiry = block.timestamp + 1 hours;
+
+        // Mint a signature under chain A.
+        uint256 chainA = 1;
+        uint256 chainB = 2;
+        vm.chainId(chainA);
+        bytes memory sig = _signBalanceRead(USER_PRIVATE_KEY, user, expiry);
+
+        // (b) A valid signature on its own chain still returns the balance.
+        assertEq(tokens[0].balanceOfSigned(user, expiry, sig), 1e18);
+
+        // (c) Token-agnostic on the same chain is preserved: the same signature
+        //     validates against a second SRC20 instance (SRC20Multicall depends on this).
+        assertEq(tokens[4].balanceOfSigned(user, expiry, sig), 5e18);
+        TestSRC20 second = new TestSRC20("Second", "SEC", 18);
+        second.mint(user, 7e18);
+        assertEq(second.balanceOfSigned(user, expiry, sig), 7e18);
+
+        // (a) Replaying the same signature on a different chain must revert.
+        vm.chainId(chainB);
+        vm.expectRevert("invalid signature");
+        tokens[0].balanceOfSigned(user, expiry, sig);
+    }
+
     // timestamp == expiry is valid
     function test_expiryBoundary() public {
         uint256 expiry = block.timestamp + 1 hours;
@@ -157,6 +225,37 @@ contract BatchReadTest is Test {
             assertEq(results[i].token, address(tokens[i]));
             assertEq(results[i].balance, (i + 1) * 1e18);
         }
+    }
+
+    // Zellic 3.6: a non-reverting token that returns a payload other than 32 bytes
+    // must be reported as a failure, not as a successful zero balance.
+    function test_batchBalancesDetailedMalformedReturn() public {
+        uint256 expiry = block.timestamp + 1 hours;
+        bytes memory sig = _signBalanceRead(USER_PRIVATE_KEY, user, expiry);
+
+        address[] memory testTokens = new address[](4);
+        testTokens[0] = address(tokens[0]);
+        testTokens[1] = address(new ShortReturnToken());
+        testTokens[2] = address(new LongReturnToken());
+        testTokens[3] = address(new RevertingToken());
+
+        SRC20Multicall.BalanceResult[] memory results = multicall.batchBalancesDetailed(user, testTokens, expiry, sig);
+
+        assertEq(results.length, 4);
+
+        // (a) well-formed token: success with the real balance
+        assertTrue(results[0].success);
+        assertEq(results[0].balance, 1e18);
+
+        // (b) malformed returns (16 and 48 bytes): must not look like a real zero balance
+        assertFalse(results[1].success);
+        assertEq(results[1].balance, 0);
+        assertFalse(results[2].success);
+        assertEq(results[2].balance, 0);
+
+        // (c) reverting token: failure
+        assertFalse(results[3].success);
+        assertEq(results[3].balance, 0);
     }
 
     function test_staticcallErrorHandling() public {

@@ -240,7 +240,13 @@ abstract contract SRC20 {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Read any user's balance with their signature authorization.
-    /// @dev Signature is token-agnostic: uses personal sign over ("SRC20_BALANCE_READ", owner, expiry).
+    /// @dev The signature is bound to `block.chainid` via an EIP-712 domain, but deliberately
+    ///      NOT to the token address: it stays valid across SRC20 deployments on the same chain
+    ///      (SRC20Multicall relies on one signature covering many tokens) while cross-chain replay
+    ///      is blocked. The domain separator is recomputed from `block.chainid` on every call so it
+    ///      is fork-safe. Because this is a `view` function it cannot consume a per-owner nonce, so
+    ///      a leaked signature stays a valid viewing key on `balances[owner]` until `expiry` — keep
+    ///      expiries short.
     function balanceOfSigned(address owner, uint256 expiry, bytes calldata signature)
         external
         view
@@ -250,8 +256,17 @@ abstract contract SRC20 {
         require(block.timestamp <= expiry, "signature expired");
         require(signature.length == 65, "invalid signature length");
 
-        bytes32 messageHash = keccak256(abi.encodePacked("SRC20_BALANCE_READ", owner, expiry));
-        bytes32 ethSignedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId)"),
+                keccak256(bytes("SRC20BalanceRead")),
+                keccak256(bytes("1")),
+                block.chainid
+            )
+        );
+        bytes32 structHash =
+            keccak256(abi.encode(keccak256("BalanceRead(address owner,uint256 expiry)"), owner, expiry));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
 
         bytes32 r;
         bytes32 s;
@@ -262,7 +277,7 @@ abstract contract SRC20 {
             v := byte(0, calldataload(add(signature.offset, 64)))
         }
 
-        address signer = ecrecover(ethSignedHash, v, r, s);
+        address signer = ecrecover(digest, v, r, s);
         require(signer != address(0) && signer == owner, "invalid signature");
 
         return uint256(balances[owner]);

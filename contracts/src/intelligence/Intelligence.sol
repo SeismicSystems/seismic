@@ -18,16 +18,31 @@ contract Intelligence is IIntelligence {
     }
 
     function encryptToProviders(bytes memory _plaintext) external returns (bytes32[] memory, bytes[] memory) {
-        bytes32[] memory hashes = new bytes32[](numProviders());
-        bytes[] memory encryptedData = new bytes[](numProviders());
+        uint256 keyed = 0;
         for (uint256 i = 0; i < numProviders(); i++) {
-            hashes[i] = directory.keyHash(providers[i]);
-            encryptedData[i] = directory.encrypt(providers[i], _plaintext);
+            if (directory.checkHasKey(providers[i])) {
+                keyed++;
+            }
+        }
+
+        bytes32[] memory hashes = new bytes32[](keyed);
+        bytes[] memory encryptedData = new bytes[](keyed);
+        uint256 j = 0;
+        for (uint256 i = 0; i < numProviders(); i++) {
+            // Never encrypt under a zero key: skip providers without a registered key.
+            if (!directory.checkHasKey(providers[i])) {
+                continue;
+            }
+            hashes[j] = directory.keyHash(providers[i]);
+            encryptedData[j] = directory.encrypt(providers[i], _plaintext);
+            j++;
         }
         return (hashes, encryptedData);
     }
 
     function addProvider(address _provider) external uniqueProvider(_provider) onlyOwner {
+        require(directory.checkHasKey(_provider), "PROVIDER_NO_KEY");
+
         providers.push(_provider);
 
         emit ProviderAdded(_provider);
@@ -55,6 +70,7 @@ contract Intelligence is IIntelligence {
     }
 
     function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "ZERO_OWNER");
         owner = newOwner;
         emit OwnershipTransferred(newOwner);
     }

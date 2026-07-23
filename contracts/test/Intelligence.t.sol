@@ -22,12 +22,9 @@ contract IntelligenceTest is Test {
 
     function setUp() public {
         intelligence = new Intelligence();
-        vm.startPrank(intelligence.INITIAL_OWNER());
-        intelligence.addProvider(alice);
-        intelligence.addProvider(bob);
-        vm.stopPrank();
-
         directory = Directory(intelligence.DIRECTORY_ADDRESS());
+
+        // Providers must hold a registered key before they can be added.
         vm.prank(alice);
         directory.setKey(suint256(0xABC));
         vm.prank(alice);
@@ -36,6 +33,11 @@ contract IntelligenceTest is Test {
         directory.setKey(suint256(0xDEF));
         vm.prank(bob);
         bobKey = suint256(directory.getKey());
+
+        vm.startPrank(intelligence.INITIAL_OWNER());
+        intelligence.addProvider(alice);
+        intelligence.addProvider(bob);
+        vm.stopPrank();
     }
 
     function extractCT(bytes memory _encryptedData) internal view returns (bytes memory ct) {
@@ -115,8 +117,32 @@ contract IntelligenceTest is Test {
         intelligence.transferOwnership(alice);
 
         address charlie = makeAddr("charlie");
+        vm.prank(charlie);
+        directory.setKey(suint256(0x123));
+
         vm.prank(alice);
         intelligence.addProvider(charlie);
         assertEq(intelligence.numProviders(), 3);
+    }
+
+    function test_RevertWhen_TransferOwnershipToZeroAddress() public {
+        vm.prank(intelligence.owner());
+        vm.expectRevert("ZERO_OWNER");
+        intelligence.transferOwnership(address(0));
+    }
+
+    function test_OwnerNotDisplacedByZeroAddressTransfer() public {
+        vm.prank(intelligence.owner());
+        intelligence.transferOwnership(alice);
+
+        vm.prank(alice);
+        vm.expectRevert("ZERO_OWNER");
+        intelligence.transferOwnership(address(0));
+        assertEq(intelligence.owner(), alice);
+
+        address charlie = makeAddr("charlie");
+        vm.prank(intelligence.INITIAL_OWNER());
+        vm.expectRevert("UNAUTHORIZED");
+        intelligence.addProvider(charlie);
     }
 }
