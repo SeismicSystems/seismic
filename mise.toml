@@ -73,7 +73,7 @@ cargo run --bin seismic-reth -- node \
   --datadir /tmp/seismic-reth-dev \
   --http --http.port ${usage_port} \
   --ws --ws.port ${usage_port} \
-  --enclave.mock-server \
+  --seismic.purpose-keys-source built-in \
   ${usage_quiet:+--quiet}
   """
 
