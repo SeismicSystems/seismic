@@ -169,13 +169,37 @@ export async function sendShieldedTransaction<
       // When gas is not provided, sign a temporary tx and send it to
       // eth_estimateGas so the node can authenticate the sender.
       // This prevents caller-spoofing against msg.sender-gated state.
+      //
+      // Estimate with a non-broadcastable signed-read twin: a separate
+      // signedRead=true metadata (with a fresh encryptionNonce to avoid
+      // AES-GCM nonce reuse against the write) re-encrypts the calldata for
+      // the estimate only. The consensus/pooled decoders reject signed reads
+      // as state transitions, so an intercepted estimate payload cannot be
+      // replayed via eth_sendRawTransaction. The final tx below is still built
+      // from `metadata`/`encryptedCalldata` (signedRead=false), unchanged.
       const resolvedGas =
         gas ??
-        (await estimateShieldedGas(client, {
-          encryptedData: encryptedCalldata,
-          metadata,
-          gasPrice: resolvedGasPrice,
-        }))
+        (await (async () => {
+          const estimateMetadata = await buildTxSeismicMetadata(client, {
+            account: account_,
+            nonce,
+            to: to!,
+            value,
+            blocksWindow,
+            signedRead: true,
+            recentBlockHash,
+            expiresAtBlock,
+          })
+          const estimateEncryptedCalldata = await client.encrypt(
+            plaintextCalldata,
+            estimateMetadata
+          )
+          return estimateShieldedGas(client, {
+            encryptedData: estimateEncryptedCalldata,
+            metadata: estimateMetadata,
+            gasPrice: resolvedGasPrice,
+          })
+        })())
 
       // Fill remaining fee fields via prepareTransactionRequest.
       // Gas is already resolved so viem won't call eth_estimateGas.
@@ -261,7 +285,7 @@ export async function sendShieldedTransaction<
  * Signs a temporary shielded transaction and sends it to `eth_estimateGas`
  * so the node can authenticate the sender during simulation.
  */
-async function estimateShieldedGas<
+export async function estimateShieldedGas<
   TTransport extends Transport,
   TChain extends Chain | undefined,
   TAccount extends Account,

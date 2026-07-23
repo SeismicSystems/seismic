@@ -195,8 +195,10 @@ class _TransparentWriteNamespace:
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
         private_key: PrivateKey | None = None,
+        encryption: EncryptionState | None = None,
     ) -> None:
         self._w3 = w3
+        self._encryption = encryption
         self._address = address
         self._abi = abi
         self._private_key = private_key
@@ -206,13 +208,18 @@ class _TransparentWriteNamespace:
 
         def call(*args: Any, value: int = 0, **tx_params: Any) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
-            if "gas" not in tx_params and self._private_key is not None:
+            if (
+                "gas" not in tx_params
+                and self._private_key is not None
+                and self._encryption is not None
+            ):
                 tx_params["gas"] = estimate_transparent_gas(
                     self._w3,
                     to=self._address,
                     data=data.to_0x_hex(),
                     value=value,
                     private_key=self._private_key,
+                    encryption=self._encryption,
                 )
             tx: dict[str, Any] = {
                 "to": self._address,
@@ -306,6 +313,7 @@ class _SmartWriteNamespace:
                         data=data.to_0x_hex(),
                         value=value,
                         private_key=self._private_key,
+                        encryption=self._encryption,
                     )
                 tx: dict[str, Any] = {
                     "to": self._address,
@@ -520,8 +528,10 @@ class _AsyncTransparentWriteNamespace:
         address: ChecksumAddress,
         abi: list[dict[str, Any]],
         private_key: PrivateKey | None = None,
+        encryption: EncryptionState | None = None,
     ) -> None:
         self._w3 = w3
+        self._encryption = encryption
         self._address = address
         self._abi = abi
         self._private_key = private_key
@@ -531,13 +541,18 @@ class _AsyncTransparentWriteNamespace:
 
         async def call(*args: Any, value: int = 0, **tx_params: Any) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
-            if "gas" not in tx_params and self._private_key is not None:
+            if (
+                "gas" not in tx_params
+                and self._private_key is not None
+                and self._encryption is not None
+            ):
                 tx_params["gas"] = await async_estimate_transparent_gas(
                     self._w3,
                     to=self._address,
                     data=data.to_0x_hex(),
                     value=value,
                     private_key=self._private_key,
+                    encryption=self._encryption,
                 )
             tx: dict[str, Any] = {
                 "to": self._address,
@@ -631,6 +646,7 @@ class _AsyncSmartWriteNamespace:
                         data=data.to_0x_hex(),
                         value=value,
                         private_key=self._private_key,
+                        encryption=self._encryption,
                     )
                 tx: dict[str, Any] = {
                     "to": self._address,
@@ -779,6 +795,7 @@ class ShieldedContract:
             address,
             abi,
             private_key=private_key,
+            encryption=encryption,
         )
         self.tread = _TransparentReadNamespace(w3, address, abi)
         self.dwrite = _ShieldedDebugWriteNamespace(
@@ -871,6 +888,7 @@ class AsyncShieldedContract:
             address,
             abi,
             private_key=private_key,
+            encryption=encryption,
         )
         self.tread = _AsyncTransparentReadNamespace(w3, address, abi)
         self.dwrite = _AsyncShieldedDebugWriteNamespace(
