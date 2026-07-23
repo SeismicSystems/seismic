@@ -59,7 +59,14 @@ const toYParitySignatureArray = (signature?: {
 
 // ── Key derivation ──────────────────────────────────────────────────
 
-const deriveAesKey = (privateKey: Hex, networkPublicKey: string): Hex => {
+// Only the request key: this package encrypts write-tx calldata and never
+// decrypts TEE responses. The request uses the original "aes-gcm key" label.
+// A signed-read feature would need the response label
+// ("seismic/response/aes-256-gcm/v1") as well.
+const deriveRequestAesKey = (
+  privateKey: Hex,
+  networkPublicKey: string
+): Hex => {
   const privHex = privateKey.startsWith('0x') ? privateKey.slice(2) : privateKey
   const sharedPoint = secp256k1
     .getSharedSecret(privHex, networkPublicKey, false)
@@ -280,7 +287,7 @@ export const encryptSeismicTx = async ({
 
   // 2. Derive encryption keys
   const encPrivKey = encryptionPrivateKey ?? generatePrivateKey()
-  const aesKey = deriveAesKey(encPrivKey, teePubkey)
+  const aesKey = deriveRequestAesKey(encPrivKey, teePubkey)
   const uncompressedPk = privateKeyToAccount(encPrivKey).publicKey
   const encPubkey = compressPublicKey(uncompressedPk)
 

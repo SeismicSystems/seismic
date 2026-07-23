@@ -19,8 +19,10 @@ from seismic_web3.client import (
     create_wallet_client,
     get_encryption,
 )
+from seismic_web3.crypto.aes import AesGcmCrypto
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 from seismic_web3.module import SeismicPublicNamespace
+from seismic_web3.transaction.aead import encode_metadata_as_aad
 from seismic_web3.transaction_types import (
     LegacyFields,
     SeismicElements,
@@ -34,16 +36,22 @@ _NETWORK_PK = CompressedPublicKey(
 _CLIENT_SK = PrivateKey(
     "0xa30363336e1bb949185292a2a302de86e447d98f3a43d823c8c234d9e3e5ad77"
 )
-_EXPECTED_AES_KEY = Bytes32(
+# Request keeps the original "aes-gcm key" label; only the response is new.
+_EXPECTED_REQUEST_AES_KEY = Bytes32(
     "0xbf0dd6556618d1bf8d1602bf80be3a0f7cc729973829bb9acb75bd77770d5b90"
+)
+_EXPECTED_RESPONSE_AES_KEY = Bytes32(
+    "0x974b310e3990d555da33e2b0c1dc6036a9709400ec992dbfc9330cc00e673144"
 )
 
 
 class TestGetEncryption:
     def test_deterministic_with_known_keys(self):
-        """get_encryption with a fixed client key produces the expected AES key."""
+        """Fixed ECDH inputs produce the expected directional AES keys."""
         state = get_encryption(_NETWORK_PK, _CLIENT_SK)
-        assert state.aes_key == _EXPECTED_AES_KEY
+        assert state.aes_key == _EXPECTED_REQUEST_AES_KEY
+        assert state.response_aes_key == _EXPECTED_RESPONSE_AES_KEY
+        assert state.aes_key != state.response_aes_key
 
     def test_returns_encryption_state(self):
         state = get_encryption(_NETWORK_PK, _CLIENT_SK)
@@ -90,19 +98,26 @@ class TestEncryptionState:
             ),
         )
 
-    def test_encrypt_decrypt_round_trip(self):
-        """Encrypting then decrypting should return the original plaintext."""
+    def test_directional_request_and_response_round_trips(self):
+        """Each traffic direction uses its matching independent AES key."""
         state = get_encryption(_NETWORK_PK, _CLIENT_SK)
         metadata = self._make_metadata()
         nonce = EncryptionNonce("0x46a2b6020bba77fcb1e676a6")
-        plaintext = HexBytes(b"Hello Seismic!")
+        request_plaintext = HexBytes(b"request data")
+        response_plaintext = HexBytes(b"response data")
+        aad = encode_metadata_as_aad(metadata)
 
-        ciphertext = state.encrypt(plaintext, nonce, metadata)
-        assert ciphertext != plaintext
-        assert len(ciphertext) > len(plaintext)  # includes auth tag
+        encrypted_request = state.encrypt(request_plaintext, nonce, metadata)
+        tee_request_crypto = AesGcmCrypto(state.aes_key)
+        assert (
+            tee_request_crypto.decrypt(encrypted_request, nonce, aad)
+            == request_plaintext
+        )
 
-        decrypted = state.decrypt(ciphertext, nonce, metadata)
-        assert bytes(decrypted) == bytes(plaintext)
+        tee_response_crypto = AesGcmCrypto(state.response_aes_key)
+        encrypted_response = tee_response_crypto.encrypt(response_plaintext, nonce, aad)
+        assert state.decrypt(encrypted_response, nonce, metadata) == response_plaintext
+        assert encrypted_request != encrypted_response
 
     def test_encrypt_empty_data(self):
         """Encrypting empty data returns empty data."""

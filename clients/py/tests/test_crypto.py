@@ -9,6 +9,7 @@ from coincurve import PublicKey as _CoincurvePublicKey
 
 from seismic_web3._types import Bytes32, CompressedPublicKey, PrivateKey
 from seismic_web3.crypto.ecdh import (
+    AesKeyDomain,
     derive_aes_key,
     generate_aes_key,
     shared_key_from_point,
@@ -46,6 +47,13 @@ EXPECTED_SHARED_KEY_HEX = (
 EXPECTED_AES_KEY_HEX = (
     "0xbf0dd6556618d1bf8d1602bf80be3a0f7cc729973829bb9acb75bd77770d5b90"
 )
+# Equal to EXPECTED_AES_KEY_HEX: request keeps the original "aes-gcm key" label.
+EXPECTED_REQUEST_AES_KEY_HEX = (
+    "0xbf0dd6556618d1bf8d1602bf80be3a0f7cc729973829bb9acb75bd77770d5b90"
+)
+EXPECTED_RESPONSE_AES_KEY_HEX = (
+    "0x974b310e3990d555da33e2b0c1dc6036a9709400ec992dbfc9330cc00e673144"
+)
 
 # Private key whose compressed public key matches TEE_PK.
 KEYGEN_SK_HEX = "0x311d54d3bf8359c70827122a44a7b4458733adce3c51c6b59d9acfce85e07505"
@@ -74,18 +82,33 @@ class TestSharedKeyFromPoint:
 
 
 class TestDeriveAesKey:
-    def test_known_vector(self):
+    def test_known_vectors_per_domain(self):
         shared_key = Bytes32(EXPECTED_SHARED_KEY_HEX)
-        aes_key = derive_aes_key(shared_key)
-        assert isinstance(aes_key, Bytes32)
-        assert aes_key.to_0x_hex() == EXPECTED_AES_KEY_HEX
+        precompile_key = derive_aes_key(shared_key, AesKeyDomain.ECDH_PRECOMPILE)
+        request_key = derive_aes_key(shared_key, AesKeyDomain.TX_REQUEST)
+        response_key = derive_aes_key(shared_key, AesKeyDomain.TX_RESPONSE)
+
+        assert isinstance(precompile_key, Bytes32)
+        assert precompile_key.to_0x_hex() == EXPECTED_AES_KEY_HEX
+        assert request_key.to_0x_hex() == EXPECTED_REQUEST_AES_KEY_HEX
+        assert response_key.to_0x_hex() == EXPECTED_RESPONSE_AES_KEY_HEX
+        assert request_key != response_key
 
 
 class TestGenerateAesKey:
-    def test_full_pipeline(self):
-        aes_key = generate_aes_key(ENC_SK, TEE_PK)
-        assert isinstance(aes_key, Bytes32)
-        assert aes_key.to_0x_hex() == EXPECTED_AES_KEY_HEX
+    def test_full_pipeline_per_domain(self):
+        precompile_key = generate_aes_key(
+            ENC_SK,
+            TEE_PK,
+            AesKeyDomain.ECDH_PRECOMPILE,
+        )
+        request_key = generate_aes_key(ENC_SK, TEE_PK, AesKeyDomain.TX_REQUEST)
+        response_key = generate_aes_key(ENC_SK, TEE_PK, AesKeyDomain.TX_RESPONSE)
+
+        assert isinstance(precompile_key, Bytes32)
+        assert precompile_key.to_0x_hex() == EXPECTED_AES_KEY_HEX
+        assert request_key.to_0x_hex() == EXPECTED_REQUEST_AES_KEY_HEX
+        assert response_key.to_0x_hex() == EXPECTED_RESPONSE_AES_KEY_HEX
 
 
 # ---------------------------------------------------------------------------

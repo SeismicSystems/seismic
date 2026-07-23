@@ -6,6 +6,7 @@ import type { TxSeismicMetadata } from '@sviem/tx/metadata.ts'
 
 export type EncryptionActions = {
   getEncryption: () => Hex
+  getResponseEncryption: () => Hex
   getEncryptionPublicKey: () => Hex
   encrypt: (
     plaintext: Hex | undefined,
@@ -18,17 +19,19 @@ export type EncryptionActions = {
 }
 
 export const encryptionActions = (
-  encryption: Hex,
+  requestEncryption: Hex,
+  responseEncryption: Hex,
   encryptionPublicKey: Hex
 ): EncryptionActions => {
   return {
-    getEncryption: () => encryption,
+    getEncryption: () => requestEncryption,
+    getResponseEncryption: () => responseEncryption,
     getEncryptionPublicKey: () => encryptionPublicKey,
     encrypt: async (
       plaintext: Hex | undefined,
       metadata: TxSeismicMetadata
     ) => {
-      const aesCipher = new AesGcmCrypto(encryption)
+      const aesCipher = new AesGcmCrypto(requestEncryption)
       const aad = encodeSeismicMetadataAsAAD(metadata)
       const ciphertext = await aesCipher.encrypt(
         plaintext,
@@ -41,7 +44,7 @@ export const encryptionActions = (
       ciphertext: Hex | undefined,
       metadata: TxSeismicMetadata
     ) => {
-      const aesCipher = new AesGcmCrypto(encryption)
+      const aesCipher = new AesGcmCrypto(responseEncryption)
       const aad = encodeSeismicMetadataAsAAD(metadata)
       return await aesCipher.decrypt(
         ciphertext,

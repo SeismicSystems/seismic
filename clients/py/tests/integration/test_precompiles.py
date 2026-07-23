@@ -8,6 +8,7 @@ import pytest
 from web3 import AsyncWeb3, Web3
 
 from seismic_web3._types import Bytes32, PrivateKey
+from seismic_web3.crypto.ecdh import AesKeyDomain, generate_aes_key
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 from seismic_web3.precompiles import (
     aes_gcm_decrypt,
@@ -70,14 +71,12 @@ class TestEcdh:
 
     def test_matches_client_side(self, w3: Web3):
         """On-chain ECDH should produce the same result as client-side."""
-        from seismic_web3.crypto.ecdh import generate_aes_key
-
         sk = PrivateKey(b"\x01" * 32)
         other_sk = PrivateKey(b"\x02" * 32)
         pk = private_key_to_compressed_public_key(other_sk)
 
         on_chain = ecdh(w3, sk=sk, pk=pk)
-        client_side = generate_aes_key(sk, pk)
+        client_side = generate_aes_key(sk, pk, AesKeyDomain.ECDH_PRECOMPILE)
 
         # The on-chain ECDH precompile does ECDH + HKDF together,
         # which matches the client-side generate_aes_key pipeline.

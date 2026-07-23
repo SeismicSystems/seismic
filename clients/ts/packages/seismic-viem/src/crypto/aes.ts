@@ -148,18 +148,53 @@ export const generateSharedKey = (inputs: AesInputKeys): string => {
   return sharedKeyFromPoint(sharedSecret)
 }
 
-export const deriveAesKey = (sharedSecret: string): Hex => {
+/**
+ * Domain-separation labels for AES keys derived from an ECDH shared secret.
+ * HKDF info labels must match the Rust `AesKeyDomain` enum (in
+ * seismic-crypto); keys from different domains are independent.
+ */
+export const AesKeyDomain = {
+  /** Client-to-TEE transaction I/O: encrypted calldata, signed-read requests */
+  TxRequest: 'tx-request',
+  /** TEE-to-client transaction I/O: signed-read return data */
+  TxResponse: 'tx-response',
+  /** The on-chain ECDH precompile's derivation (consensus-frozen label) */
+  EcdhPrecompile: 'ecdh-precompile',
+} as const
+
+export type AesKeyDomain = (typeof AesKeyDomain)[keyof typeof AesKeyDomain]
+
+const DOMAIN_HKDF_INFO: Record<AesKeyDomain, string> = {
+  // Request keeps the original 'aes-gcm key' label for backward compat;
+  // only the response moved to a new one. See the Rust AesKeyDomain enum.
+  [AesKeyDomain.TxRequest]: 'aes-gcm key',
+  [AesKeyDomain.TxResponse]: 'seismic/response/aes-256-gcm/v1',
+  [AesKeyDomain.EcdhPrecompile]: 'aes-gcm key',
+}
+
+/**
+ * Derive a domain-separated AES-256 key from an ECDH shared secret using
+ * HKDF-SHA256.
+ */
+export const deriveAesKey = (
+  sharedSecret: string,
+  domain: AesKeyDomain
+): Hex => {
   const derivedKey = hkdf(
-    sha256, // Hash function
+    sha256,
     hexToBytes(`0x${sharedSecret}`),
-    new Uint8Array(0), // Salt
-    new TextEncoder().encode('aes-gcm key'), // Info (optional context string)
-    32 // Output length (32 bytes for AES-256)
+    new Uint8Array(0),
+    new TextEncoder().encode(DOMAIN_HKDF_INFO[domain]),
+    32
   )
   return bytesToHex(derivedKey)
 }
 
-export const generateAesKey = (aesKeys: AesInputKeys): Hex => {
+/** Run ECDH and derive a domain-separated AES-256 key. */
+export const generateAesKey = (
+  aesKeys: AesInputKeys,
+  domain: AesKeyDomain
+): Hex => {
   const sharedSecret = generateSharedKey(aesKeys)
-  return deriveAesKey(sharedSecret)
+  return deriveAesKey(sharedSecret, domain)
 }

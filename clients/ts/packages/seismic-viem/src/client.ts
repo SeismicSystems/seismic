@@ -27,7 +27,7 @@ import type { ShieldedPublicActions } from '@sviem/actions/public.ts'
 import { shieldedPublicActions } from '@sviem/actions/public.ts'
 import type { ShieldedWalletActions } from '@sviem/actions/wallet.ts'
 import { shieldedWalletActions } from '@sviem/actions/wallet.ts'
-import { generateAesKey } from '@sviem/crypto/aes.ts'
+import { AesKeyDomain, generateAesKey } from '@sviem/crypto/aes.ts'
 import { compressPublicKey } from '@sviem/crypto/secp.ts'
 import type {
   DepositContractPublicActions,
@@ -158,27 +158,40 @@ export type GetSeismicClientsParameters<
 }
 
 /**
- * Returns an AES key and its input keys
+ * Returns direction-separated AES traffic keys and their input keys.
  *
  * @param networkPk - The network's encryption public key (secp256k1)
  * @param clientSk - Optionally, the user's encryption private key. If not provided, this function will generate one
- * @returns {Object} An object with 3 fields:
- *   - `aesKey` (string) - The AES key used to encrypt calldata
+ * @returns {Object} An object with 4 fields:
+ *   - `aesKey` (string) - The request AES key used to encrypt calldata
+ *   - `responseAesKey` (string) - The response AES key used to decrypt signed-read results
  *   - `encryptionPrivateKey` (string) - Either `clientSk` if it was provided. Otherwise a newly generated secp256k1 private key
  *   - `encryptionPublicKey` (string) - The corresponding secp256k1 public key
  */
 export const getEncryption = (
   networkPk: string,
   clientSk?: Hex | undefined
-): { aesKey: Hex; encryptionPrivateKey: Hex; encryptionPublicKey: Hex } => {
+): {
+  aesKey: Hex
+  responseAesKey: Hex
+  encryptionPrivateKey: Hex
+  encryptionPublicKey: Hex
+} => {
   const encryptionPrivateKey = clientSk ?? generatePrivateKey()
-  const aesKey = generateAesKey({
+  const aesInputs = {
     privateKey: encryptionPrivateKey,
     networkPublicKey: networkPk,
-  })
+  }
+  const aesKey = generateAesKey(aesInputs, AesKeyDomain.TxRequest)
+  const responseAesKey = generateAesKey(aesInputs, AesKeyDomain.TxResponse)
   const uncompressedPk = privateKeyToAccount(encryptionPrivateKey).publicKey
   const encryptionPublicKey = compressPublicKey(uncompressedPk)
-  return { encryptionPrivateKey, encryptionPublicKey, aesKey }
+  return {
+    encryptionPrivateKey,
+    encryptionPublicKey,
+    aesKey,
+    responseAesKey,
+  }
 }
 
 /**
@@ -247,7 +260,7 @@ export const getSeismicClients = async <
     }))
 
   const networkPublicKey = await pubClient.getTeePublicKey()
-  const { aesKey, encryptionPublicKey } = getEncryption(
+  const { aesKey, responseAesKey, encryptionPublicKey } = getEncryption(
     networkPublicKey,
     encryptionSk
   )
@@ -262,7 +275,9 @@ export const getSeismicClients = async <
     // @ts-ignore
     .extend(() => publicActions(pubClient))
     // @ts-ignore
-    .extend(() => encryptionActions(aesKey, encryptionPublicKey))
+    .extend(() =>
+      encryptionActions(aesKey, responseAesKey, encryptionPublicKey)
+    )
     // @ts-ignore
     .extend(() => shieldedPublicActions(pubClient))
     // @ts-ignore
