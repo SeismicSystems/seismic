@@ -103,6 +103,7 @@ export {
 export { compressPublicKey } from '@sviem/crypto/secp.ts'
 export { encodeSeismicMetadataAsAAD } from '@sviem/crypto/aead.ts'
 export {
+  AesKeyDomain,
   AesGcmCrypto,
   generateAesKey,
   deriveAesKey,

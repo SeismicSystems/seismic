@@ -1,5 +1,6 @@
 import { expect } from 'bun:test'
 import {
+  AesKeyDomain,
   deriveAesKey,
   sharedKeyFromPoint,
   sharedSecretPoint,
@@ -23,8 +24,23 @@ export const testAesKeygen = () => {
   expect(sharedSecret).toBe(
     '46a4d6fce8eca748ba8362e726de51a5c62202c887d6bb81fa6f4df1fb360999'
   )
-  const aesKey = deriveAesKey(sharedSecret)
-  expect(aesKey).toBe(
+  const precompileAesKey = deriveAesKey(
+    sharedSecret,
+    AesKeyDomain.EcdhPrecompile
+  )
+  expect(precompileAesKey).toBe(
     '0xbf0dd6556618d1bf8d1602bf80be3a0f7cc729973829bb9acb75bd77770d5b90'
   )
+
+  // Equal to precompileAesKey: request keeps the original "aes-gcm key" label.
+  const requestAesKey = deriveAesKey(sharedSecret, AesKeyDomain.TxRequest)
+  expect(requestAesKey).toBe(
+    '0xbf0dd6556618d1bf8d1602bf80be3a0f7cc729973829bb9acb75bd77770d5b90'
+  )
+
+  const responseAesKey = deriveAesKey(sharedSecret, AesKeyDomain.TxResponse)
+  expect(responseAesKey).toBe(
+    '0x974b310e3990d555da33e2b0c1dc6036a9709400ec992dbfc9330cc00e673144'
+  )
+  expect(requestAesKey).not.toBe(responseAesKey)
 }

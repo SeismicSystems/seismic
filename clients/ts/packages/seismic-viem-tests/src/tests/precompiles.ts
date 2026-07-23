@@ -1,6 +1,6 @@
 import { expect } from 'bun:test'
 import { createShieldedPublicClient } from 'seismic-viem'
-import { generateAesKey } from 'seismic-viem'
+import { AesKeyDomain, generateAesKey } from 'seismic-viem'
 import { compressPublicKey } from 'seismic-viem'
 import { Chain, hexToBytes, http, recoverMessageAddress } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
@@ -47,10 +47,13 @@ export const testEcdh = async ({ chain, url }: PublicClientConfig) => {
   const pk2 = compressPublicKey(privateKeyToAccount(sk2).publicKey)
   const sharedSecret = await publicClient.ecdh({ sk: sk1, pk: pk2 })
   const ssBytes = hexToBytes(sharedSecret)
-  const expected = generateAesKey({
-    privateKey: sk1,
-    networkPublicKey: pk2.slice(2),
-  })
+  const expected = generateAesKey(
+    {
+      privateKey: sk1,
+      networkPublicKey: pk2.slice(2),
+    },
+    AesKeyDomain.EcdhPrecompile
+  )
   expect(ssBytes.length).toBe(32)
   expect(sharedSecret).toBe(expected)
 }

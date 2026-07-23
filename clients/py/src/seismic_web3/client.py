@@ -22,7 +22,7 @@ from web3 import AsyncHTTPProvider, AsyncWeb3, Web3, WebSocketProvider
 
 from seismic_web3._types import Bytes32, CompressedPublicKey, PrivateKey
 from seismic_web3.crypto.aes import AesGcmCrypto
-from seismic_web3.crypto.ecdh import generate_aes_key
+from seismic_web3.crypto.ecdh import AesKeyDomain, generate_aes_key
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 from seismic_web3.module import (
     AsyncSeismicNamespace,
@@ -42,24 +42,28 @@ if TYPE_CHECKING:
 
 @dataclass
 class EncryptionState:
-    """Holds the AES key and encryption keypair derived from ECDH.
+    """Holds directional AES keys and the encryption keypair derived from ECDH.
 
-    Created by :func:`get_encryption` during client setup.  Pure
+    Created by :func:`get_encryption` during client setup. Pure
     computation - works in both sync and async contexts.
 
     Attributes:
-        aes_key: 32-byte AES-256 key derived from ECDH + HKDF.
+        aes_key: Request AES-256 key used to encrypt calldata.
+        response_aes_key: Response AES-256 key used to decrypt signed reads.
         encryption_pubkey: Client's compressed secp256k1 public key.
         encryption_private_key: Client's secp256k1 private key.
     """
 
     aes_key: Bytes32
+    response_aes_key: Bytes32
     encryption_pubkey: CompressedPublicKey
     encryption_private_key: PrivateKey
-    _crypto: AesGcmCrypto = field(init=False, repr=False, compare=False)
+    _request_crypto: AesGcmCrypto = field(init=False, repr=False, compare=False)
+    _response_crypto: AesGcmCrypto = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        self._crypto = AesGcmCrypto(self.aes_key)
+        self._request_crypto = AesGcmCrypto(self.aes_key)
+        self._response_crypto = AesGcmCrypto(self.response_aes_key)
 
     def encrypt(
         self,
@@ -67,7 +71,7 @@ class EncryptionState:
         nonce: EncryptionNonce,
         metadata: TxSeismicMetadata,
     ) -> HexBytes:
-        """Encrypt plaintext calldata with metadata-bound AAD.
+        """Encrypt plaintext calldata with the request key and metadata-bound AAD.
 
         Args:
             plaintext: Raw calldata to encrypt.
@@ -78,7 +82,7 @@ class EncryptionState:
             Ciphertext with 16-byte authentication tag.
         """
         aad = encode_metadata_as_aad(metadata)
-        return self._crypto.encrypt(plaintext, nonce, aad)
+        return self._request_crypto.encrypt(plaintext, nonce, aad)
 
     def decrypt(
         self,
@@ -86,7 +90,7 @@ class EncryptionState:
         nonce: EncryptionNonce,
         metadata: TxSeismicMetadata,
     ) -> HexBytes:
-        """Decrypt ciphertext with metadata-bound AAD.
+        """Decrypt signed-read ciphertext with the response key and metadata-bound AAD.
 
         Args:
             ciphertext: Encrypted data (includes auth tag).
@@ -100,14 +104,14 @@ class EncryptionState:
             cryptography.exceptions.InvalidTag: If authentication fails.
         """
         aad = encode_metadata_as_aad(metadata)
-        return self._crypto.decrypt(ciphertext, nonce, aad)
+        return self._response_crypto.decrypt(ciphertext, nonce, aad)
 
 
 def get_encryption(
     network_pk: CompressedPublicKey,
     client_sk: PrivateKey | None = None,
 ) -> EncryptionState:
-    """Derive encryption state from a TEE public key.
+    """Derive direction-separated encryption state from a TEE public key.
 
     Pure computation (no I/O).  If ``client_sk`` is not provided,
     a random ephemeral private key is generated.
@@ -123,11 +127,21 @@ def get_encryption(
     if client_sk is None:
         client_sk = PrivateKey(os.urandom(32))
 
-    aes_key = generate_aes_key(client_sk, network_pk)
+    aes_key = generate_aes_key(
+        client_sk,
+        network_pk,
+        AesKeyDomain.TX_REQUEST,
+    )
+    response_aes_key = generate_aes_key(
+        client_sk,
+        network_pk,
+        AesKeyDomain.TX_RESPONSE,
+    )
     client_pubkey = private_key_to_compressed_public_key(client_sk)
 
     return EncryptionState(
         aes_key=aes_key,
+        response_aes_key=response_aes_key,
         encryption_pubkey=client_pubkey,
         encryption_private_key=client_sk,
     )
