@@ -4,11 +4,12 @@ import {
   createShieldedPublicClient,
   createShieldedWalletClient,
 } from 'seismic-viem'
-import { Account, Chain, parseEther } from 'viem'
-import { http } from 'viem'
+import { Account, Chain, concatHex, parseEther } from 'viem'
+import { http, parseEventLogs } from 'viem'
 
 import { depositContractAbi } from '@sviem-tests/tests/contract/depositContractAbi.ts'
 import { depositContractBytecode } from '@sviem-tests/tests/contract/depositContractBytecode.ts'
+import { summitDepositRequestFixture } from '@sviem-tests/tests/contract/depositRequestVectors.ts'
 
 export type ContractTestArgs = {
   chain: Chain
@@ -144,6 +145,91 @@ function computeDepositDataRoot(
     .digest()
 
   return `0x${depositDataRoot.toString('hex')}` as `0x${string}`
+}
+
+/**
+ * Replay Summit's golden deposit-request vectors through the client.
+ *
+ * The vectors (vendored in depositRequestVectors.ts; canonical copy in the
+ * summit repo at types/fixtures/deposit_requests.json) carry valid Ed25519 +
+ * BLS signatures and the exact 288-byte execution-layer request that Summit
+ * parses and validates. Submitting each vector and reassembling the emitted
+ * DepositEvent must reproduce expected_request byte for byte, proving the
+ * client transports deposit data unmangled into the format the consensus
+ * layer accepts.
+ *
+ * The vectors are submitted in file order onto a fresh contract so the
+ * contract assigns the deposit indices the fixtures were frozen with.
+ */
+export const testDepositEventsMatchSummitVectors = async ({
+  chain,
+  url,
+  account,
+}: ContractTestArgs) => {
+  const publicClient = createShieldedPublicClient({
+    chain,
+    transport: http(url),
+  })
+  const walletClient = await createShieldedWalletClient({
+    chain,
+    transport: http(url),
+    account,
+  })
+
+  const bytecode: `0x${string}` = `0x${depositContractBytecode.object.replace(/^0x/, '')}`
+  const deployTx = await walletClient.deployContract({
+    abi: depositContractAbi,
+    bytecode,
+    chain: walletClient.chain,
+  })
+  const deployReceipt = await publicClient.waitForTransactionReceipt({
+    hash: deployTx,
+  })
+  const address = deployReceipt.contractAddress!
+
+  for (const vector of summitDepositRequestFixture.vectors) {
+    const valueWei = BigInt(vector.amount_gwei) * 10n ** 9n
+    const depositDataRoot = computeDepositDataRoot(
+      vector.node_pubkey,
+      vector.consensus_pubkey,
+      vector.withdrawal_credentials,
+      vector.node_signature,
+      vector.consensus_signature,
+      valueWei
+    )
+    const depositTx = await walletClient.deposit({
+      address,
+      nodePubkey: vector.node_pubkey,
+      consensusPubkey: vector.consensus_pubkey,
+      withdrawalCredentials: vector.withdrawal_credentials,
+      nodeSignature: vector.node_signature,
+      consensusSignature: vector.consensus_signature,
+      depositDataRoot,
+      value: valueWei,
+    })
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: depositTx,
+    })
+    expect(receipt.status).toBe('success')
+
+    const events = parseEventLogs({
+      abi: depositContractAbi,
+      eventName: 'DepositEvent',
+      logs: receipt.logs,
+    })
+    expect(events).toHaveLength(1)
+    const args = events[0].args
+    const emittedRequest = concatHex([
+      args.node_pubkey,
+      args.consensus_pubkey,
+      args.withdrawal_credentials,
+      args.amount,
+      args.node_signature,
+      args.consensus_signature,
+      args.index,
+    ])
+    expect(emittedRequest).toBe(vector.expected_request)
+  }
 }
 
 export const testDepositContract = async ({
