@@ -5,6 +5,9 @@
 			"name": "seismic (monorepo)"
 		},
 		{
+			"path": "../../summit"
+		},
+		{
 			"path": "../../seismic-reth"
 		},
 		{
@@ -41,13 +44,10 @@
 			"path": "../../seismic-images"
 		},
 		{
-			"path": "../../tdx-init"
+			"path": "../../enclave"
 		},
 		{
 			"path": "../../deploy"
-		},
-		{
-			"path": "../../enclave"
 		},
 	],
 	"settings": {
