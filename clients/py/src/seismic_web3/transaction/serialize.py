@@ -50,6 +50,21 @@ def _bool_to_rlp_bytes(value: bool) -> bytes:
     return b"\x01" if value else b""
 
 
+def _authorization_list_rlp_items(tx: UnsignedSeismicTx) -> list[list[bytes]]:
+    """Build the nested RLP items for a transaction's authorization list."""
+    return [
+        [
+            _int_to_rlp_bytes(a.chain_id),
+            _address_to_bytes(a.address),
+            _int_to_rlp_bytes(a.nonce),
+            _int_to_rlp_bytes(a.y_parity),
+            _int_to_rlp_bytes(a.r),
+            _int_to_rlp_bytes(a.s),
+        ]
+        for a in tx.authorization_list
+    ]
+
+
 def _tx_rlp_fields(tx: UnsignedSeismicTx) -> list:
     """Build the ordered list of RLP fields for a Seismic transaction.
 
@@ -79,18 +94,7 @@ def _tx_rlp_fields(tx: UnsignedSeismicTx) -> list:
     ]
     # Authorization list: nested RLP list
     # [[chain_id, address, nonce, y_parity, r, s], ...]
-    auth_items = [
-        [
-            _int_to_rlp_bytes(a.chain_id),
-            _address_to_bytes(a.address),
-            _int_to_rlp_bytes(a.nonce),
-            _int_to_rlp_bytes(a.y_parity),
-            _int_to_rlp_bytes(a.r),
-            _int_to_rlp_bytes(a.s),
-        ]
-        for a in tx.authorization_list
-    ]
-    fields.append(auth_items)
+    fields.append(_authorization_list_rlp_items(tx))
     return fields
 
 

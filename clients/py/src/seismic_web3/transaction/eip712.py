@@ -19,12 +19,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import rlp
 from eth_hash.auto import keccak
 from eth_keys.main import KeyAPI as eth_keys
 from hexbytes import HexBytes
 
 from seismic_web3._constants import TYPED_DATA_MESSAGE_VERSION
-from seismic_web3.transaction.serialize import serialize_signed
+from seismic_web3.transaction.serialize import (
+    _authorization_list_rlp_items,
+    serialize_signed,
+)
 from seismic_web3.transaction_types import Signature
 
 if TYPE_CHECKING:
@@ -56,7 +60,8 @@ TX_SEISMIC_TYPE_STR: str = (
     "uint8 messageVersion,"
     "bytes32 recentBlockHash,"
     "uint64 expiresAtBlock,"
-    "bool signedRead"
+    "bool signedRead,"
+    "bytes32 authorizationListHash"
     ")"
 )
 
@@ -175,7 +180,13 @@ def struct_hash(tx: UnsignedSeismicTx) -> bytes:
         + bytes(se.recent_block_hash)  # bytes32 (already 32 bytes)
         + _pad32_int(se.expires_at_block)  # uint64
         + _pad32_bool(se.signed_read)  # bool
+        + authorization_list_hash(tx)  # bytes32
     )
+
+
+def authorization_list_hash(tx: UnsignedSeismicTx) -> bytes:
+    """Hash the transaction's RLP-encoded EIP-7702 authorization list."""
+    return keccak(rlp.encode(_authorization_list_rlp_items(tx)))
 
 
 def eip712_signing_hash(tx: UnsignedSeismicTx) -> bytes:
@@ -235,6 +246,7 @@ def build_seismic_typed_data(tx: UnsignedSeismicTx) -> dict[str, Any]:
                 {"name": "recentBlockHash", "type": "bytes32"},
                 {"name": "expiresAtBlock", "type": "uint64"},
                 {"name": "signedRead", "type": "bool"},
+                {"name": "authorizationListHash", "type": "bytes32"},
             ],
         },
         "primaryType": "TxSeismic",
@@ -259,6 +271,7 @@ def build_seismic_typed_data(tx: UnsignedSeismicTx) -> dict[str, Any]:
             "recentBlockHash": HexBytes(bytes(se.recent_block_hash)).to_0x_hex(),
             "expiresAtBlock": se.expires_at_block,
             "signedRead": se.signed_read,
+            "authorizationListHash": HexBytes(authorization_list_hash(tx)).to_0x_hex(),
         },
     }
 

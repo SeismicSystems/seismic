@@ -20,6 +20,7 @@ import {
   Hex,
   Transport,
   TypedData,
+  keccak256,
   numberToHex,
   parseSignature,
 } from 'viem'
@@ -28,6 +29,7 @@ import { SignTypedDataParameters, signTypedData } from 'viem/actions'
 import {
   type TransactionSerializableSeismic,
   type TxSeismic,
+  encodeAuthorizationList,
 } from '@sviem/tx/seismicTx.ts'
 
 /**
@@ -64,7 +66,6 @@ const seismicTxTypedData = <
   if (tx.signedRead === undefined) {
     throw new Error('Seismic transactions require signedRead')
   }
-
   const isCreate = tx.to === undefined || tx.to === null
   const message: TxSeismic = {
     chainId: tx.chainId,
@@ -81,6 +82,11 @@ const seismicTxTypedData = <
     recentBlockHash: tx.recentBlockHash,
     expiresAtBlock: tx.expiresAtBlock,
     signedRead: tx.signedRead,
+    authorizationListHash: keccak256(
+      encodeAuthorizationList(
+        tx.authorizationList as TxSeismic['authorizationList']
+      )
+    ),
   }
 
   // @ts-ignore
@@ -108,6 +114,7 @@ const seismicTxTypedData = <
         { name: 'recentBlockHash', type: 'bytes32' },
         { name: 'expiresAtBlock', type: 'uint64' },
         { name: 'signedRead', type: 'bool' },
+        { name: 'authorizationListHash', type: 'bytes32' },
       ],
     },
     primaryType: 'TxSeismic',

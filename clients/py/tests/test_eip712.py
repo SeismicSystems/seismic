@@ -23,6 +23,7 @@ from seismic_web3.transaction.eip712 import (
     TX_SEISMIC_TYPE_HASH,
     TX_SEISMIC_TYPE_STR,
     VERIFYING_CONTRACT,
+    authorization_list_hash,
     build_seismic_typed_data,
     domain_separator,
     eip712_signing_hash,
@@ -36,6 +37,7 @@ from seismic_web3.transaction.serialize import (
 from seismic_web3.transaction_types import (
     SeismicElements,
     Signature,
+    SignedAuthorization,
     UnsignedSeismicTx,
 )
 
@@ -148,11 +150,10 @@ class TestTypeHashes:
         assert " ," not in TX_SEISMIC_TYPE_STR
         assert ", " not in TX_SEISMIC_TYPE_STR
 
-    def test_tx_seismic_has_14_fields(self):
-        """TxSeismic struct has exactly 14 fields."""
-        # Count commas inside the parentheses: 13 commas = 14 fields
+    def test_tx_seismic_has_15_fields(self):
+        """TxSeismic struct has exactly 15 fields."""
         inner = TX_SEISMIC_TYPE_STR.split("(", 1)[1].rstrip(")")
-        assert inner.count(",") == 13
+        assert inner.count(",") == 14
 
     def test_domain_version_matches_constant(self):
         assert str(TYPED_DATA_MESSAGE_VERSION) == DOMAIN_VERSION
@@ -287,11 +288,39 @@ class TestStructHash:
         )
         assert struct_hash(tx_read) != struct_hash(tx)
 
+    def test_authorization_list_changes_hash(self):
+        tx = _make_eip712_tx()
+        tx_with_auth = UnsignedSeismicTx(
+            chain_id=tx.chain_id,
+            nonce=tx.nonce,
+            gas_price=tx.gas_price,
+            gas=tx.gas,
+            to=tx.to,
+            value=tx.value,
+            data=tx.data,
+            seismic=tx.seismic,
+            authorization_list=[
+                SignedAuthorization(
+                    chain_id=tx.chain_id,
+                    address="0x1111111111111111111111111111111111111111",
+                    nonce=7,
+                    y_parity=0,
+                    r=1,
+                    s=2,
+                )
+            ],
+        )
+        assert authorization_list_hash(tx).hex() == (
+            "1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"
+        )
+        assert authorization_list_hash(tx_with_auth) != authorization_list_hash(tx)
+        assert struct_hash(tx_with_auth) != struct_hash(tx)
+
     def test_known_vector_rust(self):
         """Cross-validate struct hash with seismic-alloy test_eip712_hash."""
         tx = _make_rust_test_vector_tx()
         assert struct_hash(tx).hex() == (
-            "c9ae99a778a215dc1fd48f331e99aaff8a274c465c786ba3ba5e44facb5fcfb9"
+            "34de7016eca39d935e5b41954404d6c9cb3fb08d31776712fcfbc6bb5d5740ab"
         )
 
 
@@ -320,14 +349,14 @@ class TestEIP712SigningHash:
         """Known signing hash for the anvil test tx (chain 31337)."""
         tx = _make_eip712_tx()
         assert eip712_signing_hash(tx).hex() == (
-            "2eed0627f80abbb44c3b6af040f5325566c481806a1c90e3dfe570ca8cf864f3"
+            "97df07b716306c8ebb936d22d20b811d8050c8608083df60c303bcc31c58fe9f"
         )
 
     def test_known_vector_rust(self):
         """Cross-validate signing hash with seismic-alloy test_eip712_hash."""
         tx = _make_rust_test_vector_tx()
         assert eip712_signing_hash(tx).hex() == (
-            "6f2f9a96ba31694d65f039356a838cf932f799b545fd95a7ff53616c55adffc1"
+            "e3bd8539e48a9ea2cafaef070c11f9f82e20c08cdd5063b98a3818c0da9a5e41"
         )
 
     def test_different_chain_ids_produce_different_hashes(self):
@@ -385,10 +414,10 @@ class TestBuildSeismicTypedData:
         assert "EIP712Domain" in td["types"]
         assert "TxSeismic" in td["types"]
 
-    def test_tx_seismic_type_has_14_fields(self):
+    def test_tx_seismic_type_has_15_fields(self):
         tx = _make_eip712_tx()
         td = build_seismic_typed_data(tx)
-        assert len(td["types"]["TxSeismic"]) == 14
+        assert len(td["types"]["TxSeismic"]) == 15
 
     def test_message_fields_match_tx(self):
         tx = _make_eip712_tx()
@@ -402,6 +431,9 @@ class TestBuildSeismicTypedData:
         assert msg["messageVersion"] == tx.seismic.message_version
         assert msg["expiresAtBlock"] == tx.seismic.expires_at_block
         assert msg["signedRead"] == tx.seismic.signed_read
+        assert msg["authorizationListHash"] == (
+            "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"
+        )
 
     def test_bytes_fields_are_hex(self):
         tx = _make_eip712_tx()
@@ -410,6 +442,7 @@ class TestBuildSeismicTypedData:
         assert msg["input"].startswith("0x")
         assert msg["encryptionPubkey"].startswith("0x")
         assert msg["recentBlockHash"].startswith("0x")
+        assert msg["authorizationListHash"].startswith("0x")
 
     def test_contract_creation_to_is_zero_address(self):
         tx = _make_eip712_tx()
@@ -470,9 +503,9 @@ EXPECTED_EIP712_SIGNED_TX = (
     "181885f6859ca848f5f01091d1957444a920a2bfb262fa043c6c239f906480b850"
     "bf645e68de8096b62950fac2d5bceb71ab1a085aed2e973a8b4f961ca77209f991"
     "16130edecd27c39fc62e1b3c05ff42d9e4382f987fc55c2011f8e4f2e66204e171"
-    "74e9d2756bb20f4cdfe48bd5d237c080a075f0104222864723bca4714783f66ebe"
-    "0137682e32cac7dca7113fded9f4126aa008ca7dbe13125a35fd5baf6bb5ad7052"
-    "e38f954e028ccd6ead85e9c39aafdbbe"
+    "74e9d2756bb20f4cdfe48bd5d237c001a07ab4bc33c64dff2b56023bb662219a9"
+    "950337e3cd3a6dd63f5760c0e7bdaceb3a060bccb842c9f6c6d87d47b5af0cb3"
+    "3dc208be79eb92786417a7c3caa9edd609c"
 )
 
 
@@ -577,13 +610,13 @@ class TestRustCrossValidation:
     def test_struct_hash_matches_rust(self):
         tx = _make_rust_test_vector_tx()
         assert struct_hash(tx).hex() == (
-            "c9ae99a778a215dc1fd48f331e99aaff8a274c465c786ba3ba5e44facb5fcfb9"
+            "34de7016eca39d935e5b41954404d6c9cb3fb08d31776712fcfbc6bb5d5740ab"
         )
 
     def test_signing_hash_matches_rust(self):
         tx = _make_rust_test_vector_tx()
         assert eip712_signing_hash(tx).hex() == (
-            "6f2f9a96ba31694d65f039356a838cf932f799b545fd95a7ff53616c55adffc1"
+            "e3bd8539e48a9ea2cafaef070c11f9f82e20c08cdd5063b98a3818c0da9a5e41"
         )
 
 

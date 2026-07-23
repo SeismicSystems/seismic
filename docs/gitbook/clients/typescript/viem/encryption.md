@@ -145,6 +145,12 @@ Seismic uses AES-GCM with Additional Authenticated Data (AEAD) to bind encrypted
 - `value` -- ETH value
 - `seismicElements` -- the `encryptionPubkey`, `encryptionNonce`, `messageVersion`, `recentBlockHash`, `expiresAtBlock`, and `signedRead` fields
 
+For EIP-712 signing, the `TxSeismic` typed-data message also includes
+`authorizationListHash = keccak256(rlp(authorizationList))`. This binds the
+EIP-7702 authorization list carried on the transaction wire format into the
+signature. The hash for an empty authorization list is
+`0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347`.
+
 ## Crypto Dependencies
 
 seismic-viem uses the following `@noble` libraries for client-side cryptography. These are bundled as direct dependencies and do not need to be installed separately.

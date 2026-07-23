@@ -40,6 +40,10 @@ import {
   testParseEncryptedDataThrowsOnEmpty,
   testParseEncryptedDataThrowsOnEmptyString,
 } from '@sviem-tests/tests/src20Crypto.ts'
+import {
+  testEmptyAuthorizationListHash,
+  testTypedDataIncludesAuthorizationListHash,
+} from '@sviem-tests/tests/typedDataUnit.ts'
 
 describe('Explorer URL utilities', () => {
   test(
@@ -132,5 +136,13 @@ describe('Directory computeKeyHash', () => {
   test(
     'different keys produce different hashes',
     testComputeKeyHashDifferentKeysProduceDifferentHashes
+  )
+})
+
+describe('Seismic EIP-712 typed data', () => {
+  test('hashes an empty authorization list', testEmptyAuthorizationListHash)
+  test(
+    'includes authorizationListHash',
+    testTypedDataIncludesAuthorizationListHash
   )
 })

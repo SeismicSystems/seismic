@@ -26,6 +26,7 @@ export {
   createSeismicTestnet,
 } from '@sviem/chain.ts'
 export {
+  encodeAuthorizationList,
   SEISMIC_TX_TYPE,
   serializeSeismicTransaction,
 } from '@sviem/tx/seismicTx.ts'
