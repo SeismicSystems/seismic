@@ -1,5 +1,6 @@
 MultisigUpgradeOperator
 UpgradeOperator
+MeasurementRegistry
 ShieldedDelegationAccount
 DepositContract
 Directory
