@@ -28,12 +28,6 @@ git submodule update --init --recursive
 sforge build
 ```
 
-### Build with library linking (for genesis artifacts)
-
-```bash
-sforge build --libraries lib/AesLib.sol:AesLib:0x1000000000000000000000000000000000000003
-```
-
 ### via-ir mode
 
 Some contracts (e.g., `DepositContract.sol`) hit "stack too deep" errors with the default compiler pipeline. To build everything, use `--via-ir --unsafe-via-ir`:
@@ -89,7 +83,7 @@ sforge test -vvvv --match-contract IntelligenceTest
 bash script/sync-artifacts.sh
 ```
 
-`script/genesis-contracts.txt` lists the 8 contracts included in genesis artifacts.
+`script/genesis-contracts.txt` lists the contracts included in genesis artifacts.
 
 ## Project Layout
 
@@ -117,7 +111,6 @@ src/
       TestToken.sol        Simple test token extending SRC20
       precompiles/CryptoUtils.sol   RNG (0x64), AES encrypt (0x66), AES decrypt (0x67) precompile wrappers
 lib/
-  AesLib.sol             AES-256-GCM + HKDF library using precompiles (0x66, 0x67, 0x68)
   forge-std/             Foundry test framework (submodule)
   openzeppelin-contracts/  OpenZeppelin v5.4.0 (submodule)
   solady/                Solady v0.1.26 — P256, WebAuthn, SignatureChecker (submodule)
@@ -125,7 +118,7 @@ test/                    Foundry tests (*.t.sol)
 script/
   sync-artifacts.sh      Build + copy JSON artifacts for genesis contracts
   genesis-contracts.txt  List of genesis contract names
-artifacts/               Pre-built JSON ABI artifacts (8 contracts)
+artifacts/               Pre-built JSON ABI artifacts
 ```
 
 ## Dependencies
