@@ -1,0 +1,647 @@
+{
+  "abi": [
+    {
+      "type": "function",
+      "name": "AUTHORITY",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "acceptedCount",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "activePolicyHash",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "applyPolicyUpdate",
+      "inputs": [
+        {
+          "name": "accept",
+          "type": "bytes32[]",
+          "internalType": "bytes32[]"
+        },
+        {
+          "name": "deprecate",
+          "type": "bytes32[]",
+          "internalType": "bytes32[]"
+        },
+        {
+          "name": "newActivePolicyHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "bootstrapPolicyHash",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "isAccepted",
+      "inputs": [
+        {
+          "name": "admissionId",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "policyRevision",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint64",
+          "internalType": "uint64"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "statusOf",
+      "inputs": [
+        {
+          "name": "admissionId",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint8",
+          "internalType": "enum MeasurementRegistry.Status"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "event",
+      "name": "AdmissionStatusChanged",
+      "inputs": [
+        {
+          "name": "admissionId",
+          "type": "bytes32",
+          "indexed": true,
+          "internalType": "bytes32"
+        },
+        {
+          "name": "previousStatus",
+          "type": "uint8",
+          "indexed": false,
+          "internalType": "enum MeasurementRegistry.Status"
+        },
+        {
+          "name": "newStatus",
+          "type": "uint8",
+          "indexed": false,
+          "internalType": "enum MeasurementRegistry.Status"
+        },
+        {
+          "name": "policyRevision",
+          "type": "uint64",
+          "indexed": true,
+          "internalType": "uint64"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "PolicyUpdated",
+      "inputs": [
+        {
+          "name": "policyRevision",
+          "type": "uint64",
+          "indexed": true,
+          "internalType": "uint64"
+        },
+        {
+          "name": "activePolicyHash",
+          "type": "bytes32",
+          "indexed": true,
+          "internalType": "bytes32"
+        },
+        {
+          "name": "accepted",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "deprecated",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "error",
+      "name": "ContradictoryAdmissionId",
+      "inputs": [
+        {
+          "name": "admissionId",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "DuplicateAdmissionId",
+      "inputs": [
+        {
+          "name": "admissionId",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "EmptyUpdate",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidTransition",
+      "inputs": [
+        {
+          "name": "admissionId",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        },
+        {
+          "name": "currentStatus",
+          "type": "uint8",
+          "internalType": "enum MeasurementRegistry.Status"
+        },
+        {
+          "name": "requestedStatus",
+          "type": "uint8",
+          "internalType": "enum MeasurementRegistry.Status"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "Unauthorized",
+      "inputs": [
+        {
+          "name": "caller",
+          "type": "address",
+          "internalType": "address"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "UnchangedPolicyHash",
+      "inputs": [
+        {
+          "name": "policyHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "Uninitialized",
+      "inputs": []
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234601c57600e6020565b61107c61002b823961107c90f35b6026565b60405190565b5f80fdfe60806040526004361015610013575b6104b6565b61001d5f3561009c565b8063246ce79d1461009757806326a7d805146100925780637bb08e0e1461008d57806389fcd79614610088578063a78f84cf14610083578063c7df14e21461007e578063c895d51e146100795763cdc6102a0361000e5761047f565b61038e565b610359565b6102c7565b610226565b6101a2565b610148565b6100e4565b60e01c90565b60405190565b5f80fd5b5f80fd5b5f9103126100ba57565b6100ac565b90565b6100cb906100bf565b9052565b91906100e2905f602085019401906100c2565b565b34610114576100f43660046100b0565b6101106100ff6104e7565b6101076100a2565b918291826100cf565b0390f35b6100a8565b67ffffffffffffffff1690565b61012f90610119565b9052565b9190610146905f60208501940190610126565b565b34610178576101583660046100b0565b610174610163610538565b61016b6100a2565b91829182610133565b0390f35b6100a8565b90565b6101899061017d565b9052565b91906101a0905f60208501940190610180565b565b346101d2576101b23660046100b0565b6101ce6101bd61057f565b6101c56100a2565b9182918261018d565b0390f35b6100a8565b60026001609c1b0190565b6101ea6101d7565b90565b60018060a01b031690565b610201906101ed565b90565b61020d906101f8565b9052565b9190610224905f60208501940190610204565b565b34610256576102363660046100b0565b6102526102416101e2565b6102496100a2565b91829182610211565b0390f35b6100a8565b5f80fd5b610268816100bf565b0361026f57565b5f80fd5b905035906102808261025f565b565b9060208282031261029b57610298915f01610273565b90565b6100ac565b151590565b6102ae906102a0565b9052565b91906102c5905f602085019401906102a5565b565b346102f7576102f36102e26102dd366004610282565b6105eb565b6102ea6100a2565b918291826102b2565b0390f35b6100a8565b634e487b7160e01b5f52602160045260245ffd5b6003111561031a57565b6102fc565b9061032982610310565b565b6103349061031f565b90565b6103409061032b565b9052565b9190610357905f60208501940190610337565b565b346103895761038561037461036f366004610282565b61062a565b61037c6100a2565b91829182610344565b0390f35b6100a8565b346103be5761039e3660046100b0565b6103ba6103a9610651565b6103b16100a2565b918291826100cf565b0390f35b6100a8565b5f80fd5b5f80fd5b5f80fd5b909182601f830112156104095781359167ffffffffffffffff83116104045760200192602083028401116103ff57565b6103cb565b6103c7565b6103c3565b606081830312610475575f81013567ffffffffffffffff811161047057826104379183016103cf565b929093602083013567ffffffffffffffff811161046b5761045d836104689286016103cf565b939094604001610273565b90565b61025b565b61025b565b6100ac565b5f0190565b346104b15761049b61049236600461040e565b93929092610ca9565b6104a36100a2565b806104ad8161047a565b0390f35b6100a8565b5f80fd5b5f90565b5f1c90565b90565b6104d26104d7916104be565b6104c3565b90565b6104e490546104c6565b90565b6104ef6104ba565b5061050360026104fd610d03565b016104da565b90565b5f90565b67ffffffffffffffff1690565b610523610528916104be565b61050a565b90565b6105359054610517565b90565b610540610506565b50610554600361054e610d03565b0161052b565b90565b5f90565b90565b61056a61056f916104be565b61055b565b90565b61057c905461055e565b90565b610587610557565b5061059b6004610595610d03565b01610572565b90565b5f90565b6105ab906100bf565b90565b906105b8906105a2565b5f5260205260405f2090565b60ff1690565b6105d66105db916104be565b6105c4565b90565b6105e890546105ca565b90565b61060a61060f916105fa61059e565b505f610604610d03565b016105ae565b6105de565b61062261061c600161031f565b9161031f565b1490565b5f90565b61064961064e91610639610626565b505f610643610d03565b016105ae565b6105de565b90565b6106596104ba565b5061066d6001610667610d03565b016104da565b90565b939291903361068e6106886106836101d7565b6101f8565b916101f8565b0361069e5761069c94610946565b565b6106b9335f91829163472511eb60e11b835260048301610211565b0390fd5b90565b90565b6106d76106d26106dc926106bd565b6106c0565b610119565b90565b5090565b6106f76106f26106fc926106bd565b6106c0565b61017d565b90565b90565b61071661071161071b926106ff565b6106c0565b610119565b90565b634e487b7160e01b5f52601160045260245ffd5b61073e61074491610119565b91610119565b019067ffffffffffffffff821161075757565b61071e565b6001610768910161017d565b90565b634e487b7160e01b5f52603260045260245ffd5b919081101561078f576020020190565b61076b565b3561079e8161025f565b90565b5f1b90565b906107b260ff916107a1565b9181191691161790565b6107c59061031f565b90565b90565b906107e06107db6107e7926107bc565b6107c8565b82546107a6565b9055565b6107f49061017d565b5f1981146108025760010190565b61071e565b61081b61081661082092610119565b6106c0565b610119565b90565b91602061084492949361083d60408201965f830190610337565b0190610337565b565b61084f9061017d565b5f811461085d576001900390565b61071e565b9061086e5f19916107a1565b9181191691161790565b610881906104be565b90565b906108996108946108a0926105a2565b610878565b8254610862565b9055565b906108b767ffffffffffffffff916107a1565b9181191691161790565b90565b906108d96108d46108e092610807565b6108c1565b82546108a4565b9055565b6108f86108f36108fd9261017d565b6106c0565b61017d565b90565b90565b9061091861091361091f926108e4565b610900565b8254610862565b9055565b91602061094492949361093d60408201965f830190610180565b0190610180565b565b9490929192610953610d03565b936109606003860161052b565b61097261096c5f6106c3565b91610119565b14610c8d576109828783906106df565b61099461098e5f6106e3565b9161017d565b1480610c69575b610c4d57856109bd6109b76109b2600289016104da565b6100bf565b916100bf565b14610c2e576109d185888484918893610d40565b6109f06109e06003870161052b565b6109ea6001610702565b90610732565b936109fd60048701610572565b93610a06610557565b5b80610a24610a1e610a198d89906106df565b61017d565b9161017d565b1015610ad457610acf90610a42610a3d8c88849161077f565b610794565b96610a79610a5b610a565f8d018b906105ae565b6105de565b91610a748c610a6f5f600192018d906105ae565b6107cb565b6107eb565b976001908a91610ab2610aac7fb55248914791427650cad9ac333398e6ac0e218c28cc013e2e84710b40a987e1936105a2565b93610807565b93610ac7610abe6100a2565b92839283610823565b0390a361075c565b610a07565b509197909296959495610ae5610557565b5b80610b03610afd610af88d89906106df565b61017d565b9161017d565b1015610b9f57610b9a90610b41610b24610b1f8d89859161077f565b610794565b97610b3c6002610b375f8d018c906105ae565b6107cb565b610846565b966001906002908b91610b7d610b777fb55248914791427650cad9ac333398e6ac0e218c28cc013e2e84710b40a987e1936105a2565b93610807565b93610b92610b896100a2565b92839283610823565b0390a361075c565b610ae6565b509495610bd4610bdb93999892976004610be197610bc08a60028501610884565b610bcd85600385016108c4565b9101610903565b94956106df565b946106df565b610c14610c0e7f96b9d28f52e69b6ea44ab0ee7c0626fbf3ea51880e30d764d243df73a4a3b12a93610807565b936105a2565b93610c29610c206100a2565b92839283610923565b0390a3565b610c49865f918291639068ae8560e01b8352600483016100cf565b0390fd5b5f63a095e7e160e01b815280610c656004820161047a565b0390fd5b50610c758185906106df565b610c87610c815f6106e3565b9161017d565b1461099b565b5f63071cbeb560e21b815280610ca56004820161047a565b0390fd5b90610cb694939291610670565b565b90565b610ccf610cca610cd492610cb8565b6107a1565b6100bf565b90565b610d007fa3ae60943e4f183142036d77b94858085814dd428f131289aea7e42703fb0b00610cbb565b90565b610d0b610cd7565b90565b604090610d37610d3e9496959396610d2d60608401985f8501906100c2565b6020830190610337565b0190610337565b565b9091929493610d4d610557565b955b86610d6c610d66610d618789906106df565b61017d565b9161017d565b1015610ef757610d86610d8185878a9161077f565b610794565b95610d8f610557565b5b80610da3610d9d8b61017d565b9161017d565b1015610e0157610dbd610db88789849161077f565b610794565b610dcf610dc98a6100bf565b916100bf565b14610de257610ddd9061075c565b610d90565b610dfd885f91829163d834506760e01b8352600483016100cf565b0390fd5b5090939194969296610e11610557565b5b80610e2f610e29610e24898b906106df565b61017d565b9161017d565b1015610e8d57610e49610e448789849161077f565b610794565b610e5b610e558a6100bf565b916100bf565b14610e6e57610e699061075c565b610e12565b610e89885f918291637346a6e960e01b8352600483016100cf565b0390fd5b509491939596929096610eab610ea65f860183906105ae565b6105de565b9081610ec0610eba600161031f565b9161031f565b14610ed7575050610ed09061075c565b9594610d4f565b610ef360015f938493636d8557b760e01b855260048501610d0e565b0390fd5b925092509350610f05610557565b5b80610f23610f1d610f188587906106df565b61017d565b9161017d565b101561101957610f3d610f388385849161077f565b610794565b93610f46610557565b5b80610f5a610f548561017d565b9161017d565b1015610fb857610f74610f6f8587849161077f565b610794565b610f86610f80886100bf565b916100bf565b14610f9957610f949061075c565b610f47565b610fb4865f91829163d834506760e01b8352600483016100cf565b0390fd5b5093610fcf610fca5f880183906105ae565b6105de565b9081610fe4610fde600161031f565b9161031f565b03610ff9575050610ff49061075c565b610f06565b61101560025f938493636d8557b760e01b855260048501610d0e565b0390fd5b505050905056fea2646970667358221220cae804079fe59347151a1bb9c13f5460a3932cffbb6216cd0ed14bbd84e7d6f564736f6c637828302e382e33312d646576656c6f702e323032362e332e31322b636f6d6d69742e32656262333664340059",
+    "sourceMap": "1651:9249:19:-:0;;;;;;;;:::i;:::-;;;;;;;;;;:::i;:::-;;;;:::o;:::-;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x60806040526004361015610013575b6104b6565b61001d5f3561009c565b8063246ce79d1461009757806326a7d805146100925780637bb08e0e1461008d57806389fcd79614610088578063a78f84cf14610083578063c7df14e21461007e578063c895d51e146100795763cdc6102a0361000e5761047f565b61038e565b610359565b6102c7565b610226565b6101a2565b610148565b6100e4565b60e01c90565b60405190565b5f80fd5b5f80fd5b5f9103126100ba57565b6100ac565b90565b6100cb906100bf565b9052565b91906100e2905f602085019401906100c2565b565b34610114576100f43660046100b0565b6101106100ff6104e7565b6101076100a2565b918291826100cf565b0390f35b6100a8565b67ffffffffffffffff1690565b61012f90610119565b9052565b9190610146905f60208501940190610126565b565b34610178576101583660046100b0565b610174610163610538565b61016b6100a2565b91829182610133565b0390f35b6100a8565b90565b6101899061017d565b9052565b91906101a0905f60208501940190610180565b565b346101d2576101b23660046100b0565b6101ce6101bd61057f565b6101c56100a2565b9182918261018d565b0390f35b6100a8565b60026001609c1b0190565b6101ea6101d7565b90565b60018060a01b031690565b610201906101ed565b90565b61020d906101f8565b9052565b9190610224905f60208501940190610204565b565b34610256576102363660046100b0565b6102526102416101e2565b6102496100a2565b91829182610211565b0390f35b6100a8565b5f80fd5b610268816100bf565b0361026f57565b5f80fd5b905035906102808261025f565b565b9060208282031261029b57610298915f01610273565b90565b6100ac565b151590565b6102ae906102a0565b9052565b91906102c5905f602085019401906102a5565b565b346102f7576102f36102e26102dd366004610282565b6105eb565b6102ea6100a2565b918291826102b2565b0390f35b6100a8565b634e487b7160e01b5f52602160045260245ffd5b6003111561031a57565b6102fc565b9061032982610310565b565b6103349061031f565b90565b6103409061032b565b9052565b9190610357905f60208501940190610337565b565b346103895761038561037461036f366004610282565b61062a565b61037c6100a2565b91829182610344565b0390f35b6100a8565b346103be5761039e3660046100b0565b6103ba6103a9610651565b6103b16100a2565b918291826100cf565b0390f35b6100a8565b5f80fd5b5f80fd5b5f80fd5b909182601f830112156104095781359167ffffffffffffffff83116104045760200192602083028401116103ff57565b6103cb565b6103c7565b6103c3565b606081830312610475575f81013567ffffffffffffffff811161047057826104379183016103cf565b929093602083013567ffffffffffffffff811161046b5761045d836104689286016103cf565b939094604001610273565b90565b61025b565b61025b565b6100ac565b5f0190565b346104b15761049b61049236600461040e565b93929092610ca9565b6104a36100a2565b806104ad8161047a565b0390f35b6100a8565b5f80fd5b5f90565b5f1c90565b90565b6104d26104d7916104be565b6104c3565b90565b6104e490546104c6565b90565b6104ef6104ba565b5061050360026104fd610d03565b016104da565b90565b5f90565b67ffffffffffffffff1690565b610523610528916104be565b61050a565b90565b6105359054610517565b90565b610540610506565b50610554600361054e610d03565b0161052b565b90565b5f90565b90565b61056a61056f916104be565b61055b565b90565b61057c905461055e565b90565b610587610557565b5061059b6004610595610d03565b01610572565b90565b5f90565b6105ab906100bf565b90565b906105b8906105a2565b5f5260205260405f2090565b60ff1690565b6105d66105db916104be565b6105c4565b90565b6105e890546105ca565b90565b61060a61060f916105fa61059e565b505f610604610d03565b016105ae565b6105de565b61062261061c600161031f565b9161031f565b1490565b5f90565b61064961064e91610639610626565b505f610643610d03565b016105ae565b6105de565b90565b6106596104ba565b5061066d6001610667610d03565b016104da565b90565b939291903361068e6106886106836101d7565b6101f8565b916101f8565b0361069e5761069c94610946565b565b6106b9335f91829163472511eb60e11b835260048301610211565b0390fd5b90565b90565b6106d76106d26106dc926106bd565b6106c0565b610119565b90565b5090565b6106f76106f26106fc926106bd565b6106c0565b61017d565b90565b90565b61071661071161071b926106ff565b6106c0565b610119565b90565b634e487b7160e01b5f52601160045260245ffd5b61073e61074491610119565b91610119565b019067ffffffffffffffff821161075757565b61071e565b6001610768910161017d565b90565b634e487b7160e01b5f52603260045260245ffd5b919081101561078f576020020190565b61076b565b3561079e8161025f565b90565b5f1b90565b906107b260ff916107a1565b9181191691161790565b6107c59061031f565b90565b90565b906107e06107db6107e7926107bc565b6107c8565b82546107a6565b9055565b6107f49061017d565b5f1981146108025760010190565b61071e565b61081b61081661082092610119565b6106c0565b610119565b90565b91602061084492949361083d60408201965f830190610337565b0190610337565b565b61084f9061017d565b5f811461085d576001900390565b61071e565b9061086e5f19916107a1565b9181191691161790565b610881906104be565b90565b906108996108946108a0926105a2565b610878565b8254610862565b9055565b906108b767ffffffffffffffff916107a1565b9181191691161790565b90565b906108d96108d46108e092610807565b6108c1565b82546108a4565b9055565b6108f86108f36108fd9261017d565b6106c0565b61017d565b90565b90565b9061091861091361091f926108e4565b610900565b8254610862565b9055565b91602061094492949361093d60408201965f830190610180565b0190610180565b565b9490929192610953610d03565b936109606003860161052b565b61097261096c5f6106c3565b91610119565b14610c8d576109828783906106df565b61099461098e5f6106e3565b9161017d565b1480610c69575b610c4d57856109bd6109b76109b2600289016104da565b6100bf565b916100bf565b14610c2e576109d185888484918893610d40565b6109f06109e06003870161052b565b6109ea6001610702565b90610732565b936109fd60048701610572565b93610a06610557565b5b80610a24610a1e610a198d89906106df565b61017d565b9161017d565b1015610ad457610acf90610a42610a3d8c88849161077f565b610794565b96610a79610a5b610a565f8d018b906105ae565b6105de565b91610a748c610a6f5f600192018d906105ae565b6107cb565b6107eb565b976001908a91610ab2610aac7fb55248914791427650cad9ac333398e6ac0e218c28cc013e2e84710b40a987e1936105a2565b93610807565b93610ac7610abe6100a2565b92839283610823565b0390a361075c565b610a07565b509197909296959495610ae5610557565b5b80610b03610afd610af88d89906106df565b61017d565b9161017d565b1015610b9f57610b9a90610b41610b24610b1f8d89859161077f565b610794565b97610b3c6002610b375f8d018c906105ae565b6107cb565b610846565b966001906002908b91610b7d610b777fb55248914791427650cad9ac333398e6ac0e218c28cc013e2e84710b40a987e1936105a2565b93610807565b93610b92610b896100a2565b92839283610823565b0390a361075c565b610ae6565b509495610bd4610bdb93999892976004610be197610bc08a60028501610884565b610bcd85600385016108c4565b9101610903565b94956106df565b946106df565b610c14610c0e7f96b9d28f52e69b6ea44ab0ee7c0626fbf3ea51880e30d764d243df73a4a3b12a93610807565b936105a2565b93610c29610c206100a2565b92839283610923565b0390a3565b610c49865f918291639068ae8560e01b8352600483016100cf565b0390fd5b5f63a095e7e160e01b815280610c656004820161047a565b0390fd5b50610c758185906106df565b610c87610c815f6106e3565b9161017d565b1461099b565b5f63071cbeb560e21b815280610ca56004820161047a565b0390fd5b90610cb694939291610670565b565b90565b610ccf610cca610cd492610cb8565b6107a1565b6100bf565b90565b610d007fa3ae60943e4f183142036d77b94858085814dd428f131289aea7e42703fb0b00610cbb565b90565b610d0b610cd7565b90565b604090610d37610d3e9496959396610d2d60608401985f8501906100c2565b6020830190610337565b0190610337565b565b9091929493610d4d610557565b955b86610d6c610d66610d618789906106df565b61017d565b9161017d565b1015610ef757610d86610d8185878a9161077f565b610794565b95610d8f610557565b5b80610da3610d9d8b61017d565b9161017d565b1015610e0157610dbd610db88789849161077f565b610794565b610dcf610dc98a6100bf565b916100bf565b14610de257610ddd9061075c565b610d90565b610dfd885f91829163d834506760e01b8352600483016100cf565b0390fd5b5090939194969296610e11610557565b5b80610e2f610e29610e24898b906106df565b61017d565b9161017d565b1015610e8d57610e49610e448789849161077f565b610794565b610e5b610e558a6100bf565b916100bf565b14610e6e57610e699061075c565b610e12565b610e89885f918291637346a6e960e01b8352600483016100cf565b0390fd5b509491939596929096610eab610ea65f860183906105ae565b6105de565b9081610ec0610eba600161031f565b9161031f565b14610ed7575050610ed09061075c565b9594610d4f565b610ef360015f938493636d8557b760e01b855260048501610d0e565b0390fd5b925092509350610f05610557565b5b80610f23610f1d610f188587906106df565b61017d565b9161017d565b101561101957610f3d610f388385849161077f565b610794565b93610f46610557565b5b80610f5a610f548561017d565b9161017d565b1015610fb857610f74610f6f8587849161077f565b610794565b610f86610f80886100bf565b916100bf565b14610f9957610f949061075c565b610f47565b610fb4865f91829163d834506760e01b8352600483016100cf565b0390fd5b5093610fcf610fca5f880183906105ae565b6105de565b9081610fe4610fde600161031f565b9161031f565b03610ff9575050610ff49061075c565b610f06565b61101560025f938493636d8557b760e01b855260048501610d0e565b0390fd5b505050905056fea2646970667358221220cae804079fe59347151a1bb9c13f5460a3932cffbb6216cd0ed14bbd84e7d6f564736f6c637828302e382e33312d646576656c6f702e323032362e332e31322b636f6d6d69742e32656262333664340059",
+    "sourceMap": "1651:9249:19:-:0;;;;;;;;;-1:-1:-1;1651:9249:19;:::i;:::-;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::i;:::-;;;;:::o;:::-;;;;:::o;:::-;;;;;;;;;;;;;;;:::o;:::-;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;;;;:::i;:::-;;;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::i;:::-;;;;:::o;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;;;;:::i;:::-;;;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;;;;:::i;:::-;;;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::i;3497:78::-;3533:42;1651:9249;3533:42;;;3497:78;:::o;:::-;;;:::i;:::-;;:::o;1651:9249::-;;;;;;;;:::o;:::-;;;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;;;;:::i;:::-;;;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::i;:::-;;;;;;;;:::i;:::-;;;;:::o;:::-;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;;;;;;;;;;:::i;:::-;;:::o;:::-;;:::i;:::-;;;;:::o;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;;;;;;:::i;:::-;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::i;:::-;;;;;;;;;;;;;;-1:-1:-1;1651:9249:19;;;:::o;:::-;;:::i;:::-;;;;;:::i;:::-;:::o;:::-;;;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;;;;;;:::i;:::-;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::i;:::-;;;;;;;;:::i;:::-;;;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::o;:::-;;:::i;:::-;;:::i;:::-;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;:::i;:::-;;:::o;:::-;;:::i;:::-;;:::i;:::-;;:::i;:::-;;;;:::o;:::-;;;;;;;;;:::i;:::-;;;;;;:::i;:::-;;;:::i;:::-;;;;;:::i;:::-;;;;;;:::i;:::-;;;;;;;:::o;:::-;;;;:::o;:::-;;:::o;:::-;;;;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;;:::i;:::-;;:::o;6043:122::-;6094:7;;:::i;:::-;6120:21;:38;;:21;;:::i;:::-;:38;;:::i;:::-;6113:45;:::o;1651:9249::-;;;:::o;:::-;;;;:::o;:::-;;;;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;;:::i;:::-;;:::o;6259:117::-;6308:6;;:::i;:::-;6333:21;:36;;:21;;:::i;:::-;:36;;:::i;:::-;6326:43;:::o;1651:9249::-;;;:::o;:::-;;:::o;:::-;;;;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;;:::i;:::-;;:::o;6564:116::-;6612:7;;:::i;:::-;6638:21;:35;;:21;;:::i;:::-;:35;;:::i;:::-;6631:42;:::o;1651:9249::-;;;:::o;:::-;;;;:::i;:::-;;:::o;:::-;;;;;:::i;:::-;;;;;;;;;:::o;:::-;;;;:::o;:::-;;;;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;;:::i;:::-;;:::o;5189:156::-;5276:43;;5189:156;5253:4;;:::i;:::-;5276:21;:30;:21;;:::i;:::-;:30;:43;:::i;:::-;;:::i;:::-;:62;;5323:15;5276:62;:::i;:::-;;;:::i;:::-;;5269:69;:::o;1651:9249::-;;;:::o;5413:137::-;5500:43;;5413:137;5475:6;;:::i;:::-;5500:21;:30;:21;;:::i;:::-;:30;:43;:::i;:::-;;:::i;:::-;5493:50;:::o;5742:128::-;5796:7;;:::i;:::-;5822:21;:41;;:21;;:::i;:::-;:41;;:::i;:::-;5815:48;:::o;4988:113::-;;;;;5027:10;:23;;5041:9;;:::i;:::-;5027:23;:::i;:::-;;;:::i;:::-;;5023:60;;5093:1;;;:::i;:::-;4988:113::o;5023:60::-;5059:24;5072:10;5059:24;;;;;;;;;;;;;:::i;:::-;;;;1651:9249;;:::o;:::-;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;;;;;;;;;;;;;;:::i;:::-;;;:::i;:::-;;;;;;;;:::o;:::-;;:::i;:::-;;;;;;:::i;:::-;;:::o;:::-;;;;;;;;;;;;;;;;;;;;;;;;:::o;:::-;;:::i;:::-;;;;;:::i;:::-;;:::o;:::-;;;;:::o;:::-;;;;;;:::i;:::-;;;;;;;;;:::o;:::-;;;;:::i;:::-;;:::o;:::-;;:::o;:::-;;;;;;;:::i;:::-;;:::i;:::-;;;;:::i;:::-;;;:::o;:::-;;;;:::i;:::-;;;;;;;;;;:::o;:::-;;:::i;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;;;;;;;;;;;;;;:::i;:::-;;;;:::i;:::-;:::o;:::-;;;;:::i;:::-;;;;;;;;;;:::o;:::-;;:::i;:::-;;;;;;;:::i;:::-;;;;;;;;;:::o;:::-;;;;:::i;:::-;;:::o;:::-;;;;;;;:::i;:::-;;:::i;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;:::i;:::-;;;;;;;;;:::o;:::-;;:::o;:::-;;;;;;;:::i;:::-;;:::i;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;:::o;:::-;;;;;;;:::i;:::-;;:::i;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;;;;;:::i;:::-;;;;:::i;:::-;:::o;7673:1643::-;;;;;;7874:21;;:::i;:::-;7910:8;:23;;:8;:23;;:::i;:::-;:28;;7937:1;7910:28;:::i;:::-;;;:::i;:::-;;7906:56;;7976:13;:6;;:13;;:::i;:::-;:18;;7993:1;7976:18;:::i;:::-;;;:::i;:::-;;:43;;;7673:1643;7972:69;;8055:19;:48;;8078:25;;:8;:25;;:::i;:::-;8055:48;:::i;:::-;;;:::i;:::-;;8051:126;;8220:9;8202:8;8212:6;;8220:9;;;;;:::i;:::-;8268:27;:23;;:8;:23;;:::i;:::-;:27;8294:1;8268:27;:::i;:::-;;;:::i;:::-;8332:8;:22;;:8;:22;;:::i;:::-;8370:9;;;:::i;:::-;8400:3;8381:1;:17;;8385:13;:6;;:13;;:::i;:::-;8381:17;:::i;:::-;;;:::i;:::-;;;;;8400:3;8441:6;:9;;:6;;8448:1;8441:9;;:::i;:::-;;:::i;:::-;8488:8;8594:18;8488:30;;:17;:8;:17;8506:11;8488:30;;:::i;:::-;;:::i;:::-;8565:15;8532:48;8565:15;8532:30;:17;8565:15;8532:8;:17;8550:11;8532:30;;:::i;:::-;:48;:::i;:::-;8594:18;:::i;:::-;8654:11;8683:15;8700:17;;8631:87;;;;;;:::i;:::-;;;:::i;:::-;;;;;:::i;:::-;;;;;;:::i;:::-;;;;8400:3;:::i;:::-;8370:9;;8381:17;;;;;;;;;;8744:9;;:::i;:::-;8777:3;8755:1;:20;;8759:16;:9;;:16;;:::i;:::-;8755:20;:::i;:::-;;;:::i;:::-;;;;;8777:3;8818:9;8908:18;8818:12;;:9;;8828:1;8818:12;;:::i;:::-;;:::i;:::-;8877:17;8844:50;8877:17;8844:30;:17;:8;:17;8862:11;8844:30;;:::i;:::-;:50;:::i;:::-;8908:18;:::i;:::-;8968:11;8981:15;8998:17;;9017;;8945:90;;;;;;:::i;:::-;;;:::i;:::-;;;;;:::i;:::-;;;;;;:::i;:::-;;;;8777:3;:::i;:::-;8744:9;;8755:20;;;;9166:41;9277:13;8755:20;;;;;9166:22;9292:16;8755:20;9056:47;9084:19;9056:25;:8;:25;:47;:::i;:::-;9113:43;9139:17;9113:23;:8;:23;:43;:::i;:::-;9166:8;:22;:41;:::i;:::-;9256:19;9277:6;:13;:::i;:::-;9292:9;:16;:::i;:::-;9223:86;;;;;:::i;:::-;;;:::i;:::-;;;;;:::i;:::-;;;;;;:::i;:::-;;;;7673:1643::o;8051:126::-;8126:40;8146:19;8126:40;;;;;;;;;;;;;:::i;:::-;;;;7972:69;8028:13;;;;;;;;;;;;:::i;:::-;;;;7976:43;7998:9;:16;:9;;:16;;:::i;:::-;:21;;8018:1;7998:21;:::i;:::-;;;:::i;:::-;;7976:43;;7906:56;7947:15;;;;;;;;;;;;:::i;:::-;;;;7673:1643;;;;;;;;:::i;:::-;:::o;1651:9249::-;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;3282:128::-;3344:66;;;:::i;:::-;3282:128;:::o;10683:215::-;10799:25;;:::i;:::-;10683:215;:::o;1651:9249::-;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;:::i;:::-;;;;:::i;:::-;:::o;9322:1355::-;;;;;;9485:9;;:::i;:::-;9480:668;9515:3;9496:1;:17;;9500:13;:6;;:13;;:::i;:::-;9496:17;:::i;:::-;;;:::i;:::-;;;;;9556:9;;:6;;9563:1;9556:9;;:::i;:::-;;:::i;:::-;9585;;;:::i;:::-;9603:3;9596:1;:5;;9600:1;9596:5;:::i;:::-;;;:::i;:::-;;;;;9630:9;;:6;;9637:1;9630:9;;:::i;:::-;;:::i;:::-;:24;;9643:11;9630:24;:::i;:::-;;;:::i;:::-;;9626:70;;9603:3;;;:::i;:::-;9585:9;;9626:70;9663:33;9684:11;9663:33;;;;;;;;;;;;;:::i;:::-;;;;9596:5;;;;;;;;;9729:9;;:::i;:::-;9762:3;9740:1;:20;;9744:16;:9;;:16;;:::i;:::-;9740:20;:::i;:::-;;;:::i;:::-;;;;;9789:12;;:9;;9799:1;9789:12;;:::i;:::-;;:::i;:::-;:27;;9805:11;9789:27;:::i;:::-;;;:::i;:::-;;9785:118;;9762:3;;;:::i;:::-;9729:9;;9785:118;9847:37;9872:11;9847:37;;;;;;;;;;;;;:::i;:::-;;;;9740:20;;;;;;;;;;9954:30;;:17;:8;:17;9972:11;9954:30;;:::i;:::-;;:::i;:::-;10002:13;;:32;;10019:15;10002:32;:::i;:::-;;;:::i;:::-;;9998:140;;9515:3;;;;;:::i;:::-;9485:9;;;;9998:140;10061:62;10107:15;10061:62;;;;;;;;;;;;;:::i;:::-;;;;9496:17;;;;;;;10163:9;;:::i;:::-;10196:3;10174:1;:20;;10178:16;:9;;:16;;:::i;:::-;10174:20;:::i;:::-;;;:::i;:::-;;;;;10237:12;;:9;;10247:1;10237:12;;:::i;:::-;;:::i;:::-;10269:9;;;:::i;:::-;10287:3;10280:1;:5;;10284:1;10280:5;:::i;:::-;;;:::i;:::-;;;;;10314:12;;:9;;10324:1;10314:12;;:::i;:::-;;:::i;:::-;:27;;10330:11;10314:27;:::i;:::-;;;:::i;:::-;;10310:114;;10287:3;;;:::i;:::-;10269:9;;10310:114;10372:33;10393:11;10372:33;9663;;;;;;10372;;;;;;:::i;:::-;;;;10280:5;;;10475:30;;:17;:8;:17;10493:11;10475:30;;:::i;:::-;;:::i;:::-;10523:13;;:32;;10540:15;10523:32;:::i;:::-;;;:::i;:::-;;10519:142;;10196:3;;;;;:::i;:::-;10163:9;;10519:142;10582:64;10628:17;10582:64;10061:62;;;;;;10582:64;;;;;;:::i;:::-;;;;10174:20;;;;;;9322:1355::o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "AUTHORITY()": "89fcd796",
+    "acceptedCount()": "7bb08e0e",
+    "activePolicyHash()": "246ce79d",
+    "applyPolicyUpdate(bytes32[],bytes32[],bytes32)": "cdc6102a",
+    "bootstrapPolicyHash()": "c895d51e",
+    "isAccepted(bytes32)": "a78f84cf",
+    "policyRevision()": "26a7d805",
+    "statusOf(bytes32)": "c7df14e2"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.31-develop.2026.3.12+commit.2ebb36d4\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"admissionId\",\"type\":\"bytes32\"}],\"name\":\"ContradictoryAdmissionId\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"admissionId\",\"type\":\"bytes32\"}],\"name\":\"DuplicateAdmissionId\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"EmptyUpdate\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"admissionId\",\"type\":\"bytes32\"},{\"internalType\":\"enum MeasurementRegistry.Status\",\"name\":\"currentStatus\",\"type\":\"uint8\"},{\"internalType\":\"enum MeasurementRegistry.Status\",\"name\":\"requestedStatus\",\"type\":\"uint8\"}],\"name\":\"InvalidTransition\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"caller\",\"type\":\"address\"}],\"name\":\"Unauthorized\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"policyHash\",\"type\":\"bytes32\"}],\"name\":\"UnchangedPolicyHash\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"Uninitialized\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"admissionId\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"enum MeasurementRegistry.Status\",\"name\":\"previousStatus\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"enum MeasurementRegistry.Status\",\"name\":\"newStatus\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"uint64\",\"name\":\"policyRevision\",\"type\":\"uint64\"}],\"name\":\"AdmissionStatusChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint64\",\"name\":\"policyRevision\",\"type\":\"uint64\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"activePolicyHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"accepted\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deprecated\",\"type\":\"uint256\"}],\"name\":\"PolicyUpdated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"AUTHORITY\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"acceptedCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"activePolicyHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"accept\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"deprecate\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"newActivePolicyHash\",\"type\":\"bytes32\"}],\"name\":\"applyPolicyUpdate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bootstrapPolicyHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"admissionId\",\"type\":\"bytes32\"}],\"name\":\"isAccepted\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"policyRevision\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"admissionId\",\"type\":\"bytes32\"}],\"name\":\"statusOf\",\"outputs\":[{\"internalType\":\"enum MeasurementRegistry.Status\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"custom:spec\":\"TODO: add the public measurement-admission specification URL once published.\",\"details\":\"An off-chain policy compiler derives two outputs from each complete policy      document: the set of admitted IDs and the SHA-256 hash of the exact document      bytes. For a tuple-based schema, each ID represents a conjunction of exact      observed values (for example, PCR4 == a AND PCR9 == b AND PCR11 == c), and      the accepted-ID set is the disjunction (OR) of those concrete clauses. Any      policy alternatives are expanded into concrete IDs before reaching this      contract.      At genesis, deploy tooling writes the compiled IDs and document hash directly      into storage as policy revision 1. For later revisions, authority tooling      diffs the previous and new compiled ID sets and calls `applyPolicyUpdate` with      the status delta and the hash of the new complete document.      The registry does not verify that a status delta corresponds to a policy      hash; the authorized caller attests to that relationship. The status mapping      is the sole source of admission decisions. The hashes, revision, and count      support provenance, update sequencing, auditing, and consistency checks.      This contract is installed as a genesis predeploy, so its constructor is      deliberately empty and its initial state must be written directly into      genesis storage.\",\"events\":{\"AdmissionStatusChanged(bytes32,uint8,uint8,uint64)\":{\"params\":{\"admissionId\":\"The concrete admission clause whose status changed.\",\"newStatus\":\"Status after the update.\",\"policyRevision\":\"The revision resulting from the update.\",\"previousStatus\":\"Status before the update.\"}},\"PolicyUpdated(uint64,bytes32,uint256,uint256)\":{\"params\":{\"accepted\":\"Number of IDs accepted or reinstated by this update, not the current total.\",\"activePolicyHash\":\"SHA-256 of the exact complete policy document for this revision.\",\"deprecated\":\"Number of IDs deprecated by this update, not the current total.\",\"policyRevision\":\"The revision resulting from the update.\"}}},\"kind\":\"dev\",\"methods\":{\"acceptedCount()\":{\"details\":\"This is a cached audit and consistency value; it is not consulted by `isAccepted`.\"},\"activePolicyHash()\":{\"details\":\"This is an audit commitment and is not consulted by `isAccepted`.\"},\"applyPolicyUpdate(bytes32[],bytes32[],bytes32)\":{\"details\":\"Authority tooling is expected to compile the previous and new complete      policy documents, set `accept` to IDs present only in the new set, and set      `deprecate` to IDs present only in the previous set.      `newActivePolicyHash` identifies the complete new policy document, not a delta.      The registry trusts the authority to provide a matching ID delta and hash.      All status changes, metadata changes, and events are atomic.      Genesis must initialize the registry at revision 1. This function cannot      be used as a post-genesis initialization path.\",\"params\":{\"accept\":\"IDs transitioning from Unknown or Deprecated to Accepted.\",\"deprecate\":\"IDs transitioning from Accepted to Deprecated.\",\"newActivePolicyHash\":\"SHA-256 of the exact complete new policy document bytes.\"}},\"bootstrapPolicyHash()\":{\"details\":\"This is an immutable audit commitment and is not consulted by `isAccepted`.\"}},\"stateVariables\":{\"REGISTRY_STORAGE_LOCATION\":{\"details\":\"keccak256(abi.encode(uint256(          keccak256(\\\"seismic.storage.MeasurementRegistry\\\")) - 1))      & ~bytes32(uint256(0xff)). Hardcoded to avoid runtime derivation;      its value is pinned against this expression by a golden test.\"}},\"title\":\"MeasurementRegistry\",\"version\":1},\"userdoc\":{\"events\":{\"AdmissionStatusChanged(bytes32,uint8,uint8,uint64)\":{\"notice\":\"Emitted for each admission ID changed by a policy update.\"},\"PolicyUpdated(uint64,bytes32,uint256,uint256)\":{\"notice\":\"Emitted after all per-ID status changes for a policy update.\"}},\"kind\":\"user\",\"methods\":{\"AUTHORITY()\":{\"notice\":\"Well-known address of the contract authorized to mutate policy.\"},\"acceptedCount()\":{\"notice\":\"Number of concrete admission clauses currently in the Accepted state.\"},\"activePolicyHash()\":{\"notice\":\"SHA-256 of the exact complete policy document for the current revision.\"},\"applyPolicyUpdate(bytes32[],bytes32[],bytes32)\":{\"notice\":\"Applies the admission-ID difference for a new complete policy document.\"},\"bootstrapPolicyHash()\":{\"notice\":\"SHA-256 of the exact bootstrap policy document compiled into genesis revision 1.\"},\"isAccepted(bytes32)\":{\"notice\":\"Returns the authoritative admission decision for one compiled ID.\"},\"policyRevision()\":{\"notice\":\"Current policy revision. A valid genesis registry starts at revision 1.\"},\"statusOf(bytes32)\":{\"notice\":\"Returns the complete status of `admissionId`.\"}},\"notice\":\"Stores the admission status of opaque, schema-separated measurement IDs.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/enclave/MeasurementRegistry.sol\":\"MeasurementRegistry\"},\"evmVersion\":\"mercury\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[\":@openzeppelin/=lib/openzeppelin-contracts/\",\":forge-std/=lib/forge-std/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/\",\":seismic-std-lib/=src/seismic-std-lib/\",\":solady/=lib/solady/src/\"],\"viaIR\":true},\"sources\":{\"src/enclave/MeasurementRegistry.sol\":{\"keccak256\":\"0xadfc0752c6eef442735629ff9c02d0f90908890bd4a49fa6aedcac42a554f556\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://409600f6712f66fa9a32917c4df5f5eef990fd446d43f07ba01c20418335b75b\",\"dweb:/ipfs/QmdsNqPjzHFQJkRzQR4DUVZs5255D1AXR2t62XrP4KttDp\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.31-develop.2026.3.12+commit.2ebb36d4"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "admissionId",
+              "type": "bytes32"
+            }
+          ],
+          "type": "error",
+          "name": "ContradictoryAdmissionId"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "admissionId",
+              "type": "bytes32"
+            }
+          ],
+          "type": "error",
+          "name": "DuplicateAdmissionId"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "EmptyUpdate"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "admissionId",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "enum MeasurementRegistry.Status",
+              "name": "currentStatus",
+              "type": "uint8"
+            },
+            {
+              "internalType": "enum MeasurementRegistry.Status",
+              "name": "requestedStatus",
+              "type": "uint8"
+            }
+          ],
+          "type": "error",
+          "name": "InvalidTransition"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "caller",
+              "type": "address"
+            }
+          ],
+          "type": "error",
+          "name": "Unauthorized"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "policyHash",
+              "type": "bytes32"
+            }
+          ],
+          "type": "error",
+          "name": "UnchangedPolicyHash"
+        },
+        {
+          "inputs": [],
+          "type": "error",
+          "name": "Uninitialized"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "admissionId",
+              "type": "bytes32",
+              "indexed": true
+            },
+            {
+              "internalType": "enum MeasurementRegistry.Status",
+              "name": "previousStatus",
+              "type": "uint8",
+              "indexed": false
+            },
+            {
+              "internalType": "enum MeasurementRegistry.Status",
+              "name": "newStatus",
+              "type": "uint8",
+              "indexed": false
+            },
+            {
+              "internalType": "uint64",
+              "name": "policyRevision",
+              "type": "uint64",
+              "indexed": true
+            }
+          ],
+          "type": "event",
+          "name": "AdmissionStatusChanged",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint64",
+              "name": "policyRevision",
+              "type": "uint64",
+              "indexed": true
+            },
+            {
+              "internalType": "bytes32",
+              "name": "activePolicyHash",
+              "type": "bytes32",
+              "indexed": true
+            },
+            {
+              "internalType": "uint256",
+              "name": "accepted",
+              "type": "uint256",
+              "indexed": false
+            },
+            {
+              "internalType": "uint256",
+              "name": "deprecated",
+              "type": "uint256",
+              "indexed": false
+            }
+          ],
+          "type": "event",
+          "name": "PolicyUpdated",
+          "anonymous": false
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "AUTHORITY",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "acceptedCount",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "activePolicyHash",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32[]",
+              "name": "accept",
+              "type": "bytes32[]"
+            },
+            {
+              "internalType": "bytes32[]",
+              "name": "deprecate",
+              "type": "bytes32[]"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "newActivePolicyHash",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "applyPolicyUpdate"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "bootstrapPolicyHash",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "admissionId",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "isAccepted",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "policyRevision",
+          "outputs": [
+            {
+              "internalType": "uint64",
+              "name": "",
+              "type": "uint64"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "admissionId",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "statusOf",
+          "outputs": [
+            {
+              "internalType": "enum MeasurementRegistry.Status",
+              "name": "",
+              "type": "uint8"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {
+          "acceptedCount()": {
+            "details": "This is a cached audit and consistency value; it is not consulted by `isAccepted`."
+          },
+          "activePolicyHash()": {
+            "details": "This is an audit commitment and is not consulted by `isAccepted`."
+          },
+          "applyPolicyUpdate(bytes32[],bytes32[],bytes32)": {
+            "details": "Authority tooling is expected to compile the previous and new complete      policy documents, set `accept` to IDs present only in the new set, and set      `deprecate` to IDs present only in the previous set.      `newActivePolicyHash` identifies the complete new policy document, not a delta.      The registry trusts the authority to provide a matching ID delta and hash.      All status changes, metadata changes, and events are atomic.      Genesis must initialize the registry at revision 1. This function cannot      be used as a post-genesis initialization path.",
+            "params": {
+              "accept": "IDs transitioning from Unknown or Deprecated to Accepted.",
+              "deprecate": "IDs transitioning from Accepted to Deprecated.",
+              "newActivePolicyHash": "SHA-256 of the exact complete new policy document bytes."
+            }
+          },
+          "bootstrapPolicyHash()": {
+            "details": "This is an immutable audit commitment and is not consulted by `isAccepted`."
+          }
+        },
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {
+          "AUTHORITY()": {
+            "notice": "Well-known address of the contract authorized to mutate policy."
+          },
+          "acceptedCount()": {
+            "notice": "Number of concrete admission clauses currently in the Accepted state."
+          },
+          "activePolicyHash()": {
+            "notice": "SHA-256 of the exact complete policy document for the current revision."
+          },
+          "applyPolicyUpdate(bytes32[],bytes32[],bytes32)": {
+            "notice": "Applies the admission-ID difference for a new complete policy document."
+          },
+          "bootstrapPolicyHash()": {
+            "notice": "SHA-256 of the exact bootstrap policy document compiled into genesis revision 1."
+          },
+          "isAccepted(bytes32)": {
+            "notice": "Returns the authoritative admission decision for one compiled ID."
+          },
+          "policyRevision()": {
+            "notice": "Current policy revision. A valid genesis registry starts at revision 1."
+          },
+          "statusOf(bytes32)": {
+            "notice": "Returns the complete status of `admissionId`."
+          }
+        },
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        "@openzeppelin/=lib/openzeppelin-contracts/",
+        "forge-std/=lib/forge-std/src/",
+        "openzeppelin-contracts/=lib/openzeppelin-contracts/",
+        "seismic-std-lib/=src/seismic-std-lib/",
+        "solady/=lib/solady/src/"
+      ],
+      "optimizer": {
+        "enabled": false,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "src/enclave/MeasurementRegistry.sol": "MeasurementRegistry"
+      },
+      "evmVersion": "mercury",
+      "libraries": {},
+      "viaIR": true
+    },
+    "sources": {
+      "src/enclave/MeasurementRegistry.sol": {
+        "keccak256": "0xadfc0752c6eef442735629ff9c02d0f90908890bd4a49fa6aedcac42a554f556",
+        "urls": [
+          "bzz-raw://409600f6712f66fa9a32917c4df5f5eef990fd446d43f07ba01c20418335b75b",
+          "dweb:/ipfs/QmdsNqPjzHFQJkRzQR4DUVZs5255D1AXR2t62XrP4KttDp"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "id": 19
+}
