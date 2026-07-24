@@ -261,6 +261,8 @@
   * [AES-GCM Decrypt](reference/precompiles/aes-gcm-decrypt.md)
   * [HKDF](reference/precompiles/hkdf.md)
   * [secp256k1 Sign](reference/precompiles/secp256k1-sign.md)
+* [Predeploys](reference/predeploys.md)
+* [Deterministic Deployments](reference/deterministic-deployments.md)
 * [RPC Methods](reference/rpc-methods/README.md)
   * [seismic\_getTeePublicKey](reference/rpc-methods/seismic-get-tee-public-key.md)
   * [eth\_call](reference/rpc-methods/eth-call.md)
