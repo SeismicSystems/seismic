@@ -40,11 +40,11 @@ measurement admission. Despite their names, they do not upgrade contract
 bytecode. They are deployed at their fixed addresses but are not currently
 used by the network.
 
-The AES Solidity library is not an AES precompile. Current contracts call the
-AES and HKDF precompiles through internal `CryptoUtils` functions and do not
-link to this deployed library. The predeploy remains present for existing
-networks but is deprecated and slated for deletion from future genesis
-configurations.
+The public testnet genesis still contains the deprecated AES Solidity library
+at `0x1000000000000000000000000000000000000003`. It is not an AES precompile.
+Current contracts call the AES and HKDF precompiles through internal
+`CryptoUtils` functions and do not link to this deployed library. It has been
+removed from the genesis manifest used to build future dev configurations.
 
 The operations sentinel is intercepted by Seismic node software. Its fixed
 address and ABI identify an operations request, while its behavior is not
