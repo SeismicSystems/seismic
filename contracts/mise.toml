@@ -34,10 +34,10 @@ git diff --exit-code artifacts/ || \
 ########## sforge aliases (used by high-level tasks above, but can be used individually) ##########
 
 [tasks.sforge]
-description = "Run mise-installed sforge"
+description = "Run sfoundryup-installed sforge with the mise-managed ssolc"
 raw = true
 usage = 'arg "[args]" var=#true help="Arguments to pass to sforge"'
-# sforge uses /usr/local/bin/ssolc by default, which foundryup installs from the seismic branch.
+# sforge uses /usr/local/bin/ssolc by default, while sfoundryup installs the Seismic compiler.
 # Thus we need to point sforge to a different ssolc binary.
 # foundry.toml's solc key somehow doesn't expand relative paths (~ or $HOME), so we instead inject
 # the solc via FOUNDRY_SOLC env var in mise.toml tasks.
