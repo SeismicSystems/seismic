@@ -1,7 +1,12 @@
-# Claude Code
-.claude/**
-!.claude/settings.json
-!.claude/skills/*/SKILL.md
+# Claude Code — .claude/ is shared config (settings, skills) and committed;
+# deny-list only the local-only bits.
+.claude/settings.local.json
+.claude/.cc-writes/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
 
 # OS
 .DS_Store

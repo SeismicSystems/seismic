@@ -10,6 +10,7 @@ This is seismic's monorepo, targeting Seismic developers and contributors. It co
 - [docs/language-and-vm.md](docs/language-and-vm.md) — Mercury EVM spec: shielded types, CLOAD/CSTORE, FlaggedStorage, arrays, casting
 - [docs/gitbook/reference/repos.md](docs/gitbook/reference/repos.md) — all repos, fork management, dependency flow
 - [docs/claude-code-setup.md](docs/claude-code-setup.md) — Claude Code skills setup and symlink instructions
+- [docs/diagrams/README.md](docs/diagrams/README.md) — diagram conventions: Mermaid in markdown for structured diagrams, .excalidraw + rendered .png pairs here for freeform; follow this when creating or editing diagrams
 
 
 ## Docs ↔ Code Sync
