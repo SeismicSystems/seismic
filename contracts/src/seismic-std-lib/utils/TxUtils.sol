@@ -13,7 +13,12 @@ library TxUtils {
         }
     }
 
-    /// @notice True if the current transaction is a Seismic (type 0x4A) transaction.
+    /// @notice True when executing in an authenticated Seismic context: a real Seismic
+    /// transaction (type 0x4A) or an authenticated signed read. False for a plain,
+    /// unauthenticated `eth_call`.
+    /// @dev Reports the transaction type only. This is NOT an authorization check, does not
+    /// prove the call is state-changing (authenticated signed reads also return true), and does
+    /// not by itself guarantee that every field of the RPC response is encrypted.
     function isSeismicTx() internal view returns (bool) {
         return txType() == SEISMIC_TX_TYPE;
     }
