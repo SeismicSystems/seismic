@@ -1,6 +1,7 @@
 MultisigUpgradeOperator
 UpgradeOperator
 MeasurementRegistry
+MeasurementAuthorityDev
 ShieldedDelegationAccount
 DepositContract
 Directory
