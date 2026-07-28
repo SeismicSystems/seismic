@@ -91,11 +91,16 @@ jobs:
             bun-${{ runner.os }}-
 
       # `mise run test::integration::sreth` below starts reth in the background using `cargo run`,
-      # so we cache the built binary to speed up the workflow.
+      # so we cache the built binary to speed up the workflow. rust-cache caches ~/.cargo plus the
+      # target dir of the Rust workspace checked out at ./seismic-reth ("<workspace-dir> ->
+      # <target-dir>" syntax). shared-key is deliberately identical to client-py.yml's
+      # integration-test-reth job: both check out seismic-reth at the same path, so the two jobs
+      # restore one shared build cache — keep the blocks in sync.
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: seismic-reth -> target
+          shared-key: seismic-reth-debug
       # Explicitly build first because `mise run` will timeout after 60 seconds, and building reth
       # can take longer than that, especially on the first run when the cargo registry cache is cold.
       - run: cargo build --bin seismic-reth
