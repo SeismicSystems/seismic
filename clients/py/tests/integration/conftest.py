@@ -187,10 +187,24 @@ def _start_reth(port: int) -> _StartResult:
         "--http",
         "--http.port",
         str(port),
-        # Enclave
-        "--enclave.mock-server",
-        # Logging
+        # Built-in dev purpose keys; the default source waits on the
+        # custodian socket, which only exists on TEE nodes
+        "--seismic.purpose-keys-source",
+        "built-in",
+        # The default IPC path and authrpc/p2p ports are global (keyed on
+        # chain ID at best), so they collide with any other local reth
+        "--ipcdisable",
+        "--authrpc.port",
+        str(_free_port()),
+        "--port",
+        "0",
+        "--disable-discovery",
+        # Logging: --log.file.directory keeps file logs (and boot panics
+        # when the directory is unwritable) inside this run's tmpdir
+        # instead of the machine-global reth cache
         "--quiet",
+        "--log.file.directory",
+        os.path.join(tmpdir, "logs"),
         # Data directories
         "--datadir",
         tmpdir,
