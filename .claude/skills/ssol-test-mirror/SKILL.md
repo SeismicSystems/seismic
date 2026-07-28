@@ -190,7 +190,7 @@ When adapting `int` tests to `sint`:
 
 When skipping, tell the user why.
 
-## Complete Example: Arithmetic Test
+## Complete Example
 
 **Source** (`checked_add_v2.sol`):
 ```solidity
@@ -220,96 +220,6 @@ contract C {
 // f(suint16,suint16): 65535, 1 -> FAILURE, hex"4e487b71", 0x11
 ```
 
-## Complete Example: Storage + Assembly Test
-
-**Source** (`unchecked_cleanup.sol`):
-```solidity
-contract C {
-    uint8 a;
-    uint8 b;
-    function testDiv() public returns (uint) {
-        assembly {
-            sstore(a.slot, 0x0102)
-            sstore(b.slot, 0x0101)
-        }
-        unchecked { return a / b; }
-    }
-}
-```
-
-**Adapted** (`shielded_unchecked_cleanup.sol`):
-```solidity
-contract C {
-    suint8 a;
-    suint8 b;
-
-    function testDiv() public returns (uint) {
-        assembly {
-            cstore(a.slot, 0x0102)
-            cstore(b.slot, 0x0101)
-        }
-        unchecked {
-            return uint(a / b);
-        }
-    }
-}
-// ----
-// testDiv() -> 2
-```
-
-## Complete Example: Array Test
-
-**Source** (`array_copy_cleanup_uint40.sol`):
-```solidity
-contract C {
-    uint40[] x;
-    function f() public returns(bool) {
-        for (uint i = 0; i < 20; i++) x.push(42);
-        while (x.length > 1) x.pop();
-        x[0] = 23;
-        assembly { sstore(x.slot, 20) }
-        // ... assertions ...
-    }
-}
-```
-
-**Adapted** (`shielded_array_copy_cleanup_uint40.sol`):
-```solidity
-contract C {
-    suint40[] x;
-    function f() public returns(bool) {
-        for (uint i = 0; i < 20; i++) x.push(suint40(42));
-        while (uint256(x.length) > 1) x.pop();
-        x[0] = suint40(23);
-        assembly { cstore(x.slot, 20) }
-        assert(uint40(x[0]) == 23);
-        assert(uint40(x[1]) == 0);
-        // ... etc ...
-    }
-}
-```
-
 ## After Writing Tests
 
-Use the `/ssolc-tests` skill for detailed build and test commands. Quick summary:
-
-1. **Build the compiler** (if not already built):
-   ```bash
-   mkdir -p build && cd build && cmake .. && make -j$(nproc)
-   ```
-
-2. **Syntax tests**: Verify with isoltest (always pass `--no-semantic-tests`):
-   ```bash
-   build/test/tools/isoltest --no-semantic-tests -t "<test-filter>"
-   ```
-   Use `--accept-updates` only with explicit user approval to fix byte offsets in error expectations.
-
-3. **Semantic tests**: Run via seismic-revm's `revme` binary (see `/ssolc-tests` for full commands with all optimizer/via-ir configurations):
-   ```bash
-   cd <seismic-revm-repo-root> && cargo run -p revme -- semantics \
-     --keep-going --unsafe-via-ir \
-     -s "<solidity-repo-root>/build/solc/solc" \
-     -t "<solidity-repo-root>/test/libsolidity/semanticTests"
-   ```
-
-4. If a test fails, diagnose whether it's an adaptation error or a compiler bug. Fix adaptation errors; report compiler bugs to the user.
+Use the `ssolc-tests` skill for build and test commands (compiler build, isoltest for syntax tests with `--no-semantic-tests`, revme semantic tests with all optimizer/via-ir configurations). If a test fails, diagnose whether it's an adaptation error or a compiler bug — fix adaptation errors; report compiler bugs to the user.

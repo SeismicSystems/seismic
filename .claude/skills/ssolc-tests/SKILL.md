@@ -1,3 +1,8 @@
+---
+name: ssolc-tests
+description: Build and test seismic-solidity locally — cmake build, soltest.sh Boost unit tests, revme semantic tests via seismic-revm, and isoltest for syntax test expectations. Use when running, filtering, or debugging solidity/ssolc tests, semantic tests, or updating test expectations.
+---
+
 # Running the Test Suite Locally
 
 Instructions for building and testing seismic-solidity.
@@ -30,50 +35,29 @@ You can filter tests with `-t`:
 
 ## Running Semantic Tests
 
-Semantic tests use the seismic-revm fork (not evmone). They must be run from `<workspace-root>/seismic-revm`, where `<workspace-root>` is the parent directory containing all seismic repos as siblings (the same directory that holds `seismic/`, `seismic-revm/`, `seismic-solidity/`, etc.). See the below sections for the specific commands.
+Semantic tests use the seismic-revm fork (not evmone). They must be run from `<workspace-root>/seismic-revm`, where `<workspace-root>` is the parent directory containing all seismic repos as siblings (the same directory that holds `seismic/`, `seismic-revm/`, `seismic-solidity/`, etc.).
 
 **Important:** Replace `<solidity-repo-root>` below with the absolute path to the seismic-solidity repo you are working in (e.g., for git worktrees, use the worktree path). Replace `<workspace-root>` with the absolute path to your seismic workspace directory.
 
-Note: the --unsafe-via-ir command will allow us to bypass a restriction in Seismic Solidity that prevents compiling --via-ir or --experimental-via-ir. It does not run all the tests --via-ir necessarily. You can read a more detailed writeup of this argument by calling --help on the `semantics` revme subcommand
+Note: `--unsafe-via-ir` bypasses a restriction in Seismic Solidity that prevents compiling `--via-ir` or `--experimental-via-ir`. It does not run all the tests via-ir necessarily. See `--help` on the `semantics` revme subcommand for details.
 
-### Without Optimizer, without --via-ir
-
-```bash
-cd <workspace-root>/seismic-revm && cargo run -p revme -- semantics \
-  --keep-going --unsafe-via-ir \
-  -s "<solidity-repo-root>/build/solc/solc" \
-  -t "<solidity-repo-root>/test/libsolidity/semanticTests"
-```
-
-### With Optimizer, without --via-ir
+Base command:
 
 ```bash
 cd <workspace-root>/seismic-revm && cargo run -p revme -- semantics \
   --keep-going --unsafe-via-ir \
-  --optimize --optimizer-runs 200 \
   -s "<solidity-repo-root>/build/solc/solc" \
   -t "<solidity-repo-root>/test/libsolidity/semanticTests"
 ```
 
-### Without Optimizer, with --via-ir
+Run all four configurations by adding flags to the base command:
 
-```bash
-cd <workspace-root>/seismic-revm && cargo run -p revme -- semantics \
-  --keep-going --unsafe-via-ir --via-ir \
-  -s "<solidity-repo-root>/build/solc/solc" \
-  -t "<solidity-repo-root>/test/libsolidity/semanticTests"
-```
-
-### With Optimizer, with --via-ir
-
-```bash
-cd <workspace-root>/seismic-revm && cargo run -p revme -- semantics \
-  --keep-going --unsafe-via-ir --via-ir \
-  --optimize --optimizer-runs 200 \
-  -s "<solidity-repo-root>/build/solc/solc" \
-  -t "<solidity-repo-root>/test/libsolidity/semanticTests"
-```
-
+| Configuration | Extra flags |
+|---|---|
+| No optimizer, no via-ir | (none) |
+| Optimizer, no via-ir | `--optimize --optimizer-runs 200` |
+| No optimizer, via-ir | `--via-ir` |
+| Optimizer, via-ir | `--via-ir --optimize --optimizer-runs 200` |
 
 ## Running isoltest
 
@@ -102,7 +86,5 @@ You may use `--accept-updates` to batch-fix test expectations, but **you must wa
 ## Notes
 
 - The compiler binary is `solc` (not `ssolc`) inside `build/solc/`
-- `--skip-via-ir` is required until the via-IR pipeline is re-enabled. You can find this on the `seismic-revm` branch called `ci-via-ir-support`
-- Some tests may only fail with the optimizer enabled
-- Some tests may only fail with the optimizer disabled
-- Always test both configurations when debugging issues
+- Semantic test runs require `--unsafe-via-ir` (see above); via-IR pipeline re-enablement work lives on the seismic-revm branch `ci-via-ir-support`
+- Some tests may only fail with the optimizer enabled, others only with it disabled — always test both configurations when debugging issues

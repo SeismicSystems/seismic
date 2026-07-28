@@ -10,53 +10,30 @@ An auditor has found a problem in this codebase. We are tasked with fixing the i
 
 ## Workflow
 
-Follow these steps for all audit fixes:
-
 1. **Write tests that expose the faulty behaviour**
    - Create comprehensive tests that demonstrate the vulnerability or issue
-   - Tests should clearly show the problematic behavior
 
 2. **Run tests against the current code**
-   - Execute the tests to confirm they fail as expected
-   - This validates that our tests accurately capture the issue
+   - Confirm they fail as expected — this validates that the tests accurately capture the issue
    - The entire test suite is run in .github/workflows, usually called "seismic.yml" but sometimes "test.yml" or "ci.yml"
 
-3. **Commit the changes**
-   - All of the tests we have added should be in a single commit
-   - Important to not commit changes until you have run the added tests, and they have all failed
+3. **Commit the tests**
+   - All added tests go in a single `test[optional scope]:` commit (Conventional Commits)
+   - Do not commit until the added tests have run and all failed
 
-4. **Implement the fixes**
+4. **Implement the fix**
    - If the auditor clearly suggested a fix, follow that approach
    - Otherwise, think critically about the best solution
-   - Apply the fix to resolve the issue
 
 5. **Run tests again**
-   - Execute the tests to verify the fix works
    - Repeat steps 4 & 5 until all tests pass
 
 6. **Commit the fix**
-   - It's important that the full test suite passes before you commit your changes
-   - If you realized you needed to add more changes, make sure your finished product still contains two commits: (1) the test commit and (2) the actual fix
+   - The full test suite must pass before committing
+   - Commit as `fix[optional scope]: <description>` with an optional body explaining approach and trade-offs
+   - The finished product must be exactly two commits: (1) the tests, (2) the fix
 
-## Communication
-
-As you make progress, explain:
-- What we will do to fix the issue
-- Why we're taking this approach
-- Trade-offs or considerations in the solution
-
-## Commit message format
-It's important that your commit messages are good, and accurately describe the changes. We also want the formats of these commits to match the "Conventional Commits". A summary of these rules:
-- Structure: Every commit must follow the format: <type>[optional scope]: <description> followed by an optional body and footer(s).
-- Core Types for this task are:
-  - fix: we made the actual fix
-  - test: we added tests that exposed the faulty behaviour
-- Breaking Changes: Indicated by a ! after the type/scope (e.g., feat!:) or by including BREAKING CHANGE: as a footer. This correlates to a MAJOR in SemVer.
-- Optional Scopes: A noun in parentheses providing additional context (e.g., feat(api):).
-- Other Types: Allows for types like feat:, build:, chore:, ci:, docs:, style:, refactor:, perf:, and test:.
-- Format Rules: * A blank line must separate the description from the body and the body from the footer.
-- Footers must use a hyphenated token (e.g., Reviewed-by:) followed by a separator.
-- Don't mention this was authored or co-authored by Claude
+Do not mention that commits were authored or co-authored by Claude.
 
 ## Priorities (in order)
 
