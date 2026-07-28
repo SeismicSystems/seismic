@@ -1,0 +1,220 @@
+{
+  "abi": [
+    {
+      "type": "function",
+      "name": "OWNER",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "REGISTRY",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "contract MeasurementRegistry"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "applyPolicyUpdate",
+      "inputs": [
+        {
+          "name": "accept",
+          "type": "bytes32[]",
+          "internalType": "bytes32[]"
+        },
+        {
+          "name": "deprecate",
+          "type": "bytes32[]",
+          "internalType": "bytes32[]"
+        },
+        {
+          "name": "newActivePolicyHash",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "error",
+      "name": "NotOwner",
+      "inputs": [
+        {
+          "name": "caller",
+          "type": "address",
+          "internalType": "address"
+        }
+      ]
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234601c57600e6020565b61051461002b823961051490f35b6026565b60405190565b5f80fdfe60806040526004361015610013575b6102e0565b61001d5f3561004c565b806306433b1b14610047578063117803e3146100425763cdc6102a0361000e576102a9565b61018e565b610108565b60e01c90565b60405190565b5f80fd5b5f80fd5b5f91031261006a57565b61005c565b60018060a01b031690565b90565b61009161008c6100969261006f565b61007a565b61006f565b90565b6100a29061007d565b90565b6100ae90610099565b90565b6100c0600180609c1b016100a5565b90565b6100cb6100b1565b90565b6100d79061007d565b90565b6100e3906100ce565b90565b6100ef906100da565b9052565b9190610106905f602085019401906100e6565b565b3461013857610118366004610060565b6101346101236100c3565b61012b610052565b918291826100f3565b0390f35b610058565b73f39fd6e51aad88f6f4ce6ab8827279cfffb9226690565b61015d61013d565b90565b6101699061006f565b90565b61017590610160565b9052565b919061018c905f6020850194019061016c565b565b346101be5761019e366004610060565b6101ba6101a9610155565b6101b1610052565b91829182610179565b0390f35b610058565b5f80fd5b5f80fd5b5f80fd5b5f80fd5b909182601f8301121561020d5781359167ffffffffffffffff831161020857602001926020830284011161020357565b6101cf565b6101cb565b6101c7565b90565b61021e81610212565b0361022557565b5f80fd5b9050359061023682610215565b565b60608183031261029f575f81013567ffffffffffffffff811161029a57826102619183016101d3565b929093602083013567ffffffffffffffff811161029557610287836102929286016101d3565b939094604001610229565b90565b6101c3565b6101c3565b61005c565b5f0190565b346102db576102c56102bc366004610238565b939290926103e0565b6102cd610052565b806102d7816102a4565b0390f35b610058565b5f80fd5b5f80fd5b601f801991011690565b634e487b7160e01b5f52604160045260245ffd5b90610310906102e8565b810190811067ffffffffffffffff82111761032a57604052565b6102f2565b60e01b90565b5f91031261033f57565b61005c565b60209181520190565b5f80fd5b9037565b90918261036191610344565b9160018060fb1b03811161038457829160206103809202938491610351565b0190565b61034d565b61039290610212565b9052565b9594926103ce946103b86103c69360409560608b01918b83035f8d0152610355565b9188830360208a0152610355565b940190610389565b565b6103d8610052565b3d5f823e3d90fd5b93909193336103fe6103f86103f361013d565b610160565b91610160565b036104995761041361040e6100b1565b6100da565b9163cdc6102a919395949091833b1561049457610451610446935f9793889461043a610052565b9a8b998a98899761032f565b875260048701610396565b03925af1801561048f57610463575b50565b610482905f3d8111610488575b61047a8183610306565b810190610335565b5f610460565b503d610470565b6103d0565b6102e4565b6104b4335f91829163245aecd360e01b835260048301610179565b0390fdfea2646970667358221220486dc1853c8722a23d199aa3a61e2edaa7f4641bdcf4ba680e86eb52fe9a92f764736f6c637828302e382e33312d646576656c6f702e323032362e342e32392b636f6d6d69742e63643931363364380059",
+    "sourceMap": "992:1168:19:-:0;;;;;;;;:::i;:::-;;;;;;;;;;:::i;:::-;;;;:::o;:::-;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x60806040526004361015610013575b6102e0565b61001d5f3561004c565b806306433b1b14610047578063117803e3146100425763cdc6102a0361000e576102a9565b61018e565b610108565b60e01c90565b60405190565b5f80fd5b5f80fd5b5f91031261006a57565b61005c565b60018060a01b031690565b90565b61009161008c6100969261006f565b61007a565b61006f565b90565b6100a29061007d565b90565b6100ae90610099565b90565b6100c0600180609c1b016100a5565b90565b6100cb6100b1565b90565b6100d79061007d565b90565b6100e3906100ce565b90565b6100ef906100da565b9052565b9190610106905f602085019401906100e6565b565b3461013857610118366004610060565b6101346101236100c3565b61012b610052565b918291826100f3565b0390f35b610058565b73f39fd6e51aad88f6f4ce6ab8827279cfffb9226690565b61015d61013d565b90565b6101699061006f565b90565b61017590610160565b9052565b919061018c905f6020850194019061016c565b565b346101be5761019e366004610060565b6101ba6101a9610155565b6101b1610052565b91829182610179565b0390f35b610058565b5f80fd5b5f80fd5b5f80fd5b5f80fd5b909182601f8301121561020d5781359167ffffffffffffffff831161020857602001926020830284011161020357565b6101cf565b6101cb565b6101c7565b90565b61021e81610212565b0361022557565b5f80fd5b9050359061023682610215565b565b60608183031261029f575f81013567ffffffffffffffff811161029a57826102619183016101d3565b929093602083013567ffffffffffffffff811161029557610287836102929286016101d3565b939094604001610229565b90565b6101c3565b6101c3565b61005c565b5f0190565b346102db576102c56102bc366004610238565b939290926103e0565b6102cd610052565b806102d7816102a4565b0390f35b610058565b5f80fd5b5f80fd5b601f801991011690565b634e487b7160e01b5f52604160045260245ffd5b90610310906102e8565b810190811067ffffffffffffffff82111761032a57604052565b6102f2565b60e01b90565b5f91031261033f57565b61005c565b60209181520190565b5f80fd5b9037565b90918261036191610344565b9160018060fb1b03811161038457829160206103809202938491610351565b0190565b61034d565b61039290610212565b9052565b9594926103ce946103b86103c69360409560608b01918b83035f8d0152610355565b9188830360208a0152610355565b940190610389565b565b6103d8610052565b3d5f823e3d90fd5b93909193336103fe6103f86103f361013d565b610160565b91610160565b036104995761041361040e6100b1565b6100da565b9163cdc6102a919395949091833b1561049457610451610446935f9793889461043a610052565b9a8b998a98899761032f565b875260048701610396565b03925af1801561048f57610463575b50565b610482905f3d8111610488575b61047a8183610306565b810190610335565b5f610460565b503d610470565b6103d0565b6102e4565b6104b4335f91829163245aecd360e01b835260048301610179565b0390fdfea2646970667358221220486dc1853c8722a23d199aa3a61e2edaa7f4641bdcf4ba680e86eb52fe9a92f764736f6c637828302e382e33312d646576656c6f702e323032362e342e32392b636f6d6d69742e63643931363364380059",
+    "sourceMap": "992:1168:19:-:0;;;;;;;;;-1:-1:-1;992:1168:19;:::i;:::-;;;;;:::i;:::-;;;;;;;;;;;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;;;:::o;:::-;;;;:::o;:::-;;;;;;;;;;;;;;;:::o;:::-;;:::i;:::-;;;;;;;;:::o;:::-;;:::o;:::-;;;;;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;:::o;1275:110::-;1322:63;992:1168;1342:42;;;;1322:63;:::i;:::-;1275:110;:::o;:::-;;;:::i;:::-;;:::o;992:1168::-;;;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;;;;:::i;:::-;;;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::i;1115:74::-;1147:42;1115:74;:::o;:::-;;;:::i;:::-;;:::o;992:1168::-;;;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;;;;:::i;:::-;;;;:::i;:::-;;;:::i;:::-;;;;;;:::i;:::-;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::o;:::-;;:::i;:::-;;:::i;:::-;;:::i;:::-;;:::o;:::-;;;;:::i;:::-;;;;:::o;:::-;;;;;;;;;;;;:::i;:::-;:::o;:::-;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;:::i;:::-;;:::o;:::-;;:::i;:::-;;:::i;:::-;;:::i;:::-;;;;:::o;:::-;;;;;;;;;:::i;:::-;;;;;;:::i;:::-;;;:::i;:::-;;;;;:::i;:::-;;;;;;:::i;:::-;;;;;;;;;;;;;;;;:::o;:::-;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;:::o;:::-;;:::i;:::-;;;;:::o;:::-;;;;;;;:::o;:::-;;:::i;:::-;;;;;;;:::o;:::-;;;;;;;:::o;:::-;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;:::o;:::-;;:::i;:::-;;;;:::i;:::-;;;:::o;:::-;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;:::i;:::-;;;;;:::i;:::-;:::o;:::-;;;:::i;:::-;;;;;;;;1878:280;;;;;2026:10;:19;;2040:5;;:::i;:::-;2026:19;:::i;:::-;;;:::i;:::-;;2022:52;;2085:26;:8;;:::i;:::-;:26;:::i;:::-;;;2112:6;;2120:9;;2131:19;2085:66;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;:::i;:::-;;;;;;;:::i;:::-;;;;;;;;;;;1878:280;;:::o;2085:66::-;;;;;;;;;;;;;;:::i;:::-;;;;;:::i;:::-;;;;;;;;;;;:::i;:::-;;:::i;2022:52::-;2054:20;2063:10;2054:20;;;;;;;;;;;;;:::i;:::-;;;",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "OWNER()": "117803e3",
+    "REGISTRY()": "06433b1b",
+    "applyPolicyUpdate(bytes32[],bytes32[],bytes32)": "cdc6102a"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.31-develop.2026.4.29+commit.cd9163d8\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"caller\",\"type\":\"address\"}],\"name\":\"NotOwner\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OWNER\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"REGISTRY\",\"outputs\":[{\"internalType\":\"contract MeasurementRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"accept\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"deprecate\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32\",\"name\":\"newActivePolicyHash\",\"type\":\"bytes32\"}],\"name\":\"applyPolicyUpdate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"FOR DEVELOPMENT AND TESTS ONLY. The owner is a well-known Anvil test key,      so any network running this contract has a publicly known policy authority.      It exists so local networks and integration tests can exercise live policy      mutation (accept, deprecate, reinstate) against the registry with one      transaction from one key.      The registry recognizes one fixed authority address      (`MeasurementRegistry.AUTHORITY`), which no EOA can occupy, so even a      development network needs a forwarding contract there. Production networks      install an audited multisig/governance component behind the same address      at genesis; the registry and the address itself never change.\",\"kind\":\"dev\",\"methods\":{\"applyPolicyUpdate(bytes32[],bytes32[],bytes32)\":{\"details\":\"The registry enforces payload validity (status transitions, duplicates,      policy-hash change) and emits all policy events.\",\"params\":{\"accept\":\"IDs transitioning from Unknown or Deprecated to Accepted.\",\"deprecate\":\"IDs transitioning from Accepted to Deprecated.\",\"newActivePolicyHash\":\"SHA-256 of the exact complete new policy document bytes.\"}}},\"title\":\"MeasurementAuthorityDev\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"OWNER()\":{\"notice\":\"The only account allowed to apply policy updates (Anvil account 0).\"},\"REGISTRY()\":{\"notice\":\"The registry this authority administers, installed at genesis.\"},\"applyPolicyUpdate(bytes32[],bytes32[],bytes32)\":{\"notice\":\"Forwards a policy update to the registry.\"}},\"notice\":\"Single-owner forwarder that drives `MeasurementRegistry.applyPolicyUpdate`.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/enclave/MeasurementAuthorityDev.sol\":\"MeasurementAuthorityDev\"},\"evmVersion\":\"mercury\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[\":@openzeppelin/=lib/openzeppelin-contracts/\",\":forge-std/=lib/forge-std/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/\",\":seismic-std-lib/=src/seismic-std-lib/\",\":solady/=lib/solady/src/\"],\"viaIR\":true},\"sources\":{\"src/enclave/MeasurementAuthorityDev.sol\":{\"keccak256\":\"0x92353a8ece7810e733baa86bdf2c87b79813e8dea03656b9501d68ce70d326bf\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://260227e2d553969a5eef99d7784122cc56d432bba5e59d64526e3c53ff085fde\",\"dweb:/ipfs/QmTanQHio1Syo9XC5H7WnZT8q3Hwym6R6KjK3jReFebg3S\"]},\"src/enclave/MeasurementRegistry.sol\":{\"keccak256\":\"0xadfc0752c6eef442735629ff9c02d0f90908890bd4a49fa6aedcac42a554f556\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://409600f6712f66fa9a32917c4df5f5eef990fd446d43f07ba01c20418335b75b\",\"dweb:/ipfs/QmdsNqPjzHFQJkRzQR4DUVZs5255D1AXR2t62XrP4KttDp\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.31-develop.2026.4.29+commit.cd9163d8"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "caller",
+              "type": "address"
+            }
+          ],
+          "type": "error",
+          "name": "NotOwner"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "OWNER",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "REGISTRY",
+          "outputs": [
+            {
+              "internalType": "contract MeasurementRegistry",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32[]",
+              "name": "accept",
+              "type": "bytes32[]"
+            },
+            {
+              "internalType": "bytes32[]",
+              "name": "deprecate",
+              "type": "bytes32[]"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "newActivePolicyHash",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "applyPolicyUpdate"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {
+          "applyPolicyUpdate(bytes32[],bytes32[],bytes32)": {
+            "details": "The registry enforces payload validity (status transitions, duplicates,      policy-hash change) and emits all policy events.",
+            "params": {
+              "accept": "IDs transitioning from Unknown or Deprecated to Accepted.",
+              "deprecate": "IDs transitioning from Accepted to Deprecated.",
+              "newActivePolicyHash": "SHA-256 of the exact complete new policy document bytes."
+            }
+          }
+        },
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {
+          "OWNER()": {
+            "notice": "The only account allowed to apply policy updates (Anvil account 0)."
+          },
+          "REGISTRY()": {
+            "notice": "The registry this authority administers, installed at genesis."
+          },
+          "applyPolicyUpdate(bytes32[],bytes32[],bytes32)": {
+            "notice": "Forwards a policy update to the registry."
+          }
+        },
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        "@openzeppelin/=lib/openzeppelin-contracts/",
+        "forge-std/=lib/forge-std/src/",
+        "openzeppelin-contracts/=lib/openzeppelin-contracts/",
+        "seismic-std-lib/=src/seismic-std-lib/",
+        "solady/=lib/solady/src/"
+      ],
+      "optimizer": {
+        "enabled": false,
+        "runs": 200
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "src/enclave/MeasurementAuthorityDev.sol": "MeasurementAuthorityDev"
+      },
+      "evmVersion": "mercury",
+      "libraries": {},
+      "viaIR": true
+    },
+    "sources": {
+      "src/enclave/MeasurementAuthorityDev.sol": {
+        "keccak256": "0x92353a8ece7810e733baa86bdf2c87b79813e8dea03656b9501d68ce70d326bf",
+        "urls": [
+          "bzz-raw://260227e2d553969a5eef99d7784122cc56d432bba5e59d64526e3c53ff085fde",
+          "dweb:/ipfs/QmTanQHio1Syo9XC5H7WnZT8q3Hwym6R6KjK3jReFebg3S"
+        ],
+        "license": "MIT"
+      },
+      "src/enclave/MeasurementRegistry.sol": {
+        "keccak256": "0xadfc0752c6eef442735629ff9c02d0f90908890bd4a49fa6aedcac42a554f556",
+        "urls": [
+          "bzz-raw://409600f6712f66fa9a32917c4df5f5eef990fd446d43f07ba01c20418335b75b",
+          "dweb:/ipfs/QmdsNqPjzHFQJkRzQR4DUVZs5255D1AXR2t62XrP4KttDp"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "id": 19
+}
