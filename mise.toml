@@ -44,23 +44,30 @@ run = "rm -f .cargo/config.toml && echo 'Local patches OFF: .cargo/config.toml r
 # sreth tasks
 
 [tasks."sreth::start-local"]
-description = "Build and start seismic-reth in dev mode"
-dir = "{{config_root}}/../seismic-reth"
+description = "Start seismic-reth in dev mode"
 raw = true
 usage = '''
 flag "--port <port>" help="HTTP and WS port" default="8545"
-flag "--chain <chain>" help="Path to chain genesis file (relative to ../seismic-reth)" default="crates/seismic/chainspec/res/genesis/dev.json"
+flag "--chain <chain>" help="Built-in chain name (dev/testnet/mainnet) or path to a genesis file" default="dev"
 flag "-q --quiet" help="Silence all log output"
 '''
+# SRETH_BIN points at a prebuilt seismic-reth binary (CI sets it via the
+# setup-sreth action); without it we build and run the sibling checkout.
 # TODO(samlaf): figure out a better way to manage the data dir for local development.
 # We could create a depends task that uses the reth db cli (https://reth.rs/cli/reth/db/drop)
 # to drop the db after use, but right now seismic-reth doesn't have the db cli, so we'd need to compile
 # the reth binary just to drop the db...
 run = """
+if [ -n "${SRETH_BIN:-}" ]; then
+  sreth="$SRETH_BIN"
+else
+  cargo build --manifest-path {{config_root}}/../seismic-reth/Cargo.toml --bin seismic-reth
+  sreth="{{config_root}}/../seismic-reth/target/debug/seismic-reth"
+fi
 rm -rf /tmp/seismic-reth-dev
-cargo run --bin seismic-reth -- node \
+"$sreth" node \
   --dev \
-  --dev.block-time 2s \
+  --dev.block-max-transactions 1 \
   --chain ${usage_chain} \
   --datadir /tmp/seismic-reth-dev \
   --http --http.port ${usage_port} \
@@ -76,7 +83,7 @@ depends_post = ["cargo::local-patches::off"]
 raw = true
 usage = '''
 flag "--port <port>" help="HTTP and WS port" default="8545"
-flag "--chain <chain>" help="Path to chain genesis file (relative to ../seismic-reth)" default="crates/seismic/chainspec/res/genesis/dev.json"
+flag "--chain <chain>" help="Built-in chain name (dev/testnet/mainnet) or path to a genesis file" default="dev"
 flag "-q --quiet" help="Silence all log output"
 '''
 run = "mise run sreth::start-local --port ${usage_port} --chain ${usage_chain} ${usage_quiet:+--quiet}"

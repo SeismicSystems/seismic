@@ -8,6 +8,7 @@ Environment variables:
     SEISMIC_PORT       - override the RPC port (default: pick a free port)
     SANVIL_BIN         - direct path to the sanvil binary (used by CI)
     SFOUNDRY_ROOT      - seismic-foundry repo root (target/debug/sanvil)
+    SRETH_BIN          - direct path to the seismic-reth binary (used by CI)
     SRETH_ROOT         - seismic-reth repo root (target/debug/seismic-reth)
     SEISMIC_WORKSPACE  - fallback: parent dir of seismic-foundry/ and seismic-reth/
 """
@@ -120,6 +121,10 @@ def _get_sanvil_bin() -> str:
 
 
 def _get_reth_bin() -> str:
+    # Direct path takes precedence (used by CI with pre-built binaries)
+    direct = os.environ.get("SRETH_BIN")
+    if direct:
+        return os.path.expanduser(direct)
     return _resolve_binary(
         "SRETH_ROOT", "seismic-reth", os.path.join("target", "debug", "seismic-reth")
     )

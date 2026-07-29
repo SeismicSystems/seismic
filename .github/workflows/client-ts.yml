@@ -9,6 +9,7 @@ on:
       - "pitchfork.toml"
       - ".github/workflows/client-ts.yml"
       - ".github/actions/setup-sfoundry/**"
+      - ".github/actions/setup-sreth/**"
   pull_request:
     paths:
       - "clients/ts/**"
@@ -16,6 +17,7 @@ on:
       - "pitchfork.toml"
       - ".github/workflows/client-ts.yml"
       - ".github/actions/setup-sfoundry/**"
+      - ".github/actions/setup-sreth/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -46,7 +48,6 @@ jobs:
       - run: mise run test::unit
 
   test-sanvil:
-    needs: [check]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -66,45 +67,26 @@ jobs:
       - run: mise run test::integration::sanvil
 
   test-sreth:
-    needs: [check]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
-        with:
-          path: seismic
-      # We checkout the seismic-reth repo as a sibling repo. `mise run test::integration::sreth` has this hardcoded requirement for now
-      # as it starts reth by cd'ing into ../seismic-reth and running `cargo run ...`
-      - uses: actions/checkout@v6
-        with:
-          repository: SeismicSystems/seismic-reth
-          path: seismic-reth
       - uses: jdx/mise-action@v2
         with:
-          working_directory: seismic
           install_args: bun pitchfork
       - uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('seismic/clients/ts/bun.lock') }}
+          key: bun-${{ runner.os }}-${{ hashFiles('clients/ts/bun.lock') }}
           restore-keys: |
             bun-${{ runner.os }}-
-
-      # `mise run test::integration::sreth` below starts reth in the background using `cargo run`,
-      # so we cache the built binary to speed up the workflow. rust-cache caches ~/.cargo plus the
-      # target dir of the Rust workspace checked out at ./seismic-reth ("<workspace-dir> ->
-      # <target-dir>" syntax). shared-key is deliberately identical to client-py.yml's
-      # integration-test-reth job: both check out seismic-reth at the same path, so the two jobs
-      # restore one shared build cache — keep the blocks in sync.
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - id: sreth
+        uses: ./.github/actions/setup-sreth
         with:
-          workspaces: seismic-reth -> target
-          shared-key: seismic-reth-debug
-      # Explicitly build first because `mise run` will timeout after 60 seconds, and building reth
-      # can take longer than that, especially on the first run when the cargo registry cache is cold.
-      - run: cargo build --bin seismic-reth
-        working-directory: seismic-reth
-
-      - run: mise run test::integration::sreth
-        working-directory: seismic/clients/ts
+          version: nightly
+      # SRETH_BIN makes the sreth::start-local mise task (reached via
+      # pitchfork) run the prebuilt binary instead of a sibling
+      # seismic-reth checkout.
+      - env:
+          SRETH_BIN: ${{ steps.sreth.outputs.seismic-reth-path }}
+        run: mise run test::integration::sreth
