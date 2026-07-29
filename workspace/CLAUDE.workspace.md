@@ -60,3 +60,4 @@ seismic/                          # parent directory
 - **Formatting**: `cargo +nightly fmt --all` across all repos.
 - **Linting**: `RUSTFLAGS="-D warnings" cargo clippy --workspace --all-features`.
 - **Fork management**: All forks pin upstream commits. Dependency versions are coordinated across repos via `[patch]` sections in `Cargo.toml`.
+- **Cross-repo file references**: when a code comment, commit message, or PR description refers to a file in *another* repo, use the full GitHub URL (e.g. `https://github.com/SeismicSystems/seismic-foundry/blob/seismic/.github/workflows/release.yml`) so readers can click through — a bare repo+path only works within the same repo. Link to the repo's default branch unless the reference is to a specific historical version, in which case pin a commit SHA. Same-repo references stay plain relative paths.
