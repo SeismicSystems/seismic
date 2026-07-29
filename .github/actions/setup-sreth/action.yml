@@ -1,0 +1,50 @@
+name: Setup sreth
+description: Install a prebuilt seismic-reth release binary
+
+inputs:
+  version:
+    description: seismic-reth release to install (nightly or a vX.Y.Z tag)
+    required: false
+    default: nightly
+
+outputs:
+  seismic-reth-path:
+    description: Absolute path to the installed seismic-reth binary
+    value: ${{ steps.install.outputs.seismic-reth-path }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      name: Install seismic-reth (${{ inputs.version }})
+      shell: bash
+      env:
+        SRETH_VERSION: ${{ inputs.version }}
+      run: |
+        case "$(uname -s)" in
+          Linux) platform=linux ;;
+          Darwin) platform=darwin ;;
+          *)
+            echo "Unsupported platform: $(uname -s)" >&2
+            exit 1
+            ;;
+        esac
+        case "$(uname -m)" in
+          x86_64) arch=amd64 ;;
+          aarch64 | arm64) arch=arm64 ;;
+          *)
+            echo "Unsupported architecture: $(uname -m)" >&2
+            exit 1
+            ;;
+        esac
+
+        # Tarball published by seismic-reth's seismic-release.yml
+        # (https://github.com/SeismicSystems/seismic-reth/blob/seismic/.github/workflows/seismic-release.yml);
+        # the asset name embeds the version, which is "nightly" on the rolling release.
+        url="https://github.com/SeismicSystems/seismic-reth/releases/download/${SRETH_VERSION}/seismic-reth_${SRETH_VERSION}_${platform}_${arch}.tar.gz"
+        SEISMIC_BIN="${XDG_CONFIG_HOME:-$HOME}/.seismic/bin"
+        mkdir -p "$SEISMIC_BIN"
+        curl -fsSL "$url" | tar -xz -C "$SEISMIC_BIN"
+        "$SEISMIC_BIN/seismic-reth" --version
+        echo "$SEISMIC_BIN" >> "$GITHUB_PATH"
+        echo "seismic-reth-path=$SEISMIC_BIN/seismic-reth" >> "$GITHUB_OUTPUT"
