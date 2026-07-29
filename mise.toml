@@ -67,7 +67,7 @@ fi
 rm -rf /tmp/seismic-reth-dev
 "$sreth" node \
   --dev \
-  --dev.block-time 2s \
+  --dev.block-max-transactions 1 \
   --chain ${usage_chain} \
   --datadir /tmp/seismic-reth-dev \
   --http --http.port ${usage_port} \
