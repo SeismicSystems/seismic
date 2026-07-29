@@ -249,6 +249,8 @@ export const getSeismicClients = async <
   account,
   encryptionSk,
   publicClient,
+  cacheTime,
+  pollingInterval,
 }: GetSeismicClientsParameters<TTransport, TChain, TAccount>): Promise<
   SeismicClients<TTransport, TChain, TAccount>
 > => {
@@ -257,6 +259,8 @@ export const getSeismicClients = async <
     (await createShieldedPublicClient<TTransport, TChain>({
       chain,
       transport,
+      cacheTime,
+      pollingInterval,
     }))
 
   const networkPublicKey = await pubClient.getTeePublicKey()
@@ -265,11 +269,16 @@ export const getSeismicClients = async <
     encryptionSk
   )
 
+  // waitForTransactionReceipt and friends run on pubClient (see the
+  // publicActions extension below), but polling-driven actions bound to the
+  // wallet client itself read its own pollingInterval — set both.
   const wallet = createClient({
     account,
     chain,
     transport,
     rpcSchema: seismicRpcSchema,
+    cacheTime,
+    pollingInterval,
   })
     .extend(walletActions)
     // @ts-ignore
@@ -331,21 +340,9 @@ export const createShieldedWalletClient = async <
   TTransport extends Transport,
   TChain extends Chain | undefined,
   TAccount extends Account,
->({
-  chain,
-  transport,
-  account,
-  encryptionSk,
-  publicClient,
-}: GetSeismicClientsParameters<TTransport, TChain, TAccount>): Promise<
-  ShieldedWalletClient<TTransport, TChain, TAccount>
-> => {
-  const clients = await getSeismicClients({
-    chain,
-    transport,
-    account,
-    encryptionSk,
-    publicClient,
-  })
+>(
+  parameters: GetSeismicClientsParameters<TTransport, TChain, TAccount>
+): Promise<ShieldedWalletClient<TTransport, TChain, TAccount>> => {
+  const clients = await getSeismicClients(parameters)
   return clients.wallet
 }
