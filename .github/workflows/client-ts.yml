@@ -48,7 +48,6 @@ jobs:
       - run: mise run test::unit
 
   test-sanvil:
-    needs: [check]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -68,7 +67,6 @@ jobs:
       - run: mise run test::integration::sanvil
 
   test-sreth:
-    needs: [check]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
