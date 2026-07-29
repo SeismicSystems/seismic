@@ -57,7 +57,7 @@ Tests live in `tests/seismic-viem/` and connect to an already-running node. The 
 ```bash
 mise run test::unit    # fast unit tests, no node required
 mise run test::integration::sanvil  # starts sanvil, runs tests, stops sanvil
-mise run test::integration::sreth   # builds & starts reth, runs tests, stops reth
+mise run test::integration::sreth   # starts reth, runs tests, stops reth
 ```
 
 **Manual** (start a node yourself, then run tests):
@@ -76,7 +76,7 @@ bun run viem:test         # connects to http://127.0.0.1:8545 by default
 
 **Anvil tests** require `sanvil` on PATH (install via `sfoundryup`).
 
-**Reth tests** require `SRETH_ROOT` pointing to a [seismic-reth](https://github.com/SeismicSystems/seismic-reth) checkout (or defaulting to `../../seismic-reth`).
+**Reth tests** run the binary at `SRETH_BIN` if set (CI sets it to a prebuilt nightly via the monorepo's [setup-sreth action](../../.github/actions/setup-sreth/action.yml)); otherwise the mise task builds and runs the sibling [seismic-reth](https://github.com/SeismicSystems/seismic-reth) checkout at `../../seismic-reth`.
 
 > **Note**: The `seismic-viem-tests` package still exports process management functions (`setupNode`, `buildNode`, etc.) for backward compatibility with seismic-reth and seismic-foundry. These are deprecated and will be removed in a future version.
 
@@ -116,12 +116,11 @@ These are resolved at build time by `tsc-alias`.
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`):
+GitHub Actions (monorepo [client-ts.yml](../../.github/workflows/client-ts.yml)), all jobs in parallel on hosted runners:
 
-- **lint**: ESLint + Prettier on ubuntu-24.04 (Bun 1.2.5)
-- **typecheck**: tsc on ubuntu-24.04
-- **test-anvil**: Self-hosted runner, runs anvil tests (sanvil from PATH)
-- **test-devnet**: Self-hosted runner (after test-anvil), builds seismic-reth from `SRETH_ROOT`, runs reth tests
+- **check**: lint + typecheck + build + unit tests
+- **test-sanvil**: integration tests against sanvil (nightly binary via the setup-sfoundry action)
+- **test-sreth**: integration tests against seismic-reth (prebuilt nightly binary via the setup-sreth action, passed to the mise task as `SRETH_BIN`)
 
 ## Key Concepts
 
