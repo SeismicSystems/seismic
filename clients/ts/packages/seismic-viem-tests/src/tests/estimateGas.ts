@@ -7,14 +7,10 @@
  *   - Explicit gas bypasses estimation.
  */
 import { expect } from 'bun:test'
-import {
-  createShieldedPublicClient,
-  createShieldedWalletClient,
-  getShieldedContract,
-} from 'seismic-viem'
+import { getShieldedContract } from 'seismic-viem'
 import type { Account, Chain } from 'viem'
-import { http } from 'viem'
 
+import { httpPublicClient, httpWalletClient } from '@sviem-tests/clients.ts'
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
 import { seismicCounterBytecode } from '@sviem-tests/tests/contract/bytecode.ts'
 
@@ -25,15 +21,8 @@ export type EstimateGasTestArgs = {
 }
 
 const deployCounter = async (chain: Chain, url: string, account: Account) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
   const deployTx = await walletClient.deployContract({
     abi: seismicCounterAbi,

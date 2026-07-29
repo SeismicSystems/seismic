@@ -1,12 +1,9 @@
 import { expect } from 'bun:test'
 import { createHash } from 'crypto'
-import {
-  createShieldedPublicClient,
-  createShieldedWalletClient,
-} from 'seismic-viem'
 import { Account, Chain, concatHex, parseEther } from 'viem'
-import { http, parseEventLogs } from 'viem'
+import { parseEventLogs } from 'viem'
 
+import { httpPublicClient, httpWalletClient } from '@sviem-tests/clients.ts'
 import { depositContractAbi } from '@sviem-tests/tests/contract/depositContractAbi.ts'
 import { depositContractBytecode } from '@sviem-tests/tests/contract/depositContractBytecode.ts'
 import { summitDepositRequestFixture } from '@sviem-tests/tests/contract/depositRequestVectors.ts'
@@ -166,15 +163,8 @@ export const testDepositEventsMatchSummitVectors = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
 
   const bytecode: `0x${string}` = `0x${depositContractBytecode.object.replace(/^0x/, '')}`
   const deployTx = await walletClient.deployContract({
@@ -237,15 +227,8 @@ export const testDepositContract = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
 
   const testContractBytecodeFormatted: `0x${string}` = `0x${depositContractBytecode.object.replace(/^0x/, '')}`
 

@@ -1,12 +1,7 @@
 import { expect } from 'bun:test'
-import {
-  createShieldedPublicClient,
-  createShieldedWalletClient,
-  getShieldedContract,
-  hasShieldedParams,
-} from 'seismic-viem'
-import { http } from 'viem'
+import { getShieldedContract, hasShieldedParams } from 'seismic-viem'
 
+import { httpPublicClient, httpWalletClient } from '@sviem-tests/clients.ts'
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
 import { seismicCounterBytecode } from '@sviem-tests/tests/contract/bytecode.ts'
 import type { ContractTestArgs } from '@sviem-tests/tests/contract/contract.ts'
@@ -68,15 +63,8 @@ export const testSmartWriteShieldedParam = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -110,15 +98,8 @@ export const testSmartWriteTransparentParam = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -155,15 +136,8 @@ export const testSmartReadTransparentParam = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -198,15 +172,8 @@ export const testSmartReadAfterSmartWrite = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -253,15 +220,8 @@ export const testSwriteAlwaysShielded = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -295,15 +255,8 @@ export const testSreadAlwaysShielded = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -339,15 +292,8 @@ export const testSmartWalletWriteShielded = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -379,15 +325,8 @@ export const testSmartWalletWriteTransparent = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -418,15 +357,8 @@ export const testSmartWalletReadTransparent = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
+  const walletClient = await httpWalletClient({ chain, url, account })
+  const publicClient = httpPublicClient({ chain, url })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -458,15 +390,8 @@ export const testSwriteContractAlwaysShielded = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -497,15 +422,8 @@ export const testSreadContractAlwaysShielded = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -539,15 +457,8 @@ export const testTwriteRemapsShieldedTypes = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -584,15 +495,8 @@ export const testTwriteContractRemapsShieldedTypes = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -627,15 +531,8 @@ export const testSmartWriteTransparentContract = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${transparentCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -668,15 +565,8 @@ export const testSmartReadTransparentContract = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${transparentCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -712,15 +602,8 @@ export const testSmartRoutingLifecycle = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
@@ -801,15 +684,8 @@ export const testSmartWalletActionsLifecycle = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({
