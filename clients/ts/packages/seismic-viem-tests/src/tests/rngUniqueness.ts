@@ -1,7 +1,7 @@
 import { expect } from 'bun:test'
-import { createShieldedPublicClient } from 'seismic-viem'
 import type { Chain } from 'viem'
-import { http } from 'viem'
+
+import { httpPublicClient } from '@sviem-tests/clients.ts'
 
 type PublicClientConfig = {
   chain: Chain
@@ -12,10 +12,7 @@ export const testRngDifferentPersProducesDifferentResults = async ({
   chain,
   url,
 }: PublicClientConfig) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
+  const publicClient = httpPublicClient({ chain, url })
 
   const pers1 = new Uint8Array([1, 2, 3, 4])
   const pers2 = new Uint8Array([5, 6, 7, 8])

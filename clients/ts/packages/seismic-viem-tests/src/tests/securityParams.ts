@@ -1,10 +1,6 @@
 import { expect } from 'bun:test'
-import {
-  createShieldedPublicClient,
-  createShieldedWalletClient,
-} from 'seismic-viem'
-import { http } from 'viem'
 
+import { httpPublicClient, httpWalletClient } from '@sviem-tests/clients.ts'
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
 import { seismicCounterBytecode } from '@sviem-tests/tests/contract/bytecode.ts'
 import type { ContractTestArgs } from '@sviem-tests/tests/contract/contract.ts'
@@ -14,15 +10,8 @@ export const testDwriteContractUsesSecurityParams = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const bytecode: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({

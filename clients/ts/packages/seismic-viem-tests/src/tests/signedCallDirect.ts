@@ -1,12 +1,9 @@
 import { expect } from 'bun:test'
-import {
-  createShieldedPublicClient,
-  createShieldedWalletClient,
-  getShieldedContract,
-} from 'seismic-viem'
+import { getShieldedContract } from 'seismic-viem'
 import type { Account, Chain } from 'viem'
-import { decodeFunctionResult, encodeFunctionData, http } from 'viem'
+import { decodeFunctionResult, encodeFunctionData } from 'viem'
 
+import { httpPublicClient, httpWalletClient } from '@sviem-tests/clients.ts'
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
 import { deploySeismicCounter } from '@sviem-tests/tests/contract/deploy.ts'
 
@@ -24,15 +21,8 @@ export const testSignedCallDirect = async ({
   url,
   account,
 }: SignedCallTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const address = await deploySeismicCounter({ publicClient, walletClient })
 
   const contract = getShieldedContract({
@@ -67,15 +57,8 @@ export const testSignedCallWithSecurityParams = async ({
   url,
   account,
 }: SignedCallTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const address = await deploySeismicCounter({ publicClient, walletClient })
 
   const calldata = encodeFunctionData({

@@ -1,6 +1,18 @@
 export type { NodeConnection } from '@sviem-tests/connect.ts'
 export { connectToNode } from '@sviem-tests/connect.ts'
 
+export type {
+  PublicClientArgs,
+  WsPublicClientArgs,
+  WalletClientArgs,
+} from '@sviem-tests/clients.ts'
+export {
+  LOCAL_POLLING_INTERVAL_MS,
+  httpPublicClient,
+  httpWalletClient,
+  wsPublicClient,
+} from '@sviem-tests/clients.ts'
+
 export {
   TEST_ACCOUNT_PRIVATE_KEY,
   ENCRYPTION_SK,

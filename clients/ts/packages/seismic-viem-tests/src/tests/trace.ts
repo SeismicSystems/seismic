@@ -1,12 +1,11 @@
 import { expect } from 'bun:test'
 import {
   buildTxSeismicMetadata,
-  createShieldedPublicClient,
-  createShieldedWalletClient,
   encodeSeismicMetadataAsAAD,
 } from 'seismic-viem'
 import { Account, Chain, bytesToHex } from 'viem'
-import { http } from 'viem'
+
+import { httpPublicClient, httpWalletClient } from '@sviem-tests/clients.ts'
 
 type ContractTestArgs = {
   chain: Chain
@@ -19,13 +18,10 @@ export const testSeismicTxTrace = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({
     chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
+    url,
     account,
     encryptionSk:
       '0x311d54d3bf8359c70827122a44a7b4458733adce3c51c6b59d9acfce85e07505',
@@ -73,15 +69,8 @@ export const testLegacyTxTrace = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
 
   const nonce = await publicClient.getTransactionCount({
     address: account.address,

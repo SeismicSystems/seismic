@@ -1,13 +1,9 @@
 import { expect } from 'bun:test'
-import {
-  createShieldedPublicClient,
-  createShieldedWalletClient,
-} from 'seismic-viem'
 import { SEISMIC_TX_TYPE, getShieldedContract } from 'seismic-viem'
 import { Hex, hexToNumber } from 'viem'
-import { http } from 'viem'
 import { writeContract } from 'viem/actions'
 
+import { httpPublicClient, httpWalletClient } from '@sviem-tests/clients.ts'
 import type { ContractTestArgs } from '@sviem-tests/tests/contract/contract.ts'
 import { transparentCounterABI } from '@sviem-tests/tests/transparentContract/abi.ts'
 import { transparentCounterBytecode } from '@sviem-tests/tests/transparentContract/bytecode.ts'
@@ -15,15 +11,8 @@ import { transparentCounterBytecode } from '@sviem-tests/tests/transparentContra
 const TEST_NUMBER = BigInt(11)
 
 const twriteSetup = async ({ chain, url, account }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const testContractBytecodeFormatted: `0x${string}` = `0x${transparentCounterBytecode.object.replace(/^0x/, '')}`
 
   const deployTx = await walletClient.deployContract({

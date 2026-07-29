@@ -1,15 +1,16 @@
 import { expect } from 'bun:test'
 import {
   buildTxSeismicMetadata,
-  createShieldedWalletClient,
   encodeSeismicMetadataAsAAD,
   randomEncryptionNonce,
   signSeismicTxTypedData,
 } from 'seismic-viem'
-import { bytesToHex, http } from 'viem'
+import { bytesToHex } from 'viem'
 import type { Account, Chain, TransactionSerializableLegacy } from 'viem'
 import type { Hex } from 'viem'
 import { parseEther } from 'viem/utils'
+
+import { httpWalletClient } from '@sviem-tests/clients.ts'
 
 type TestSeismicCallTypeDataArgs = {
   chain: Chain
@@ -26,12 +27,7 @@ export const testSeismicCallTypedData = async ({
   encryptionSk,
   encryptionPubkey,
 }: TestSeismicCallTypeDataArgs) => {
-  const client = await createShieldedWalletClient({
-    chain,
-    account,
-    transport: http(url),
-    encryptionSk,
-  })
+  const client = await httpWalletClient({ chain, url, account, encryptionSk })
 
   const nonce = await client.getTransactionCount({
     address: account.address,
@@ -82,12 +78,7 @@ export const testSeismicTxTypedData = async ({
   const recipientAddress = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
   const value = parseEther('1', 'wei')
 
-  const client = await createShieldedWalletClient({
-    chain,
-    account,
-    transport: http(url),
-    encryptionSk,
-  })
+  const client = await httpWalletClient({ chain, url, account, encryptionSk })
 
   const preTxBalance = await client.getBalance({ address: recipientAddress })
 

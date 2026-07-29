@@ -1,7 +1,7 @@
 import { expect } from 'bun:test'
-import { createShieldedPublicClient } from 'seismic-viem'
 import type { Chain } from 'viem'
-import { webSocket } from 'viem'
+
+import { wsPublicClient } from '@sviem-tests/clients.ts'
 
 type WsTestArgs = {
   chain: Chain
@@ -11,10 +11,7 @@ type WsTestArgs = {
 const RNG_SIZE_BYTES = 32
 
 export const testWsBlockSubscription = async ({ chain, wsUrl }: WsTestArgs) => {
-  const client = await createShieldedPublicClient({
-    chain,
-    transport: webSocket(wsUrl),
-  })
+  const client = wsPublicClient({ chain, wsUrl })
 
   // If the WS transport weren't wired up this would reject or hang;
   // the assertion proves we got a numeric block height back.
@@ -26,10 +23,7 @@ export const testWsBlockSubscription = async ({ chain, wsUrl }: WsTestArgs) => {
 }
 
 export const testWsPrecompileCall = async ({ chain, wsUrl }: WsTestArgs) => {
-  const client = await createShieldedPublicClient({
-    chain,
-    transport: webSocket(wsUrl),
-  })
+  const client = wsPublicClient({ chain, wsUrl })
 
   const teeKey = await client.getTeePublicKey()
   expect(teeKey.length).toBeGreaterThan(0)
@@ -39,10 +33,7 @@ export const testWsPrecompileCall = async ({ chain, wsUrl }: WsTestArgs) => {
 }
 
 export const testWsRngCall = async ({ chain, wsUrl }: WsTestArgs) => {
-  const client = await createShieldedPublicClient({
-    chain,
-    transport: webSocket(wsUrl),
-  })
+  const client = wsPublicClient({ chain, wsUrl })
 
   const randomValue = await client.rng({ numBytes: RNG_SIZE_BYTES })
   expect(randomValue).toBeLessThan(2n ** BigInt(8 * RNG_SIZE_BYTES))

@@ -1,11 +1,7 @@
 import { expect } from 'bun:test'
-import {
-  createShieldedPublicClient,
-  createShieldedWalletClient,
-} from 'seismic-viem'
 import type { Account, Chain } from 'viem'
-import { http } from 'viem'
 
+import { httpPublicClient, httpWalletClient } from '@sviem-tests/clients.ts'
 import { ZERO_ADDRESS } from '@sviem-tests/constants.ts'
 
 type NodeParams = {
@@ -14,10 +10,7 @@ type NodeParams = {
 }
 
 export const testGetStorageAtThrows = async ({ chain, url }: NodeParams) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
+  const publicClient = httpPublicClient({ chain, url })
   await expect(
     publicClient.getStorageAt({
       address: ZERO_ADDRESS,
@@ -37,11 +30,7 @@ export const testSignedCallWithoutToThrows = async ({
   url,
   account,
 }: SignedCallErrorParams) => {
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const walletClient = await httpWalletClient({ chain, url, account })
   await expect(
     walletClient.signedCall({
       data: '0xdeadbeef',

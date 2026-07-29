@@ -3,13 +3,13 @@ import {
   buildTxSeismicMetadata,
   serializeSeismicTransaction,
 } from 'seismic-viem'
-import { createShieldedWalletClient } from 'seismic-viem'
 import { compressPublicKey } from 'seismic-viem'
-import { http } from 'viem'
 import type { Account, Chain, Hex, TransactionSerializableLegacy } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { prepareTransactionRequest } from 'viem/actions'
 import { anvil } from 'viem/chains'
+
+import { httpWalletClient } from '@sviem-tests/clients.ts'
 
 type EncodingParams = {
   chain: Chain
@@ -29,12 +29,7 @@ export const testSeismicTxEncoding = async ({
   expect(encryptionPubkey).toBe(
     compressPublicKey(privateKeyToAccount(encryptionSk).publicKey)
   )
-  const client = await createShieldedWalletClient({
-    chain,
-    account,
-    transport: http(url),
-    encryptionSk,
-  })
+  const client = await httpWalletClient({ chain, url, account, encryptionSk })
 
   const plaintext =
     '0xfc3c2cf4943c327f19af0efaf3b07201f608dd5c8e3954399a919b72588d3872b6819ac3d13d3656cbb38833a39ffd1e73963196a1ddfa9e4a5d595fdbebb875'

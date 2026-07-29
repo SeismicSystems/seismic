@@ -1,5 +1,6 @@
-import { createShieldedPublicClient } from 'seismic-viem'
-import { Chain, webSocket } from 'viem'
+import { Chain } from 'viem'
+
+import { wsPublicClient } from '@sviem-tests/clients.ts'
 
 export const testWsConnection = async ({
   chain,
@@ -8,10 +9,7 @@ export const testWsConnection = async ({
   chain: Chain
   wsUrl: string
 }) => {
-  const client = await createShieldedPublicClient({
-    chain,
-    transport: webSocket(wsUrl),
-  })
+  const client = wsPublicClient({ chain, wsUrl })
   await client.getTeePublicKey()
   const rpcClient = await client.transport.getRpcClient()
   rpcClient.close()

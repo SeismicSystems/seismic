@@ -3,8 +3,6 @@ import {
   SEISMIC_TX_TYPE,
   TransactionSerializableSeismic,
   buildTxSeismicMetadata,
-  createShieldedPublicClient,
-  createShieldedWalletClient,
   getPlaintextCalldata,
   signSeismicTxTypedData,
 } from 'seismic-viem'
@@ -17,8 +15,8 @@ import {
   hexToNumber,
   parseGwei,
 } from 'viem'
-import { http } from 'viem'
 
+import { httpPublicClient, httpWalletClient } from '@sviem-tests/clients.ts'
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
 import { seismicCounterBytecode } from '@sviem-tests/tests/contract/bytecode.ts'
 
@@ -45,15 +43,8 @@ export const testSeismicTx = async ({
   url,
   account,
 }: ContractTestArgs) => {
-  const publicClient = createShieldedPublicClient({
-    chain,
-    transport: http(url),
-  })
-  const walletClient = await createShieldedWalletClient({
-    chain,
-    transport: http(url),
-    account,
-  })
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
   const testContractBytecodeFormatted: `0x${string}` = `0x${seismicCounterBytecode.object.replace(/^0x/, '')}`
   const TEST_NUMBER = BigInt(11)
 
