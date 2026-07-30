@@ -2,18 +2,18 @@
 pragma solidity ^0.8.23;
 
 /// @title TxUtils
-/// @notice Helpers for reading transaction-level context on Seismic via the tx-info precompile.
-/// @dev Uses a `staticcall` to the tx-info precompile (0x6A) rather than a custom opcode, so it
+/// @notice Helpers for reading transaction-level context on Seismic via the tx-type precompile.
+/// @dev Uses a `staticcall` to the tx-type precompile (0x6A) rather than a custom opcode, so it
 /// compiles with a stock Solidity compiler — no `ssolc` builtin required.
 library TxUtils {
-    /// @notice Address of the Seismic tx-info precompile.
-    address internal constant TX_INFO_PRECOMPILE = address(0x6A);
+    /// @notice Address of the Seismic tx-type precompile.
+    address internal constant TX_TYPE_PRECOMPILE = address(0x6A);
 
     uint256 internal constant SEISMIC_TX_TYPE = 0x4A;
 
     /// @notice EIP-2718 transaction-type byte of the current transaction (74 = Seismic).
     function txType() internal view returns (uint256 t) {
-        (bool ok, bytes memory ret) = TX_INFO_PRECOMPILE.staticcall("");
+        (bool ok, bytes memory ret) = TX_TYPE_PRECOMPILE.staticcall("");
         require(ok && ret.length == 32, "TX_INFO");
         t = abi.decode(ret, (uint256));
     }
