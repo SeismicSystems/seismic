@@ -4,12 +4,12 @@ This page is meant to host various diagrams detailing the architecture of differ
 
 ## Seismic Node
 
-![](../assets/seismic-node.png)
+![](diagrams/seismic-node.png)
 
 ## RPC/EVM/Storage Interactions
 
-![](../assets/rpc-evm-storage.png)
+![](diagrams/rpc-evm-storage.png)
 
 ## Tries + SeismicTx
 
-![](../assets/tries.png)
+![](diagrams/tries.png)

@@ -60,7 +60,7 @@ code seismic/workspace/seismic.code-workspace
 
 We use mise to manage supporting tools and run common tasks. It is not mandatory to use mise, but we recommend it for ease of use and consistency. Start by [installing mise](https://mise.jdx.dev/getting-started.html), then run `mise install`. Install the Seismic Foundry toolchain (`sforge`, `sanvil`, and `scast`) separately with [`sfoundryup`](docs/gitbook/getting-started/installation.md). Both installers set up your PATH so the tools are available inside the repo. Make sure to take a look at comments inside the various `mise.toml` files across the repos, and run `mise run` from anywhere to see the tasks available in that subdir.
 
-![](assets/mise-demo.gif)
+![](mise-demo.gif)
 
 ### Docs
 
