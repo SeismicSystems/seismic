@@ -11,10 +11,16 @@ library TxUtils {
 
     uint256 internal constant SEISMIC_TX_TYPE = 0x4A;
 
+    /// @notice Thrown when the tx-type precompile is unavailable (e.g. on a non-Seismic EVM).
+    error TxTypePrecompileUnavailable();
+
     /// @notice EIP-2718 transaction-type byte of the current transaction (74 = Seismic).
+    /// @dev **Fail-closed:** reverts with {TxTypePrecompileUnavailable} on an EVM that lacks the
+    /// `0x6A` precompile — there the `staticcall` succeeds with empty returndata rather than a
+    /// 32-byte type, so this never silently returns 0.
     function txType() internal view returns (uint256 t) {
         (bool ok, bytes memory ret) = TX_TYPE_PRECOMPILE.staticcall("");
-        require(ok && ret.length == 32, "TX_INFO");
+        if (!ok || ret.length != 32) revert TxTypePrecompileUnavailable();
         t = abi.decode(ret, (uint256));
     }
 
@@ -23,7 +29,8 @@ library TxUtils {
     /// unauthenticated `eth_call`.
     /// @dev Reports the transaction type only. This is NOT an authorization check, does not
     /// prove the call is state-changing (authenticated signed reads also return true), and does
-    /// not by itself guarantee that every field of the RPC response is encrypted.
+    /// not by itself guarantee that every field of the RPC response is encrypted. **Reverts** (it
+    /// does not return `false`) on an EVM without the precompile — see {txType}.
     function isSeismicTx() internal view returns (bool) {
         return txType() == SEISMIC_TX_TYPE;
     }
