@@ -23,7 +23,8 @@ Detailed docs live in the [seismic](https://github.com/SeismicSystems/seismic) m
 - [seismic/docs/key-schedule.md](../docs/key-schedule.md) — every key derivation and its domain-separation label, by layer
 - [seismic/docs/language-and-vm.md](../docs/language-and-vm.md) — Mercury EVM spec: shielded types, CLOAD/CSTORE, FlaggedStorage, arrays, casting
 - [seismic/docs/gitbook/reference/repos.md](../docs/gitbook/reference/repos.md) — all repos, fork management, dependency flow
-- [seismic/docs/diagrams/README.md](../docs/diagrams/README.md) — diagram conventions: Mermaid in markdown for structured diagrams, .excalidraw + rendered .png pairs for freeform; follow this when creating or editing diagrams
+- [seismic/docs/tee/network-founding.md](../docs/tee/network-founding.md) — network founding: boot-chain sequencing, the summit key holder, what `network_id` pins
+- [seismic/docs/tee/diagrams/README.md](../docs/tee/diagrams/README.md) — diagram conventions: Mermaid in markdown for structured diagrams, .excalidraw + rendered .png pairs next to their docs for freeform; follow this when creating or editing diagrams
 
 When working in a specific repo, also check that repo's README and CLAUDE.md, as well as anything under that repo's `docs/seismic` directory.
 

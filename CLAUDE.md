@@ -9,8 +9,9 @@ This is seismic's monorepo, targeting Seismic developers and contributors. It co
 - [docs/key-schedule.md](docs/key-schedule.md) — every key derivation and its domain-separation label, by layer
 - [docs/language-and-vm.md](docs/language-and-vm.md) — Mercury EVM spec: shielded types, CLOAD/CSTORE, FlaggedStorage, arrays, casting
 - [docs/gitbook/reference/repos.md](docs/gitbook/reference/repos.md) — all repos, fork management, dependency flow
+- [docs/tee/network-founding.md](docs/tee/network-founding.md) — network founding: boot-chain sequencing, the summit key holder, what `network_id` pins
 - [docs/claude-code-setup.md](docs/claude-code-setup.md) — Claude Code skills setup and symlink instructions
-- [docs/diagrams/README.md](docs/diagrams/README.md) — diagram conventions: Mermaid in markdown for structured diagrams, .excalidraw + rendered .png pairs here for freeform; follow this when creating or editing diagrams
+- [docs/tee/diagrams/README.md](docs/tee/diagrams/README.md) — diagram conventions: Mermaid in markdown for structured diagrams, .excalidraw + rendered .png pairs next to their docs for freeform; follow this when creating or editing diagrams
 
 
 ## Docs ↔ Code Sync
