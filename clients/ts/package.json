@@ -2,8 +2,8 @@
   "name": "seismic-client",
   "private": true,
   "workspaces": [
-    "packages/**",
-    "tests/**"
+    "packages/*",
+    "tests/*"
   ],
   "type": "module",
   "scripts": {
