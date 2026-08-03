@@ -24,7 +24,9 @@ import { extract, getCallError, parseAccount } from 'viem/utils'
 
 import { ShieldedWalletClient } from '@sviem/client.ts'
 import { SignedCallError } from '@sviem/error/signedCall.ts'
+import type { TxSeismicMetadata } from '@sviem/tx/metadata.ts'
 import { buildTxSeismicMetadata } from '@sviem/tx/metadata.ts'
+import { decryptRevertError } from '@sviem/tx/revertDecrypt.ts'
 import {
   type SeismicSecurityParams,
   type SeismicTxExtras,
@@ -237,6 +239,10 @@ export async function signedCall<
     throw new BaseError("Signed calls must set 'to' address")
   }
 
+  // Hoisted so the catch block can decrypt signed-read revert data with the
+  // same metadata (AES key + AAD) that encrypted the request.
+  let metadata: TxSeismicMetadata | undefined
+
   try {
     const assertRequestParams = {
       account,
@@ -268,7 +274,7 @@ export async function signedCall<
       })
     }
 
-    const metadata = await buildTxSeismicMetadata(client, {
+    metadata = await buildTxSeismicMetadata(client, {
       account,
       to: to!,
       blocksWindow,
@@ -332,7 +338,10 @@ export async function signedCall<
     if (response === '0x') return { data: undefined }
     const decryptedResponse = await client.decrypt(response, metadata)
     return { data: decryptedResponse }
-  } catch (err) {
+  } catch (rawErr) {
+    // The node encrypts signed-read revert output under the caller's key;
+    // restore the plaintext so revert reasons decode as usual downstream.
+    const err = await decryptRevertError(client, rawErr, metadata)
     const data = getRevertErrorData(err)
 
     // Check for CCIP-Read offchain lookup signature.

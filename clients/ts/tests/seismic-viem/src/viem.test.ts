@@ -57,6 +57,11 @@ import {
   testSignedCallWithSecurityParams,
 } from '@sviem-tests/tests/signedCallDirect.ts'
 import {
+  testEstimateGasDecryptsRevertReason,
+  testSignedCallDecryptsRevertReason,
+  testSignedReadRevertWireFormatIsEncrypted,
+} from '@sviem-tests/tests/signedReadRevert.ts'
+import {
   testHasShieldedParamsDetectsShielded,
   testHasShieldedParamsDetectsTransparent,
   testHasShieldedParamsTransparentContract,
@@ -587,6 +592,28 @@ describe('SignedCall standalone', () => {
   test(
     'signedCall with custom security params',
     async () => await testSignedCallWithSecurityParams({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'signed-read revert is encrypted on the wire but decryptable by the signer',
+    async () =>
+      await testSignedReadRevertWireFormatIsEncrypted({
+        chain,
+        url,
+        account,
+      }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'signedCall surfaces the decrypted revert reason',
+    async () =>
+      await testSignedCallDecryptsRevertReason({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'signed estimateGas surfaces the decrypted revert reason',
+    async () =>
+      await testEstimateGasDecryptsRevertReason({ chain, url, account }),
     { timeout: CONTRACT_TIMEOUT_MS }
   )
 })
