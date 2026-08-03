@@ -127,12 +127,15 @@ const deployAndSetSecret = async ({
 }
 
 /**
- * Wire level: send a signed read as raw tx bytes straight to `eth_call`
- * (bypassing the client's automatic revert decryption) and inspect the raw
- * RPC error exactly as the node produced it.
+ * Wire level: send a signed read as raw tx bytes straight to the given RPC
+ * method (bypassing the client's automatic revert decryption) and assert on
+ * the raw RPC error exactly as the node produced it:
+ *  1. the plaintext secret appears nowhere in the error
+ *  2. the error `data` decrypts to the real revert reason
  */
-export const testSignedReadRevertWireFormatIsEncrypted = async (
-  args: SignedReadRevertTestArgs
+const wireLevelRevertTest = async (
+  args: SignedReadRevertTestArgs,
+  method: 'eth_call' | 'eth_estimateGas'
 ) => {
   const { publicClient, walletClient, address } = await deployAndSetSecret(args)
   const { account } = args
@@ -174,19 +177,22 @@ export const testSignedReadRevertWireFormatIsEncrypted = async (
   let caught: unknown
   try {
     await walletClient.request({
-      method: 'eth_call',
-      params: [serializedTransaction, 'latest'],
+      method: method as 'eth_call',
+      params:
+        method === 'eth_call'
+          ? [serializedTransaction, 'latest']
+          : ([serializedTransaction] as unknown as [Hex, 'latest']),
     })
   } catch (err) {
     caught = err
   }
-  expect(caught, 'revertWithSecret() must revert').toBeDefined()
+  expect(caught, `${method} on revertWithSecret() must reject`).toBeDefined()
 
   // 1. The plaintext secret must not appear anywhere in the raw RPC error.
   const errText = `${(caught as Error).message}\n${JSON.stringify(caught)}`
   expect(
     errText.includes(`secret=${SECRET}`),
-    `node leaked the private value in cleartext on the wire: ${errText}`
+    `${method} leaked the private value in cleartext on the wire: ${errText}`
   ).toBe(false)
 
   // 2. The signer must be able to decrypt the revert data and recover the
@@ -194,12 +200,29 @@ export const testSignedReadRevertWireFormatIsEncrypted = async (
   const ciphertext = extractErrorData(caught)
   expect(
     ciphertext,
-    'signed-read revert error should carry the encrypted revert output as data'
+    `${method} revert error should carry the encrypted revert output as data`
   ).toBeDefined()
   const decrypted = await walletClient.decrypt(ciphertext!, metadata)
   const { args: decodedArgs } = decodeErrorResult({ data: decrypted })
   expect(decodedArgs?.[0]).toBe(`secret=${SECRET}`)
 }
+
+/** Wire-level signed-read revert confidentiality for `eth_call`. */
+export const testSignedReadRevertWireFormatIsEncrypted = async (
+  args: SignedReadRevertTestArgs
+) => wireLevelRevertTest(args, 'eth_call')
+
+/**
+ * Wire-level signed-read revert confidentiality for `eth_estimateGas`.
+ *
+ * NOTE: fails against sanvil as of seismic-foundry 979e9446a — its
+ * gas-estimation path bypasses the encrypting call wrapper
+ * (`do_estimate_gas_with_state` calls the plain `call_with_state`), so
+ * revert output goes out in cleartext.
+ */
+export const testEstimateGasRevertWireFormatIsEncrypted = async (
+  args: SignedReadRevertTestArgs
+) => wireLevelRevertTest(args, 'eth_estimateGas')
 
 /**
  * Client level: `signedCall` transparently decrypts the encrypted revert
