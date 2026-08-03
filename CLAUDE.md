@@ -1,18 +1,19 @@
 # Seismic Monorepo
 
-This is seismic's monorepo, targeting Seismic developers and contributors. It contains documentation, scripts, and the VS Code workspace file.
+This is seismic's monorepo, targeting Seismic developers and contributors.
 
-## Docs in This Repo
+**Workspace context**: if the workspace file isn't already in your context, read [workspace/CLAUDE.workspace.md](workspace/CLAUDE.workspace.md) for key concepts, the repo map, and cross-repo conventions.
 
-- [docs/architecture.md](docs/architecture.md) — diagrams: Seismic node, RPC/EVM/storage interactions, tries + SeismicTx
-- [docs/glossary.md](docs/glossary.md) — key concepts: FlaggedStorage, TxSeismic, Mercury Spec, SeismicHost
-- [docs/key-schedule.md](docs/key-schedule.md) — every key derivation and its domain-separation label, by layer
-- [docs/language-and-vm.md](docs/language-and-vm.md) — Mercury EVM spec: shielded types, CLOAD/CSTORE, FlaggedStorage, arrays, casting
-- [docs/gitbook/reference/repos.md](docs/gitbook/reference/repos.md) — all repos, fork management, dependency flow
-- [docs/tee/network-founding.md](docs/tee/network-founding.md) — network founding: boot-chain sequencing, the summit key holder, what `network_id` pins
-- [docs/claude-code-setup.md](docs/claude-code-setup.md) — Claude Code skills setup and symlink instructions
-- [docs/tee/diagrams/README.md](docs/tee/diagrams/README.md) — diagram conventions: Mermaid in markdown for structured diagrams, .excalidraw + rendered .png pairs next to their docs for freeform; follow this when creating or editing diagrams
+## Repo Layout
 
+```
+seismic/
+├── docs/            # developer docs + gitbook (user-facing) — see docs/README.md for the index
+├── contracts/       # Solidity contracts
+├── clients/ts/      # TypeScript client (Viem + React)
+├── clients/py/      # Python client (Web3.py)
+└── workspace/       # cross-repo workspace files: CLAUDE.workspace.md, seismic.code-workspace, cargo-local-patches.toml
+```
 
 ## Docs ↔ Code Sync
 

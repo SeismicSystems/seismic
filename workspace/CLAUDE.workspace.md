@@ -6,7 +6,7 @@ Seismic is a privacy-enabled EVM blockchain. This file gives you the context to 
 
 ## Key Concepts
 
-See [seismic/docs/glossary.md](../docs/glossary.md) for full definitions. Quick summary:
+See `seismic/docs/glossary.md` for full definitions. Quick summary:
 
 - **FlaggedStorage** — `(value: U256, is_private: bool)` tuple replacing `U256` for all storage values. Private slots return 0 via RPC; only `CLOAD`/`CSTORE` opcodes can access them.
 - **Shielded Types** — `suint`, `sint`, `sbool`, `saddress` compile to `CLOAD`/`CSTORE` instead of `SLOAD`/`SSTORE`.
@@ -16,17 +16,9 @@ See [seismic/docs/glossary.md](../docs/glossary.md) for full definitions. Quick 
 
 ## Docs
 
-Detailed docs live in the [seismic](https://github.com/SeismicSystems/seismic) monorepo:
+Detailed docs live in `seismic/docs/` — read its README for the index (architecture, key schedule, Mercury EVM spec, network founding, diagram conventions, repo/fork management).
 
-- [seismic/docs/architecture.md](../docs/architecture.md) — diagrams: Seismic node, RPC/EVM/storage interactions, tries + SeismicTx
-- [seismic/docs/glossary.md](../docs/glossary.md) — key concepts: FlaggedStorage, TxSeismic, Mercury Spec, SeismicHost
-- [seismic/docs/key-schedule.md](../docs/key-schedule.md) — every key derivation and its domain-separation label, by layer
-- [seismic/docs/language-and-vm.md](../docs/language-and-vm.md) — Mercury EVM spec: shielded types, CLOAD/CSTORE, FlaggedStorage, arrays, casting
-- [seismic/docs/gitbook/reference/repos.md](../docs/gitbook/reference/repos.md) — all repos, fork management, dependency flow
-- [seismic/docs/tee/network-founding.md](../docs/tee/network-founding.md) — network founding: boot-chain sequencing, the summit key holder, what `network_id` pins
-- [seismic/docs/tee/diagrams/README.md](../docs/tee/diagrams/README.md) — diagram conventions: Mermaid in markdown for structured diagrams, .excalidraw + rendered .png pairs next to their docs for freeform; follow this when creating or editing diagrams
-
-When working in a specific repo, also check that repo's README and CLAUDE.md, as well as anything under that repo's `docs/seismic` directory.
+When working in a specific repo, also check that repo's README and CLAUDE.md/AGENTS.md, as well as anything under that repo's `docs/seismic` directory.
 
 ## Workspace Layout
 
@@ -34,13 +26,10 @@ All repos live as siblings under the parent directory. Open `seismic/workspace/s
 
 ```
 seismic/                          # parent directory
-├── CLAUDE.md                     # symlink -> seismic/workspace/CLAUDE.md
-├── seismic/                      # monorepo (docs, scripts, workspace config)
-│   ├── workspace/                # cross-repo workspace files (source of truth)
-│   ├── contracts/                # Solidity contracts
-│   ├── clients/ts/               # TypeScript client (Viem + React)
-│   └── clients/py/               # Python client (Web3.py) 
+├── CLAUDE.md                     # symlink -> seismic/workspace/CLAUDE.workspace.md
+├── seismic/                      # monorepo: docs, Solidity contracts, TS/Python clients, workspace config
 ├── seismic-reth/                 # execution client (fork of reth)
+├── summit/                       # consensus client
 ├── seismic-evm/                  # block execution layer (fork of alloy-evm)
 ├── seismic-revm/                 # Mercury EVM (fork of revm)
 ├── seismic-revm-inspectors/      # EVM tracing (fork of revm-inspectors)
@@ -51,6 +40,8 @@ seismic/                          # parent directory
 ├── seismic-foundry-fork-db/      # fork DB with FlaggedStorage (fork of foundry-fork-db)
 ├── seismic-compilers/            # compiler integration for sforge (fork of foundry-compilers)
 ├── enclave/                      # TEE enclave server and contracts
+├── seismic-images/               # TDX confidential VM images (fork of flashbots-images)
+├── deploy/                       # network deployment tooling (Pulumi + tee CLIs)
 ├── seismic-solidity/             # Solidity compiler with shielded types (fork of solidity)
 ```
 
@@ -61,4 +52,5 @@ seismic/                          # parent directory
 - **Formatting**: `cargo +nightly fmt --all` across all repos.
 - **Linting**: `RUSTFLAGS="-D warnings" cargo clippy --workspace --all-features`.
 - **Fork management**: All forks pin upstream commits. Dependency versions are coordinated across repos via `[patch]` sections in `Cargo.toml`.
-- **Cross-repo file references**: when a code comment, commit message, or PR description refers to a file in *another* repo, use the full GitHub URL (e.g. `https://github.com/SeismicSystems/seismic-foundry/blob/seismic/.github/workflows/release.yml`) so readers can click through — a bare repo+path only works within the same repo. Link to the repo's default branch unless the reference is to a specific historical version, in which case pin a commit SHA. Same-repo references stay plain relative paths.
+- **Cross-repo verification**: `mise run cargo::local-patches::on` (from `seismic/`) makes all sibling repos resolve Seismic dependencies from local checkouts instead of pinned commits; `::off` reverts, `::status` shows current state. Never hand-edit pins.
+- **Cross-repo file references** (code comments, commits, PR text): use the full GitHub URL so readers can click through — default branch normally, a pinned commit SHA for historical references. Same-repo references stay relative paths.
