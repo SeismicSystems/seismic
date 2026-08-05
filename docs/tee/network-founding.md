@@ -1,6 +1,8 @@
 # Network Founding — Boot-Chain Sequencing
 
-**Status**: proposed design (2026-07), under review.
+**Status**: agreed design (2026-07); implementation in progress — the
+enclave surface (item 1 under Implementation surface) is fully merged
+as of 2026-08 (enclave #229–#232).
 
 How a Seismic network is founded: where validator keys are born, what the
 network's identity hash covers, and how the node boot chain is sequenced to
@@ -30,7 +32,7 @@ Side by side with the design it replaces — the same boot chain in both,
 one event moves, everything else is consequence:
 
 ![founding reorder vs ceremony+split: where validator keys are born
-decides what network_id pins](diagrams/founding-reorder-vs-split.png)
+decides what network_id pins](diagrams/founding-reorder-vs-split.svg)
 
 ## Background
 
