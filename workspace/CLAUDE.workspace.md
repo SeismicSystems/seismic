@@ -18,6 +18,8 @@ See `seismic/docs/glossary.md` for full definitions. Quick summary:
 
 Detailed docs live in `seismic/docs/` — read its README for the index (architecture, key schedule, Mercury EVM spec, network founding, diagram conventions, repo/fork management).
 
+Diagrams: Mermaid first; hand-authored structured SVG only when spatial layout carries meaning. Read `seismic/docs/tee/diagrams/README.md` before creating or editing any diagram.
+
 When working in a specific repo, also check that repo's README and CLAUDE.md/AGENTS.md, as well as anything under that repo's `docs/seismic` directory.
 
 ## Workspace Layout

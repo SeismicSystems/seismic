@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 1450"
+     font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <style>
+    text { fill: #374151; font-size: 16px; }
+    .title    { font-size: 30px; font-weight: 700; fill: #1e40af; }
+    .subtitle { font-size: 15px; fill: #64748b; }
+    .col-a    { font-size: 21px; font-weight: 700; fill: #1e40af; }
+    .col-b    { font-size: 21px; font-weight: 700; fill: #047857; }
+    .sub       { font-size: 14px; fill: #64748b; }
+    .sub.blue  { fill: #1e40af; }
+    .moved     { fill: #c2410c; }
+    .ceremony-label { fill: #dc2626; font-weight: 600; }
+    .caption   { font-size: 14px; fill: #64748b; }
+    .verdict   { font-size: 15px; }
+    .verdict.green { fill: #047857; }
+    .timeline { stroke: #64748b; stroke-width: 3; }
+    .dot { fill: #3b82f6; }
+    .dot.moved { fill: #fed7aa; stroke: #c2410c; stroke-width: 3; }
+    .divider { stroke: #64748b; stroke-width: 2; stroke-dasharray: 4 8; }
+    .pinbox  { fill: none; stroke: #1e3a5f; stroke-dasharray: 8 6; }
+    .pinbox-label { font-size: 15px; font-weight: 600; fill: #1e40af; }
+    .ceremony-box { fill: #fee2e2; fill-opacity: 0.5; stroke: #dc2626; stroke-width: 2; stroke-dasharray: 10 7; }
+    .deleted-box  { fill: none; stroke: #64748b; stroke-dasharray: 8 6; }
+    .chip > rect { stroke-width: 1.5; }
+    .chip > text { text-anchor: middle; dominant-baseline: middle; font-size: 14px; }
+    .chip.pinned  > rect { fill: #93c5fd; stroke: #1e3a5f; }
+    .chip.pinned  > text { fill: #1e3a5f; }
+    .chip.outside > rect { fill: #fee2e2; stroke: #dc2626; }
+    .chip.outside > text { fill: #dc2626; }
+    .chip.green   > rect { fill: #a7f3d0; stroke: #047857; stroke-width: 2.5; }
+    .chip.green   > text { fill: #065f46; }
+  </style>
+
+  <rect width="2000" height="1450" fill="#ffffff"/>
+
+  <text class="title" x="40" y="50">Founding: where validator keys are born decides what network_id pins</text>
+  <text class="subtitle" x="40" y="84">same boot chain in both designs; one event (orange) moves, everything else is consequence</text>
+
+  <line class="divider" x1="1000" y1="120" x2="1000" y2="1430"/>
+
+  <!-- ================= column A: ceremony + split (fallback) ================= -->
+  <text class="col-a" x="60" y="160">A — ceremony + split (fallback)</text>
+
+  <line class="timeline" x1="115" y1="250" x2="115" y2="1035"/>
+
+  <circle class="dot" cx="115" cy="250" r="9"/>
+  <text x="145" y="256">author inputs/ (params, reth genesis, measurements)</text>
+
+  <circle class="dot" cx="115" cy="350" r="9"/>
+  <text x="145" y="356">manifest assemble — pins params, image policy</text>
+  <text class="sub blue" x="145" y="382">→ network_id minted</text>
+
+  <circle class="dot" cx="115" cy="475" r="9"/>
+  <text x="145" y="481">configure — manifest + reth genesis to boxes</text>
+
+  <circle class="dot" cx="115" cy="572" r="9"/>
+  <text x="145" y="578">admission → root_key → LUKS open</text>
+
+  <circle class="dot moved" cx="115" cy="670" r="11"/>
+  <text class="moved" x="145" y="676">summit keys born — onto the LUKS disk</text>
+  <text class="sub" x="145" y="702">after network_id exists → can never be inside the pin</text>
+
+  <!-- the ceremony exists only because the keys were born too late to pin -->
+  <rect class="ceremony-box" x="88" y="745" width="825" height="240" rx="20"/>
+  <text class="ceremony-label" x="145" y="788">genesis ceremony — exists only to inject the late keys</text>
+  <circle class="dot" cx="115" cy="832" r="9"/>
+  <text x="145" y="838">gather pubkeys (+ quotes) from every summit</text>
+  <circle class="dot" cx="115" cy="885" r="9"/>
+  <text x="145" y="891">fill the pinned params template → genesis.toml</text>
+  <circle class="dot" cx="115" cy="938" r="9"/>
+  <text x="145" y="944">POST sendGenesis back to every node</text>
+
+  <circle class="dot" cx="115" cy="1035" r="9"/>
+  <text x="145" y="1041">commit the founding output to the network dir</text>
+
+  <!-- what the pin covers (A): validator set lives outside -->
+  <rect class="pinbox" x="100" y="1115" width="520" height="180" rx="20"/>
+  <text class="pinbox-label" x="120" y="1150">network_id pins</text>
+  <g class="chip pinned" transform="translate(120,1170)">
+    <rect width="230" height="40" rx="10"/>
+    <text x="115" y="21">manifest</text>
+  </g>
+  <g class="chip pinned" transform="translate(370,1170)">
+    <rect width="230" height="40" rx="10"/>
+    <text x="115" y="21">reth-genesis.json</text>
+  </g>
+  <g class="chip pinned" transform="translate(120,1230)">
+    <rect width="230" height="40" rx="10"/>
+    <text x="115" y="21">summit params</text>
+  </g>
+  <g class="chip pinned" transform="translate(370,1230)">
+    <rect width="230" height="40" rx="10"/>
+    <text x="115" y="21">measurement-policy</text>
+  </g>
+
+  <g class="chip outside" transform="translate(660,1140)">
+    <rect width="310" height="40" rx="10"/>
+    <text x="155" y="21">founding-validators.toml</text>
+  </g>
+  <g class="chip outside" transform="translate(660,1198)">
+    <rect width="310" height="40" rx="10"/>
+    <text x="155" y="21">quote sidecar</text>
+  </g>
+  <text class="caption" y="1262">
+    <tspan x="660">outside the pin: git-trusted;</tspan>
+    <tspan x="660" dy="18">quotes age, prove membership</tspan>
+    <tspan x="660" dy="18">only — never completeness</tspan>
+  </text>
+
+  <text class="verdict" y="1390">
+    <tspan x="60">joiner verifies: manifest hash + each pinned artifact, then</tspan>
+    <tspan x="60" dy="22">trusts git + re-verifies quotes for the validator set</tspan>
+  </text>
+
+  <!-- ================= column B: founding reorder (chosen) ================= -->
+  <text class="col-b" x="1120" y="160">B — founding reorder (chosen)</text>
+
+  <line class="timeline" x1="1175" y1="250" x2="1175" y2="895"/>
+
+  <circle class="dot" cx="1175" cy="250" r="9"/>
+  <text x="1205" y="256">up — boxes boot the measured image, identity-free</text>
+
+  <circle class="dot moved" cx="1175" cy="348" r="11"/>
+  <text class="moved" x="1205" y="354">summit keys born — in RAM (TDX-protected)</text>
+  <text class="sub" x="1205" y="380">before network_id → born pinnable</text>
+
+  <circle class="dot" cx="1175" cy="475" r="9"/>
+  <text x="1205" y="481">harvest {pubkeys, quote, ip} — DCAP-verify vs policy</text>
+
+  <circle class="dot" cx="1175" cy="572" r="9"/>
+  <text x="1205" y="578">manifest assemble — pins the validator set too</text>
+  <text class="sub blue" x="1205" y="604">→ network_id minted — covers everything</text>
+
+  <circle class="dot" cx="1175" cy="700" r="9"/>
+  <text x="1205" y="706">configure — manifest + reth genesis + complete genesis.toml</text>
+
+  <circle class="dot" cx="1175" cy="797" r="9"/>
+  <text x="1205" y="803">admission → root_key → LUKS → keys persist (unchanged)</text>
+
+  <circle class="dot" cx="1175" cy="895" r="9"/>
+  <text x="1205" y="901">launch checks: pubkey continuity + reth block 0</text>
+
+  <rect class="deleted-box" x="1150" y="950" width="490" height="55" rx="18"/>
+  <text class="caption" x="1395" y="983" text-anchor="middle" font-size="16">genesis ceremony — deleted</text>
+
+  <!-- what the pin covers (B): everything, validators inside genesis.toml -->
+  <rect class="pinbox" x="1160" y="1115" width="790" height="180" rx="20"/>
+  <text class="pinbox-label" x="1180" y="1150">network_id pins — everything</text>
+  <g class="chip pinned" transform="translate(1180,1170)">
+    <rect width="230" height="40" rx="10"/>
+    <text x="115" y="21">manifest</text>
+  </g>
+  <g class="chip pinned" transform="translate(1435,1170)">
+    <rect width="240" height="40" rx="10"/>
+    <text x="120" y="21">reth-genesis.json</text>
+  </g>
+  <g class="chip pinned" transform="translate(1700,1170)">
+    <rect width="230" height="40" rx="10"/>
+    <text x="115" y="21">measurement-policy</text>
+  </g>
+  <g class="chip green" transform="translate(1180,1228)">
+    <rect width="560" height="44" rx="10"/>
+    <text x="280" y="23">genesis.toml — complete, validators inside</text>
+  </g>
+
+  <text class="verdict green" x="1120" y="1390">joiner verifies: sha256(manifest) ≡ network_id + artifact pins</text>
+</svg>
