@@ -55,6 +55,7 @@ class TestSignedEstimateGas:
             contract._address,
             0,
             None,
+            signed_read=True,
             eip712=eip712,
         )
         metadata = build_metadata(w3, params)
