@@ -15,8 +15,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from cryptography.exceptions import InvalidTag
+from eth_abi import decode as abi_decode
 from eth_keys.main import KeyAPI as eth_keys
 from hexbytes import HexBytes
+from web3.exceptions import ContractLogicError
 from web3.types import RPCEndpoint
 
 from seismic_web3._constants import TYPED_DATA_MESSAGE_VERSION
@@ -164,8 +166,10 @@ def estimate_shielded_gas(
 
     Builds a temporary tx using the block gas limit as a placeholder,
     signs it, and sends the signed bytes to ``eth_estimateGas``.  The
-    node can then authenticate the sender and execute against the
-    correct private state.
+    supplied metadata and encrypted calldata must use ``signed_read=True``;
+    the node requires this for signed simulations so the estimate cannot be
+    replayed as a write. The node can then authenticate the sender and execute
+    against the correct private state.
 
     When ``encryption`` is provided and the call reverts, the encrypted
     revert output in the error is decrypted so the raised
@@ -330,8 +334,6 @@ def _decode_revert_reason(data: HexBytes) -> str:
     """
     if data[:4] == _ERROR_STRING_SELECTOR:
         try:
-            from eth_abi import decode as abi_decode
-
             (reason,) = abi_decode(["string"], bytes(data[4:]))
             return f"execution reverted: {reason}"
         except Exception:  # malformed revert data
@@ -363,8 +365,6 @@ def _raise_signed_rpc_error(
         return
     error = response["error"]
     message = str(error.get("message", "RPC error"))
-
-    from web3.exceptions import ContractLogicError
 
     data = error.get("data")
     if isinstance(data, str) and data.startswith("0x") and len(data) > 2:
