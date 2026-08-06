@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from cryptography.exceptions import InvalidTag
 from eth_keys.main import KeyAPI as eth_keys
 from hexbytes import HexBytes
 from web3.types import RPCEndpoint
@@ -45,6 +46,9 @@ if TYPE_CHECKING:
 
 #: Default gas limit for reads (signed calls) where estimation is unnecessary.
 _DEFAULT_GAS = 30_000_000
+
+#: 4-byte selector of the standard ``Error(string)`` revert.
+_ERROR_STRING_SELECTOR = bytes.fromhex("08c379a0")
 
 
 def _address_from_key(private_key: PrivateKey) -> ChecksumAddress:
@@ -154,6 +158,7 @@ def estimate_shielded_gas(
     metadata: TxSeismicMetadata,
     gas_price: int,
     private_key: PrivateKey,
+    encryption: EncryptionState | None = None,
 ) -> int:
     """Estimate gas for a shielded transaction by signing it first (sync).
 
@@ -161,6 +166,10 @@ def estimate_shielded_gas(
     signs it, and sends the signed bytes to ``eth_estimateGas``.  The
     node can then authenticate the sender and execute against the
     correct private state.
+
+    When ``encryption`` is provided and the call reverts, the encrypted
+    revert output in the error is decrypted so the raised
+    ``ContractLogicError`` carries the plaintext revert reason.
     """
     block_gas_limit = w3.eth.get_block("latest")["gasLimit"]
     temp_tx = _build_unsigned_tx(metadata, gas_price, block_gas_limit, encrypted_data)
@@ -170,6 +179,8 @@ def estimate_shielded_gas(
         RPCEndpoint("eth_estimateGas"),
         [signed.to_0x_hex()],
     )
+    if encryption is not None:
+        _raise_signed_rpc_error(response, encryption, metadata)
     return int(_check_rpc_response(response), 16)
 
 
@@ -180,6 +191,7 @@ async def async_estimate_shielded_gas(
     metadata: TxSeismicMetadata,
     gas_price: int,
     private_key: PrivateKey,
+    encryption: EncryptionState | None = None,
 ) -> int:
     """Estimate gas for a shielded transaction by signing it first (async).
 
@@ -193,6 +205,8 @@ async def async_estimate_shielded_gas(
         RPCEndpoint("eth_estimateGas"),
         [signed.to_0x_hex()],
     )
+    if encryption is not None:
+        _raise_signed_rpc_error(response, encryption, metadata)
     return int(_check_rpc_response(response), 16)
 
 
@@ -248,6 +262,7 @@ def estimate_transparent_gas(
         metadata=metadata,
         gas_price=w3.eth.gas_price,
         private_key=private_key,
+        encryption=encryption,
     )
 
 
@@ -289,6 +304,7 @@ async def async_estimate_transparent_gas(
         metadata=metadata,
         gas_price=await w3.eth.gas_price,
         private_key=private_key,
+        encryption=encryption,
     )
 
 
@@ -303,6 +319,69 @@ def _check_rpc_response(response: RPCResponse) -> str:
         error = response["error"]
         raise RuntimeError(f"RPC error: {error['message']}")
     return str(response["result"])
+
+
+def _decode_revert_reason(data: HexBytes) -> str:
+    """Best-effort human-readable message for revert data.
+
+    Decodes the standard ``Error(string)`` shape; custom errors and raw
+    bytes fall back to the generic message (the full plaintext is still
+    attached to the raised exception's ``data``).
+    """
+    if data[:4] == _ERROR_STRING_SELECTOR:
+        try:
+            from eth_abi import decode as abi_decode
+
+            (reason,) = abi_decode(["string"], bytes(data[4:]))
+            return f"execution reverted: {reason}"
+        except Exception:  # malformed revert data
+            pass
+    return "execution reverted"
+
+
+def _raise_signed_rpc_error(
+    response: RPCResponse,
+    encryption: EncryptionState,
+    metadata: TxSeismicMetadata,
+) -> None:
+    """Raise on an RPC error response from a signed read / signed estimate.
+
+    The node encrypts the revert output of a signed request under the
+    caller's key (revert data can embed private state just like a
+    successful return value), surfacing only a generic ``execution
+    reverted`` message with the ciphertext in the error ``data`` field.
+    Decrypt it here so callers see the decoded revert reason, with the
+    plaintext revert data attached to the exception.
+
+    Falls back to the raw error (message only) when there is nothing to
+    decrypt or decryption fails, e.g. non-revert errors or plaintext
+    revert data from a node without signed-read revert encryption —
+    AES-GCM authentication makes a wrong-input decrypt fail loudly
+    rather than produce garbage.
+    """
+    if "error" not in response:
+        return
+    error = response["error"]
+    message = str(error.get("message", "RPC error"))
+
+    from web3.exceptions import ContractLogicError
+
+    data = error.get("data")
+    if isinstance(data, str) and data.startswith("0x") and len(data) > 2:
+        try:
+            decrypted = encryption.decrypt(
+                HexBytes(data),
+                metadata.seismic_elements.encryption_nonce,
+                metadata,
+            )
+            raise ContractLogicError(
+                _decode_revert_reason(decrypted), data=decrypted.to_0x_hex()
+            )
+        except InvalidTag:
+            # Not ciphertext for our key (e.g. plaintext revert data from an
+            # unfixed node); surface it as-is.
+            raise ContractLogicError(message, data=data) from None
+    raise ContractLogicError(message)
 
 
 def send_shielded_raw(w3: Web3, signed_tx: HexBytes) -> HexBytes:
@@ -404,6 +483,7 @@ def _prepare_shielded_transaction(
             metadata=estimate_metadata,
             gas_price=resolved_gas_price,
             private_key=private_key,
+            encryption=encryption,
         )
 
     tx = _build_unsigned_tx(metadata, resolved_gas_price, resolved_gas, encrypted_data)
@@ -470,6 +550,7 @@ async def _async_prepare_shielded_transaction(
             metadata=estimate_metadata,
             gas_price=resolved_gas_price,
             private_key=private_key,
+            encryption=encryption,
         )
 
     tx = _build_unsigned_tx(metadata, resolved_gas_price, resolved_gas, encrypted_data)
@@ -758,6 +839,9 @@ def signed_call(
         RPCEndpoint("eth_call"),
         [signed.to_0x_hex(), "latest"],
     )
+    # Raise on errors (e.g. reverts), decrypting the encrypted revert output
+    # so the exception carries the plaintext revert reason.
+    _raise_signed_rpc_error(response, encryption, metadata)
     raw_result: str = response.get("result", "0x")
 
     if not raw_result or raw_result == "0x":
@@ -819,6 +903,9 @@ async def async_signed_call(
         RPCEndpoint("eth_call"),
         [signed.to_0x_hex(), "latest"],
     )
+    # Raise on errors (e.g. reverts), decrypting the encrypted revert output
+    # so the exception carries the plaintext revert reason.
+    _raise_signed_rpc_error(response, encryption, metadata)
     raw_result: str = response.get("result", "0x")
 
     if not raw_result or raw_result == "0x":

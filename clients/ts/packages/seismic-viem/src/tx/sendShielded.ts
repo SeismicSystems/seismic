@@ -20,6 +20,7 @@ import {
   type TxSeismicMetadata,
   buildTxSeismicMetadata,
 } from '@sviem/tx/metadata.ts'
+import { decryptRevertError } from '@sviem/tx/revertDecrypt.ts'
 import type {
   SeismicSecurityParams,
   TransactionSerializableSeismic,
@@ -319,25 +320,35 @@ export async function estimateShieldedGas<
   const isEip712 =
     metadata.seismicElements.messageVersion === TYPED_DATA_MESSAGE_VERSION
 
-  if (isEip712) {
-    const { typedData, signature } = await signSeismicTxTypedData(
-      client,
-      tempTx
+  try {
+    if (isEip712) {
+      const { typedData, signature } = await signSeismicTxTypedData(
+        client,
+        tempTx
+      )
+      const response: Hex = await client.request({
+        method: 'eth_estimateGas',
+        params: [{ data: typedData, signature }],
+      })
+      return BigInt(response)
+    }
+
+    const serializedTransaction = await client.account!.signTransaction!(
+      tempTx,
+      {
+        serializer: serializeSeismicTransaction,
+      }
     )
+
     const response: Hex = await client.request({
       method: 'eth_estimateGas',
-      params: [{ data: typedData, signature }],
+      params: [serializedTransaction],
     })
     return BigInt(response)
+  } catch (err) {
+    // The node encrypts the revert output of a reverting signed estimate
+    // under the caller's key; restore the plaintext so revert reasons
+    // decode as usual downstream.
+    throw await decryptRevertError(client, err, metadata)
   }
-
-  const serializedTransaction = await client.account!.signTransaction!(tempTx, {
-    serializer: serializeSeismicTransaction,
-  })
-
-  const response: Hex = await client.request({
-    method: 'eth_estimateGas',
-    params: [serializedTransaction],
-  })
-  return BigInt(response)
 }

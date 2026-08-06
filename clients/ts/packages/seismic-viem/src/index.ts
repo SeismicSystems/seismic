@@ -45,6 +45,7 @@ export {
   transparentReadContract,
 } from '@sviem/contract/read.ts'
 export { signedCall } from '@sviem/tx/signedCall.ts'
+export { decryptRevertError } from '@sviem/tx/revertDecrypt.ts'
 export type { ShieldedWriteContractDebugResult } from '@sviem/contract/write.ts'
 export {
   shieldedWriteContract,
