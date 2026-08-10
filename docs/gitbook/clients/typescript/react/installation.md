@@ -7,14 +7,14 @@ icon: download
 
 ## Prerequisites
 
-| Requirement            | Version | Notes                   |
-| ---------------------- | ------- | ----------------------- |
-| Node.js                | 18+     | LTS recommended         |
-| React                  | ^18     | Peer dependency         |
-| wagmi                  | ^2.0.0  | Peer dependency         |
-| viem                   | 2.x     | Peer dependency         |
-| seismic-viem           | >=1.1.1 | Seismic transport layer |
-| @rainbow-me/rainbowkit | ^2.0.0  | Optional, for wallet UI |
+| Requirement            | Version      | Notes                   |
+| ---------------------- | ------------ | ----------------------- |
+| Node.js                | 18+          | LTS recommended         |
+| React                  | ^18 \|\| ^19 | Peer dependency         |
+| wagmi                  | ^2.0.0       | Peer dependency         |
+| viem                   | 2.x          | Peer dependency         |
+| seismic-viem           | >=3.0.0      | Seismic transport layer |
+| @rainbow-me/rainbowkit | ^2.0.0       | Optional, for wallet UI |
 
 ## Install
 
