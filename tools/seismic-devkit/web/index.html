@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seismic Studio • Privacy EVM & Shielded DevKit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="logo-area">
+      <div class="logo-badge">
+        <span class="logo-glow"></span>
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">SEISMIC <span class="badge-shield">PRIVACY EVM</span></h1>
+        <p class="brand-subtitle">Shielded State & TEE Enclave DevKit • Chain ID 5124</p>
+      </div>
+    </div>
+
+    <div class="network-badge">
+      <span class="pulse-dot"></span>
+      <span id="header-net-name">Seismic Testnet</span>
+      <span class="chain-id-tag">5124</span>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs">
+    <button class="nav-tab active" data-tab="dashboard">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      Overview & Network
+    </button>
+    <button class="nav-tab" data-tab="faucet">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+      Testnet Faucet & Wallet
+    </button>
+    <button class="nav-tab" data-tab="shielded">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      Shielded State Simulator
+    </button>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Tab 1: Dashboard -->
+    <section id="tab-dashboard" class="tab-pane active">
+      <div class="hero-card">
+        <div class="hero-content">
+          <div class="pill-highlight">🛡️ Encrypted & Shielded Layer 1</div>
+          <h2>Privacy-Enabled Smart Contracts on EVM</h2>
+          <p>
+            Seismic enables private smart contracts with shielded state types (<code>suint</code>, <code>sbool</code>, <code>saddress</code>) and hardware-level TEE confidential execution.
+          </p>
+        </div>
+      </div>
+
+      <div class="stats-grid mt-4">
+        <div class="stat-card">
+          <span class="stat-lbl">Chain ID</span>
+          <span class="stat-val" id="stat-chain-id">5124</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-lbl">Latest Block</span>
+          <span class="stat-val mono" id="stat-block-num">#...</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-lbl">Active RPC</span>
+          <span class="stat-val mono" id="stat-rpc-url">testnet-1.seismictest.net</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-lbl">Explorer</span>
+          <span class="stat-val mono"><a href="https://seismic-testnet.socialscan.io" target="_blank" style="color: #60a5fa;">SocialScan ↗</a></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: Faucet & Wallet -->
+    <section id="tab-faucet" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>🚰 Seismic Testnet Wallet & Faucet</h3>
+            <p class="text-muted">Generate devnet keys and claim 0.5 sETH testnet gas.</p>
+          </div>
+          <button class="btn btn-secondary" id="btn-gen-wallet">⚡ Generate New Wallet</button>
+        </div>
+
+        <div id="wallet-info-box" class="wallet-box" style="display: none;">
+          <div class="form-group">
+            <label>Wallet Address</label>
+            <input type="text" id="wallet-addr-input" class="form-input mono" readonly />
+          </div>
+          <div class="form-group">
+            <label>Private Key</label>
+            <input type="password" id="wallet-pk-input" class="form-input mono" readonly />
+          </div>
+          <button class="btn btn-primary mt-2" id="btn-claim-drip">🚰 Claim 0.5 sETH Faucet</button>
+        </div>
+
+        <div id="faucet-result" class="mt-3"></div>
+
+        <div class="mt-4">
+          <h4>Faucet Drip Log</h4>
+          <div id="faucet-history-list" class="ledger-list mt-2">
+            <div class="empty-state">No faucet drips requested in this session.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Shielded State Simulator -->
+    <section id="tab-shielded" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>🔒 Shielded Type Encryption & TEE Simulator</h3>
+            <p class="text-muted">Encrypt values to simulate confidential execution in Seismic TEE enclaves.</p>
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Shielded Type</label>
+            <select id="shield-type-select" class="form-input">
+              <option value="suint256">suint256 (Shielded 256-bit uint)</option>
+              <option value="suint32">suint32 (Shielded 32-bit uint)</option>
+              <option value="suint8">suint8 (Shielded 8-bit uint)</option>
+              <option value="sbool">sbool (Shielded bool)</option>
+              <option value="saddress">saddress (Shielded address)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Plain Value</label>
+            <input type="text" id="shield-val-input" class="form-input" value="1000000" placeholder="e.g. 1000 or true" />
+          </div>
+          <div class="form-group" style="display: flex; align-items: flex-end;">
+            <button class="btn btn-gradient" id="btn-encrypt-shield">🔐 Encrypt for TEE</button>
+          </div>
+        </div>
+
+        <div class="json-inspector mt-4">
+          <div class="inspector-header">
+            <span>Encrypted TEE Payload Output</span>
+          </div>
+          <pre id="shield-output">Select a type, enter value, and click "Encrypt for TEE".</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>Seismic Systems Developer Studio • Open Source Privacy EVM</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

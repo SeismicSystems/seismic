@@ -1,0 +1,32 @@
+{
+  "name": "seismic-devkit",
+  "version": "1.0.0",
+  "description": "Developer toolkit, interactive Web Studio, and shielded transaction runner for the Seismic privacy-enabled EVM blockchain.",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "seismic-cli": "./bin/seismic-cli.js"
+  },
+  "scripts": {
+    "start": "node src/server/studio.js",
+    "cli": "node bin/seismic-cli.js",
+    "test": "node tests/run-all.js"
+  },
+  "keywords": [
+    "seismic",
+    "privacy-evm",
+    "shielded-state",
+    "suint",
+    "sbool",
+    "saddress",
+    "seismic-devkit"
+  ],
+  "author": "Seismic Community",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.5",
+    "express": "^4.21.2"
+  }
+}
