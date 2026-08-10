@@ -2,12 +2,12 @@
 pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 import {MeasurementRegistry} from "../src/enclave/MeasurementRegistry.sol";
 
-contract MeasurementRegistryTest is Test {
-    bytes32 internal constant REGISTRY_STORAGE_LOCATION =
-        0xa3ae60943e4f183142036d77b94858085814dd428f131289aea7e42703fb0b00;
+bytes32 constant REGISTRY_STORAGE_LOCATION = 0xa3ae60943e4f183142036d77b94858085814dd428f131289aea7e42703fb0b00;
 
+contract MeasurementRegistryTest is Test {
     address internal constant AUTHORITY = 0x1000000000000000000000000000000000000002;
 
     bytes32 internal constant BOOTSTRAP_POLICY_HASH = keccak256("bootstrap-policy");
@@ -267,6 +267,91 @@ contract MeasurementRegistryTest is Test {
         assertEq(registry.policyRevision(), 3);
     }
 
+    function testFuzz_MixedMultiIdBatchUpdatesStatusesAndCount(
+        bytes32 seed,
+        uint256 acceptCount,
+        uint256 deprecateCount
+    ) public {
+        acceptCount = bound(acceptCount, 0, 8);
+        deprecateCount = bound(deprecateCount, 0, 8);
+        if (acceptCount == 0 && deprecateCount == 0) acceptCount = 1;
+
+        // Deprecation candidates must first be Accepted through a real update
+        // so acceptedCount accounting stays honest.
+        bytes32[] memory deprecate = _distinctIds(seed, "deprecate", deprecateCount);
+        if (deprecateCount > 0) {
+            _apply(deprecate, _empty(), keccak256(abi.encode(seed, "staging-policy")));
+        }
+        uint256 acceptedBefore = registry.acceptedCount();
+        uint64 revisionBefore = registry.policyRevision();
+
+        bytes32[] memory accept = _distinctIds(seed, "accept", acceptCount);
+        _apply(accept, deprecate, keccak256(abi.encode(seed, "updated-policy")));
+
+        for (uint256 i; i < accept.length; ++i) {
+            assertTrue(registry.isAccepted(accept[i]));
+        }
+        for (uint256 i; i < deprecate.length; ++i) {
+            assertEq(uint8(registry.statusOf(deprecate[i])), uint8(MeasurementRegistry.Status.Deprecated));
+        }
+        assertEq(registry.acceptedCount(), acceptedBefore + acceptCount - deprecateCount);
+        assertEq(registry.policyRevision(), revisionBefore + 1);
+        assertTrue(registry.isAccepted(INITIAL_ADMISSION_ID));
+    }
+
+    function testFuzz_RevertWhen_AcceptBatchContainsDuplicate(bytes32 seed, uint256 idCount, uint256 duplicateAt)
+        public
+    {
+        idCount = bound(idCount, 2, 8);
+        duplicateAt = bound(duplicateAt, 1, idCount - 1);
+        bytes32[] memory accept = _distinctIds(seed, "accept", idCount);
+        accept[duplicateAt] = accept[0];
+
+        vm.prank(AUTHORITY);
+        vm.expectRevert(abi.encodeWithSelector(MeasurementRegistry.DuplicateAdmissionId.selector, accept[0]));
+        registry.applyPolicyUpdate(accept, _empty(), keccak256(abi.encode(seed, "updated-policy")));
+    }
+
+    function testFuzz_RevertWhen_DeprecateBatchContainsDuplicate(bytes32 seed, uint256 idCount, uint256 duplicateAt)
+        public
+    {
+        idCount = bound(idCount, 2, 8);
+        duplicateAt = bound(duplicateAt, 1, idCount - 1);
+        bytes32[] memory deprecate = _distinctIds(seed, "deprecate", idCount);
+        _apply(deprecate, _empty(), keccak256(abi.encode(seed, "staging-policy")));
+        deprecate[duplicateAt] = deprecate[0];
+
+        vm.prank(AUTHORITY);
+        vm.expectRevert(abi.encodeWithSelector(MeasurementRegistry.DuplicateAdmissionId.selector, deprecate[0]));
+        registry.applyPolicyUpdate(_empty(), deprecate, keccak256(abi.encode(seed, "updated-policy")));
+    }
+
+    function testFuzz_RevertWhen_BatchesContradictAtAnyPosition(
+        bytes32 seed,
+        uint256 acceptCount,
+        uint256 deprecateCount,
+        uint256 acceptAt,
+        uint256 deprecateAt
+    ) public {
+        acceptCount = bound(acceptCount, 1, 8);
+        deprecateCount = bound(deprecateCount, 1, 8);
+        acceptAt = bound(acceptAt, 0, acceptCount - 1);
+        deprecateAt = bound(deprecateAt, 0, deprecateCount - 1);
+
+        // Stage an otherwise-valid mixed update so the contradiction is the
+        // only defect in the batch.
+        bytes32[] memory deprecate = _distinctIds(seed, "deprecate", deprecateCount);
+        _apply(deprecate, _empty(), keccak256(abi.encode(seed, "staging-policy")));
+        bytes32[] memory accept = _distinctIds(seed, "accept", acceptCount);
+        accept[acceptAt] = deprecate[deprecateAt];
+
+        vm.prank(AUTHORITY);
+        vm.expectRevert(
+            abi.encodeWithSelector(MeasurementRegistry.ContradictoryAdmissionId.selector, deprecate[deprecateAt])
+        );
+        registry.applyPolicyUpdate(accept, deprecate, keccak256(abi.encode(seed, "updated-policy")));
+    }
+
     function _initializeRegistry() internal {
         vm.store(address(registry), bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 1), BOOTSTRAP_POLICY_HASH);
         vm.store(address(registry), bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 2), BOOTSTRAP_POLICY_HASH);
@@ -292,5 +377,104 @@ contract MeasurementRegistryTest is Test {
 
     function _empty() internal pure returns (bytes32[] memory values) {
         values = new bytes32[](0);
+    }
+
+    /// Distinct pseudo-random admission IDs; `domain` keeps the accept and
+    /// deprecate populations disjoint for any seed.
+    function _distinctIds(bytes32 seed, string memory domain, uint256 count)
+        internal
+        pure
+        returns (bytes32[] memory ids)
+    {
+        ids = new bytes32[](count);
+        for (uint256 i; i < count; ++i) {
+            ids[i] = keccak256(abi.encode(seed, domain, i));
+        }
+    }
+}
+
+/// Pins the committed measurement-policy fixture pair from Solidity: the
+/// compiled report's genesis storage map, loaded verbatim, must produce the
+/// getters the report claims, and the report itself must re-derive from the
+/// policy document and the frozen slot formulas. The fixtures are verbatim
+/// copies of the golden pair owned by the enclave repo's policy compiler
+/// (https://github.com/SeismicSystems/enclave/blob/main/crates/measurement-admission/fixtures/golden/),
+/// so Rust, deploy tooling, and Solidity all pin the same bytes.
+contract MeasurementRegistryFixtureTest is Test {
+    using stdJson for string;
+
+    string internal constant POLICY_FIXTURE = "test/fixtures/measurement-policy-v1.json";
+    string internal constant COMPILED_FIXTURE = "test/fixtures/measurement-policy-v1.compiled.json";
+    string internal constant CANONICAL_ARTIFACT = "artifacts/MeasurementRegistry.json";
+
+    MeasurementRegistry internal registry;
+    string internal compiled;
+    bytes32 internal policyHash;
+    bytes32[] internal admissionIds;
+
+    function setUp() public {
+        compiled = vm.readFile(COMPILED_FIXTURE);
+        policyHash = compiled.readBytes32(".policy_hash");
+        admissionIds = compiled.readBytes32Array(".admission_ids");
+
+        // Play the deploy role: write the report's storage map verbatim into
+        // a fresh predeploy, exactly as genesis assembly does.
+        registry = new MeasurementRegistry();
+        string[] memory slots = vm.parseJsonKeys(compiled, ".registry_genesis_storage");
+        for (uint256 i; i < slots.length; ++i) {
+            bytes32 value = compiled.readBytes32(string.concat(".registry_genesis_storage.", slots[i]));
+            vm.store(address(registry), vm.parseBytes32(slots[i]), value);
+        }
+    }
+
+    function test_PolicyHashCommitsToPolicyDocumentBytes() public view {
+        assertEq(sha256(vm.readFileBinary(POLICY_FIXTURE)), policyHash);
+    }
+
+    function test_CompiledStorageMapLoadsExpectedGetters() public view {
+        assertEq(registry.bootstrapPolicyHash(), policyHash);
+        assertEq(registry.activePolicyHash(), policyHash);
+        assertEq(registry.policyRevision(), 1);
+        assertEq(registry.acceptedCount(), compiled.readUint(".accepted_count"));
+        assertEq(admissionIds.length, compiled.readUint(".accepted_count"));
+        for (uint256 i; i < admissionIds.length; ++i) {
+            assertTrue(registry.isAccepted(admissionIds[i]));
+            assertEq(uint8(registry.statusOf(admissionIds[i])), uint8(MeasurementRegistry.Status.Accepted));
+        }
+        assertFalse(registry.isAccepted(keccak256("unknown-admission-id")));
+    }
+
+    function test_CompiledStorageMapIsExactlyDerivedPolicyState() public view {
+        string[] memory slots = vm.parseJsonKeys(compiled, ".registry_genesis_storage");
+        assertEq(slots.length, admissionIds.length + 4);
+
+        _assertSlotValue(bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 1), policyHash);
+        _assertSlotValue(bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 2), policyHash);
+        _assertSlotValue(bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 3), bytes32(uint256(1)));
+        _assertSlotValue(bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 4), bytes32(admissionIds.length));
+        for (uint256 i; i < admissionIds.length; ++i) {
+            _assertSlotValue(
+                keccak256(abi.encode(admissionIds[i], REGISTRY_STORAGE_LOCATION)),
+                bytes32(uint256(uint8(MeasurementRegistry.Status.Accepted)))
+            );
+        }
+    }
+
+    /// The report's runtime-code hash must be the canonical committed
+    /// artifact's — the same value the enclave crate freezes as
+    /// `REGISTRY_RUNTIME_CODE_HASH` and deploy validation enforces against
+    /// the genesis alloc.
+    function test_RuntimeCodeHashMatchesCanonicalArtifact() public view {
+        string memory artifact = vm.readFile(CANONICAL_ARTIFACT);
+        assertEq(
+            keccak256(artifact.readBytes(".deployedBytecode.object")),
+            compiled.readBytes32(".registry_runtime_code_hash")
+        );
+    }
+
+    function _assertSlotValue(bytes32 slot, bytes32 expected) internal view {
+        string memory path = string.concat(".registry_genesis_storage.", vm.toString(slot));
+        assertTrue(compiled.keyExists(path), string.concat("missing storage slot ", vm.toString(slot)));
+        assertEq(compiled.readBytes32(path), expected);
     }
 }

@@ -10,6 +10,11 @@ remappings = [
 # via-ir support was added in https://github.com/SeismicSystems/seismic-solidity/pull/204
 # However it is considered experimental and less safe, so we keep it false by default.
 via_ir = false
+# Tests pin the committed measurement-policy fixtures and genesis artifacts.
+fs_permissions = [
+    { access = "read", path = "./test/fixtures" },
+    { access = "read", path = "./artifacts" },
+]
 
 [profile.via-ir]
 via_ir = true
