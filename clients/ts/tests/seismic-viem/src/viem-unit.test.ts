@@ -1,6 +1,14 @@
 import { describe, test } from 'bun:test'
 
 import {
+  testAesGcmDecryptPreservesLeadingNulByte,
+  testAesGcmDecryptPreservesOrdinaryText,
+  testAesGcmEncryptPreservesLeadingZeroByte,
+  testAesGcmEncryptPreservesMultipleLeadingZeroBytes,
+  testAesGcmEncryptPreservesNonZeroLeadingByte,
+  testAesGcmEncryptPreservesTagOnlyOutput,
+} from '@sviem-tests/tests/aesPrecompileDecoding.ts'
+import {
   testAddressExplorerUrlBuildsCorrectUrl,
   testAddressExplorerUrlReturnsNullWithoutExplorer,
   testAddressExplorerUrlWithTab,
@@ -144,5 +152,32 @@ describe('Seismic EIP-712 typed data', () => {
   test(
     'includes authorizationListHash',
     testTypedDataIncludesAuthorizationListHash
+  )
+})
+
+describe('AES-GCM precompile decoding', () => {
+  test(
+    'encrypt preserves a leading zero byte',
+    testAesGcmEncryptPreservesLeadingZeroByte
+  )
+  test(
+    'encrypt preserves multiple leading zero bytes',
+    testAesGcmEncryptPreservesMultipleLeadingZeroBytes
+  )
+  test(
+    'encrypt preserves a non-zero leading byte',
+    testAesGcmEncryptPreservesNonZeroLeadingByte
+  )
+  test(
+    'encrypt preserves a tag-only output',
+    testAesGcmEncryptPreservesTagOnlyOutput
+  )
+  test(
+    'decrypt preserves a leading NUL byte',
+    testAesGcmDecryptPreservesLeadingNulByte
+  )
+  test(
+    'decrypt preserves ordinary text',
+    testAesGcmDecryptPreservesOrdinaryText
   )
 })
