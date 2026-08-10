@@ -1,6 +1,14 @@
 import { describe, test } from 'bun:test'
 
 import {
+  testCreateNonceDoesNotCollideAboveU64,
+  testCreateNonceIsUnchangedBelowU64,
+  testCreateNonceMatchesU96Encoding,
+  testCreateNonceRejectsNegativeValues,
+  testCreateNonceRejectsOversizedValues,
+  testEncryptUsesFullWidthNumericNonce,
+} from '@sviem-tests/tests/encryptionNonce.ts'
+import {
   testAddressExplorerUrlBuildsCorrectUrl,
   testAddressExplorerUrlReturnsNullWithoutExplorer,
   testAddressExplorerUrlWithTab,
@@ -144,5 +152,26 @@ describe('Seismic EIP-712 typed data', () => {
   test(
     'includes authorizationListHash',
     testTypedDataIncludesAuthorizationListHash
+  )
+})
+
+describe('encryption nonce (U96)', () => {
+  test('matches the node U96 encoding', testCreateNonceMatchesU96Encoding)
+  test(
+    'does not collide for values differing above bit 63',
+    testCreateNonceDoesNotCollideAboveU64
+  )
+  test(
+    'is unchanged for values that fit in 64 bits',
+    testCreateNonceIsUnchangedBelowU64
+  )
+  test(
+    'rejects values wider than 96 bits',
+    testCreateNonceRejectsOversizedValues
+  )
+  test('rejects negative values', testCreateNonceRejectsNegativeValues)
+  test(
+    'encrypt uses the full-width numeric nonce',
+    testEncryptUsesFullWidthNumericNonce
   )
 })
