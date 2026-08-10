@@ -47,7 +47,7 @@
   <text x="145" y="256">author inputs/ (params, reth genesis, measurements)</text>
 
   <circle class="dot" cx="115" cy="350" r="9"/>
-  <text x="145" y="356">manifest assemble — pins params, image policy</text>
+  <text x="145" y="356">assemble — pins params, image policy</text>
   <text class="sub blue" x="145" y="382">→ network_id minted</text>
 
   <circle class="dot" cx="115" cy="475" r="9"/>
@@ -128,7 +128,7 @@
   <text x="1205" y="481">harvest {pubkeys, quote, ip} — DCAP-verify vs policy</text>
 
   <circle class="dot" cx="1175" cy="572" r="9"/>
-  <text x="1205" y="578">manifest assemble — pins the validator set too</text>
+  <text x="1205" y="578">assemble — pins the validator set too</text>
   <text class="sub blue" x="1205" y="604">→ network_id minted — covers everything</text>
 
   <circle class="dot" cx="1175" cy="700" r="9"/>
