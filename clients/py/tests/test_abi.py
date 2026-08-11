@@ -48,14 +48,29 @@ class TestRemapSeismicParam:
         assert result["type"] == "bool[]"
         assert result["shielded"] is True
 
+    def test_sbool_fixed_array(self):
+        result = remap_seismic_param({"name": "x", "type": "sbool[2]"})
+        assert result["type"] == "bool[2]"
+        assert result["shielded"] is True
+
     def test_saddress_dynamic_array(self):
         result = remap_seismic_param({"name": "x", "type": "saddress[]"})
         assert result["type"] == "address[]"
         assert result["shielded"] is True
 
+    def test_saddress_fixed_array(self):
+        result = remap_seismic_param({"name": "x", "type": "saddress[2]"})
+        assert result["type"] == "address[2]"
+        assert result["shielded"] is True
+
     def test_sint64_dynamic_array(self):
         result = remap_seismic_param({"name": "x", "type": "sint64[]"})
         assert result["type"] == "int64[]"
+        assert result["shielded"] is True
+
+    def test_suint256_nested_array(self):
+        result = remap_seismic_param({"name": "x", "type": "suint256[2][]"})
+        assert result["type"] == "uint256[2][]"
         assert result["shielded"] is True
 
     def test_non_shielded_passthrough(self):
@@ -185,6 +200,23 @@ class TestEncodeShieldedCalldata:
         param_data = bytes(calldata[4:])
         assert len(param_data) == 32
         assert int.from_bytes(param_data, "big") == 42
+
+    def test_fixed_array_params_encoded_with_remapped_types(self):
+        abi = [
+            {
+                "type": "function",
+                "name": "setFlags",
+                "inputs": [{"name": "flags", "type": "sbool[2]"}],
+                "outputs": [],
+                "stateMutability": "nonpayable",
+            },
+        ]
+
+        calldata = encode_shielded_calldata(abi, "setFlags", [[True, False]])
+
+        expected_selector = keccak(b"setFlags(sbool[2])")[:4]
+        assert bytes(calldata[:4]) == expected_selector
+        assert bytes(calldata[4:]) == encode(["bool[2]"], [[True, False]])
 
     def test_no_args_function(self):
         calldata = encode_shielded_calldata(COUNTER_ABI, "increment", [])

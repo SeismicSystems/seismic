@@ -32,32 +32,10 @@ def _remap_type(solidity_type: str) -> tuple[str, bool]:
     Returns:
         Tuple of (remapped_type, was_shielded).
     """
-    # suint/sint with fixed-size array: suint256[5] → uint256[5]
-    m = re.match(r"^(s)(u?int\d+)(\[\d+\])$", solidity_type)
+    # Shielded scalar or array type: suint256[5] -> uint256[5].
+    m = re.match(r"^s(u?int\d+|bool|address)((?:\[\d*\])*)$", solidity_type)
     if m:
-        return f"{m.group(2)}{m.group(3)}", True
-
-    # suint/sint with dynamic array: suint256[] → uint256[]
-    m = re.match(r"^(s)(u?int\d+)(\[\])$", solidity_type)
-    if m:
-        return f"{m.group(2)}{m.group(3)}", True
-
-    # suint/sint scalar: suint256 → uint256
-    m = re.match(r"^s(u?int\d+)$", solidity_type)
-    if m:
-        return m.group(1), True
-
-    # sbool / sbool[]
-    if solidity_type == "sbool":
-        return "bool", True
-    if solidity_type == "sbool[]":
-        return "bool[]", True
-
-    # saddress / saddress[]
-    if solidity_type == "saddress":
-        return "address", True
-    if solidity_type == "saddress[]":
-        return "address[]", True
+        return f"{m.group(1)}{m.group(2)}", True
 
     return solidity_type, False
 
