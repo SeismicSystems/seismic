@@ -270,6 +270,22 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
         );
     }
 
+    /// @notice Creates a MultiSend-compatible call to approve a spender for tokens
+    /// @param spender Address to approve
+    /// @param amount Amount of tokens to approve
+    /// @return calls Encoded call data for MultiSend
+    function _createApproveCall(address spender, uint256 amount) internal view returns (bytes memory calls) {
+        bytes memory approveData = abi.encodeWithSelector(SRC20.approve.selector, spender, amount);
+
+        return abi.encodePacked(
+            uint8(0), // operation (0 = call)
+            address(tok), // to: token contract address
+            uint256(0), // value: 0 ETH (no ETH sent with approve)
+            uint256(approveData.length), // data length
+            approveData // the actual calldata
+        );
+    }
+
     /// @notice Creates and signs a digest for the execute function
     /// @param keyIndex Index of the key to use
     /// @param cipher Encrypted data to be executed
@@ -958,6 +974,80 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
             _executeViaKeyTransparent(ALICE_ADDRESS, keyIndex, calls, privateKey, true);
             assertEq(BOB_ADDRESS.balance, initialBalance + 10 ether, "No more transfers should be possible");
         }
+    }
+
+    /// @notice REGRESSION (#116): _calculateTotalSpend only sums native ETH `value`.
+    ///         A session key with a 1 ETH limit can still move ERC-20 tokens freely,
+    ///         because token transfer calls carry value = 0 and the amount lives in
+    ///         calldata, which is never inspected.
+    /// @dev This test currently PASSES (i.e. the token transfer succeeds) even though
+    ///      it should REVERT with "spend limit exceeded". A passing result here is the
+    ///      bug, not the fix. Once a proper per-token accounting fix lands, this test
+    ///      should be updated to expect a revert (or a token-specific limit check).
+    function test_BUG_ethSessionLimitDoesNotBoundTokenTransfer() public {
+        (bytes memory publicKey, uint256 privateKey) = _randomSecp256k1Key();
+
+        // Grant session with a 1 ETH spend limit
+        vm.prank(ALICE_ADDRESS);
+        ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 1 ether
+        );
+
+        uint32 keyIndex = ShieldedDelegationAccount(ALICE_ADDRESS).getKeyIndex(KeyType.Secp256k1, publicKey);
+
+        // Session key transfers 5 tokens (Alice holds 100 from setUp), value = 0
+        bytes memory calls = _createTokenTransferCall(BOB_ADDRESS, 5 * 10 ** 18);
+        // expectRevert = false: this SHOULD be true once the bug is fixed
+        _executeViaKeyTransparent(ALICE_ADDRESS, keyIndex, calls, privateKey, false);
+
+        vm.prank(BOB_ADDRESS);
+        uint256 bobBalance = tok.balance();
+        assertEq(
+            bobBalance,
+            5 * 10 ** 18,
+            "BUG: 1 ETH-limited session key drained ERC-20 tokens because value-only accounting ignores token transfers"
+        );
+    }
+
+    /// @notice OBSERVATION (#116, related): documents that a session key can call
+    ///         approve() (value = 0, so it never touches spentWei) to grant an
+    ///         unlimited allowance to an attacker, who can then drain the account's
+    ///         tokens later via transferFrom, entirely outside of execute() and
+    ///         therefore outside any spend-limit check.
+    /// @dev This is intentionally NOT named test_BUG_* or written as an expectRevert
+    ///      test: whether approve() should count against the spend limit depends on
+    ///      the intended session-key threat model (does "spend limit" mean "bounded
+    ///      immediate value moved" or "bounded total value ever controllable"?). This
+    ///      test simply pins down the current behavior so the design discussion in
+    ///      #116 has a concrete PoC to reference, separate from the unambiguous
+    ///      transfer() bypass above.
+    function test_approveCanDelegateUnlimitedFutureSpending() public {
+        (bytes memory publicKey, uint256 privateKey) = _randomSecp256k1Key();
+        address attacker = address(0xBEEF);
+
+        // Grant session with a 1 ETH spend limit
+        vm.prank(ALICE_ADDRESS);
+        ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 24 hours), 1 ether
+        );
+
+        uint32 keyIndex = ShieldedDelegationAccount(ALICE_ADDRESS).getKeyIndex(KeyType.Secp256k1, publicKey);
+
+        // Session key approves attacker for max tokens; value = 0, spend limit untouched
+        bytes memory calls = _createApproveCall(attacker, type(uint256).max);
+        _executeViaKeyTransparent(ALICE_ADDRESS, keyIndex, calls, privateKey, false);
+
+        // Attacker drains tokens directly via transferFrom, completely outside execute()
+        vm.prank(attacker);
+        tok.transferFrom(ALICE_ADDRESS, attacker, suint256(100 * 10 ** 18));
+
+        vm.prank(attacker);
+        uint256 attackerBalance = tok.balance();
+        assertEq(
+            attackerBalance,
+            100 * 10 ** 18,
+            "session key can delegate future token spending via approve()"
+        );
     }
 
     /// @notice Test that reentrancy into execute is blocked
