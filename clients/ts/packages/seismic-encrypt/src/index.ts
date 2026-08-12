@@ -49,7 +49,9 @@ const toYParitySignatureArray = (signature?: {
   const { v, r, s } = signature
   const trimR = trim(r)
   const trimS = trim(s)
-  const yParity = v === 0n || v === 27n ? '0x' : toHex(1)
+  const isEvenParity =
+    v === 0n || v === 27n || (v >= 35n && (v - 35n) % 2n === 0n)
+  const yParity = isEvenParity ? '0x' : toHex(1)
   return [
     yParity,
     trimR === '0x00' ? '0x' : trimR,
