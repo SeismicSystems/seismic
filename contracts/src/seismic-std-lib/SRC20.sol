@@ -195,12 +195,12 @@ abstract contract SRC20 {
             emit Transfer(from, to, bytes32(0), bytes(""));
         }
 
-        // Emit to recipient if they have a registered key
-        if (directory.checkHasKey(to)) {
+        // Emit to recipient if they have a registered key (skip if recipient == sender to avoid duplicate events)
+        if (to != from && directory.checkHasKey(to)) {
             bytes32 recipientKeyHash = directory.keyHash(to);
             bytes memory recipientEncrypted = directory.encrypt(to, abi.encodePacked(uint256(amount)));
             emit Transfer(from, to, recipientKeyHash, recipientEncrypted);
-        } else {
+        } else if (to != from) {
             // Emit with zero hash and empty data if recipient has no key
             emit Transfer(from, to, bytes32(0), bytes(""));
         }
@@ -224,12 +224,12 @@ abstract contract SRC20 {
             emit Approval(owner, spender, bytes32(0), bytes(""));
         }
 
-        // Emit to spender if they have a registered key
-        if (directory.checkHasKey(spender)) {
+        // Emit to spender if they have a registered key (skip if spender == owner to avoid duplicate events)
+        if (spender != owner && directory.checkHasKey(spender)) {
             bytes32 spenderKeyHash = directory.keyHash(spender);
             bytes memory spenderEncrypted = directory.encrypt(spender, abi.encodePacked(uint256(amount)));
             emit Approval(owner, spender, spenderKeyHash, spenderEncrypted);
-        } else {
+        } else if (spender != owner) {
             // Emit with zero hash and empty data if spender has no key
             emit Approval(owner, spender, bytes32(0), bytes(""));
         }
