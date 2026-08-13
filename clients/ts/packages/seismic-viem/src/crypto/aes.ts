@@ -22,7 +22,13 @@ export class AesGcmCrypto {
    * @param num - The number to convert (will be treated as u64)
    */
   private numberToNonce(num: bigint | number): Uint8Array {
+    if (typeof num === 'number' && !Number.isSafeInteger(num)) {
+      throw new RangeError('Nonce must be a safe integer')
+    }
     let value = BigInt(num)
+    if (value < 0n || value > 0xffffffffffffffffn) {
+      throw new RangeError('Nonce must fit in an unsigned 64-bit integer')
+    }
 
     // Create a buffer for the full nonce (12 bytes)
     const nonceBuffer = new Uint8Array(this.NONCE_LENGTH)
