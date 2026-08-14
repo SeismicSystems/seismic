@@ -69,6 +69,7 @@ export function useShieldedWriteContract<
 
     if (!walletClient) {
       setError(new Error('Shielded wallet client not initialized'))
+      setIsLoading(false)
       return
     }
 
