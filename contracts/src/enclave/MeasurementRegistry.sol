@@ -24,7 +24,7 @@ pragma solidity ^0.8.20;
 ///      This contract is installed as a genesis predeploy, so its constructor is
 ///      deliberately empty and its initial state must be written directly into
 ///      genesis storage.
-/// @custom:spec TODO: add the public measurement-admission specification URL once published.
+/// @custom:spec https://github.com/SeismicSystems/enclave/blob/seismic/crates/measurement-admission/SPEC.md
 contract MeasurementRegistry {
     enum Status {
         Unknown,
