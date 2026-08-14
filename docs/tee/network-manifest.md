@@ -36,14 +36,11 @@ flowchart TD
 This doc is the field-by-field reference. The implementation is the
 [`seismic-network-manifest`](https://github.com/SeismicSystems/enclave/tree/seismic/crates/network-manifest)
 crate — strict parser, `NetworkId` derivation, and the golden fixture every
-stack pins — and the two must agree at all times. Where the pinned artifacts
-come from is described in [network founding](network-founding.md) and the network directory's
-[provenance diagram](https://github.com/SeismicSystems/deploy/blob/main/tee/networks/network-dir.svg);
-how a node is let in once it holds the manifest is [chain-backed admission](chain-backed-admission.md).
-A network ships one more artifact, the attested addendum, but it is
-not a second half of the identity: it carries the network's TEE-born key state,
-it names `network_id` rather than contributing to it, and it rotates on disaster
-recovery while `network_id` never does.
+stack pins — and the two must agree at all times. A network ships one more
+artifact, the attested addendum, but it is not a second half of the identity:
+it carries the network's TEE-born key state, it names `network_id` rather than
+contributing to it, and it rotates on disaster recovery while `network_id`
+never does.
 
 - [Summary](#summary)
 - [What the manifest is not](#what-the-manifest-is-not)
@@ -158,7 +155,9 @@ tool is the sole emitter and renders deterministically — 2-space indent,
 key-sorted, single trailing newline — and the file is never hand-typed. It is
 emitted into a committed
 [network directory](https://github.com/SeismicSystems/deploy/blob/main/tee/networks/README.md)
-holding the artifacts it pins.
+holding the artifacts it pins, whose
+[provenance diagram](https://github.com/SeismicSystems/deploy/blob/main/tee/networks/network-dir.svg)
+traces where each one came from.
 
 ## `network_id` = SHA-256 of the exact bytes
 

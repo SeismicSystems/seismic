@@ -113,6 +113,12 @@ halves.** Where a decision has to be visible up front, because a reader who
 misses it would undo it, the body states the rule in a sentence and links down
 to the rationale.
 
+Cross-doc routing lives here, in [The docs](#the-docs), and nowhere else. A doc
+opens with its own scope and its normative boundary — which spec owns the
+byte-exact rules — and links a sibling at the point in the text where a reader
+needs it, never in an index of its own. A second index drifts: two hand-written
+summaries of one doc's contents stop matching, and neither one is the authority.
+
 [diagrams/README.md](diagrams/README.md) is the diagram convention for the whole
 repo — mermaid first, hand-authored structured SVG only when spatial layout
 carries meaning. Follow it before creating or editing any diagram.
