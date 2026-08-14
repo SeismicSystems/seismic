@@ -49,7 +49,7 @@ recovery while `network_id` never does.
 - [What the manifest is not](#what-the-manifest-is-not)
 - [The v1 fields](#the-v1-fields)
 - [`network_id` = SHA-256 of the exact bytes](#network_id--sha-256-of-the-exact-bytes)
-- [Validation gates and a known limit](#validation-gates-and-a-known-limit)
+- [Validation gates](#validation-gates)
 - [Consumers of `network_id`](#consumers-of-network_id)
 - [Lifecycle](#lifecycle)
 - [What the manifest cannot hold](#what-the-manifest-cannot-hold)
@@ -65,19 +65,23 @@ recovery while `network_id` never does.
 - **It is what a joiner can check before it can check anything else.** Reading
   Seismic state at all requires `root_key`, which is exactly what a joining node
   is asking for, so the manifest is its only pre-chain anchor.
-- **One hash covers every founding artifact.** The reth genesis (and through it
+- **One hash reaches every founding artifact.** The reth genesis (and through it
   the registry's initial policy storage), the complete summit genesis, and the
   bootstrap measurement policy are all reachable from the manifest's fields.
+  Each field commits to an exact scope, stated in
+  [Validation gates](#validation-gates).
 - **Deploy-time facts only.** Everything in the manifest can be computed before
   any node boots, because `network_id` must exist before the first node mints
   its first quote. Facts born inside the genesis TEE live in a second,
   separately attested artifact.
-- **Immutable for the network's lifetime.** The manifest is written once, by
-  one emitter, and travels as opaque bytes to every consumer. Nothing ever
+- **Immutable for the network's lifetime.** The manifest is written once, by one
+  emitter, and travels as opaque bytes to every consumer. Nothing ever
   re-renders it.
-- **It pins the bootstrap policy, not the live one.** The measurement set in
-  force today is registry state on chain; the manifest freezes what the network
-  founded on.
+- **It pins founding values; a live value can move elsewhere.** The measurement
+  set in force today is registry state on chain, and the manifest freezes what
+  the network founded on. That split — a frozen commitment in the file, a live
+  value moved by on-chain authority — is the shape a network-defining value
+  takes when it has to change without changing `network_id`.
 
 ## What the manifest is not
 
@@ -126,7 +130,7 @@ documentation is this table.
 | `manifest_version`                   | int         | Schema version of this document; `1`.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `name`                               | string      | Human label. Intentionally part of the hash: the stated intent is part of the identity.                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `eth.chain_id`                       | int         | Must equal `config.chainId` inside the reth genesis JSON. Not derivable from `eth.genesis_hash` — the genesis hash covers the header, and `config` lives outside it — so the chain id is an independent commitment. Separates transaction replay (EIP-155).                                                                                                                                                                                                                                    |
-| `eth.genesis_hash`                   | 32-byte hex | `keccak(rlp(header(reth-genesis.json)))`, computed offline by `seismic-reth genesis-hash` down the same parse path a booting node takes. Commits to the full genesis alloc: the registry's runtime code and initial policy storage, the other predeploys, prefunds. Does not commit to the file's `config` section — see the fork-schedule limit below.                                                                                                                                        |
+| `eth.genesis_hash`                   | 32-byte hex | `keccak(rlp(header(reth-genesis.json)))`, computed offline by `seismic-reth genesis-hash` down the same parse path a booting node takes. Commits to the full genesis alloc: the registry's runtime code and initial policy storage, the other predeploys, prefunds. Does not commit to the file's `config` section — see [Validation gates](#validation-gates).                                                                                                                                        |
 | `summit.genesis_config_digest`       | 32-byte hex | Summit's own `config_digest` over the complete `summit-genesis.toml`: SHA-256 over its domain-prefixed SSZ, computed offline by `summit genesis digest`. Covers the consensus parameters and, per validator, both pubkeys and the withdrawal credentials; excludes `ip_address`, which is topology rather than identity. The same value domain-separates every consensus signature, so live nodes already enforce agreement on everything it covers ([network founding](network-founding.md)). |
 | `summit.namespace`                   | string      | The BLS signature domain separator. Must equal the genesis file's value; duplicated here so a verifier need not parse TOML. Distinct namespaces are what stop a validator key active on two chains from producing votes valid on both.                                                                                                                                                                                                                                                         |
 | `measurements.bootstrap_policy_hash` | 32-byte hex | SHA-256 of the bootstrap policy document's bytes — the founding accepted measurement set, promoted from seismic-images' `make measure` output. The document format is the [attestation crate's](https://github.com/SeismicSystems/attested-tls/blob/main/crates/attestation/README.md) list of per-image measurement records, one file covering every attestation type.                                                                                                                        |
@@ -200,11 +204,11 @@ There is no domain-separation prefix inside the file hash. Domain separation
 lives in the transcript context strings that consume `network_id`, and plain
 file hashing preserves the `sha256sum` property.
 
-## Validation gates and a known limit
+## Validation gates
 
 Every commitment in the graph at the top is checked somewhere. Everything fails
-at deploy, at POST time, or at the
-moment a verdict is given — never silently at boot:
+at deploy, at POST time, or at the moment a verdict is given — never silently at
+boot:
 
 - **The deploy tool, at assembly.** `eth.chain_id` equals the genesis JSON's
   `config.chainId`; `eth.genesis_hash` equals the recomputed
@@ -237,16 +241,17 @@ moment a verdict is given — never silently at boot:
   genesis does the rest: reaching a policy the network never authorized then
   needs the authority key, not an edited JSON file.
 
-**A known limit: the fork schedule.** `eth.genesis_hash` under-commits to the
-reth genesis *file*. Fork activation times live in the `config` section, outside
-the header, so two genesis files differing only in a future-dated fork time hash
-identically and the founding schedule is pinned by nothing. This is moot today,
-when every fork activates at genesis. It is deliberately not fixed by pinning
-the genesis file's bytes: a hardfork must not re-issue the manifest, because
-`network_id` survives forks. What a real fix has to look like is in
-[Design rationale](#design-rationale). Keeping fork times in the config POST
-rather than in the image is what lets one measured hardfork image serve devnet,
-testnet, and mainnet on different clocks.
+**What `eth.genesis_hash` covers, and what it does not.** The genesis hash
+commits to the header, and fork activation times live in the genesis file's
+`config` section, outside it — so two genesis files differing only in a
+future-dated fork time hash identically, and the founding fork schedule is
+pinned by nothing. Every fork activates at genesis today, so the schedule the
+header commits to is the whole schedule. Byte-pinning the genesis file is not
+the fix, because `network_id` survives forks and a hardfork must not re-issue
+the manifest: what the schedule needs is a founding pin plus an authorized
+amendment path, decided together with the registry's mutation authority.
+Keeping fork times in the config POST rather than in the image is what lets one
+measured hardfork image serve devnet, testnet, and mainnet on different clocks.
 
 ## Consumers of `network_id`
 
@@ -305,18 +310,19 @@ that waits on [the addendum](#the-attested-addendum).
 - **`network_id` is immutable for the network's lifetime** — across disaster
   recovery, across measurement-policy updates, across forks. The deploy tool
   refuses to overwrite an existing manifest for exactly this reason.
-- **Policy updates are on-chain**, through the authority to the registry. The
-  manifest's pinned policy is the bootstrap policy only, and there is
-  deliberately no manifest-refresh machinery. The staleness this implies is
-  bounded and symmetric: a joiner verifying a responder's measurements against
-  the manifest-pinned founding set will reject responders running images
-  admitted later, and will keep accepting a founding image after governance has
-  deprecated it, since deprecations are equally invisible off chain.
-  [The addendum's](#the-attested-addendum) commitment check supersedes the
-  joiner-side measurement check entirely — joiners verify the responder's
-  transcript binding plus the delivered key against the pin, and drop the
-  policy comparison. The deprecation half is the security reason to sequence
-  that switch soon rather than eventually.
+- **Policy updates are on-chain**, through the authority to the registry — the
+  mechanism for changing any network-defining value after founding, since the
+  file itself never changes. The manifest's pinned policy is the bootstrap
+  policy only, and there is deliberately no manifest-refresh machinery. The
+  staleness this implies is bounded and symmetric: a joiner verifying a
+  responder's measurements against the manifest-pinned founding set will reject
+  responders running images admitted later, and will keep accepting a founding
+  image after governance has deprecated it, since deprecations are equally
+  invisible off chain. [The addendum's](#the-attested-addendum) commitment check
+  supersedes the joiner-side measurement check entirely — joiners verify the
+  responder's transcript binding plus the delivered key against the pin, and
+  drop the policy comparison. The deprecation half is the security reason to
+  sequence that switch soon rather than eventually.
 - **A new network gets a fresh manifest.** The freshly harvested founding keys
   alone guarantee a distinct `network_id`, since no two foundings can produce
   identical manifest bytes; in practice the name, namespace, and genesis differ
@@ -426,9 +432,11 @@ client-visible, auditable event.
 
 ## Design rationale
 
-Alternatives weighed and set aside, with the reasons that decided them.
+Alternatives weighed and set aside, with the reasons that decided them. Each
+names the section whose rule it settles.
 
-**Raw bytes rather than a canonical encoding.** The obvious objection to byte
+**Raw bytes rather than a canonical encoding** ([`network_id` = SHA-256 of the
+exact bytes](#network_id--sha-256-of-the-exact-bytes)). The objection to byte
 hashing is cosmetic divergence: a copy gains a trailing newline, and "the same"
 manifest now has a different id. That scenario presupposes someone re-creating
 the file, and nobody in the lifecycle does — the manifest is assembled exactly
@@ -448,56 +456,53 @@ security identifier. Byte hashing also makes the file an artifact, the way git
 objects, container image digests, and CCF's raw security policy in `host_data`
 are artifacts.
 
-**JSON rather than TOML with inline comments.** TOML is attractive for an
-operator-reviewed artifact that wants its rationale inline, and the surrounding
-config surface is TOML — but comments are non-semantic bytes inside an identity
-hash, and both ways of handling them lose. Hash them, and fixing a typo in a
-comment is a different network, while prose invites churn on a file that must
-never change. Strip them before hashing, and that is half a canonical form, with
-the multi-language transform risk back again and no canonicalization standard to
-lean on. JSON's inability to carry comments is the feature.
+**JSON rather than TOML with inline comments** ([the v1
+fields](#the-v1-fields)). TOML is attractive for an operator-reviewed artifact
+that wants its rationale inline, and the surrounding config surface is TOML —
+but comments are non-semantic bytes inside an identity hash, and both ways of
+handling them lose. Hash them, and fixing a typo in a comment is a different
+network, while prose invites churn on a file that must never change. Strip them
+before hashing, and that is half a canonical form, with the multi-language
+transform risk back again and no canonicalization standard to lean on. JSON's
+inability to carry comments is the feature.
 
-**Two files rather than one document with a hashed subsection** — the `tx_io`
-pin inside the file but outside the hash. One file is operationally nice, but
-mixed hashed/unhashed sections invite verifiers hashing the wrong scope, and the
-file would have to be mutated post-genesis to insert the pin, which violates
-byte-exactness. Two files with distinct names are unambiguous.
+**Two files rather than one document with a hashed subsection** ([the attested
+addendum](#the-attested-addendum)) — the `tx_io` pin inside the file but outside
+the hash. One file is operationally nice, but mixed hashed/unhashed sections
+invite verifiers hashing the wrong scope, and the file would have to be mutated
+post-genesis to insert the pin, which violates byte-exactness. Two files with
+distinct names are unambiguous.
 
-**Two files rather than a two-phase `network_id`** — a draft id for the genesis
-boot, a final one after. That gives two ids for one network: every transcript
-verifier would need to know which phase it is in, and a hardware measurement of
-the config would differ across the phases. Putting `tx_io_pk` in the manifest
-core is the same problem stated forwards — impossible without a pre-boot key
+**Two files rather than a two-phase `network_id`** ([what the manifest cannot
+hold](#what-the-manifest-cannot-hold)) — a draft id for the genesis boot, a
+final one after. That gives two ids for one network: every transcript verifier
+would need to know which phase it is in, and a hardware measurement of the
+config would differ across the phases. Putting `tx_io_pk` in the manifest core
+is the same problem stated forwards — impossible without a pre-boot key
 ceremony, since `root_key` is born in the genesis TEE.
 
-**SHA-256 rather than keccak256 for `network_id`.** The consumers are a SHA-256
-world — every `report_data` binding is SHA-256 — and `sha256sum` auditability
-wins. A contract can store the value as `bytes32` either way.
+**SHA-256 rather than keccak256 for `network_id`** ([consumers of
+`network_id`](#consumers-of-network_id)). The consumers are a SHA-256 world —
+every `report_data` binding is SHA-256 — and `sha256sum` auditability wins. A
+contract can store the value as `bytes32` either way.
 
-**No joiner-side policy refresh** — fetching the current policy instead of
-relying on the bootstrap pin, for instance by querying the registry through a
-running node's RPC and feeding the result to tdx-init. This is circular.
-Registry contents are chain state, and a joiner without `root_key` cannot
-authenticate chain state — no trusted header, no readable ledger — so "the
-current policy" is whatever an untrusted endpoint asserts, and the joiner would
-be verifying its counterparty against a document that counterparty's side could
-have chosen. The sound variant, complete policy documents signed by
-manifest-pinned authority keys and accepted at any revision above bootstrap, is
-TUF-shaped and inherits TUF's hard parts: rollback and freeze protection need
-freshness evidence, which is chain state again.
+**No joiner-side policy refresh** ([lifecycle](#lifecycle)) — fetching the
+current policy instead of relying on the bootstrap pin, for instance by querying
+the registry through a running node's RPC and feeding the result to tdx-init.
+This is circular. Registry contents are chain state, and a joiner without
+`root_key` cannot authenticate chain state — no trusted header, no readable
+ledger — so "the current policy" is whatever an untrusted endpoint asserts, and
+the joiner would be verifying its counterparty against a document that
+counterparty's side could have chosen. The sound variant, complete policy
+documents signed by manifest-pinned authority keys and accepted at any revision
+above bootstrap, is TUF-shaped and inherits TUF's hard parts: rollback and
+freeze protection need freshness evidence, which is chain state again.
 
-**Pinning the fork schedule, when it is needed.** The shape a fix has to take is
-a founding pin plus an authorized amendment path — a rolling digest anchored at
-founding and authorized by the same on-chain authority that admits new image
-measurements, since a hardfork is a new measurement and a new schedule
-authorized together — together with a cohort-consistency check, because TEE
-nodes have no devp2p forkid handshake to catch a validator that missed a
-pre-fork reconfigure.
-
-**Precedent: CCF.** The manifest/addendum split follows CCF's: startup
-configuration is the trust anchor, and the service certificate
-(`service_cert.pem`) is created when the service opens and distributed out of
-band from then on — a credential the anchor names, not a second anchor. The addendum's validity-at-creation semantics follow CCF too
-— join quotes are verified once at admission and recorded, and nobody
+**Precedent: CCF** ([the attested addendum](#the-attested-addendum)). The
+manifest/addendum split follows CCF's: startup configuration is the trust
+anchor, and the service certificate (`service_cert.pem`) is created when the
+service opens and distributed out of band from then on — a credential the anchor
+names, not a second anchor. The addendum's validity-at-creation semantics follow
+CCF too — join quotes are verified once at admission and recorded, and nobody
 re-verifies old quotes against live collateral — and so does recovery, where the
 ledger continues, the service certificate rotates, and clients re-fetch.
