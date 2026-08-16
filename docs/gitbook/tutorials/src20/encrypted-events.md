@@ -22,13 +22,13 @@ The compiler rejects this because event data is written to public logs, and shie
 
 Use Seismic's AES-GCM precompiles to encrypt the sensitive data before emitting it. The event carries opaque bytes that only the intended recipient can decrypt.
 
-The modified event signature uses `bytes` instead of `uint256` for the amount:
+The modified event signature uses `bytes` instead of `uint256` for the amount, along with `bytes32 indexed encryptKeyHash` to identify the recipient's encryption key:
 
 ```solidity
-event Transfer(address indexed from, address indexed to, bytes encryptedAmount);
+event Transfer(address indexed from, address indexed to, bytes32 indexed encryptKeyHash, bytes encryptedAmount);
 ```
 
-The `from` and `to` addresses remain as `indexed` parameters. These are public -- observers can see who is transacting with whom. Only the amount is encrypted. If you need to hide the participants as well, you can encrypt those too, but that is less common for a token.
+The `from` and `to` addresses remain as `indexed` parameters, along with `encryptKeyHash` which allows recipients to filter logs for events encrypted with their key. These are public -- observers can see who is transacting with whom and which key was used. Only the amount is encrypted. If you need to hide the participants as well, you can encrypt those too, but that is less common for a token.
 
 ## Step by step
 
@@ -142,8 +142,11 @@ function _emitEncryptedTransfer(
     bytes memory plaintext = abi.encode(uint256(amount));
     bytes memory encryptedAmount = _encrypt(encKey, nonce, plaintext);
 
+    // Derive recipient key hash for event filtering
+    bytes32 recipientKeyHash = keccak256(recipientPublicKey);
+
     // Emit with encrypted data
-    emit Transfer(from, to, encryptedAmount);
+    emit Transfer(from, to, recipientKeyHash, encryptedAmount);
 }
 ```
 
@@ -169,8 +172,8 @@ function transfer(address to, suint256 amount) public returns (bool) {
     if (recipientPubKey.length > 0) {
         _emitEncryptedTransfer(msg.sender, to, amount, recipientPubKey);
     } else {
-        // Fallback: emit with zero if recipient has no registered key
-        emit Transfer(msg.sender, to, bytes(""));
+        // Fallback: emit with zero key hash and empty data if recipient has no registered key
+        emit Transfer(msg.sender, to, bytes32(0), bytes(""));
     }
 
     return true;
@@ -198,6 +201,7 @@ Here is the visibility breakdown for each piece of data in a Transfer event:
 | ------------------- | -------------- | ---------------------------------------------- |
 | `from` address      | Everyone       | Indexed parameter, stored in public log topics |
 | `to` address        | Everyone       | Indexed parameter, stored in public log topics |
+| `encryptKeyHash`    | Everyone       | Indexed parameter, hash of recipient's viewing key |
 | Transfer amount     | Recipient only | Encrypted to recipient's public key            |
 | A transfer happened | Everyone       | The event emission itself is visible           |
 
