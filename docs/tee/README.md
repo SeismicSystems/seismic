@@ -99,6 +99,11 @@ repo, plus the image that measures them:
   in.** The root-key handshake, the admission predicate, the readiness and
   freshness gate, and which repo owns each stage of an image release. Read it
   when working on admission, the registry, or the measurement pipeline.
+- [trust-model.md](trust-model.md) — **what is trusted, and what is
+  accepted.** What a quote does and does not prove, the anchor each actor
+  verifies against, the accepted risks including the rollback family, and the
+  open decisions. Read it before extending trust to a new actor, accepting a
+  new residual, or closing a listed decision.
 
 Normative specs live next to the code that implements them:
 

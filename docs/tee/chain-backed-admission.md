@@ -201,33 +201,16 @@ block. Why it does not sit in front of the port instead: [design
 rationale](#design-rationale).
 
 **What the gate does not defend against**: a host that controls its guest's
-view of time, or of how far the chain has come. Staleness is measured against
-the guest's wall clock, so a host that both eclipses the guest and controls
-that clock can have an honest enclave compute a fresh-looking verdict. And a
-host that rewinds its guest's chain view all the way to block 0 lands in the
-genesis window, where no timestamp check bites and "still at genesis" is
-indistinguishable from "chain withheld" from inside the guest. Persisting the
-latch would not change that: the same host owns that disk.
-
-The genesis check bounds what the rewind buys to the founding accepted set — a
-reviewed list, never an image of the attacker's choosing — but a founding image
-deprecated for a vulnerability is exactly what it would revive. Nor does
-disaster recovery clear it: `network_id` and the genesis block survive
-recovery, so block-0 policy keeps listing what it listed. Deprecation therefore
-takes effect network-wide against every adversary except one holding host
-control of a node that already holds `root_key`. Both residuals are accepted
-host influence under the TEE threat model today; closing them takes freshness
-evidence a host cannot mint — verifying summit's finality signatures against
-the manifest-pinned validator set, rather than trusting whatever the local reth
-tags as finalized — which is open design work.
-
-**Nor does the handshake require independent responders to agree.** A joiner
-accepts `root_key` from whichever single responder answers yes; no threshold
-of independent verdicts is required. So the bar to defeat admission is
-compromising or eclipsing one node, not the two-thirds-of-validators bar
-consensus finality itself sets — and unlike a block, a granted `root_key`
-never reorgs away. Whether the joiner's admission path should require
-corroboration across independent responders is open design work.
+clock while eclipsing it can have an honest enclave compute a fresh-looking
+verdict; a host that rewinds its guest's chain view to block 0 lands in the
+genesis window, bounded by the genesis check to the founding accepted set; and
+one responder's yes is enough — the handshake requires no corroboration across
+independent responders. Deprecation therefore takes effect network-wide
+against every adversary except one holding host control of a node that already
+holds `root_key`. All three residuals are accepted host influence under the
+TEE threat model; [the trust model](trust-model.md#accepted-risks) states each
+plainly, with the rollback family the second belongs to and the freshness
+evidence that would close them.
 
 ## The network manifest as the joiner's root of trust
 
