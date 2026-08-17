@@ -82,6 +82,11 @@ repo, plus the image that measures them:
 
 ## The docs
 
+- [architecture.md](architecture.md) — **what a TEE node is.** The processes,
+  what the outside can reach and the three networking planes, key custody and
+  the custodian's socket boundary, the keys by family, the root-key handshake
+  cryptography, the LUKS volume, and the boot chain from power-on to serving.
+  Read it when you touch a service, a key, a port, or the boot order.
 - [network-manifest.md](network-manifest.md) — **what identifies a network.**
   The nine fields, `network_id = SHA-256(file bytes)`, the byte-exactness rule,
   what the hash commits to, the transcript bindings, and the attested addendum.
