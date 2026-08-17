@@ -157,7 +157,7 @@ another.
 | Plane | Port | Protocol | Identity key | Discovery | Membership |
 | --- | --- | --- | --- | --- | --- |
 | Consensus | `:18551` | commonware-p2p | Ed25519 | none: the validator set itself | closed — the peer set *is* the validator set |
-| Tx gossip | `:30303` TCP+UDP | devp2p: RLPx + discv5 | secp256k1 | bootnodes from the config POST, then the discv5 DHT | open to anything carrying the `seismic` fork id |
+| Tx gossip | `:30303` TCP+UDP | devp2p: RLPx + discv5 | secp256k1 | the cohort from the config POST as discv5 bootnodes *and* RLPx trusted peers, then the discv5 DHT | open to anything carrying the `seismic` fork id |
 | Enclave peer RPC | `:7878` | JSON-RPC over HTTP | none standing | the same bootnode list, as `http://<host>:7878` | attested per exchange |
 
 **Consensus.** BLS12-381 signs consensus messages and Ed25519 is the transport
@@ -168,26 +168,43 @@ pubkey, so only a set member completes a handshake.
 **Tx gossip.** The identity is reth's own `discovery-secret`, under LUKS, so the
 node's `enode://` address is stable for its life. Discovery is discv5 only —
 discv4 and DNS discovery are off — keyed by the `seismic` ENR fork id, so
-Seismic nodes match only each other. Bootnodes are operational data, delivered
-per boot in the config POST and never part of the hashed manifest; they matter
-mostly at first boot, since reth persists discovered peers and one live bootnode
-is enough for discv5 to flood the rest.
+Seismic nodes match only each other. The cohort is operational data, delivered
+per boot in the config POST and never part of the hashed manifest; one live
+bootnode is enough for discv5 to flood the rest.
+
+One enode list feeds both of reth's devp2p flags, because the two do different
+jobs with it. `--trusted-peers` is how a node reaches the cohort: direct RLPx
+dials, retried, and exempt from reputation slashing. `--bootnodes` is how it
+reaches everyone else — it seeds discv5, and the DHT floods the rest, including
+joiners that no founding-era list could have named. Keeping both matters because
+discv5 bootstrap is one-shot: reth resolves a bare `enode://` with a live UDP
+round-trip at startup and never retries a lost one, so on the discovery path
+alone a single dropped packet could cost a node its seat in the mesh until the
+next reboot. Both flags are re-delivered every boot, since the conf dir is
+tmpfs.
 
 Open membership on this plane is safe by construction, in three independent
-ways. `GetNodeData` and `NodeData` are hard-rejected as bad messages, because
-raw trie nodes would carry FlaggedStorage values straight past the RPC layer's
-private-slot redaction. Sync never follows devp2p — summit drives reth's
-forkchoice over the Engine API — so eclipsing this plane costs transaction
-liveness, never safety. And the payload is ciphertext: a gossip peer learns
-timing and size, nothing else.
+ways:
+
+- **`GetNodeData` and `NodeData` are hard-rejected** as bad messages, because
+  raw trie nodes would carry FlaggedStorage values straight past the RPC
+  layer's private-slot redaction.
+- **Sync never follows devp2p** — summit drives reth's forkchoice over the
+  Engine API — so eclipsing this plane costs transaction liveness, never
+  safety.
+- **The payload is ciphertext**: a gossip peer learns timing and size, nothing
+  else.
 
 **Enclave peer RPC.** There is no standing transport identity here. Each
 exchange carries its own attestation and its own AEAD in the message body, so
 the channel is deliberately plain HTTP. Peers are derived, not configured
-separately: `tdx-init` takes one bootnode list and renders both consumers from
-it — reth's flag verbatim, and `http://<host>:7878` per bootnode for the
-root-key fetch, with the node's own entry dropped. Bootnodes and root-key peers
-are the same machines by construction, so skew between the two lists is
+separately: `tdx-init` takes one bootnode list, drops this node's own entry, and
+renders every consumer from what remains:
+
+- **reth's `--bootnodes`** and **`--trusted-peers`**, both the peer enodes.
+- **`http://<host>:7878` per peer** for the root-key fetch.
+
+All of them name the same machines by construction, so skew between the lists is
 unrepresentable, and a non-genesis node POSTed with no usable peer fails the
 POST rather than booting with no way to obtain `root_key`
 ([`peers.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/tdx-init/src/peers.rs)).
