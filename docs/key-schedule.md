@@ -4,6 +4,10 @@ Every key derivation in the Seismic protocol, in one place. Security reviews
 of domain separation start here: within each layer, no two rows may share an
 HKDF info label unless a compatibility reason is documented.
 
+This file owns how each key's bytes are derived. Which process holds a key on
+a TEE node, where it lives at rest, and how it moves between nodes is
+[tee/architecture.md](tee/architecture.md).
+
 Two derived keys are independent unless **both** the input keying material
 (IKM) and the label match. Labels therefore only need to be unique within a
 layer — cross-layer label reuse is harmless because the IKM classes never
@@ -17,7 +21,7 @@ The network root key (32 bytes, generated from the OS CSPRNG on the genesis
 node, distributed to joining nodes via the root-key-wrap handshake) is the IKM
 for every long-lived node secret.
 
-- **Code**: `enclave/crates/key-custodian/src/custodian.rs` (`KeyPurpose`)
+- **Code**: `enclave/crates/custodian/src/custodian.rs` (`KeyPurpose`)
 - **KDF**: HKDF-SHA256, salt `"seismic-purpose-derive-salt"`,
   info `"seismic-purpose-{label}" || epoch_be64`
 
