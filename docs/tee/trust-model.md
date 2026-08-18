@@ -16,7 +16,7 @@ caveat per mechanism.
 
 - [Summary](#summary)
 - [What a valid quote proves — and what it does not](#what-a-valid-quote-proves--and-what-it-does-not)
-- [The trust anchor, per actor](#the-trust-anchor-per-actor)
+- [The trust anchor, per action](#the-trust-anchor-per-action)
 - [Accepted risks](#accepted-risks)
 - [The rollback family](#the-rollback-family)
 - [Open decisions](#open-decisions)
@@ -28,9 +28,10 @@ caveat per mechanism.
   reviewed code is not yet a member of *this* network holding *its* secret.
   The gap is closed by named mechanisms — `network_id` in every transcript,
   the registry, the key commitment — never by the quote alone.
-- **Each actor has one anchor, matched to its position.** The responder reads
-  live chain state because it can; the joiner holds a frozen manifest because
-  it must. [The table](#the-trust-anchor-per-actor) names all eight.
+- **Each action has one anchor, matched to the actor's position.** The
+  responder reads live chain state because it can; the joiner holds a frozen
+  manifest because it must. [The table](#the-trust-anchor-per-action) names
+  all eight actions and the five parties that take them.
 - **The accepted risks are host influence.** A host owns its guest's disk,
   its POSTed config, its network, its clock, and its VM lifecycle, so the
   residuals cluster exactly where a locally checkable witness is the only
@@ -73,22 +74,32 @@ closed by a mechanism the quote plugs into, never by the quote alone:
 | economically admitted | the summit genesis at founding, the deposit path afterwards ([founding](network-founding.md)) |
 | view of chain state is current | [the freshness gate](chain-backed-admission.md#the-readiness-and-freshness-gate) around the responder's policy read |
 
-## The trust anchor, per actor
+## The trust anchor, per action
 
-Every actor in the network's life answers one question before it trusts
-anything, and each answers it against a different anchor, because each is in
-a different position:
+Every trust-sensitive action in the network's life answers one question
+first, and each answers it against a different anchor, because each is taken
+from a different position. Only five parties take the eight actions — the
+deployer, the validators, the clients, governance, and the security council
+that disaster recovery will one day need — and four of the eight are stations
+in a single validator's lifecycle:
 
-| Actor | Must answer | Anchor | Status |
-| --- | --- | --- | --- |
-| The genesis deployer | which founding artifacts are canonical, before any chain exists | its own verification at assemble: recomputed genesis hashes, DCAP-verified harvest quotes, registry storage recompiled from the policy document — all committed into `network_id` | shipped |
-| A responder, releasing `root_key` | may this requester join the trust domain | the requester's verified quote, then `MeasurementRegistry.isAccepted` at fresh finalized state of the manifest-pinned chain | shipped |
-| A joiner, receiving `root_key` | is this the canonical network, not a clone | the POSTed manifest: `network_id` bound in both halves of the handshake, and the delivered key checked against the pinned `tx_io_pk@0` commitment | the binding is shipped; the commitment check is specified, not built — today the joiner appraises no responder measurements |
-| A new staked operator | does a validator seat imply TEE custody of its keys | at founding, the harvest quote binds both pubkeys to the measured guest; post-genesis, the deposit path registers keys with no hardware binding | open |
-| A client submitting TxSeismic | is this `tx_io_pk` this network's recipient key | a quote over `tx_io_binding(network_id, tx_io_pk, epoch)` | evidence endpoint shipped; the SDKs verify no quote yet |
-| A snapshot receiver | is this state the canonical network's | `K_snap` is derivable only from `root_key`, so a snapshot that decrypts came from inside the trust domain | designed; the purpose is ungranted and no process serves it |
-| Governance | who may change the accepted measurement set | the manifest-pinned authority contract | a dev authority today; the mainnet authority is open |
-| Disaster recovery | how does the network outlive losing every TEE at once | nothing — at least one node must stay live | open, pre-mainnet |
+| Party | Action | Must answer | Anchor | Status |
+| --- | --- | --- | --- | --- |
+| Genesis deployer | assemble the founding artifacts | which founding artifacts are canonical, before any chain exists | its own verification at assemble: recomputed genesis hashes, DCAP-verified harvest quotes, registry storage recompiled from the policy document — all committed into `network_id` | shipped |
+| Validator | release `root_key` — the responder | may this requester join the trust domain | the requester's verified quote, then `MeasurementRegistry.isAccepted` at fresh finalized state of the manifest-pinned chain | shipped |
+|  | fetch `root_key` at every boot — the joiner | is this the canonical network, not a clone | the POSTed manifest: `network_id` bound in both halves of the handshake, and the delivered key checked against the pinned `tx_io_pk@0` commitment | the binding is shipped; the commitment check is specified, not built — today the joiner appraises no responder measurements |
+|  | stake for a seat | does a validator seat imply TEE custody of its keys | at founding, the harvest quote binds both pubkeys to the measured guest; post-genesis, the deposit path registers keys with no hardware binding | open |
+|  | receive a snapshot at a resync | is this state the canonical network's | `K_snap` is derivable only from `root_key`, so a snapshot that decrypts came from inside the trust domain | designed; the purpose is ungranted and no process serves it |
+| Client | submit a TxSeismic | is this `tx_io_pk` this network's recipient key | a quote over `tx_io_binding(network_id, tx_io_pk, epoch)` | evidence endpoint shipped; the SDKs verify no quote yet |
+| Governance | change the accepted measurement set | is the change authorized | the manifest-pinned authority contract | a dev authority today; the mainnet authority is open |
+| Security Council | recover the network after a full-fleet loss | how does the network outlive losing every TEE at once | nothing — at least one node must stay live | open, pre-mainnet |
+
+The validator's four actions repeat and interleave — `root_key` is RAM-only,
+so a validator is the joiner again at every reboot. Party and action also
+come apart at the edges: a deposit-path validator today takes its seat with
+no joiner-style hardware check at all (the open row above), and whether a
+read-only full node may join the trust domain without ever staking is part
+of the same [open decision](#open-decisions).
 
 The asymmetry between the responder and the joiner is structural, not an
 implementation gap. A responder by definition holds `root_key` and a readable
@@ -185,12 +196,18 @@ open design work.
   ([the addendum's recovery rule](network-manifest.md#the-attested-addendum)).
 - **Post-genesis binding of validator keys to a TEE** — must close before
   staking opens to outside operators. Founding validators have the binding:
-  the harvest quote proves both pubkeys were generated inside a measured
-  guest. A deposit-path validator today registers keys with no hardware
-  binding, so nothing stops its consensus keys from living, or signing,
-  outside a TEE. The candidate fix is binding the node's consensus pubkeys
-  into the admission transcript and recording the verified pair at admission
-  — nearly free, since a quote is already verified at root-key release.
+  [the harvest quote](network-founding.md#the-key-holder) proves both pubkeys
+  were generated inside a measured guest. A deposit-path validator today
+  registers keys with no hardware binding, so nothing stops its consensus
+  keys from living, or signing, outside a TEE. The candidate fix is binding
+  the node's consensus pubkeys into the admission transcript and recording
+  the verified pair at admission — nearly free, since a quote is already
+  verified at root-key release. This is the shape Microsoft's
+  [Confidential Consortium Framework (CCF)](https://microsoft.github.io/CCF/)
+  uses: a joining node's quote binds `report_data = SHA256(node pubkey)`,
+  verified at admission and recorded in the ledger. The same decision covers
+  the reverse case — whether a read-only full node may receive `root_key`
+  without ever staking, and what pre-root identity staking should register.
 - **Registry mutation authority** — must close before mainnet. The manifest
   pins which contract may change the accepted measurement set, and today
   that role is filled by a dev authority. Who holds it on mainnet — a
@@ -204,11 +221,10 @@ Alternatives weighed and set aside, with the reasons that decided them. Each
 names the section whose rule it settles.
 
 **A key commitment rather than a network identity key** ([the trust anchor,
-per actor](#the-trust-anchor-per-actor)). The joiner's planned appraisal of
+per action](#the-trust-anchor-per-action)). The joiner's planned appraisal of
 the responder is a commitment check: re-derive `tx_io_pk@0` from the
 delivered `root_key` and compare against the addendum's pin. The alternative
-is the shape of Microsoft's
-[Confidential Consortium Framework (CCF)](https://microsoft.github.io/CCF/),
+is the shape of [CCF](https://microsoft.github.io/CCF/),
 whose clients authenticate the service by its identity key — here, a
 dedicated network identity keypair, private half in the custodian, signing
 handshake transcripts so joiners and clients verify a signature instead of
