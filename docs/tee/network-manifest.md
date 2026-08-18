@@ -452,8 +452,9 @@ same logical content, which is exactly the split-network bug `network_id` exists
 to prevent, and it surfaces only on edge-case inputs, possibly long after
 deployment. Brittle-but-loud beats forgiving-but-silently-divergent for a
 security identifier. Byte hashing also makes the file an artifact, the way git
-objects, container image digests, and CCF's raw security policy in `host_data`
-are artifacts.
+objects, container image digests, and the raw security policy Microsoft's
+[Confidential Consortium Framework (CCF)](https://microsoft.github.io/CCF/)
+pins in `host_data` are artifacts.
 
 **JSON rather than TOML with inline comments** ([the v1
 fields](#the-v1-fields)). TOML is attractive for an operator-reviewed artifact
@@ -494,8 +495,10 @@ ledger — so "the current policy" is whatever an untrusted endpoint asserts, an
 the joiner would be verifying its counterparty against a document that
 counterparty's side could have chosen. The sound variant, complete policy
 documents signed by manifest-pinned authority keys and accepted at any revision
-above bootstrap, is TUF-shaped and inherits TUF's hard parts: rollback and
-freeze protection need freshness evidence, which is chain state again.
+above bootstrap, is the shape of
+[The Update Framework (TUF)](https://theupdateframework.io/) and inherits
+TUF's hard parts: rollback and freeze protection need freshness evidence,
+which is chain state again.
 
 **Precedent: CCF** ([the attested addendum](#the-attested-addendum)). The
 manifest/addendum split follows CCF's: startup configuration is the trust
