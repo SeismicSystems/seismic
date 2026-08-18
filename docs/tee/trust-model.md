@@ -15,10 +15,13 @@ accepted risk can be reviewed as one list rather than reassembled from a
 caveat per mechanism.
 
 - [Summary](#summary)
-- [What a valid quote proves — and what it does not](#what-a-valid-quote-proves--and-what-it-does-not)
+- [Assumptions](#assumptions)
+  - [The host platform, and what it is trusted for](#the-host-platform-and-what-it-is-trusted-for)
+  - [What a valid quote proves — and what it does not](#what-a-valid-quote-proves--and-what-it-does-not)
 - [The trust anchor, per action](#the-trust-anchor-per-action)
-- [Accepted risks](#accepted-risks)
-- [The rollback family](#the-rollback-family)
+- [Residuals](#residuals)
+  - [Accepted risks](#accepted-risks)
+  - [The rollback family](#the-rollback-family)
 - [Open decisions](#open-decisions)
 - [Design rationale](#design-rationale)
 
@@ -36,6 +39,11 @@ caveat per mechanism.
   its POSTed config, its network, its clock, and its VM lifecycle, so the
   residuals cluster exactly where a locally checkable witness is the only
   witness available.
+- **One trust model across platforms.** Azure TDX confidential VMs today,
+  GCP planned. The model is written to the weakest platform the network
+  admits, so no property rests on platform-specific durable state — not a
+  vTPM counter, not a platform seal ([the host
+  platform](#the-host-platform-and-what-it-is-trusted-for)).
 - **Rollback is one family, not many bugs.** Any state the guest keeps
   locally can be rewound, and no local witness detects it. The family — and
   its one real exit, freshness evidence a host cannot mint — is
@@ -45,7 +53,51 @@ caveat per mechanism.
   binding of validator keys to a TEE must close before staking opens to
   outside operators.
 
-## What a valid quote proves — and what it does not
+## Assumptions
+
+What the design takes as given, and from whom: the platform whose roots
+endorse the hardware, and the statement a quote built on them carries about
+the guest.
+
+### The host platform, and what it is trusted for
+
+Seismic runs on Azure TDX confidential VMs today, and GCP confidential VMs
+are a planned second platform. One trust model covers both, and it is written
+to the weakest platform the network admits: a property that holds on one
+vendor's hardware and not another's is not a property this design states.
+
+Three places the platform legitimately shows through:
+
+- **Endorsement roots are per-platform.** A quote chain terminates in roots
+  the vendors operate — Intel's DCAP collateral for the TDX quote, and on
+  Azure the vTPM AK certificate chain rooted in Microsoft's CAs. Trusting
+  them to endorse genuine hardware, and only that, is the base assumption of
+  any TEE deployment.
+- **Measurement shape, and so identity, is per-platform.** An Azure guest's
+  identity is its quote-authenticated vTPM PCR bank; a bare TDX guest's is
+  its MRTD/RTMR set. Each platform earns its own admission schema over a
+  disjoint ID space, and a verified guest whose attestation type has no
+  schema is denied — so a policy naming an Azure image says nothing about a
+  GCP one, by construction ([admission](chain-backed-admission.md)).
+- **Platform-specific hardening, if ever adopted, is named here.** This
+  section is the register for it: the platform, the property it buys, and
+  which deployments it applies to. Today it holds the endorsement roots and
+  nothing more.
+
+**No security property rests on platform-specific durable state.** A
+monotonic counter in vTPM NV storage, or a platform seal, would each be a
+tempting local anti-rollback anchor. Both rest on state the host stores and
+restores, under clone and rollback semantics the platform defines rather than
+the guest — Azure's vTPM state is host-persisted VM state, and every further
+platform arrives with its own answer. So the design assumes neither, on any
+host: rollback resistance is sought in evidence from beyond the host ([the
+rollback family](#the-rollback-family)), never in a counter whose behavior
+the vendor decides. An operator whose platform does offer a hardware-anchored
+counter may harden that node with it; what the *network* states stays what
+holds everywhere, because every admission decision is made about peers spread
+across all of it.
+
+### What a valid quote proves — and what it does not
 
 A valid quote with accepted measurements proves three things. The requester
 is a genuine TDX guest: the quote chain and platform collateral verify. It is
@@ -111,7 +163,13 @@ frozen one, and the joiner's protection is shaped accordingly — it holds no
 secrets yet, so a dishonest responder can at worst deliver a wrong key, and
 the commitment check catches exactly that.
 
-## Accepted risks
+## Residuals
+
+What the design accepts rather than closes. The risks are stated one by one,
+then the rollback family collects the instances of a single mechanism: local
+state a host can serve back to its guest as the guest's own past.
+
+### Accepted risks
 
 Each stated plainly, with the reason it is accepted.
 
@@ -141,9 +199,7 @@ two-thirds-of-validators bar consensus sets — and unlike a block, a granted
 `root_key` never reorgs away. Whether the joiner should require independent
 corroboration is open design work.
 
-**The rollback family**, collected next — large enough to be its own section.
-
-## The rollback family
+### The rollback family
 
 A host owns its guest's disk, its POSTed configuration, its network, its
 clock, and its VM lifecycle, snapshots included. So any state the guest keeps
@@ -168,10 +224,14 @@ detects the rewind. The instances:
   latches the genesis window shut the first time it sees the chain past
   block 0 — in process memory, so a restart reopens it. That is not a
   shortcut to fix later: persisting the latch would store it on a disk the
-  same host owns, so it would rewind with everything else.
+  same host owns, so it would rewind with everything else. A hardware counter
+  is not the alternative either — no property here rests on platform-specific
+  durable state ([the host
+  platform](#the-host-platform-and-what-it-is-trusted-for)).
 - **TPM sealing was rejected partly on the same grounds.** Sealed durability
-  for founding keys would rest on vTPM clone and rollback semantics that are
-  unknown on the platforms Seismic runs on — and a cloned consensus key is
+  for founding keys would rest on vTPM clone and rollback semantics the
+  platform defines ([the host
+  platform](#the-host-platform-and-what-it-is-trusted-for)) — and a cloned consensus key is
   accidental equivocation ([key custody](network-founding.md#key-custody-ram-only-no-tpm-sealing)).
 
 What no local witness can supply is freshness evidence the host cannot mint.
