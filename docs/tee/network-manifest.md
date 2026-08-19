@@ -262,7 +262,7 @@ quote from the right image on the wrong fork fails here:
 tx_io_binding             = SHA256("seismic-tx-io-v1:"        || network_id || tx_io_pk || epoch_be64)
 root_key_request_binding  = SHA256("seismic-root-key-req-v1:" || network_id || nonce_b || eph_pk_b)
 root_key_response_binding = SHA256("seismic-root-key-resp-v1:"|| network_id || nonce_b || eph_pk_a || wrapped)
-deploy_preflight_binding  = SHA256("seismic-deploy-v1:"       || network_id || deployment_nonce || context)
+deploy_verification_binding  = SHA256("seismic-deploy-v1:"       || network_id || deployment_nonce)
 ```
 
 Each digest is what a quote commits to: the guest minting the quote carries it
@@ -288,8 +288,11 @@ instead, and the pin itself provides the intent binding
 **The attestation service** hashes `/run/seismic/conf/network-manifest.json` at
 startup, refuses to serve without it, and uses the resulting `network_id` in
 every binding: `getTxIoAttestationEvidence(epoch)` answers with
-`tx_io_binding(network_id, tx_io_pk, epoch)`, and `getWrappedRootKey` runs the
-request and response bindings above. Two more manifest fields feed its
+`tx_io_binding(network_id, tx_io_pk, epoch)`,
+`getDeployVerificationEvidence(deployment_nonce)` answers with
+`deploy_verification_binding(network_id, deployment_nonce)` — the caller
+contributes only freshness — and `getWrappedRootKey` runs the request and
+response bindings above. Two more manifest fields feed its
 admission path: `measurements.contracts.registry`, the contract it asks for a
 verdict, and `eth.genesis_hash`, the chain that contract has to live on.
 
@@ -297,9 +300,12 @@ verdict, and `eth.genesis_hash`, the chain that contract has to live on.
 section — common to genesis and joining nodes, since joiners need it just as
 much — validates them, and writes them verbatim.
 
-**Deploy preflight and clients**: deploy tooling verifies a candidate node's
-evidence against the manifest's pinned policy and `network_id` before wiring it
-in. For a client, `network_id` is the pin answering "which network am I
+**Deploy verification and clients**: deploy tooling verifies a candidate
+node's evidence against the manifest's pinned policy and `network_id` before
+relying on it — publishing its address, or handing it to later nodes as a
+bootnode. The check guards only those operator decisions; network membership
+is granted by the attested root-key handshake and its admission policy, never
+by this check. For a client, `network_id` is the pin answering "which network am I
 encrypting this TxSeismic for". Carrying `(network_id, addendum)` in the chain
 config, so a client can also validate a node's `tx_io` responses, is future work
 that waits on [the addendum](#the-attested-addendum).
