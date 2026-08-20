@@ -40,7 +40,6 @@ seismic-alloy-genesis = { path = "./seismic-alloy/crates/genesis" }
 seismic-prelude = { path = "./seismic-alloy/crates/prelude" }
 seismic-alloy-provider = { path = "./seismic-alloy/crates/provider" }
 seismic-alloy-rpc-types = { path = "./seismic-alloy/crates/rpc-types" }
-seismic-alloy-trie = { path = "./seismic-alloy/crates/trie" }
 
 # seismic-alloy-core
 alloy-dyn-abi = { path = "./seismic-alloy-core/crates/dyn-abi" }
@@ -72,6 +71,5 @@ foundry-compilers-artifacts-solc = { path = "./seismic-compilers/crates/artifact
 foundry-compilers-artifacts-vyper = { path = "./seismic-compilers/crates/artifacts/vyper" }
 
 # enclave
-seismic-enclave = { path = "./enclave/crates/enclave" }
-seismic-enclave-server = { path = "./enclave/crates/enclave-server" }
-enclave-contract = { path = "./enclave/crates/enclave-contract" }
+seismic-crypto = { path = "./enclave/crates/crypto" }
+seismic-custodian-ipc = { path = "./enclave/crates/custodian-ipc" }
