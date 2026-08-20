@@ -30,6 +30,8 @@ event Transfer(address indexed from, address indexed to, bytes32 indexed encrypt
 
 The `from` and `to` addresses remain as `indexed` parameters, along with `encryptKeyHash` which allows recipients to filter logs for events encrypted with their key. These are public -- observers can see who is transacting with whom and which key was used. Only the amount is encrypted. If you need to hide the participants as well, you can encrypt those too, but that is less common for a token.
 
+Filtering by `encryptKeyHash` only narrows results once recipients have registered a public key. Transfers to an address without one take the fallback path below and emit `bytes32(0)`, which is the common case on testnet today.
+
 ## Step by step
 
 The encryption flow uses three of Seismic's precompiles:
