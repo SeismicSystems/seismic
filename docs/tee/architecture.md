@@ -60,46 +60,11 @@ process holds it, and says what anchors it.
 Six long-lived processes, and the oneshots that gate them, all measured into the
 image:
 
-```mermaid
-flowchart TD
-    RPCC["RPC clients<br/>wallets · indexers · frontends"]
-    OPR["operator<br/>deploy CLI"]
-    PEER["peer nodes"]
-    subgraph guest ["the TDX guest — MRTD and the RTMRs measure this image"]
-        direction TB
-        NGX["nginx :443<br/>the only TLS terminator"]
-        TDXI["tdx-init :8080<br/>oneshot · blocks for the config POST"]
-        KH["summit-key-holder :7879<br/>summit keys in RAM, pre-POST"]
-        AS["attestation-service :7878<br/>quotes · handshake · admission"]
-        RETH["reth<br/>EVM + Ethereum RPC on loopback"]
-        SUM["summit<br/>BFT consensus · drives reth"]
-        CUS["custodian<br/>owns root_key · unix socket only"]
-    end
-    VOL["/persistent — LUKS2<br/>reth datadir · summit keys and db · certbot state"]
-
-    RPCC -->|"HTTPS"| NGX
-    OPR -->|"config POST"| TDXI
-    OPR -->|"harvest — pubkeys and quote"| KH
-    NGX -->|"/rpc · /ws"| RETH
-    NGX -->|"/summit"| SUM
-    NGX -->|"/attestation"| AS
-    SUM <-->|"Engine API over a unix socket"| RETH
-    RETH -->|"tx-io + rng keys, once at startup"| CUS
-    AS -->|"bootstrap · wrap · tx-io public key"| CUS
-    CUS -->|"LUKS keys via tmpfs"| VOL
-    KH -->|"persists the keystore"| VOL
-    RETH --> VOL
-    SUM --> VOL
-    SUM -->|"consensus :18551 · commonware-p2p"| PEER
-    RETH -->|"tx gossip :30303 · devp2p"| PEER
-    PEER -->|"root-key handshake :7878"| AS
-
-    classDef secret fill:#a7f3d0,stroke:#047857,color:#111;
-    classDef pinned fill:#dbeafe,stroke:#1e3a5f,color:#111;
-    class CUS secret;
-    class VOL pinned;
-    style guest fill:#eff6ff,stroke:#1e3a5f,color:#111;
-```
+![the guest's processes and what reaches each one: clients through nginx,
+the operator on tdx-init, the key holder, and the attestation service's status
+endpoints, peers on summit, reth, and the attestation service; the custodian
+holds root_key behind a unix socket, and only /persistent survives a
+reboot](diagrams/node-processes.svg)
 
 | Process | What it owns |
 | --- | --- |
@@ -125,7 +90,7 @@ node's cloud firewall rules
 | Port | Source | What answers |
 | --- | --- | --- |
 | `:443`, `:80` | anyone | nginx, proxying `/rpc` and `/ws` to reth, `/summit` to summit's JSON-RPC (health, checkpoints, staking and deposit queries), `/attestation` to the attestation service, and `/metrics/reth` + `/metrics/summit` to the two Prometheus endpoints |
-| `:7878` | anyone | the attestation service directly: the root-key handshake, tx-io evidence, health, and first-boot disk-provisioning progress |
+| `:7878` | anyone | the attestation service directly: the root-key handshake, tx-io evidence, health, first-boot disk-provisioning progress, and admission-chain status |
 | `:18551` | anyone | summit's consensus plane |
 | `:30303` TCP+UDP | anyone | reth's devp2p plane |
 | `:8080` | operator only | `tdx-init`'s config POST |
@@ -614,12 +579,13 @@ measurement freshness for credential expiry and revocation machinery. Today
 every fetch is one verify-and-release exchange.
 
 **Clear the flag after the genesis node's first successful boot.** It is
-correct exactly once, for the very first boot of a brand-new network. On a
-restart with the flag still set, the custodian mints a *fresh* `root_key`, whose
-derived keys no longer match the volume — and the header-MAC check catches that
-before `cryptsetup open`, so the unit refuses to mount and restart-loops until
-the operator updates the config and re-POSTs. Loud failure, not a silent fork.
-A precedence-aware bootstrap would make the flag harmless; see the
+correct exactly once, for the very first boot of a brand-new network. Genesis
+mode requires a blank data disk: on a restart with the flag still set, the
+custodian mints a *fresh* `root_key`, whose derived keys can never open the
+volume — so the LUKS setup refuses to start the moment it sees a provisioned
+volume in genesis mode, naming the stale flag as the cause, and restart-loops
+until the operator updates the config and re-POSTs. Loud failure, not a silent
+fork. A precedence-aware bootstrap would make the flag harmless; see the
 [design rationale](#design-rationale).
 
 **State transfer between nodes is designed, not built.** Two nodes that both
@@ -718,7 +684,7 @@ a protocol whose peers all ship in the same release.
 ([boot](#boot-power-on-to-serving)). Fetch-first, mint-only-on-failure would
 make the flag harmless on a restart. But it needs an answer to "how long do we
 wait for peers before minting?", and every answer is a way to fork the network
-by timeout. A header-MAC failure that wedges one node until the operator fixes
+by timeout. A boot-time refusal that wedges one node until the operator fixes
 its config is the better trade.
 
 **Three planes rather than one multiplexed transport**

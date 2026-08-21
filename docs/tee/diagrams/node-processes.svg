@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2200 1380"
+     font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <style>
+    text { fill: #374151; font-size: 16px; }
+    .sub { font-size: 14px; fill: #64748b; }
+    .zone-label { font-size: 15px; font-weight: 600; fill: #1e40af; }
+    .guest { fill: #eff6ff; stroke: #1e3a5f; stroke-width: 2; }
+    .node > rect { fill: #ffffff; stroke: #475569; stroke-width: 2; }
+    .node text { text-anchor: middle; }
+    .node .name { font-weight: 700; fill: #111827; }
+    /* the one process that holds root_key */
+    .node.secret > rect { fill: #a7f3d0; stroke: #047857; }
+    /* the encrypted host disk — the only thing that survives a reboot */
+    .node.volume > rect { fill: #dbeafe; stroke: #1e3a5f; }
+    .node.volume text { fill: #1e3a5f; }
+    /* one-shot units: run at boot, then exit */
+    .node.oneshot > rect { fill: #fef3c7; stroke: #b45309; }
+    .flow { stroke: #64748b; stroke-width: 2; fill: none; }
+    /* white halo keeps labels readable where they sit on a line */
+    .flow-label { font-size: 14px; fill: #374151; paint-order: stroke; stroke: #ffffff; stroke-width: 5px; stroke-linejoin: round; }
+  </style>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="2200" height="1380" fill="#ffffff"/>
+
+  <!-- ================= legend ================= -->
+  <rect x="620" y="48" width="24" height="24" fill="#a7f3d0" stroke="#047857" stroke-width="2"/>
+  <text class="sub" x="656" y="66">holds root_key — the network secret</text>
+  <rect x="620" y="92" width="24" height="24" fill="#dbeafe" stroke="#1e3a5f" stroke-width="2"/>
+  <text class="sub" x="656" y="110">the encrypted host disk — survives reboots</text>
+  <rect x="620" y="136" width="24" height="24" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+  <text class="sub" x="656" y="154">one-shot — runs at every boot, then exits</text>
+
+  <!-- ================= external actors ================= -->
+  <g class="node" transform="translate(140,40)">
+    <rect width="340" height="110" rx="14"/>
+    <text class="name" x="170" y="44">RPC clients</text>
+    <text class="sub" x="170" y="76">wallets · indexers · frontends</text>
+  </g>
+  <g class="node" transform="translate(1460,40)">
+    <rect width="340" height="110" rx="14"/>
+    <text class="name" x="170" y="44">operator</text>
+    <text class="sub" x="170" y="76">deploy CLI</text>
+  </g>
+
+  <!-- ================= the TDX guest ================= -->
+  <rect class="guest" x="60" y="230" width="1800" height="810" rx="20"/>
+  <text class="zone-label" x="90" y="268">the TDX guest — MRTD and the RTMRs measure this image</text>
+
+  <!-- row A: the listeners the outside reaches first -->
+  <g class="node" transform="translate(160,310)">
+    <rect width="340" height="100" rx="12"/>
+    <text class="name" x="170" y="40">nginx :443</text>
+    <text class="sub" x="170" y="70">the only TLS terminator</text>
+  </g>
+  <g class="node" transform="translate(1050,310)">
+    <rect width="380" height="100" rx="12"/>
+    <text class="name" x="190" y="40">summit-key-holder :7879</text>
+    <text class="sub" x="190" y="70">summit keys in RAM, pre-POST</text>
+  </g>
+  <g class="node oneshot" transform="translate(1470,310)">
+    <rect width="330" height="100" rx="12"/>
+    <text class="name" x="165" y="40">tdx-init :8080</text>
+    <text class="sub" x="165" y="70">blocks for the config POST</text>
+  </g>
+
+  <!-- row B: the long-lived services -->
+  <g class="node" transform="translate(160,640)">
+    <rect width="380" height="120" rx="12"/>
+    <text class="name" x="190" y="46">reth</text>
+    <text class="sub" x="190" y="78">EVM + Ethereum RPC on loopback</text>
+  </g>
+  <g class="node" transform="translate(630,640)">
+    <rect width="360" height="120" rx="12"/>
+    <text class="name" x="180" y="46">summit</text>
+    <text class="sub" x="180" y="78">BFT consensus · drives reth</text>
+  </g>
+  <g class="node" transform="translate(1290,620)">
+    <rect width="460" height="160" rx="12"/>
+    <text class="name" x="230" y="44">attestation-service :7878</text>
+    <text class="sub" x="230" y="80">quotes · root-key handshake · admission</text>
+    <text class="sub" x="230" y="112">status endpoints for the operator</text>
+  </g>
+
+  <!-- row C: the secret holder — unix socket only, no network listener -->
+  <g class="node secret" transform="translate(160,890)">
+    <rect width="380" height="110" rx="12"/>
+    <text class="name" x="190" y="42">custodian</text>
+    <text class="sub" x="190" y="74">owns root_key · unix socket only</text>
+  </g>
+
+  <!-- ================= outside the guest ================= -->
+  <g class="node" transform="translate(1900,620)">
+    <rect width="240" height="140" rx="14"/>
+    <text class="name" x="120" y="78">peer nodes</text>
+  </g>
+  <g class="node volume" transform="translate(160,1180)">
+    <rect width="640" height="140" rx="14"/>
+    <text class="name" x="320" y="52">/persistent — LUKS2</text>
+    <text class="sub" x="320" y="88">reth datadir · summit keys and db · certbot state</text>
+  </g>
+
+  <!-- ================= client plane ================= -->
+  <line class="flow" x1="310" y1="150" x2="328" y2="304" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="305" y="205" text-anchor="end">HTTPS</text>
+
+  <line class="flow" x1="330" y1="410" x2="345" y2="634" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="255" y="530">/rpc · /ws</text>
+  <line class="flow" x1="435" y1="410" x2="785" y2="634" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="565" y="520">/summit</text>
+  <line class="flow" x1="500" y1="365" x2="1325" y2="616" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="890" y="505">/attestation</text>
+
+  <!-- ================= operator plane ================= -->
+  <line class="flow" x1="1650" y1="150" x2="1640" y2="304" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1660" y="205">config POST</text>
+  <line class="flow" x1="1540" y1="150" x2="1270" y2="304" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1400" y="208" text-anchor="middle">harvest — pubkeys + quote</text>
+  <path class="flow" d="M 1770,150 L 1830,260 L 1830,650 L 1756,650" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1818" y="470" text-anchor="end">status polls —</text>
+  <text class="flow-label" x="1818" y="492" text-anchor="end">health · LUKS-wipe progress</text>
+  <text class="flow-label" x="1818" y="514" text-anchor="end">admission chain</text>
+
+  <!-- ================= inside the guest ================= -->
+  <line class="flow" x1="540" y1="700" x2="630" y2="700" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="585" y="610" text-anchor="middle">Engine API</text>
+  <text class="flow-label" x="585" y="632" text-anchor="middle">unix socket</text>
+
+  <line class="flow" x1="330" y1="760" x2="330" y2="884" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="345" y="810">tx-io + rng keys,</text>
+  <text class="flow-label" x="345" y="832">once at startup</text>
+
+  <line class="flow" x1="1330" y1="780" x2="546" y2="930" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="900" y="930" text-anchor="middle">bootstrap · wrap · tx-io public key</text>
+
+  <!-- ================= peer planes — the bus to the right ================= -->
+  <path class="flow" d="M 900,760 L 900,820 L 1960,820 L 1960,766" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1300" y="808">consensus :18551 · commonware-p2p</text>
+
+  <path class="flow" d="M 500,760 L 500,856 L 2020,856 L 2020,766" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1300" y="880">tx gossip :30303 · devp2p</text>
+
+  <line class="flow" x1="1900" y1="680" x2="1760" y2="700" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1822" y="730" text-anchor="middle">root-key</text>
+  <text class="flow-label" x="1822" y="752" text-anchor="middle">handshake :7878</text>
+
+  <!-- ================= what persists ================= -->
+  <line class="flow" x1="330" y1="1000" x2="330" y2="1174" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="345" y="1090">LUKS keys via tmpfs</text>
+
+  <path class="flow" d="M 160,720 L 110,720 L 110,1250 L 154,1250" marker-end="url(#arrow)"/>
+  <line class="flow" x1="700" y1="760" x2="760" y2="1174" marker-end="url(#arrow)"/>
+
+  <path class="flow" d="M 1240,410 L 1240,1250 L 806,1250" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1255" y="1100">persists the keystore</text>
+</svg>
