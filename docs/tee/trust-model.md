@@ -34,7 +34,7 @@ caveat per mechanism.
 - **Each action has one anchor, matched to the actor's position.** The
   responder reads live chain state because it can; the joiner holds a frozen
   manifest because it must. [The table](#the-trust-anchor-per-action) names
-  all eight actions and the five parties that take them.
+  all nine actions and the five parties that take them.
 - **The accepted risks are host influence.** A host owns its guest's disk,
   its POSTed config, its network, its clock, and its VM lifecycle, so the
   residuals cluster exactly where a locally checkable witness is the only
@@ -51,7 +51,8 @@ caveat per mechanism.
 - **The open decisions have deadlines.** Disaster recovery and the registry's
   mainnet mutation authority must close before mainnet; the post-genesis
   binding of validator keys to a TEE must close before staking opens to
-  outside operators.
+  outside operators; root-key rotation must close before any purpose key
+  ships a nonzero epoch.
 
 ## Assumptions
 
@@ -130,9 +131,9 @@ closed by a mechanism the quote plugs into, never by the quote alone:
 
 Every trust-sensitive action in the network's life answers one question
 first, and each answers it against a different anchor, because each is taken
-from a different position. Only five parties take the eight actions — the
+from a different position. Only five parties take the nine actions — the
 deployer, the validators, the clients, governance, and the security council
-that disaster recovery will one day need — and four of the eight are stations
+that disaster recovery will one day need — and four of the nine are stations
 in a single validator's lifecycle:
 
 | Party | Action | Must answer | Anchor | Status |
@@ -144,6 +145,7 @@ in a single validator's lifecycle:
 |  | receive a snapshot at a resync | is this state the canonical network's | `K_snap` is derivable only from `root_key`, so a snapshot that decrypts came from inside the trust domain | designed; the purpose is ungranted and no process serves it |
 | Client | submit a TxSeismic | is this `tx_io_pk` this network's recipient key | a quote over `tx_io_binding(network_id, tx_io_pk, epoch)` | evidence endpoint shipped; the SDKs verify no quote yet |
 | Governance | change the accepted measurement set | is the change authorized | the manifest-pinned authority contract | a dev authority today; the mainnet authority is open |
+|  | rotate `root_key` to fresh entropy | is the rotation authorized, and does the successor chain to the key it replaces | undecided — the candidates are the manifest-pinned authority contract and a consensus event, and a post-recovery rotation is the security council's, authorized by the recovery ceremony itself; in every case the published wrap-chain links each version to its predecessor, so holders verify continuity | open, and prerequisite to any nonzero purpose-key epoch |
 | Security Council | recover the network after a full-fleet loss | how does the network outlive losing every TEE at once | nothing — at least one node must stay live | open, pre-mainnet |
 
 The validator's four actions repeat and interleave — `root_key` is RAM-only,
@@ -274,11 +276,31 @@ open design work.
   multisig, a governance contract, a council — decides who can admit code
   into the trust domain, and the same decision gates the fork-schedule
   amendment path ([what the genesis hash does not cover](network-manifest.md#validation-gates)).
+- **Root-key rotation** — must close before any purpose key ships a nonzero
+  epoch. Nothing introduces fresh entropy after genesis, and the holder set
+  only grows: a retired operator's TEE keeps `root_key` in RAM indefinitely.
+  The candidate design is a chained rekey in
+  [CCF](https://microsoft.github.io/CCF/)'s shape — mint a fresh `root_key`,
+  publish the old key wrapped under a key derived from the new one, so
+  current holders unwrap the chain for historical decryption while
+  everything new derives from fresh entropy. The decision is the trigger set
+  (suspected compromise; possibly validator exit) and the authorizing party
+  per trigger: a live-network rotation fits the authority's reaction-time
+  lanes — the registry-mutation question again, who may change a
+  network-defining commitment, at which latency — while a post-recovery
+  rotation belongs to the security council, authorized by the recovery
+  ceremony itself. Whatever wins, a rotation republishes the key
+  commitment at a bumped epoch under the same `network_id`, so it is
+  client-visible, never silent — the same rule recovery follows
+  ([the addendum's recovery rule](network-manifest.md#the-attested-addendum)).
 
 ## Design rationale
 
 Alternatives weighed and set aside, with the reasons that decided them. Each
-names the section whose rule it settles.
+names the section whose rule it settles. The full options pass — every
+candidate anchor, the contests they competed in, and the candidates weighed
+for the open decisions — is captured in
+[the roots-of-trust decision record](decisions/2026-08-roots-of-trust.md).
 
 **A key commitment rather than a network identity key** ([the trust anchor,
 per action](#the-trust-anchor-per-action)). The joiner's planned appraisal of
