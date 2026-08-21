@@ -31,10 +31,12 @@ library TxUtils {
         return txType() == SEISMIC_TX_TYPE;
     }
 
-    /// @notice True when the current execution is an authenticated signed read (an RPC read) rather
-    /// than a mined tx; implies {isSeismicTx}.
-    /// @dev The node's RPC classification, NOT an EVM guarantee of no state change — a signed read
-    /// can still SSTORE (the node discards it). A context signal, like {isSeismicTx}.
+    /// @notice True when executing as an authenticated signed read (an RPC read), not a mined tx.
+    /// Implies {isSeismicTx}.
+    /// @dev NOT authorization: this authenticates the execution mode, not the caller — gate on
+    /// msg.sender/roles separately, never on this predicate alone. Not a confidentiality guarantee.
+    /// State is not committed to the canonical chain, but is visible to later calls in the same
+    /// multi-call simulation.
     function isSignedRead() internal view returns (bool) {
         return _read(SIGNED_READ_SELECTOR) == 1;
     }
