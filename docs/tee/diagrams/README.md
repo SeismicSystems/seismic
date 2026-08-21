@@ -1,12 +1,12 @@
 # Architecture Diagrams
 
-This README is the diagram-conventions doc for the whole repo; it lives here because the TEE docs are currently the heaviest diagram users. Diagrams sit next to the docs that embed them (this directory serves [`docs/tee/`](../)); the general-architecture PNGs live in [`docs/diagrams/`](../../diagrams/).
+This README is the diagram-conventions doc for the whole repo; it lives here because the TEE docs are currently the heaviest diagram users. Diagrams sit next to the docs that embed them (this directory serves [`docs/tee/`](../)).
 
 ## Conventions
 
 - **Structured diagrams** (flowcharts, sequence diagrams, state machines, data-flow graphs) — write them as ` ```mermaid ` blocks directly in the relevant markdown file. GitHub and the VS Code preview (with the recommended `bierner.markdown-mermaid` extension) render them natively. This is the default: reach for mermaid first, and only leave it when auto-layout can't express the diagram.
 - **Spatial diagrams** (layouts where position carries meaning: trust boundaries, side-by-side comparisons, zoned data-flow overviews, embedded code artifacts) — hand-authored **structured SVG**, committed as `<name>.svg` next to the doc and embedded directly: `![founding reorder](diagrams/founding-reorder-vs-split.svg)`. GitHub renders SVG images natively, so the source is also the render — there is no exported copy to keep in sync.
-- The general-architecture PNGs in [`docs/diagrams/`](../../diagrams/) (`seismic-node.png`, `rpc-evm-storage.png`, `tries.png`) predate the convention and have no editable source; recreate as mermaid or SVG if one ever needs editing.
+- The general-architecture PNGs in the gitbook assets (`seismic-node.png`, `rpc-evm-storage.png`, `tries.png`, embedded by [`overview/how-seismic-works.md`](../../gitbook/overview/how-seismic-works.md)) predate the convention and have no editable source; recreate as mermaid or SVG if one ever needs editing.
 
 ## Writing structured SVG
 

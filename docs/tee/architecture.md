@@ -11,7 +11,8 @@ with the current default named.
 What runs inside a Seismic TDX guest, what carries traffic between nodes, who
 holds which key, what survives a reboot, and how a node gets from power-on to
 serving. The general node
-architecture — RPC, EVM, storage, tries — is [architecture.md](../architecture.md);
+architecture — RPC, EVM, storage, tries — is
+[How Seismic Works](../gitbook/overview/how-seismic-works.md);
 this doc is the TEE-specific shape around it.
 
 Nothing here is a key derivation. Every label, salt, and KDF belongs to

@@ -65,8 +65,7 @@ We use mise to manage supporting tools and run common tasks. It is not mandatory
 ### Docs
 
 If working with any specific fork/repo, make sure to read that repo's README and CLAUDE.md for specific context. This repo's docs are meant to provide the big picture and cross-cutting concepts that apply across all repos:
-- **[Architecture](docs/architecture.md)** — high-level diagrams of how the components fit together
 - **[Glossary](docs/glossary.md)** — key Seismic concepts: FlaggedStorage, TxSeismic, Mercury Spec, SeismicHost
-- **[Language & VM](docs/language-and-vm.md)** — Mercury EVM spec: shielded types, CLOAD/CSTORE, FlaggedStorage
+- **[How Seismic Works](docs/gitbook/overview/how-seismic-works.md)** — architecture diagrams and an end-to-end walkthrough of a shielded transaction
 - **[Repos](docs/gitbook/reference/repos.md)** — stack diagram, repos dependency chain, how changes flow
 - **[Claude Code Setup](docs/claude-code-setup.md)** — Claude Code skills setup and symlink instructions

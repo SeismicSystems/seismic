@@ -10,7 +10,7 @@
 
 ## Shielded State / FlaggedStorage
 
-Every storage slot is a tuple `(value, is_private)`, called `FlaggedStorage`. Private slots cannot be read via `eth_getStorageAt`/`eth_getProof` — they return 0. Inside the EVM, only `CLOAD`/`CSTORE` opcodes can access them - `SLOAD`/`SSTORE` will fail if `is_private` is true (meaning they have already been `CSTORE`d to). This allows contracts to keep secrets on-chain that must be accessed via contract logic rather than direct reads. Authentication/Authorization libraries such as OpenZeppelin's AccessControl can thus be used to gate READ access to private state, unlike in a standard EVM where all state is public.
+Every storage slot is a tuple `(value, is_private)`, called `FlaggedStorage`. Private slots read as 0 via RPC (`eth_getStorageAt`), indistinguishable from uninitialized storage. Inside the EVM, only `CLOAD`/`CSTORE` opcodes can access them — `SLOAD`/`SSTORE` on a private slot revert with a catchable `InvalidPrivateStorageAccess` reason. This allows contracts to keep secrets on-chain that must be accessed via contract logic rather than direct reads. Authentication/Authorization libraries such as OpenZeppelin's AccessControl can thus be used to gate READ access to private state, unlike in a standard EVM where all state is public.
 
 ```rust
 struct FlaggedStorage {
@@ -23,17 +23,27 @@ This type flows through: alloy-core → revm (journal) → trie (merkle encoding
 
 ## Shielded Types
 
-The Seismic Solidity compiler adds `suint`, `sint`, `sbool`, `saddress` — confidential counterparts of standard Solidity types. They compile down to `CLOAD`/`CSTORE` instead of `SLOAD`/`SSTORE`. They otherwise behave exactly like their public counterparts in terms of arithmetic, ABI encoding, etc. This allows developers to easily write contracts with private state without needing to manage the `(value, is_private)` tuple manually.
+The Seismic Solidity compiler adds `suint`, `sint`, `sbool`, `saddress`, `sbytes` — confidential counterparts of standard Solidity types. They compile down to `CLOAD`/`CSTORE` instead of `SLOAD`/`SSTORE`. They otherwise behave exactly like their public counterparts in terms of arithmetic, ABI encoding, etc. This allows developers to easily write contracts with private state without needing to manage the `(value, is_private)` tuple manually.
 
-See [language-and-vm.md](language-and-vm.md) for the full spec (storage behavior, restrictions, casting, arrays, best practices).
+See the [Seismic Solidity docs](gitbook/seismic-solidity/README.md) for the full spec (storage behavior, restrictions, casting, collections, best practices).
 
 ## Mercury Spec
 
 Seismic's name for the modified EVM specification. Implemented primarily in seismic-revm. Adds:
-- **Opcodes**: CLOAD (0xB0), CSTORE (0xB1)
+- **Opcodes**: CLOAD (0xB0), CSTORE (0xB1), TIMESTAMPMS (0x4B — block timestamp in milliseconds)
 - **Precompiles**: RNG (0x64), ECDH (0x65), AES-GCM Encrypt (0x66), AES-GCM Decrypt (0x67), HKDF (0x68), secp256k1 Sign (0x69)
-- **FlaggedStorage semantics**
-- **Access rules**: SLOAD on private slots returns 0/halts; CLOAD on public slots returns 0/halts
+- **FlaggedStorage access rules** (slot state `(value, is_private)`):
+
+  |             | (0, public)  | (x, public) | (0, private) | (x, private) |
+  | ----------- | ------------ | ----------- | ------------ | ------------ |
+  | `SLOAD`     | 0            | x           | revert       | revert       |
+  | `CLOAD`     | 0            | x           | 0            | x            |
+  | `SSTORE(y)` | (y, public)  | (y, public) | revert       | revert       |
+  | `CSTORE(y)` | (y, private) | revert      | (y, private) | (y, private) |
+
+- **Flat gas costs** for CLOAD/CSTORE: no cold/warm or value-transition variation, and no refunds, so gas cannot leak shielded values
+
+See the [Opcodes reference](gitbook/reference/opcodes.md) for details.
 
 ## TxSeismic
 
@@ -50,11 +60,11 @@ struct TxSeismicElements {
 }
 ```
 
-Defined in seismic-alloy, consumed by seismic-evm, seismic-reth, and seismic-foundry.
+Defined in seismic-alloy, consumed by seismic-evm, seismic-reth, and seismic-foundry. See [The Seismic Transaction](gitbook/reference/seismic-transaction/README.md) for the encryption scheme and transaction lifecycle.
 
 ## TEE Integration
 
-Nodes run inside a Trusted Execution Environment. The TEE holds the decryption key. Users encrypt calldata with the network's public key (fetched via `seismic_getTeePublicKey` RPC). Only the TEE can decrypt and execute. Note that decryption is done by the RPC layer, so as to not diverge from the ABI standard.
+Nodes run inside a Trusted Execution Environment. The TEE holds the decryption key. Users encrypt calldata with the network's public key (fetched via `seismic_getTeePublicKey` RPC). Encrypted calldata is decrypted in-enclave at execution time: in the block executor for state-changing transactions (so they stay encrypted in the mempool and over gossip), and at the RPC layer for reads (`eth_call` / signed reads).
 
 ## SeismicHost
 
