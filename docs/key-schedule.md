@@ -23,12 +23,13 @@ for every long-lived node secret.
 
 - **Code**: `enclave/crates/custodian/src/custodian.rs` (`KeyPurpose`)
 - **KDF**: HKDF-SHA256, salt `"seismic-purpose-derive-salt"`,
-  info `"seismic-purpose-{label}" || epoch_be64`
+  info `"seismic-purpose-{label}" || epoch_be64`, 32-byte output
+  (64 for `RngPrecompile`)
 
 | Purpose | Label | Output | Consumers |
 | --- | --- | --- | --- |
 | `TxIo` | `tx-io` | secp256k1 secret key (TEE side of transaction ECDH) | block executor, RPC signed reads |
-| `RngPrecompile` | `rng-precompile` | schnorrkel keypair (IKM for the RNG precompile) | RNG precompile (0x64) |
+| `RngPrecompile` | `rng-precompile` | 64 bytes of IKM for the RNG precompile | RNG precompile (0x64) |
 | `Snapshot` | `snapshot` | AES-256-GCM key for state snapshots | snapshot encrypt/decrypt |
 | `Storage` | `storage` | LUKS volume unlock key (epoch 0 only) | setup-persistent-luks |
 | `LuksHeaderMac` | `luks-header-mac` | HMAC key for LUKS2 header verification (epoch 0 only) | setup-persistent-luks |
@@ -81,7 +82,7 @@ their labels live with the precompile code, not in a shared library.
 | Precompile | KDF | Notes |
 | --- | --- | --- |
 | HKDF (0x68) | HKDF-SHA256, info `"seismic_hkdf_105"`, IKM = caller input | `crates/seismic/src/precompiles/hkdf_derive_sym_key.rs` |
-| RNG (0x64) | HKDF-SHA256, salt `"seismic rng context"`, IKM = RNG keypair secret, info = per-call domain data (block hash, tx hash, gas) ‖ `"pers"` ‖ personalization | `crates/seismic/src/precompiles/rng/domain_sep_rng.rs`; fresh derivation per call, no state |
+| RNG (0x64) | HKDF-SHA256, salt `"seismic rng context"`, IKM = the `RngPrecompile` 64 bytes, info = per-call domain data (block hash, tx hash, gas) ‖ `"pers"` ‖ personalization | `crates/seismic/src/precompiles/rng/domain_sep_rng.rs`; fresh derivation per call, no state |
 
 ## Changing an existing label
 
