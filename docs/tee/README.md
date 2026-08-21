@@ -123,6 +123,11 @@ halves.** Where a decision has to be visible up front, because a reader who
 misses it would undo it, the body states the rule in a sentence and links down
 to the rationale.
 
+[decisions/](decisions/) holds dated decision records: point-in-time captures
+of an options pass, never updated as the design moves. The current-state docs
+above stay the authority; a record is linked from the design rationale of the
+doc whose choice it settled.
+
 Cross-doc routing lives here, in [The docs](#the-docs), and nowhere else. A doc
 opens with its own scope and its normative boundary — which spec owns the
 byte-exact rules — and links a sibling at the point in the text where a reader
