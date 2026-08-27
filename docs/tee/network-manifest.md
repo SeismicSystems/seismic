@@ -156,9 +156,11 @@ never silently change `network_id`.
 **File profile.** UTF-8, no BOM, LF endings, integers only, lowercase
 `0x`-prefixed hex, no duplicate keys. These are authoring rules, not
 verification rules: the hash covers whatever bytes are published. The deploy
-tool is the sole emitter and renders deterministically — 2-space indent,
-key-sorted, single trailing newline — and the file is never hand-typed. It is
-emitted into a committed
+tool is the sole emitter — through the enclave repo's `seismic-manifest
+render`, built on the schema crate every node parses with, so emitter and
+parser cannot disagree — and renders deterministically: 2-space indent, key-sorted,
+single trailing newline. The file is never hand-typed. It is emitted into a
+committed
 [network directory](https://github.com/SeismicSystems/deploy/blob/main/tee/networks/README.md)
 holding the artifacts it pins, whose
 [provenance diagram](https://github.com/SeismicSystems/deploy/blob/main/tee/networks/network-dir.svg)
