@@ -63,6 +63,32 @@
 		],
 		"rust-analyzer.rustfmt.extraArgs": [
 			"+nightly"
-		]
+		],
+		// Enable all features so that we can see and edit all files, even those gated by some features.
+		// rust-analyzer applies one feature set to every repo in this window, and
+		// "all" is the only value that works across them: a list of feature names
+		// errors out in the repos that do not define those names.
+		//
+		// The tradeoff is that "all" is a configuration nobody actually builds:
+		//   - Alternative features all resolve one way. reth prefers jemalloc when
+		//     jemalloc and snmalloc are both on, so the snmalloc arm reads as dead
+		//     code here even though it is what an snmalloc build compiles.
+		//   - Test doubles win over the real path. attested-tls gates on
+		//     `any(test, feature = "mock")`, so mock platform metadata and a
+		//     prewarm-free PCCS are what you see, while the production arms and
+		//     the errors they raise grey out.
+		// Diagnostics here can therefore differ from CI, which builds specific
+		// feature sets. Comment this line out to analyse default features instead
+		// when you need the view a real build gets.
+		"rust-analyzer.cargo.features": "all",
+		// Give rust-analyzer its own artifact directory, target/rust-analyzer. It
+		// checks with every feature enabled while terminal builds use defaults, so
+		// sharing target/debug makes the two invalidate each other on every save.
+		// The cost is a second set of artifacts per repo.
+		"rust-analyzer.cargo.targetDir": true,
+		// Analyse crates as they are opened. Priming the whole dependency graph
+		// up front costs several GB of memory per window, which is expensive in this workspace
+		// that contains so many different repos.
+		"rust-analyzer.cachePriming.enable": false,
 	}
 }
