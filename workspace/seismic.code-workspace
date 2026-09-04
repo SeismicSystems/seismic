@@ -90,5 +90,22 @@
 		// up front costs several GB of memory per window, which is expensive in this workspace
 		// that contains so many different repos.
 		"rust-analyzer.cachePriming.enable": false,
+		// Silence the "cyclic deps" warnings that flood the server log. They are
+		// dev-dependency cycles, which Cargo allows: rust-analyzer keeps one node
+		// per package and does not separate dev-deps from normal deps, so the
+		// standard "A dev-depends on B, B depends on A" pattern always looks like a
+		// cycle to it. Most of ours come from upstream reth (reth-trie-db and
+		// reth-provider dev-depend on each other, and so on), so there is nothing
+		// to fix on our side.
+		//
+		// The warning is logged by add_dep_inner in
+		// https://github.com/rust-lang/rust-analyzer/blob/master/crates/project-model/src/workspace.rs
+		// which is the only tracing::warn! in that module — everything else there
+		// is tracing::error!, so raising just this module to "error" loses nothing.
+		// "warn" is rust-analyzer's own default filter, kept here for every other
+		// module. RA_LOG is a tracing Targets filter, hence the module::path syntax.
+		"rust-analyzer.server.extraEnv": {
+			"RA_LOG": "warn,project_model::workspace=error"
+		},
 	}
 }
