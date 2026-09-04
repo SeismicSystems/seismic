@@ -41,7 +41,7 @@ Seismic has engaged Bridge Building Inc. and its affiliates (together, "Bridge")
 
 By accessing any feature of the Services powered by Bridge, you hereby acknowledge and agree that:
 
-(a) You are agreeing to be bound by Bridge's applicable user terms and policies, currently available at https://www.bridge.xyz/legal/overview, which may be modified by Bridge from time to time;
+(a) You are agreeing to be bound by Bridge's applicable user terms and policies, currently available at [https://www.bridge.xyz/legal/overview](https://www.bridge.xyz/legal/overview), which may be modified by Bridge from time to time;
 
 (b) Bridge may conduct know-your-customer ("KYC") and anti-money laundering ("AML") due diligence on you and your authorized end users, and you consent to such due diligence and to cooperating with all related requests;
 
@@ -101,7 +101,7 @@ You represent and warrant that:
 
 (b) If acting on behalf of a legal entity, that entity is duly organized, validly existing, and in good standing under the laws of its jurisdiction of formation, and has all requisite power and authority to enter into and perform this Agreement;
 
-(c) Neither you, any affiliate, beneficial owner, or person on whose behalf you are acting is: (i) named on any OFAC sanctions list (available at https://www.treas.gov/ofac), the UK Sanctions List, any EU sanctions list, or any other applicable government sanctions list; (ii) located in or organized under the laws of any jurisdiction subject to comprehensive economic sanctions; or (iii) a senior foreign political figure or an immediate family member or close associate thereof;
+(c) Neither you, any affiliate, beneficial owner, or person on whose behalf you are acting is: (i) named on any OFAC sanctions list (available at [https://www.treas.gov/ofac](https://www.treas.gov/ofac)), the UK Sanctions List, any EU sanctions list, or any other applicable government sanctions list; (ii) located in or organized under the laws of any jurisdiction subject to comprehensive economic sanctions; or (iii) a senior foreign political figure or an immediate family member or close associate thereof;
 
 (d) You have not violated, and are not under investigation for violation of, any applicable law relating to blockchain technologies, cryptocurrency, anti-money laundering, counter-terrorist financing, or sanctions; and
 
