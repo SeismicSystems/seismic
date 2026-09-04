@@ -23,6 +23,7 @@ The [Seismic EVM](https://github.com/SeismicSystems/seismic-revm/blob/c29f4ea068
 - **Shielded storage**: Solidity contracts can store private data on-chain
 - **Runs in a TEE**: Seismic nodes must run in Trusted Execution Environments
 - **Seismic transaction:** We added a new transaction type that allows you to encrypt your calldata
+- **Gas paid in a stablecoin**: transaction fees are normally paid in a stablecoin, not the native token — see [Paying for Gas](../reference/paying-for-gas.md)
 
 ## EVM Compatibility
 
@@ -35,6 +36,14 @@ The [Seismic EVM](https://github.com/SeismicSystems/seismic-revm/blob/c29f4ea068
 ### Seismic transaction
 
 The transaction with type `0x4a` allows users to encrypt their calldata. These otherwise work just like legacy transactions. We also support the other standard Ethereum transaction types (Legacy, EIP-1559, EIP-2930, EIP-4844, EIP-7702)
+
+### Gas payment
+
+Most users pay gas in a stablecoin. The native token is the protocol's settlement and
+gas-accounting unit and is not generally distributed; the node picks the fee token per
+transaction (native if the sender holds it, otherwise the stablecoin), while a `value` transfer
+is always paid from the native balance. See [Paying for Gas](../reference/paying-for-gas.md) for
+the model, conversion, and worked examples.
 
 ### Precompiles
 
