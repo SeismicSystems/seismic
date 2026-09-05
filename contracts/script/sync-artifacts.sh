@@ -19,7 +19,7 @@ else
 fi
 
 echo "Building contracts..."
-make build
+mise run sforge -- build
 
 echo "Syncing genesis contracts..."
 mkdir -p artifacts
