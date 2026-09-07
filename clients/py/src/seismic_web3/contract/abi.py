@@ -16,11 +16,13 @@ from __future__ import annotations
 
 import re
 from copy import deepcopy
-from typing import Any
+from typing import Any, cast
 
 from eth_abi import decode, encode
 from eth_hash.auto import keccak
 from hexbytes import HexBytes
+from web3.exceptions import MismatchedABI
+from web3.utils.abi import check_if_arguments_can_be_encoded
 
 
 def _remap_type(solidity_type: str) -> tuple[str, bool]:
@@ -147,39 +149,86 @@ def _function_selector(abi_function: dict[str, Any]) -> bytes:
     return keccak(sig.encode())[:4]
 
 
-def _find_function(abi: list[dict[str, Any]], function_name: str) -> dict[str, Any]:
-    """Find a function entry in the ABI by name.
+def _find_function(
+    abi: list[dict[str, Any]],
+    function_name: str,
+    args: list[Any] | None = None,
+) -> dict[str, Any]:
+    """Find a function entry in the ABI by name and arguments.
 
     Args:
         abi: The full contract ABI (list of entries).
-        function_name: Name of the function to find.
+        function_name: Name or canonical signature of the function to find.
+        args: Positional arguments used to disambiguate overloaded functions.
 
     Returns:
         The matching ABI function entry dict.
 
     Raises:
         ValueError: If the function is not found in the ABI.
+        MismatchedABI: If overloaded functions cannot be uniquely resolved.
     """
-    for entry in abi:
-        if entry.get("type") == "function" and entry.get("name") == function_name:
-            return entry
-    raise ValueError(f"Function '{function_name}' not found in ABI")
+    signature_matches = [
+        entry
+        for entry in abi
+        if entry.get("type") == "function"
+        and _function_signature(entry) == function_name
+    ]
+    if signature_matches:
+        return signature_matches[0]
+
+    candidates = [
+        entry
+        for entry in abi
+        if entry.get("type") == "function" and entry.get("name") == function_name
+    ]
+    if not candidates:
+        raise ValueError(f"Function '{function_name}' not found in ABI")
+    if len(candidates) == 1:
+        return candidates[0]
+
+    matching = [
+        entry
+        for entry in candidates
+        if check_if_arguments_can_be_encoded(
+            cast("Any", remap_abi_inputs(entry)),
+            *(args or []),
+        )
+    ]
+    if len(matching) == 1:
+        return matching[0]
+
+    signatures = ", ".join(_function_signature(entry) for entry in candidates)
+    if not matching:
+        detail = "No overload accepts the supplied arguments"
+    else:
+        detail = "The supplied arguments match multiple overloads"
+    raise MismatchedABI(
+        f"{detail} for '{function_name}'. Available signatures: {signatures}. "
+        "Use a signature-qualified function name to disambiguate.",
+    )
 
 
-def has_shielded_params(abi: list[dict[str, Any]], function_name: str) -> bool:
+def has_shielded_params(
+    abi: list[dict[str, Any]],
+    function_name: str,
+    args: list[Any] | None = None,
+) -> bool:
     """Check if a function has any shielded input parameters.
 
     Args:
         abi: The full contract ABI (list of entries).
         function_name: Name of the function to check.
+        args: Positional arguments used to disambiguate overloaded functions.
 
     Returns:
         ``True`` if any input parameter is a shielded type.
 
     Raises:
         ValueError: If the function is not found in the ABI.
+        MismatchedABI: If overloaded functions cannot be uniquely resolved.
     """
-    fn_entry = _find_function(abi, function_name)
+    fn_entry = _find_function(abi, function_name, args)
     remapped = remap_abi_inputs(fn_entry)
     return any(p.get("shielded", False) for p in remapped["inputs"])
 
@@ -205,8 +254,9 @@ def encode_shielded_calldata(
 
     Raises:
         ValueError: If the function is not found in the ABI.
+        MismatchedABI: If overloaded functions cannot be uniquely resolved.
     """
-    fn_entry = _find_function(abi, function_name)
+    fn_entry = _find_function(abi, function_name, args)
 
     # Selector from ORIGINAL types
     selector = _function_selector(fn_entry)
@@ -224,6 +274,7 @@ def decode_abi_output(
     abi: list[dict[str, Any]],
     function_name: str,
     data: bytes,
+    args: list[Any] | None = None,
 ) -> Any:
     """Decode raw ABI-encoded output bytes for a contract function.
 
@@ -241,6 +292,7 @@ def decode_abi_output(
         abi: The full contract ABI (list of function entries).
         function_name: Name of the function whose output to decode.
         data: Raw ABI-encoded output bytes.
+        args: Positional arguments used to disambiguate overloaded functions.
 
     Returns:
         Decoded Python value(s), or ``None`` when the ABI defines no
@@ -248,8 +300,9 @@ def decode_abi_output(
 
     Raises:
         ValueError: If the function is not found in the ABI.
+        MismatchedABI: If overloaded functions cannot be uniquely resolved.
     """
-    fn_entry = _find_function(abi, function_name)
+    fn_entry = _find_function(abi, function_name, args)
     outputs = fn_entry.get("outputs", [])
 
     if not outputs:

@@ -21,13 +21,23 @@ def encode_shielded_calldata(
 
 - **Selector** is computed from original ABI type names (e.g. `setNumber(suint256)`) so it matches the on-chain contract
 - **Parameter encoding** remaps shielded types to standard ABI types (e.g. `suint256` → `uint256`) because the values are structurally identical
+- **Overloaded functions** are resolved against the supplied arguments before selector construction and parameter encoding
 - Raises `ValueError` if function is not found
+- Raises `web3.exceptions.MismatchedABI` if the supplied arguments do not uniquely identify an overload
 
 ## Example
 
 ```python
 calldata = encode_shielded_calldata(SRC20_ABI, "transfer", ["0xRecipient", 100])
 tx_hash = w3.seismic.send_shielded_transaction(to="0xToken", data=calldata)
+```
+
+When two overloads use shielded and public types with the same ABI encoding,
+use the original canonical signature to disambiguate. Contract namespaces expose
+the same escape hatch through `getattr`:
+
+```python
+result = getattr(contract.tread, "lookup(suint256)")(42)
 ```
 
 ## Notes
