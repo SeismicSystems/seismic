@@ -147,6 +147,32 @@ FULL_COUNTER_ABI = [
     },
 ]
 
+_ARGUMENT_ADDR = "0x000000000000000000000000000000000000dEaD"
+
+OVERLOADED_ABI = [
+    {
+        "type": "function",
+        "name": "lookup",
+        "inputs": [{"name": "value", "type": "suint256"}],
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view",
+    },
+    {
+        "type": "function",
+        "name": "lookup",
+        "inputs": [{"name": "value", "type": "uint256"}],
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view",
+    },
+    {
+        "type": "function",
+        "name": "lookup",
+        "inputs": [{"name": "account", "type": "address"}],
+        "outputs": [{"name": "", "type": "address"}],
+        "stateMutability": "view",
+    },
+]
+
 
 class TestHasShieldedParams:
     def test_shielded_function(self):
@@ -168,6 +194,9 @@ class TestHasShieldedParams:
     def test_view_no_inputs_getNumber(self):
         """getNumber() with no inputs is not shielded."""
         assert has_shielded_params(FULL_COUNTER_ABI, "getNumber") is False
+
+    def test_overload_uses_matching_inputs(self):
+        assert has_shielded_params(OVERLOADED_ABI, "lookup", [_ARGUMENT_ADDR]) is False
 
 
 class TestEncodeShieldedCalldata:
@@ -303,3 +332,15 @@ class TestDecodeAbiOutput:
     def test_function_not_found_raises(self):
         with pytest.raises(ValueError, match="not found"):
             decode_abi_output(DECODE_ABI, "nonexistent", b"\x00" * 32)
+
+    def test_overload_uses_matching_outputs(self):
+        raw = encode(["address"], [_ARGUMENT_ADDR])
+
+        result = decode_abi_output(
+            OVERLOADED_ABI,
+            "lookup",
+            raw,
+            [_ARGUMENT_ADDR],
+        )
+
+        assert result.lower() == _ARGUMENT_ADDR.lower()

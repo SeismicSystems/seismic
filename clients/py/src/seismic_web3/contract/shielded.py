@@ -181,7 +181,7 @@ class _ShieldedReadNamespace:
                 security=security,
                 eip712=self._eip712,
             )
-            return decode_abi_output(self._abi, fn_name, bytes(raw))
+            return decode_abi_output(self._abi, fn_name, bytes(raw), list(args))
 
         return call
 
@@ -251,7 +251,7 @@ class _TransparentReadNamespace:
         def call(*args: Any) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             raw = self._w3.eth.call({"to": self._address, "data": data})
-            return decode_abi_output(self._abi, fn_name, bytes(raw))
+            return decode_abi_output(self._abi, fn_name, bytes(raw), list(args))
 
         return call
 
@@ -291,7 +291,7 @@ class _SmartWriteNamespace:
             security: SeismicSecurityParams | None = None,
         ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
-            if has_shielded_params(self._abi, fn_name):
+            if has_shielded_params(self._abi, fn_name, list(args)):
                 return send_shielded_transaction(
                     self._w3,
                     encryption=self._encryption,
@@ -357,7 +357,7 @@ class _SmartReadNamespace:
             security: SeismicSecurityParams | None = None,
         ) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
-            if has_shielded_params(self._abi, fn_name):
+            if has_shielded_params(self._abi, fn_name, list(args)):
                 raw = signed_call(
                     self._w3,
                     encryption=self._encryption,
@@ -369,10 +369,10 @@ class _SmartReadNamespace:
                     security=security,
                     eip712=self._eip712,
                 )
-                return decode_abi_output(self._abi, fn_name, bytes(raw))
+                return decode_abi_output(self._abi, fn_name, bytes(raw), list(args))
             else:
                 raw = self._w3.eth.call({"to": self._address, "data": data})
-                return decode_abi_output(self._abi, fn_name, bytes(raw))
+                return decode_abi_output(self._abi, fn_name, bytes(raw), list(args))
 
         return call
 
@@ -514,7 +514,7 @@ class _AsyncShieldedReadNamespace:
                 security=security,
                 eip712=self._eip712,
             )
-            return decode_abi_output(self._abi, fn_name, bytes(raw))
+            return decode_abi_output(self._abi, fn_name, bytes(raw), list(args))
 
         return call
 
@@ -584,7 +584,7 @@ class _AsyncTransparentReadNamespace:
         async def call(*args: Any) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             raw = await self._w3.eth.call({"to": self._address, "data": data})
-            return decode_abi_output(self._abi, fn_name, bytes(raw))
+            return decode_abi_output(self._abi, fn_name, bytes(raw), list(args))
 
         return call
 
@@ -624,7 +624,7 @@ class _AsyncSmartWriteNamespace:
             security: SeismicSecurityParams | None = None,
         ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
-            if has_shielded_params(self._abi, fn_name):
+            if has_shielded_params(self._abi, fn_name, list(args)):
                 return await async_send_shielded_transaction(
                     self._w3,
                     encryption=self._encryption,
@@ -690,7 +690,7 @@ class _AsyncSmartReadNamespace:
             security: SeismicSecurityParams | None = None,
         ) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
-            if has_shielded_params(self._abi, fn_name):
+            if has_shielded_params(self._abi, fn_name, list(args)):
                 raw = await async_signed_call(
                     self._w3,
                     encryption=self._encryption,
@@ -702,10 +702,10 @@ class _AsyncSmartReadNamespace:
                     security=security,
                     eip712=self._eip712,
                 )
-                return decode_abi_output(self._abi, fn_name, bytes(raw))
+                return decode_abi_output(self._abi, fn_name, bytes(raw), list(args))
             else:
                 raw = await self._w3.eth.call({"to": self._address, "data": data})
-                return decode_abi_output(self._abi, fn_name, bytes(raw))
+                return decode_abi_output(self._abi, fn_name, bytes(raw), list(args))
 
         return call
 
