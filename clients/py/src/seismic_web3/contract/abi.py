@@ -32,6 +32,14 @@ def _remap_type(solidity_type: str) -> tuple[str, bool]:
     Returns:
         Tuple of (remapped_type, was_shielded).
     """
+    # sbytes / sbytes1..32, including array suffixes.
+    m = re.fullmatch(
+        r"s(bytes(?:[1-9]|[12]\d|3[0-2])?)((?:\[\d*\])*)",
+        solidity_type,
+    )
+    if m:
+        return f"{m.group(1)}{m.group(2)}", True
+
     # suint/sint with fixed-size array: suint256[5] → uint256[5]
     m = re.match(r"^(s)(u?int\d+)(\[\d+\])$", solidity_type)
     if m:
@@ -65,8 +73,8 @@ def _remap_type(solidity_type: str) -> tuple[str, bool]:
 def remap_seismic_param(param: dict[str, Any]) -> dict[str, Any]:
     """Remap one ABI parameter from shielded to standard type.
 
-    Handles ``suintN``, ``sintN``, ``sbool``, ``saddress`` — including
-    array variants and recursive tuple components.
+    Handles ``suintN``, ``sintN``, ``sbool``, ``saddress``, and ``sbytes`` —
+    including array variants and recursive tuple components.
 
     Args:
         param: An ABI parameter dict (``{"name": ..., "type": ...}``).

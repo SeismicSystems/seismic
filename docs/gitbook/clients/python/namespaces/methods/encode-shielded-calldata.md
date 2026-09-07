@@ -33,7 +33,7 @@ tx_hash = w3.seismic.send_shielded_transaction(to="0xToken", data=calldata)
 ## Notes
 
 - For contract interactions, prefer `contract.write.functionName(...)` or `contract.read.functionName(...)` which call this internally
-- Handles arrays (`suint256[]`, `suint256[5]`), `sbool`, `saddress`, and recursive tuple components
+- Handles arrays (`suint256[]`, `suint256[5]`), `sbool`, `saddress`, `sbytes`/`sbytesN`, and recursive tuple components
 
 ## See Also
 

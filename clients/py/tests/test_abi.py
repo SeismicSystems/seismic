@@ -18,6 +18,29 @@ from seismic_web3.contract.abi import (
 
 
 class TestRemapSeismicParam:
+    @pytest.mark.parametrize(
+        ("shielded_type", "standard_type"),
+        [
+            ("sbytes", "bytes"),
+            ("sbytes1", "bytes1"),
+            ("sbytes8", "bytes8"),
+            ("sbytes32", "bytes32"),
+            ("sbytes32[]", "bytes32[]"),
+            ("sbytes8[2]", "bytes8[2]"),
+            ("sbytes16[][3]", "bytes16[][3]"),
+        ],
+    )
+    def test_sbytes_types(self, shielded_type, standard_type):
+        result = remap_seismic_param({"name": "value", "type": shielded_type})
+        assert result["type"] == standard_type
+        assert result["shielded"] is True
+
+    @pytest.mark.parametrize("invalid_type", ["sbytes0", "sbytes33"])
+    def test_invalid_sbytes_sizes_are_not_remapped(self, invalid_type):
+        result = remap_seismic_param({"name": "value", "type": invalid_type})
+        assert result["type"] == invalid_type
+        assert result["shielded"] is False
+
     def test_suint256(self):
         result = remap_seismic_param({"name": "x", "type": "suint256"})
         assert result["type"] == "uint256"
@@ -194,6 +217,49 @@ class TestEncodeShieldedCalldata:
     def test_function_not_found_raises(self):
         with pytest.raises(ValueError, match="not found"):
             encode_shielded_calldata(COUNTER_ABI, "nonexistent", [])
+
+    def test_sbytes32_uses_original_selector_and_standard_encoding(self):
+        abi = [
+            {
+                "type": "function",
+                "name": "setSecret",
+                "inputs": [{"name": "secret", "type": "sbytes32"}],
+                "outputs": [],
+                "stateMutability": "nonpayable",
+            },
+        ]
+        secret = b"\x11" * 32
+
+        calldata = encode_shielded_calldata(abi, "setSecret", [secret])
+
+        assert bytes(calldata[:4]) == keccak(b"setSecret(sbytes32)")[:4]
+        assert bytes(calldata[4:]) == encode(["bytes32"], [secret])
+
+    def test_sbytes32_inside_tuple_is_remapped_recursively(self):
+        abi = [
+            {
+                "type": "function",
+                "name": "setRecord",
+                "inputs": [
+                    {
+                        "name": "record",
+                        "type": "tuple",
+                        "components": [
+                            {"name": "secret", "type": "sbytes32"},
+                            {"name": "enabled", "type": "bool"},
+                        ],
+                    },
+                ],
+                "outputs": [],
+                "stateMutability": "nonpayable",
+            },
+        ]
+        record = (b"\x22" * 32, True)
+
+        calldata = encode_shielded_calldata(abi, "setRecord", [record])
+
+        assert bytes(calldata[:4]) == keccak(b"setRecord((sbytes32,bool))")[:4]
+        assert bytes(calldata[4:]) == encode(["(bytes32,bool)"], [record])
 
 
 # ---------------------------------------------------------------------------
