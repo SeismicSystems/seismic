@@ -1,6 +1,9 @@
 """Tests for seismic_web3.contract.shielded — ShieldedContract namespaces."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from eth_abi import encode
 
 from seismic_web3._types import (
     CompressedPublicKey,
@@ -30,6 +33,16 @@ COUNTER_ABI = [
         "inputs": [],
         "outputs": [],
         "stateMutability": "nonpayable",
+    },
+]
+
+READ_ABI = [
+    {
+        "type": "function",
+        "name": "quote",
+        "inputs": [],
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "payable",
     },
 ]
 
@@ -111,6 +124,32 @@ class TestShieldedContract:
         fn = contract.dwrite.setNumber
         assert callable(fn)
 
+    @pytest.mark.parametrize(
+        ("options", "expected"),
+        [
+            ({"value": 9, "gas": 0}, {"value": 9, "gas": 0}),
+            ({"value": 0, "gas": 21_000}, {"value": 0, "gas": 21_000}),
+            ({}, {"value": 0, "gas": 30_000_000}),
+        ],
+    )
+    def test_smart_transparent_read_forwards_call_options(self, options, expected):
+        w3 = MagicMock()
+        w3.eth.call.return_value = encode(["uint256"], [7])
+        contract = ShieldedContract(
+            w3,
+            _make_encryption(),
+            _CLIENT_SK,
+            "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046",
+            READ_ABI,
+        )
+
+        result = contract.read.quote(**options)
+
+        assert result == 7
+        request = w3.eth.call.call_args.args[0]
+        assert request["value"] == expected["value"]
+        assert request["gas"] == expected["gas"]
+
 
 class TestAsyncShieldedContract:
     def test_has_all_namespaces(self):
@@ -140,3 +179,33 @@ class TestAsyncShieldedContract:
         contract = AsyncShieldedContract(w3, encryption, pk, addr, COUNTER_ABI)
         fn = contract.write.increment
         assert callable(fn)
+
+    @pytest.mark.parametrize(
+        ("options", "expected"),
+        [
+            ({"value": 9, "gas": 0}, {"value": 9, "gas": 0}),
+            ({"value": 0, "gas": 21_000}, {"value": 0, "gas": 21_000}),
+            ({}, {"value": 0, "gas": 30_000_000}),
+        ],
+    )
+    async def test_smart_transparent_read_forwards_call_options(
+        self,
+        options,
+        expected,
+    ):
+        w3 = MagicMock()
+        w3.eth.call = AsyncMock(return_value=encode(["uint256"], [7]))
+        contract = AsyncShieldedContract(
+            w3,
+            _make_encryption(),
+            _CLIENT_SK,
+            "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046",
+            READ_ABI,
+        )
+
+        result = await contract.read.quote(**options)
+
+        assert result == 7
+        request = w3.eth.call.call_args.args[0]
+        assert request["value"] == expected["value"]
+        assert request["gas"] == expected["gas"]
