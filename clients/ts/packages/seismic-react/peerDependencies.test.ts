@@ -4,14 +4,30 @@ const packageJson = await Bun.file(
   new URL('./package.json', import.meta.url)
 ).json()
 
-describe.each(['react', 'react-dom'])('%s peer dependency', (peer) => {
-  const range = packageJson.peerDependencies[peer]
+const peers = ['react', 'react-dom'] as const
 
-  test.each(['18.3.1', '19.2.0'])('accepts React %s', (version) => {
-    expect(Bun.semver.satisfies(version, range)).toBe(true)
+describe('React peer dependency contract', () => {
+  test('keeps react and react-dom on the same compatibility range', () => {
+    expect(packageJson.peerDependencies.react).toBe(
+      packageJson.peerDependencies['react-dom']
+    )
   })
 
-  test('does not expand support below React 18', () => {
-    expect(Bun.semver.satisfies('17.0.2', range)).toBe(false)
+  describe.each(peers)('%s peer dependency', (peer) => {
+    const range = packageJson.peerDependencies[peer]
+
+    test.each(['18.0.0', '18.3.1', '19.0.0', '19.2.0'])(
+      'accepts supported React version %s',
+      (version) => {
+        expect(Bun.semver.satisfies(version, range)).toBe(true)
+      }
+    )
+
+    test.each(['17.0.2', '20.0.0'])(
+      'rejects unsupported React version %s',
+      (version) => {
+        expect(Bun.semver.satisfies(version, range)).toBe(false)
+      }
+    )
   })
 })
