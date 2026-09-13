@@ -6,13 +6,17 @@ This repository contains solidity smart contracts and libraries designed for the
 
 This project uses [Seismic-Foundry](https://github.com/SeismicSystems/seismic-foundry), which is needed to compile any contracts with shielded types or seismic precompiles.
 
-We recommend using our [Makefile](./Makefile) to run common tasks, as these will also be used in CI:
+Common tasks are defined as [mise](https://mise.jdx.dev) tasks in [`mise.toml`](./mise.toml); CI runs the same ones:
 ```bash
-make build
-make test
-make fmt
-...
+mise run sforge -- build   # any sforge subcommand
+mise run test
+mise run fmt
+mise run fmt-check
+mise run artifacts::sync   # rebuild and copy genesis artifacts into artifacts/
+mise run                   # list all tasks
 ```
+
+`sforge` can also be run directly, but the mise tasks point it at the mise-managed `ssolc` and the `via-ir` profile (`FOUNDRY_PROFILE=via-ir`), which the `DepositContract` needs to compile.
 
 ## Project Structure
 
@@ -20,32 +24,44 @@ make fmt
 contracts/
 ├── src/
 │   ├── directory/
-│   │   ├── Directory.sol          # Key management contract
-│   │   └── IDirectory.sol
+│   │   └── Directory.sol                  # Key management contract
 │   ├── intelligence/
-│   │   ├── Intelligence.sol       # Multi-provider encryption
-│   │   └── IIntelligence.sol
+│   │   └── Intelligence.sol               # Multi-provider encryption
+│   ├── enclave/
+│   │   ├── MeasurementRegistry.sol        # TEE measurement admission (genesis predeploy)
+│   │   ├── MeasurementAuthorityDev.sol    # Dev-only authority for MeasurementRegistry
+│   │   ├── UpgradeOperator.sol            # Legacy measurement store
+│   │   └── MultisigUpgradeOperator.sol    # 2-of-3 multisig for UpgradeOperator
+│   ├── examples/
+│   │   ├── SeismicCounter.sol
+│   │   ├── TransparentCounter.sol
+│   │   └── WrappedNativeTokenSrc20.sol
 │   └── seismic-std-lib/
-│       ├── DepositContract.sol    # Eth2 staking deposits
-│       ├── ProtocolParams.sol     # Protocol configuration
-│       ├── SRC20.sol              # SRC20 token standard
-│       ├── session-keys/
-│       │   ├── ShieldedDelegationAccount.sol
+│       ├── DepositContract.sol            # Eth2 staking deposits
+│       ├── ProtocolParams.sol             # Protocol configuration
+│       ├── SRC20.sol                      # SRC20 token standard
+│       ├── SRC20Token.sol                 # Concrete SRC20 deployed by the factory
+│       ├── SRC20Factory.sol
+│       ├── SRC20Multicall.sol             # Batch signed balance reads
+│       ├── ShieldedDelegationAccount.sol  # EIP-7702 delegation with session keys
+│       ├── interfaces/
+│       │   ├── IDirectory.sol
+│       │   ├── IIntelligence.sol
+│       │   ├── ISRC20.sol
 │       │   └── IShieldedDelegationAccount.sol
 │       └── utils/
-│           ├── MultiSend.sol      # Batch execution (from Safe)
-│           ├── EIP7702Utils.sol   # Signature verification
-│           ├── precompiles/
-│               └── CryptoUtils.sol
-├── test/                          # Foundry tests
-└── artifacts/                     # Compiled contracts
+│           └── precompiles/
+│               └── CryptoUtils.sol        # RNG / AES-GCM / HKDF precompile wrappers
+├── test/                                  # Foundry tests
+├── script/                                # sync-artifacts.sh, genesis-contracts.txt
+└── artifacts/                             # Compiled genesis contracts
 ```
 
 ### Artifacts
 
 The `artifacts/` directory contains compiled contract artifacts, including ABIs and bytecode. These are used for deployment and interaction with the contracts.
 
-These artifacts are currently generated manually using `make sync-artifacts`.
+These artifacts are currently generated manually using `mise run artifacts::sync`.
 
 TODO: we need to figure out a way to version these and make it more explicit which of these are deployed on each network, and at which block (or genesis).
 

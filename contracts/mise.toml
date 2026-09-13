@@ -28,7 +28,7 @@ description = "Check artifacts are up to date"
 depends = ["artifacts::sync"]
 run = """
 git diff --exit-code artifacts/ || \
-  (echo "Artifacts are out of date. Run 'mise run sync-artifacts' and commit." && exit 1)
+  (echo "Artifacts are out of date. Run 'mise run artifacts::sync' and commit." && exit 1)
 """
 
 ########## sforge aliases (used by high-level tasks above, but can be used individually) ##########

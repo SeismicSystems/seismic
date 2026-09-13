@@ -19,7 +19,8 @@ else
 fi
 
 echo "Building contracts..."
-make build
+# Same sforge task the other mise tasks use (mise-managed ssolc, via-ir profile).
+mise run "${MISE_SFORGE_TASK:-sforge}" -- build
 
 echo "Syncing genesis contracts..."
 mkdir -p artifacts
