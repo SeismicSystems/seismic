@@ -1,9 +1,17 @@
 import { expect } from 'bun:test'
 import { AesKeyDomain, generateAesKey } from 'seismic-viem'
 import { compressPublicKey } from 'seismic-viem'
-import { Chain, hexToBytes, recoverMessageAddress } from 'viem'
+import {
+  Chain,
+  bytesToHex,
+  hexToBytes,
+  numberToBytes,
+  recoverMessageAddress,
+  stringToBytes,
+} from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
+import { gcm } from '@noble/ciphers/webcrypto'
 import { httpPublicClient } from '@sviem-tests/clients.ts'
 
 export type PublicClientConfig = {
@@ -87,6 +95,75 @@ export const testAesGcm = async ({ chain, url }: PublicClientConfig) => {
   const decrypted = await publicClient.aesGcmDecryption({
     aesKey,
     nonce,
+    ciphertext,
+  })
+  expect(decrypted).toBe(plaintext)
+}
+
+// AES-GCM output is uniformly random, so about 1 in 256 ciphertexts starts
+// with a zero byte. The precompile wrappers used to trim leading zeros from
+// the returned bytes, which corrupted those ciphertexts (and dropped leading
+// NUL bytes from decrypted plaintext). Search for a nonce that produces a
+// leading zero byte and check the wrapper returns the bytes unchanged.
+const ZERO_AES_KEY =
+  '0x0000000000000000000000000000000000000000000000000000000000000000'
+
+const findNonceWithLeadingZeroCiphertext = async (
+  plaintext: string
+): Promise<{ nonce: number; ciphertext: `0x${string}` }> => {
+  const key = hexToBytes(ZERO_AES_KEY)
+  const plaintextBytes = stringToBytes(plaintext)
+  for (let nonce = 0; nonce < 100_000; nonce++) {
+    const ciphertext = await gcm(
+      key,
+      numberToBytes(nonce, { size: 12 })
+    ).encrypt(plaintextBytes)
+    if (ciphertext[0] === 0) {
+      return { nonce, ciphertext: bytesToHex(ciphertext) }
+    }
+  }
+  throw new Error('no nonce produced a leading zero byte')
+}
+
+export const testAesGcmKeepsLeadingZeroCiphertextByte = async ({
+  chain,
+  url,
+}: PublicClientConfig) => {
+  const publicClient = httpPublicClient({ chain, url })
+  const plaintext = 'HelloAESGCM'
+  const { nonce, ciphertext: expected } =
+    await findNonceWithLeadingZeroCiphertext(plaintext)
+
+  const ciphertext = await publicClient.aesGcmEncryption({
+    aesKey: ZERO_AES_KEY,
+    nonce,
+    plaintext,
+  })
+  expect(ciphertext).toBe(expected)
+  expect(hexToBytes(ciphertext)[0]).toBe(0)
+
+  const decrypted = await publicClient.aesGcmDecryption({
+    aesKey: ZERO_AES_KEY,
+    nonce,
+    ciphertext,
+  })
+  expect(decrypted).toBe(plaintext)
+}
+
+export const testAesGcmKeepsLeadingNulPlaintextByte = async ({
+  chain,
+  url,
+}: PublicClientConfig) => {
+  const publicClient = httpPublicClient({ chain, url })
+  const plaintext = '\u0000\u0000leading nul'
+  const ciphertext = await publicClient.aesGcmEncryption({
+    aesKey: ZERO_AES_KEY,
+    nonce: 1,
+    plaintext,
+  })
+  const decrypted = await publicClient.aesGcmDecryption({
+    aesKey: ZERO_AES_KEY,
+    nonce: 1,
     ciphertext,
   })
   expect(decrypted).toBe(plaintext)
