@@ -18,6 +18,7 @@ w3.seismic.send_shielded_transaction(
     value: int = 0,
     gas: int | None = None,
     gas_price: int | None = None,
+    nonce: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
 ) -> HexBytes
@@ -35,6 +36,7 @@ await w3.seismic.send_shielded_transaction(...same args...) -> HexBytes
 | `value` | `int` | `0` | Wei to transfer |
 | `gas` | `int \| None` | `None` | Gas limit (defaults to `30_000_000`) |
 | `gas_price` | `int \| None` | `None` | Gas price in wei (fetched from chain if `None`) |
+| `nonce` | `int \| None` | `None` | Transaction nonce (read from the pending block if `None`) |
 | `security` | [`SeismicSecurityParams`](../../api-reference/transaction-types/seismic-security-params.md) `\| None` | `None` | Override default security parameters |
 | `eip712` | `bool` | `False` | Use EIP-712 typed-data signing path |
 

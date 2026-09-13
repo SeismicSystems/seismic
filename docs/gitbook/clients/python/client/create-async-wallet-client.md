@@ -180,22 +180,24 @@ The function performs six steps:
    w3 = AsyncWeb3(provider)
    ```
 
-3. **Fetch TEE public key** (async RPC call)
+3. **Install local signing** — `eth_sendTransaction` is signed with `private_key` and sent as `eth_sendRawTransaction`, and `w3.eth.default_account` is set to the key's address. Seismic nodes keep no unlocked accounts, so this is what makes `contract.twrite`, the transparent branch of `contract.write`, and `w3.seismic.deposit()` work without further setup. The middleware is registered under the name `seismic_local_signer` in `w3.middleware_onion`.
+
+4. **Fetch TEE public key** (async RPC call)
    ```python
    network_pk = await async_get_tee_public_key(w3)
    ```
 
-4. **Generate encryption keypair** (if `encryption_sk` is `None`, a random ephemeral key is created)
+5. **Generate encryption keypair** (if `encryption_sk` is `None`, a random ephemeral key is created)
    ```python
    encryption_sk = encryption_sk or PrivateKey(os.urandom(32))
    ```
 
-5. **Derive encryption state** (ECDH + [HKDF](https://en.wikipedia.org/wiki/HKDF))
+6. **Derive encryption state** (ECDH + [HKDF](https://en.wikipedia.org/wiki/HKDF))
    ```python
    encryption = get_encryption(network_pk, encryption_sk)
    ```
 
-6. **Attach Seismic namespace**
+7. **Attach Seismic namespace**
    ```python
    w3.seismic = AsyncSeismicNamespace(w3, encryption, private_key)
    ```

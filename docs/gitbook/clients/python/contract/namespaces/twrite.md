@@ -301,21 +301,30 @@ The `.twrite` namespace uses standard `eth_sendTransaction` under the hood. All 
 
 ### Account Management
 
+The wallet client signs `eth_sendTransaction` locally with the private key it
+was created with and sets `w3.eth.default_account` to that key's address, so
+no extra setup is needed:
+
 ```python
-# Uses default account from web3
-w3.eth.default_account = "0x..."
 tx_hash = contract.twrite.transfer(recipient, amount)
 ```
+
+To send from a different account, pass `from` explicitly or override
+`w3.eth.default_account` (the local signer only signs for its own key).
 
 ### Transaction Middleware
 
 ```python
 # All middleware is applied (gas estimation, nonce management, etc.)
-from web3.middleware import geth_poa_middleware
-w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+from web3.middleware import ExtraDataToPOAMiddleware
+w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
 
 tx_hash = contract.twrite.transfer(recipient, amount)
 ```
+
+The signing middleware installed by the factory is registered as
+`seismic_local_signer`; replace it with `w3.middleware_onion.replace(...)`
+if you need a different signer.
 
 ### Gas Estimation
 

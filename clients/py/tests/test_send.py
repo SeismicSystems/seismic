@@ -2,11 +2,15 @@
 
 from unittest.mock import MagicMock
 
+from hexbytes import HexBytes
+
 from seismic_web3._types import CompressedPublicKey, PrivateKey
 from seismic_web3.client import get_encryption
 from seismic_web3.transaction.send import (
     _address_from_key,
+    debug_send_shielded_transaction,
     estimate_transparent_gas,
+    send_shielded_transaction,
 )
 
 # Anvil account #0
@@ -77,3 +81,50 @@ class TestEstimateTransparentGas:
             "(0x4a) transaction: the node rejects plain signed txs on the "
             "raw-bytes path and strips from/value from unsigned requests"
         )
+
+
+class TestShieldedNonce:
+    """Shielded sends must pick up pending nonces and honour an explicit one."""
+
+    @staticmethod
+    def _mock_w3() -> MagicMock:
+        w3 = MagicMock()
+        w3.eth.chain_id = 31337
+        w3.eth.get_transaction_count.return_value = 7
+        w3.eth.get_block.return_value = {
+            "hash": b"\x11" * 32,
+            "number": 100,
+            "gasLimit": 30_000_000,
+        }
+        w3.eth.gas_price = 10**9
+        w3.provider.make_request.return_value = {"result": "0x" + "ab" * 32}
+        return w3
+
+    def test_default_nonce_is_read_at_pending(self):
+        w3 = self._mock_w3()
+        encryption = get_encryption(_NETWORK_PK, _CLIENT_SK)
+        send_shielded_transaction(
+            w3,
+            encryption=encryption,
+            private_key=ANVIL_PK,
+            to="0x5FbDB2315678afecb367f032d93F642f64180aa3",
+            data=HexBytes("0xd09de08a"),
+            gas=100_000,
+        )
+        w3.eth.get_transaction_count.assert_called_with(ANVIL_ADDRESS, "pending")
+
+    def test_explicit_nonce_is_used(self):
+        w3 = self._mock_w3()
+        encryption = get_encryption(_NETWORK_PK, _CLIENT_SK)
+        result = debug_send_shielded_transaction(
+            w3,
+            encryption=encryption,
+            private_key=ANVIL_PK,
+            to="0x5FbDB2315678afecb367f032d93F642f64180aa3",
+            data=HexBytes("0xd09de08a"),
+            gas=100_000,
+            nonce=42,
+        )
+        assert result.shielded_tx.nonce == 42
+        assert result.plaintext_tx.nonce == 42
+        w3.eth.get_transaction_count.assert_not_called()

@@ -288,17 +288,10 @@ def w3(
     node_process: subprocess.Popen[bytes],
     rpc_url: str,
     private_key: PrivateKey,
-    account_address: ChecksumAddress,
 ) -> Web3:
-    w3 = create_wallet_client(rpc_url, private_key=private_key)
-    # Add local signing so twrite works on reth (which has no unlocked keystore)
-    acct = Account.from_key(DEV_PRIVATE_KEY_HEX)
-    w3.middleware_onion.inject(
-        SignAndSendRawMiddlewareBuilder.build(acct),
-        layer=0,
-    )
-    w3.eth.default_account = account_address
-    return w3
+    # The factory installs local signing, so twrite works on reth (which has
+    # no unlocked keystore) without any extra setup.
+    return create_wallet_client(rpc_url, private_key=private_key)
 
 
 @pytest.fixture(scope="session")

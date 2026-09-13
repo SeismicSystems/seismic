@@ -39,7 +39,7 @@ class MetadataParams:
         to: Recipient address (``None`` for contract creation).
         encryption_pubkey: Compressed public key for ECDH.
         value: Wei to transfer (default ``0``).
-        nonce: Sender's tx count (fetched if ``None``).
+        nonce: Sender's tx count (fetched from the pending block if ``None``).
         blocks_window: Blocks until expiry (default ``100``).
         encryption_nonce: AES-GCM nonce (random if ``None``).
         recent_block_hash: Recent block hash (fetched if ``None``).
@@ -94,6 +94,8 @@ def build_metadata(w3: Web3, params: MetadataParams) -> TxSeismicMetadata:
 
     Resolves ``nonce``, ``recent_block_hash``, and ``expires_at_block``
     from the connected node if not explicitly provided in ``params``.
+    The nonce is read at the ``pending`` block so that transactions sent
+    back to back, without waiting for receipts, do not reuse a nonce.
 
     Args:
         w3: Sync ``Web3`` instance.
@@ -106,7 +108,7 @@ def build_metadata(w3: Web3, params: MetadataParams) -> TxSeismicMetadata:
     nonce = (
         params.nonce
         if params.nonce is not None
-        else w3.eth.get_transaction_count(params.sender)
+        else w3.eth.get_transaction_count(params.sender, "pending")
     )
     enc_nonce = params.encryption_nonce or random_encryption_nonce()
 
@@ -142,7 +144,7 @@ async def async_build_metadata(
     nonce = (
         params.nonce
         if params.nonce is not None
-        else await w3.eth.get_transaction_count(params.sender)
+        else await w3.eth.get_transaction_count(params.sender, "pending")
     )
     enc_nonce = params.encryption_nonce or random_encryption_nonce()
 

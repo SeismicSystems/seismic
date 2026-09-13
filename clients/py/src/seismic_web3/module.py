@@ -291,6 +291,7 @@ class SeismicNamespace(SeismicPublicNamespace):
         value: int = 0,
         gas: int | None = None,
         gas_price: int | None = None,
+        nonce: int | None = None,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
     ) -> HexBytes:
@@ -306,6 +307,8 @@ class SeismicNamespace(SeismicPublicNamespace):
             value: Wei to transfer (default ``0``).
             gas: Gas limit.
             gas_price: Gas price in wei.
+            nonce: Transaction nonce (fetched from the pending block if
+                not specified).
             security: Optional security parameter overrides.
 
         Returns:
@@ -320,6 +323,7 @@ class SeismicNamespace(SeismicPublicNamespace):
             value=value,
             gas=gas,
             gas_price=gas_price,
+            nonce=nonce,
             security=security,
             eip712=eip712,
         )
@@ -370,6 +374,7 @@ class SeismicNamespace(SeismicPublicNamespace):
         value: int = 0,
         gas: int | None = None,
         gas_price: int | None = None,
+        nonce: int | None = None,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
     ) -> DebugWriteResult:
@@ -384,6 +389,8 @@ class SeismicNamespace(SeismicPublicNamespace):
             value: Wei to transfer (default ``0``).
             gas: Gas limit.
             gas_price: Gas price in wei.
+            nonce: Transaction nonce (fetched from the pending block if
+                not specified).
             security: Optional security parameter overrides.
 
         Returns:
@@ -398,6 +405,7 @@ class SeismicNamespace(SeismicPublicNamespace):
             value=value,
             gas=gas,
             gas_price=gas_price,
+            nonce=nonce,
             security=security,
             eip712=eip712,
         )
@@ -540,6 +548,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
         value: int = 0,
         gas: int | None = None,
         gas_price: int | None = None,
+        nonce: int | None = None,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
     ) -> HexBytes:
@@ -555,6 +564,8 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
             value: Wei to transfer (default ``0``).
             gas: Gas limit.
             gas_price: Gas price in wei.
+            nonce: Transaction nonce (fetched from the pending block if
+                not specified).
             security: Optional security parameter overrides.
 
         Returns:
@@ -569,6 +580,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
             value=value,
             gas=gas,
             gas_price=gas_price,
+            nonce=nonce,
             security=security,
             eip712=eip712,
         )
@@ -619,6 +631,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
         value: int = 0,
         gas: int | None = None,
         gas_price: int | None = None,
+        nonce: int | None = None,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
     ) -> DebugWriteResult:
@@ -633,6 +646,8 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
             value: Wei to transfer (default ``0``).
             gas: Gas limit.
             gas_price: Gas price in wei.
+            nonce: Transaction nonce (fetched from the pending block if
+                not specified).
             security: Optional security parameter overrides.
 
         Returns:
@@ -647,6 +662,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
             value=value,
             gas=gas,
             gas_price=gas_price,
+            nonce=nonce,
             security=security,
             eip712=eip712,
         )

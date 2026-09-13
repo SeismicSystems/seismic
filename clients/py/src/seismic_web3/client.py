@@ -18,7 +18,9 @@ import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from eth_account import Account
 from web3 import AsyncHTTPProvider, AsyncWeb3, Web3, WebSocketProvider
+from web3.middleware import SignAndSendRawMiddlewareBuilder
 
 from seismic_web3._types import Bytes32, CompressedPublicKey, PrivateKey
 from seismic_web3.crypto.aes import AesGcmCrypto
@@ -152,6 +154,30 @@ def get_encryption(
 # ---------------------------------------------------------------------------
 
 
+#: Name of the signing middleware installed by the wallet factories, so it can
+#: be replaced or removed via ``w3.middleware_onion``.
+LOCAL_SIGNER_MIDDLEWARE = "seismic_local_signer"
+
+
+def _install_local_signer(w3: Web3 | AsyncWeb3, private_key: PrivateKey) -> None:
+    """Sign ``eth_sendTransaction`` locally and set the default account.
+
+    Transparent writes (``contract.twrite``, the non-shielded branch of
+    ``contract.write``, and ``w3.seismic.deposit``) go through
+    ``w3.eth.send_transaction``.  Seismic nodes keep no unlocked accounts,
+    so without this the request would be rejected as ``eth_sendTransaction``.
+    The middleware turns it into a locally signed ``eth_sendRawTransaction``
+    and ``default_account`` supplies the missing ``from``.
+    """
+    account = Account.from_key(bytes(private_key))
+    w3.middleware_onion.inject(
+        SignAndSendRawMiddlewareBuilder.build(account),
+        name=LOCAL_SIGNER_MIDDLEWARE,
+        layer=0,
+    )
+    w3.eth.default_account = account.address
+
+
 def create_wallet_client(
     rpc_url: str,
     private_key: PrivateKey,
@@ -166,7 +192,9 @@ def create_wallet_client(
         3. Derive encryption state (ECDH + HKDF).
         4. Attach :class:`~seismic_web3.module.SeismicNamespace`
            as ``w3.seismic``.
-        5. Normal ``w3.eth`` transactions work unchanged.
+        5. Install local signing for ``w3.eth.send_transaction`` and set
+           ``w3.eth.default_account`` to the key's address, so transparent
+           writes work without any extra middleware.
 
     Args:
         rpc_url: HTTP(S) URL of the Seismic node.
@@ -178,6 +206,7 @@ def create_wallet_client(
         A ``Web3`` instance with ``w3.seismic`` namespace attached.
     """
     w3 = Web3(Web3.HTTPProvider(rpc_url))
+    _install_local_signer(w3, private_key)
     network_pk = get_tee_public_key(w3)
     encryption = get_encryption(network_pk, encryption_sk)
 
@@ -212,6 +241,7 @@ async def create_async_wallet_client(
         provider = AsyncHTTPProvider(provider_url)
 
     w3 = AsyncWeb3(provider)
+    _install_local_signer(w3, private_key)
     network_pk = await async_get_tee_public_key(w3)
     encryption = get_encryption(network_pk, encryption_sk)
 
