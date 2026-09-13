@@ -98,6 +98,11 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuar
         returns (uint32)
     {
         ShieldedStorage storage $ = _getStorage();
+        bytes32 keyHash = _generateKeyIdentifier(keyType, publicKey);
+        // A second entry for the same key would take over keyToSessionIndex and
+        // leave the first one orphaned in `keys` (counted by keyCount, still
+        // returned by getKeyPublic, and shuffled around by revokeKey).
+        require($.keyToSessionIndex[keyHash] == 0, "key already authorized");
 
         Key memory newKey = Key({
             keyType: keyType,
@@ -110,7 +115,6 @@ contract ShieldedDelegationAccount is IShieldedDelegationAccount, ReentrancyGuar
 
         uint32 idx = uint32($.keys.length) + 1; // 1-based index
         $.keys.push(newKey);
-        bytes32 keyHash = _generateKeyIdentifier(keyType, publicKey);
         $.keyToSessionIndex[keyHash] = idx;
 
         emit KeyAuthorized(keyHash, keyType, expiry);
