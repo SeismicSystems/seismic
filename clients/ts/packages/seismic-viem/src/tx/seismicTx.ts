@@ -1,7 +1,7 @@
 // Canonical Seismic tx types and serialization. This module defines the
 // in-memory Seismic tx/request shape used across signed calls, shielded writes,
 // typed-data signing, and raw Seismic tx serialization.
-import { concatHex, hexToBigInt, toHex, toRlp } from 'viem'
+import { concatHex, hexToBigInt, toHex, toRlp, trim } from 'viem'
 import type {
   Address,
   Hex,
@@ -149,14 +149,46 @@ export type TxSeismic = {
   expiresAtBlock: bigint
   signedRead: boolean
   authorizationListHash?: Hex
-  authorizationList?: {
-    chainId: bigint
-    contractAddress: `0x${string}`
-    nonce: bigint
-    yParity: number
-    r: `0x${string}`
-    s: `0x${string}`
-  }[]
+  authorizationList?: SeismicAuthorization[]
+}
+
+/**
+ * A signed EIP-7702 authorization as accepted by the Seismic serializer.
+ * viem <2.24 returns `contractAddress` from `signAuthorization`, newer
+ * versions return `address`; both are accepted here.
+ */
+export type SeismicAuthorization = {
+  chainId: bigint | number
+  address?: Address
+  contractAddress?: Address
+  nonce: bigint | number
+  yParity?: number
+  v?: bigint
+  r: Hex
+  s: Hex
+}
+
+// Unsigned integers are RLP-encoded without leading zeros. viem pads `r` and
+// `s` to 32 bytes when signing, so they have to be trimmed here the same way
+// viem's own `serializeAuthorizationList` does, or the node rejects the tx.
+const trimQuantity = (value: Hex): Hex => {
+  const trimmed = trim(value)
+  return trimmed === '0x00' ? '0x' : trimmed
+}
+
+const authorizationYParity = (auth: SeismicAuthorization): Hex => {
+  if (typeof auth.yParity === 'number') return auth.yParity ? toHex(1) : '0x'
+  if (auth.v === 0n || auth.v === 27n) return '0x'
+  if (auth.v === 1n || auth.v === 28n) return toHex(1)
+  return '0x'
+}
+
+const authorizationAddress = (auth: SeismicAuthorization): Address => {
+  const address = auth.address ?? auth.contractAddress
+  if (!address) {
+    throw new Error('Seismic authorization requires an address')
+  }
+  return address
 }
 
 const authorizationListRlpItems = (
@@ -164,11 +196,11 @@ const authorizationListRlpItems = (
 ): Hex[][] =>
   authorizationList.map((auth) => [
     auth.chainId ? toHex(auth.chainId) : '0x',
-    auth.contractAddress,
+    authorizationAddress(auth),
     auth.nonce ? toHex(auth.nonce) : '0x',
-    auth.yParity ? toHex(auth.yParity) : '0x',
-    auth.r,
-    auth.s,
+    authorizationYParity(auth),
+    trimQuantity(auth.r),
+    trimQuantity(auth.s),
   ])
 
 export const encodeAuthorizationList = (

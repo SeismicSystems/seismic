@@ -40,6 +40,27 @@ const randomEncryptionNonce = (): Hex => {
   return nonce
 }
 
+// Unsigned integers are RLP-encoded without leading zeros. viem pads `r` and
+// `s` to 32 bytes when signing, so they have to be trimmed here the same way
+// viem's own `serializeAuthorizationList` does, or the node rejects the tx.
+const trimQuantity = (value: Hex): Hex => {
+  const trimmed = trim(value)
+  return trimmed === '0x00' ? '0x' : trimmed
+}
+
+// viem <2.24 names the delegation target `contractAddress`, newer versions
+// name it `address`; accept whichever the caller's viem produced.
+const authorizationAddress = (auth: {
+  address?: Address
+  contractAddress?: Address
+}): Address => {
+  const address = auth.address ?? auth.contractAddress
+  if (!address) {
+    throw new Error('Seismic authorization requires an address')
+  }
+  return address
+}
+
 const toYParitySignatureArray = (signature?: {
   v: bigint
   r: Hex
@@ -178,11 +199,11 @@ export const serializeSeismicTx = (
     tx.data ?? '0x',
     (tx.authorizationList ?? []).map((auth) => [
       auth.chainId ? toHex(auth.chainId) : '0x',
-      auth.contractAddress,
+      authorizationAddress(auth),
       auth.nonce ? toHex(auth.nonce) : '0x',
       auth.yParity ? toHex(auth.yParity) : '0x',
-      auth.r,
-      auth.s,
+      trimQuantity(auth.r),
+      trimQuantity(auth.s),
     ]),
     ...toYParitySignatureArray(signature),
   ]

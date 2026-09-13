@@ -1,5 +1,6 @@
 export type { CreateSeismicDevnetParams } from '@sviem/chain.ts'
 export type {
+  SeismicAuthorization,
   SeismicBlockParams,
   SeismicElements,
   SeismicSecurityParams,
