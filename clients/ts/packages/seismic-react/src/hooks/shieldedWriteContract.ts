@@ -69,6 +69,7 @@ export function useShieldedWriteContract<
 
     if (!walletClient) {
       setError(new Error('Shielded wallet client not initialized'))
+      setIsLoading(false)
       return
     }
 
@@ -81,7 +82,6 @@ export function useShieldedWriteContract<
         ...(gas && { gas }),
         ...(gasPrice && { gasPrice }),
       } as any)
-      console.log('tx', tx)
       setHash(tx)
       return tx
     } catch (err) {
