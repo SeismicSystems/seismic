@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 1050"
+     font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <style>
+    text { fill: #374151; font-size: 16px; }
+    .title    { font-size: 30px; font-weight: 700; fill: #1e40af; }
+    .subtitle { font-size: 15px; fill: #64748b; }
+    .sub      { font-size: 14px; fill: #64748b; }
+    .zone-label { font-size: 15px; font-weight: 600; fill: #1e40af; }
+    .guest { fill: #eff6ff; stroke: #1e3a5f; stroke-width: 2; }
+    .custodian-zone { fill: none; stroke: #047857; stroke-width: 2; stroke-dasharray: 8 6; }
+    .custodian-label { font-size: 15px; font-weight: 600; fill: #047857; }
+    .volume { fill: #dbeafe; stroke: #1e3a5f; stroke-width: 2; }
+    .volume > text { fill: #1e3a5f; }
+    .volume-title { font-weight: 700; }
+    .plain { fill: #ffffff; stroke: #64748b; stroke-width: 2; }
+    .chip > rect { stroke-width: 2; }
+    .chip > text { text-anchor: middle; dominant-baseline: middle; font-size: 14px; }
+    /* network-shared keys: derived from root_key, RAM only -> dotted border */
+    .chip.shared > rect { fill: #a7f3d0; stroke: #047857; stroke-dasharray: 3 5; stroke-linecap: round; }
+    .chip.shared > text { fill: #065f46; }
+    /* per-VM keys: independent randomness, persisted inside LUKS -> solid border */
+    .chip.pervm > rect { fill: #fed7aa; stroke: #c2410c; }
+    .chip.pervm > text { fill: #7c2d12; }
+    .flow { stroke: #64748b; stroke-width: 2; fill: none; }
+    .flow.planned { stroke-dasharray: 6 6; }
+    .flow-label { font-size: 14px; fill: #374151; }
+  </style>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="2000" height="1050" fill="#ffffff"/>
+
+  <text class="title" x="40" y="52">The two key families</text>
+
+  <!-- ================= legend ================= -->
+  <g class="chip shared" transform="translate(620,26)">
+    <rect width="200" height="38" rx="9"/>
+    <text x="100" y="20">network-shared</text>
+  </g>
+  <text class="sub" x="838" y="50">derived from root_key · RAM only, never on disk</text>
+  <g class="chip pervm" transform="translate(1290,26)">
+    <rect width="200" height="38" rx="9"/>
+    <text x="100" y="20">per-VM random</text>
+  </g>
+  <text class="sub" x="1508" y="50">independent per node · persisted inside LUKS</text>
+
+  <!-- ================= client ================= -->
+  <g class="chip">
+    <rect class="plain" x="40" y="380" width="200" height="150" rx="16"/>
+    <text x="140" y="455" text-anchor="middle" dominant-baseline="middle">client</text>
+  </g>
+
+  <!-- ================= validator A ================= -->
+  <rect class="guest" x="340" y="120" width="880" height="640" rx="20"/>
+  <text class="zone-label" x="370" y="158">validator A — TDX guest</text>
+
+  <!-- custodian zone -->
+  <rect class="custodian-zone" x="380" y="190" width="380" height="110" rx="14"/>
+  <text class="custodian-label" x="400" y="220">custodian</text>
+  <g class="chip shared" transform="translate(400,238)">
+    <rect width="220" height="44" rx="10"/>
+    <text x="110" y="23">root_key</text>
+  </g>
+
+  <!-- HKDF derivation -->
+  <line class="flow" x1="510" y1="300" x2="510" y2="424" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="530" y="368">HKDF, per purpose</text>
+
+  <!-- network-shared derived keys -->
+  <g class="chip shared" transform="translate(380,430)">
+    <rect width="360" height="44" rx="10"/>
+    <text x="180" y="23">tx-io keypair — held by reth</text>
+  </g>
+  <g class="chip shared" transform="translate(380,486)">
+    <rect width="360" height="44" rx="10"/>
+    <text x="180" y="23">RNG input — held by reth</text>
+  </g>
+  <g class="chip shared" transform="translate(380,542)">
+    <rect width="360" height="44" rx="10"/>
+    <text x="180" y="23">K_snap — held by nothing yet</text>
+  </g>
+  <g class="chip shared" transform="translate(380,598)">
+    <rect width="360" height="44" rx="10"/>
+    <text x="180" y="23">LUKS keys — per boot, then shredded</text>
+  </g>
+
+  <!-- per-VM keys -->
+  <g class="chip pervm" transform="translate(820,430)">
+    <rect width="360" height="44" rx="10"/>
+    <text x="180" y="23">summit BLS12-381</text>
+  </g>
+  <g class="chip pervm" transform="translate(820,486)">
+    <rect width="360" height="44" rx="10"/>
+    <text x="180" y="23">summit Ed25519</text>
+  </g>
+  <g class="chip pervm" transform="translate(820,542)">
+    <rect width="360" height="44" rx="10"/>
+    <text x="180" y="23">reth devp2p secret</text>
+  </g>
+  <g class="chip pervm" transform="translate(820,598)">
+    <rect width="360" height="44" rx="10"/>
+    <text x="180" y="23">nginx TLS certificate key</text>
+  </g>
+
+  <!-- ================= /persistent volume ================= -->
+  <g class="volume">
+    <rect class="volume" x="520" y="860" width="700" height="130" rx="16"/>
+    <text class="volume-title" x="870" y="915" text-anchor="middle">/persistent — LUKS2</text>
+    <text x="870" y="950" text-anchor="middle">reth datadir · summit keys and db · certbot state</text>
+  </g>
+
+  <!-- LUKS keys unlock the volume -->
+  <line class="flow" x1="560" y1="642" x2="640" y2="854" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="500" y="740">unlocks</text>
+
+  <!-- per-VM keys are persisted inside it -->
+  <line class="flow" x1="1000" y1="642" x2="920" y2="854" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="985" y="740">persisted inside</text>
+
+  <!-- B's volume: every node has one, under its own root_key-derived key -->
+  <g class="volume">
+    <rect class="volume" x="1450" y="860" width="510" height="130" rx="16"/>
+    <text class="volume-title" x="1705" y="915" text-anchor="middle">/persistent — LUKS2</text>
+    <text x="1705" y="950" text-anchor="middle">same layout — its own volume key</text>
+  </g>
+  <line class="flow" x1="1600" y1="642" x2="1600" y2="854" marker-end="url(#arrow)"/>
+
+  <!-- state transfer between admitted nodes: designed, not built -->
+  <line class="flow planned" x1="1226" y1="925" x2="1444" y2="925" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1240" y="888">chain state only,</text>
+  <text class="flow-label" x="1240" y="910">sealed under K_snap</text>
+  <text class="sub" x="1240" y="955">designed, not built</text>
+
+  <!-- ================= validator B (abbreviated mirror) ================= -->
+  <rect class="guest" x="1450" y="120" width="510" height="640" rx="20"/>
+  <text class="zone-label" x="1480" y="158">validator B — TDX guest</text>
+
+  <rect class="custodian-zone" x="1490" y="190" width="380" height="110" rx="14"/>
+  <text class="custodian-label" x="1510" y="220">custodian</text>
+  <g class="chip shared" transform="translate(1510,238)">
+    <rect width="340" height="44" rx="10"/>
+    <text x="170" y="23">root_key — the same 32 bytes</text>
+  </g>
+
+  <line class="flow" x1="1840" y1="300" x2="1840" y2="424" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1860" y="368">HKDF</text>
+
+  <g class="chip shared" transform="translate(1730,430)">
+    <rect width="220" height="44" rx="10"/>
+    <text><tspan x="110" y="15">the same</tspan><tspan x="110" y="33">derived keys</tspan></text>
+  </g>
+  <g class="chip pervm" transform="translate(1490,430)">
+    <rect width="220" height="44" rx="10"/>
+    <text x="110" y="23">summit BLS12-381</text>
+  </g>
+  <g class="chip pervm" transform="translate(1490,486)">
+    <rect width="220" height="44" rx="10"/>
+    <text x="110" y="23">summit Ed25519</text>
+  </g>
+  <g class="chip pervm" transform="translate(1490,542)">
+    <rect width="220" height="44" rx="10"/>
+    <text x="110" y="23">reth devp2p secret</text>
+  </g>
+  <g class="chip pervm" transform="translate(1490,598)">
+    <rect width="220" height="44" rx="10"/>
+    <text x="110" y="23">nginx TLS cert key</text>
+  </g>
+  <text class="sub" x="1490" y="684">same kinds of keys — its own randomness</text>
+
+  <!-- ================= flows between machines ================= -->
+  <!-- client encrypts to the shared tx-io key -->
+  <line class="flow" x1="246" y1="452" x2="374" y2="452" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="40" y="565">per-tx ECIES to tx_io_pk —</text>
+  <text class="flow-label" x="40" y="589">one key, any node decrypts</text>
+
+  <!-- root-key handshake -->
+  <line class="flow" x1="766" y1="260" x2="1504" y2="260" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="810" y="244">root-key handshake — the only way it moves</text>
+  <text class="sub" x="810" y="288">mutually attested, per exchange</text>
+
+  <!-- each inter-node plane is anchored to its own identity key -->
+  <line class="flow" x1="1186" y1="508" x2="1484" y2="508" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1210" y="496">summit commonware-p2p :18551</text>
+  <line class="flow" x1="1186" y1="564" x2="1484" y2="564" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1210" y="596">reth devp2p :30303</text>
+</svg>

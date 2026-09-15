@@ -4,6 +4,10 @@ Every key derivation in the Seismic protocol, in one place. Security reviews
 of domain separation start here: within each layer, no two rows may share an
 HKDF info label unless a compatibility reason is documented.
 
+This file owns how each key's bytes are derived. Which process holds a key on
+a TEE node, where it lives at rest, and how it moves between nodes is
+[tee/architecture.md](tee/architecture.md).
+
 Two derived keys are independent unless **both** the input keying material
 (IKM) and the label match. Labels therefore only need to be unique within a
 layer — cross-layer label reuse is harmless because the IKM classes never
@@ -17,14 +21,15 @@ The network root key (32 bytes, generated from the OS CSPRNG on the genesis
 node, distributed to joining nodes via the root-key-wrap handshake) is the IKM
 for every long-lived node secret.
 
-- **Code**: `enclave/crates/key-custodian/src/custodian.rs` (`KeyPurpose`)
+- **Code**: `enclave/crates/custodian/src/custodian.rs` (`KeyPurpose`)
 - **KDF**: HKDF-SHA256, salt `"seismic-purpose-derive-salt"`,
-  info `"seismic-purpose-{label}" || epoch_be64`
+  info `"seismic-purpose-{label}" || epoch_be64`, 32-byte output
+  (64 for `RngPrecompile`)
 
 | Purpose | Label | Output | Consumers |
 | --- | --- | --- | --- |
 | `TxIo` | `tx-io` | secp256k1 secret key (TEE side of transaction ECDH) | block executor, RPC signed reads |
-| `RngPrecompile` | `rng-precompile` | schnorrkel keypair (IKM for the RNG precompile) | RNG precompile (0x64) |
+| `RngPrecompile` | `rng-precompile` | 64 bytes of IKM for the RNG precompile | RNG precompile (0x64) |
 | `Snapshot` | `snapshot` | AES-256-GCM key for state snapshots | snapshot encrypt/decrypt |
 | `Storage` | `storage` | LUKS volume unlock key (epoch 0 only) | setup-persistent-luks |
 | `LuksHeaderMac` | `luks-header-mac` | HMAC key for LUKS2 header verification (epoch 0 only) | setup-persistent-luks |
@@ -77,7 +82,7 @@ their labels live with the precompile code, not in a shared library.
 | Precompile | KDF | Notes |
 | --- | --- | --- |
 | HKDF (0x68) | HKDF-SHA256, info `"seismic_hkdf_105"`, IKM = caller input | `crates/seismic/src/precompiles/hkdf_derive_sym_key.rs` |
-| RNG (0x64) | HKDF-SHA256, salt `"seismic rng context"`, IKM = RNG keypair secret, info = per-call domain data (block hash, tx hash, gas) ‖ `"pers"` ‖ personalization | `crates/seismic/src/precompiles/rng/domain_sep_rng.rs`; fresh derivation per call, no state |
+| RNG (0x64) | HKDF-SHA256, salt `"seismic rng context"`, IKM = the `RngPrecompile` 64 bytes, info = per-call domain data (block hash, tx hash, gas) ‖ `"pers"` ‖ personalization | `crates/seismic/src/precompiles/rng/domain_sep_rng.rs`; fresh derivation per call, no state |
 
 ## Changing an existing label
 

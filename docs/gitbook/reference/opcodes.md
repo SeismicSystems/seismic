@@ -31,7 +31,7 @@ Using inline assembly:
 function cloadExample(uint256 slot) internal view returns (uint256 value) {
     assembly {
         // 0xB0 = CLOAD opcode
-        // Reads from `slot` only if is_private = true
+        // Reads `slot` whether it is private or public
         value := cload(slot)
     }
 }
@@ -111,7 +111,7 @@ contract TimestampExample {
 
 ## FlaggedStorage Access Rules
 
-Every storage slot is a pair: `(value: U256, is_private: bool)`. The flag is set by the first store operation and cannot be changed after that.
+Every storage slot is a pair: `(value: U256, is_private: bool)`. The flag is set by the store opcode used. A private slot stays private forever; a public slot can only become private via `CSTORE` while it holds zero.
 
 ### Load
 
@@ -126,14 +126,15 @@ Every storage slot is a pair: `(value: U256, is_private: bool)`. The flag is set
 
 ### Store
 
-| Operation                         | Result                   |
-| --------------------------------- | ------------------------ |
-| `CSTORE` to a private slot        | Writes, stays private    |
-| `CSTORE` to a public slot         | Reverts                  |
-| `CSTORE` to an uninitialized slot | Writes, marks as private |
-| `SSTORE` to a public slot         | Writes, stays public     |
-| `SSTORE` to a private slot        | Reverts                  |
-| `SSTORE` to an uninitialized slot | Writes, marks as public  |
+| Operation                             | Result                   |
+| ------------------------------------- | ------------------------ |
+| `CSTORE` to a private slot            | Writes, stays private    |
+| `CSTORE` to a zero-value public slot  | Writes, marks as private |
+| `CSTORE` to a non-zero public slot    | Reverts                  |
+| `CSTORE` to an uninitialized slot     | Writes, marks as private |
+| `SSTORE` to a public slot             | Writes, stays public     |
+| `SSTORE` to a private slot            | Reverts                  |
+| `SSTORE` to an uninitialized slot     | Writes, marks as public  |
 
 ## Example: Mixed Public and Private Storage
 
