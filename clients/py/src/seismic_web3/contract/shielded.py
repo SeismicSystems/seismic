@@ -76,6 +76,7 @@ class _ShieldedWriteNamespace:
             value: int = 0,
             gas: int | None = None,
             gas_price: int | None = None,
+            nonce: int | None = None,
             security: SeismicSecurityParams | None = None,
         ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
@@ -88,6 +89,7 @@ class _ShieldedWriteNamespace:
                 value=value,
                 gas=gas,
                 gas_price=gas_price,
+                nonce=nonce,
                 security=security,
                 eip712=self._eip712,
             )
@@ -122,6 +124,7 @@ class _ShieldedDebugWriteNamespace:
             value: int = 0,
             gas: int | None = None,
             gas_price: int | None = None,
+            nonce: int | None = None,
             security: SeismicSecurityParams | None = None,
         ) -> DebugWriteResult:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
@@ -134,6 +137,7 @@ class _ShieldedDebugWriteNamespace:
                 value=value,
                 gas=gas,
                 gas_price=gas_price,
+                nonce=nonce,
                 security=security,
                 eip712=self._eip712,
             )
@@ -288,6 +292,7 @@ class _SmartWriteNamespace:
             value: int = 0,
             gas: int | None = None,
             gas_price: int | None = None,
+            nonce: int | None = None,
             security: SeismicSecurityParams | None = None,
         ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
@@ -301,6 +306,7 @@ class _SmartWriteNamespace:
                     value=value,
                     gas=gas,
                     gas_price=gas_price,
+                    nonce=nonce,
                     security=security,
                     eip712=self._eip712,
                 )
@@ -323,6 +329,8 @@ class _SmartWriteNamespace:
                 }
                 if gas_price is not None:
                     tx["gasPrice"] = gas_price
+                if nonce is not None:
+                    tx["nonce"] = nonce
                 return self._w3.eth.send_transaction(tx)
 
         return call
@@ -409,6 +417,7 @@ class _AsyncShieldedWriteNamespace:
             value: int = 0,
             gas: int | None = None,
             gas_price: int | None = None,
+            nonce: int | None = None,
             security: SeismicSecurityParams | None = None,
         ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
@@ -421,6 +430,7 @@ class _AsyncShieldedWriteNamespace:
                 value=value,
                 gas=gas,
                 gas_price=gas_price,
+                nonce=nonce,
                 security=security,
                 eip712=self._eip712,
             )
@@ -455,6 +465,7 @@ class _AsyncShieldedDebugWriteNamespace:
             value: int = 0,
             gas: int | None = None,
             gas_price: int | None = None,
+            nonce: int | None = None,
             security: SeismicSecurityParams | None = None,
         ) -> DebugWriteResult:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
@@ -467,6 +478,7 @@ class _AsyncShieldedDebugWriteNamespace:
                 value=value,
                 gas=gas,
                 gas_price=gas_price,
+                nonce=nonce,
                 security=security,
                 eip712=self._eip712,
             )
@@ -621,6 +633,7 @@ class _AsyncSmartWriteNamespace:
             value: int = 0,
             gas: int | None = None,
             gas_price: int | None = None,
+            nonce: int | None = None,
             security: SeismicSecurityParams | None = None,
         ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
@@ -634,6 +647,7 @@ class _AsyncSmartWriteNamespace:
                     value=value,
                     gas=gas,
                     gas_price=gas_price,
+                    nonce=nonce,
                     security=security,
                     eip712=self._eip712,
                 )
@@ -656,6 +670,8 @@ class _AsyncSmartWriteNamespace:
                 }
                 if gas_price is not None:
                     tx["gasPrice"] = gas_price
+                if nonce is not None:
+                    tx["nonce"] = nonce
                 return await self._w3.eth.send_transaction(tx)
 
         return call

@@ -109,29 +109,31 @@ chain_id = w3.eth.chain_id
 
 ## How It Works
 
-The function performs five steps:
+The function performs six steps:
 
 1. **Create Web3 instance**
    ```python
    w3 = Web3(Web3.HTTPProvider(rpc_url))
    ```
 
-2. **Fetch TEE public key** (synchronous RPC call)
+2. **Install local signing** — `eth_sendTransaction` is signed with `private_key` and sent as `eth_sendRawTransaction`, and `w3.eth.default_account` is set to the key's address. Seismic nodes keep no unlocked accounts, so this is what makes `contract.twrite`, the transparent branch of `contract.write`, and `w3.seismic.deposit()` work without further setup. The middleware is registered under the name `seismic_local_signer` in `w3.middleware_onion`.
+
+3. **Fetch TEE public key** (synchronous RPC call)
    ```python
    network_pk = get_tee_public_key(w3)
    ```
 
-3. **Generate encryption keypair** (if `encryption_sk` is `None`, a random ephemeral key is created)
+4. **Generate encryption keypair** (if `encryption_sk` is `None`, a random ephemeral key is created)
    ```python
    encryption_sk = encryption_sk or PrivateKey(os.urandom(32))
    ```
 
-4. **Derive encryption state** (ECDH + [HKDF](https://en.wikipedia.org/wiki/HKDF))
+5. **Derive encryption state** (ECDH + [HKDF](https://en.wikipedia.org/wiki/HKDF))
    ```python
    encryption = get_encryption(network_pk, encryption_sk)
    ```
 
-5. **Attach Seismic namespace**
+6. **Attach Seismic namespace**
    ```python
    w3.seismic = SeismicNamespace(w3, encryption, private_key)
    ```

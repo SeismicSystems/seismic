@@ -74,6 +74,7 @@ def _build_metadata_params(
     security: SeismicSecurityParams | None,
     signed_read: bool = False,
     eip712: bool = False,
+    nonce: int | None = None,
 ) -> MetadataParams:
     """Build ``MetadataParams`` from user-facing arguments.
 
@@ -87,6 +88,8 @@ def _build_metadata_params(
         value: Wei to transfer.
         security: Optional security parameter overrides.
         signed_read: ``True`` for signed ``eth_call`` reads.
+        eip712: ``True`` to select the EIP-712 message version.
+        nonce: Explicit transaction nonce (fetched from the node if ``None``).
 
     Returns:
         Populated ``MetadataParams``.
@@ -104,6 +107,7 @@ def _build_metadata_params(
         to=to,
         encryption_pubkey=encryption.encryption_pubkey,
         value=value,
+        nonce=nonce,
         encryption_nonce=enc_nonce,
         blocks_window=blocks_window,
         recent_block_hash=security.recent_block_hash if security else None,
@@ -431,6 +435,7 @@ def _prepare_shielded_transaction(
     value: int = 0,
     gas: int | None = None,
     gas_price: int | None = None,
+    nonce: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
 ) -> tuple[HexBytes, UnsignedSeismicTx, TxSeismicMetadata]:
@@ -446,7 +451,7 @@ def _prepare_shielded_transaction(
         ``(signed_tx_bytes, unsigned_tx, metadata)``
     """
     params = _build_metadata_params(
-        private_key, encryption, to, value, security, eip712=eip712
+        private_key, encryption, to, value, security, eip712=eip712, nonce=nonce
     )
     metadata = build_metadata(w3, params)
 
@@ -467,7 +472,14 @@ def _prepare_shielded_transaction(
         # replayed via eth_sendRawTransaction. The tx signed below still uses
         # `metadata`/`encrypted_data` (signed_read=False), unchanged.
         estimate_params = _build_metadata_params(
-            private_key, encryption, to, value, None, signed_read=True, eip712=eip712
+            private_key,
+            encryption,
+            to,
+            value,
+            None,
+            signed_read=True,
+            eip712=eip712,
+            nonce=nonce,
         )
         estimate_metadata = build_metadata(w3, estimate_params)
         estimate_encrypted = HexBytes(
@@ -501,6 +513,7 @@ async def _async_prepare_shielded_transaction(
     value: int = 0,
     gas: int | None = None,
     gas_price: int | None = None,
+    nonce: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
 ) -> tuple[HexBytes, UnsignedSeismicTx, TxSeismicMetadata]:
@@ -513,7 +526,7 @@ async def _async_prepare_shielded_transaction(
         ``(signed_tx_bytes, unsigned_tx, metadata)``
     """
     params = _build_metadata_params(
-        private_key, encryption, to, value, security, eip712=eip712
+        private_key, encryption, to, value, security, eip712=eip712, nonce=nonce
     )
     metadata = await async_build_metadata(w3, params)
 
@@ -534,7 +547,14 @@ async def _async_prepare_shielded_transaction(
         # replayed via eth_sendRawTransaction. The tx signed below still uses
         # `metadata`/`encrypted_data` (signed_read=False), unchanged.
         estimate_params = _build_metadata_params(
-            private_key, encryption, to, value, None, signed_read=True, eip712=eip712
+            private_key,
+            encryption,
+            to,
+            value,
+            None,
+            signed_read=True,
+            eip712=eip712,
+            nonce=nonce,
         )
         estimate_metadata = await async_build_metadata(w3, estimate_params)
         estimate_encrypted = HexBytes(
@@ -573,6 +593,7 @@ def send_shielded_transaction(
     value: int = 0,
     gas: int | None = None,
     gas_price: int | None = None,
+    nonce: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
 ) -> HexBytes:
@@ -590,6 +611,8 @@ def send_shielded_transaction(
         value: Wei to transfer (default ``0``).
         gas: Gas limit.  Estimated via signed ``eth_estimateGas`` if not specified.
         gas_price: Gas price in wei.  Fetched from chain if not specified.
+        nonce: Transaction nonce.  Fetched from the node (pending) if not
+            specified.
         security: Optional security parameter overrides.
 
     Returns:
@@ -604,6 +627,7 @@ def send_shielded_transaction(
         value=value,
         gas=gas,
         gas_price=gas_price,
+        nonce=nonce,
         security=security,
         eip712=eip712,
     )
@@ -620,6 +644,7 @@ async def async_send_shielded_transaction(
     value: int = 0,
     gas: int | None = None,
     gas_price: int | None = None,
+    nonce: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
 ) -> HexBytes:
@@ -637,6 +662,8 @@ async def async_send_shielded_transaction(
         value: Wei to transfer (default ``0``).
         gas: Gas limit.  Estimated via signed ``eth_estimateGas`` if not specified.
         gas_price: Gas price in wei.  Fetched from chain if not specified.
+        nonce: Transaction nonce.  Fetched from the node (pending) if not
+            specified.
         security: Optional security parameter overrides.
 
     Returns:
@@ -651,6 +678,7 @@ async def async_send_shielded_transaction(
         value=value,
         gas=gas,
         gas_price=gas_price,
+        nonce=nonce,
         security=security,
         eip712=eip712,
     )
@@ -672,6 +700,7 @@ def debug_send_shielded_transaction(
     value: int = 0,
     gas: int | None = None,
     gas_price: int | None = None,
+    nonce: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
 ) -> DebugWriteResult:
@@ -689,6 +718,8 @@ def debug_send_shielded_transaction(
         value: Wei to transfer (default ``0``).
         gas: Gas limit.  Estimated via signed ``eth_estimateGas`` if not specified.
         gas_price: Gas price in wei.  Fetched from chain if not specified.
+        nonce: Transaction nonce.  Fetched from the node (pending) if not
+            specified.
         security: Optional security parameter overrides.
 
     Returns:
@@ -704,6 +735,7 @@ def debug_send_shielded_transaction(
         value=value,
         gas=gas,
         gas_price=gas_price,
+        nonce=nonce,
         security=security,
         eip712=eip712,
     )
@@ -734,6 +766,7 @@ async def async_debug_send_shielded_transaction(
     value: int = 0,
     gas: int | None = None,
     gas_price: int | None = None,
+    nonce: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
 ) -> DebugWriteResult:
@@ -751,6 +784,8 @@ async def async_debug_send_shielded_transaction(
         value: Wei to transfer (default ``0``).
         gas: Gas limit.  Estimated via signed ``eth_estimateGas`` if not specified.
         gas_price: Gas price in wei.  Fetched from chain if not specified.
+        nonce: Transaction nonce.  Fetched from the node (pending) if not
+            specified.
         security: Optional security parameter overrides.
 
     Returns:
@@ -766,6 +801,7 @@ async def async_debug_send_shielded_transaction(
         value=value,
         gas=gas,
         gas_price=gas_price,
+        nonce=nonce,
         security=security,
         eip712=eip712,
     )

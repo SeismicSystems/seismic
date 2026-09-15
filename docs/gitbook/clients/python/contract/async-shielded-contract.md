@@ -52,6 +52,7 @@ Sends encrypted transactions using `TxSeismic` (type `0x4a`). Calldata is encryp
 - `value: int` - Wei to send (default: `0`)
 - `gas: int | None` - Gas limit (default: `30_000_000` when omitted)
 - `gas_price: int | None` - Gas price in wei (default: network suggested)
+- `nonce: int | None` - Transaction nonce (default: read from the pending block)
 - `security: [`SeismicSecurityParams`](../api-reference/transaction-types/seismic-security-params.md) | None` - Security parameters for expiry
 
 ### `.read` - Encrypted Read
