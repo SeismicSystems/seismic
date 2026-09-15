@@ -779,6 +779,34 @@ contract ShieldedDelegationAccountTest is Test, ShieldedDelegationAccount {
     }
 
     /// @notice Tests the grantAndRevokeMultipleSessions function for all key types
+    function test_RevertWhen_AuthorizeDuplicateKey() public {
+        (bytes memory publicKey,) = _randomSecp256k1Key();
+
+        vm.startPrank(ALICE_ADDRESS);
+        uint32 idx = ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 1 hours), 1 ether
+        );
+        assertEq(idx, 1);
+
+        // Same key again: must not create a second (orphaned) entry.
+        vm.expectRevert("key already authorized");
+        ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 2 hours), 2 ether
+        );
+        assertEq(ShieldedDelegationAccount(ALICE_ADDRESS).keyCount(), 1);
+        assertEq(ShieldedDelegationAccount(ALICE_ADDRESS).getKeyIndex(KeyType.Secp256k1, publicKey), 1);
+
+        // Once revoked, the key can be authorized again.
+        ShieldedDelegationAccount(ALICE_ADDRESS).revokeKey(KeyType.Secp256k1, publicKey);
+        assertEq(ShieldedDelegationAccount(ALICE_ADDRESS).keyCount(), 0);
+        uint32 idxAgain = ShieldedDelegationAccount(ALICE_ADDRESS).authorizeKey(
+            KeyType.Secp256k1, publicKey, uint40(block.timestamp + 2 hours), 2 ether
+        );
+        vm.stopPrank();
+        assertEq(idxAgain, 1);
+        assertEq(ShieldedDelegationAccount(ALICE_ADDRESS).keyCount(), 1);
+    }
+
     function test_grantAndRevokeMultipleSessions_AllKeyTypes() public {
         // P256
         _test_grantAndRevokeMultipleSessions(KeyType.P256);
