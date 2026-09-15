@@ -371,7 +371,14 @@ class _SmartReadNamespace:
                 )
                 return decode_abi_output(self._abi, fn_name, bytes(raw))
             else:
-                raw = self._w3.eth.call({"to": self._address, "data": data})
+                raw = self._w3.eth.call(
+                    {
+                        "to": self._address,
+                        "data": data,
+                        "value": value,
+                        "gas": gas,
+                    },
+                )
                 return decode_abi_output(self._abi, fn_name, bytes(raw))
 
         return call
@@ -704,7 +711,14 @@ class _AsyncSmartReadNamespace:
                 )
                 return decode_abi_output(self._abi, fn_name, bytes(raw))
             else:
-                raw = await self._w3.eth.call({"to": self._address, "data": data})
+                raw = await self._w3.eth.call(
+                    {
+                        "to": self._address,
+                        "data": data,
+                        "value": value,
+                        "gas": gas,
+                    },
+                )
                 return decode_abi_output(self._abi, fn_name, bytes(raw))
 
         return call
