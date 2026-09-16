@@ -19,7 +19,10 @@ RESPONSE_IV_LENGTH = 12
 """Length of the IV the TEE prepends to a signed-read response."""
 
 RESPONSE_FORMAT_VERSION = 1
-"""Wire format version prefixing every non-empty signed-read response."""
+"""Wire format version prefixing every signed-read response."""
+
+MIN_RESPONSE_LEN = 1 + RESPONSE_IV_LENGTH + 16
+"""Smallest well-formed response: version, IV, and AES-GCM tag over empty plaintext."""
 
 
 def split_response_iv(response: HexBytes) -> tuple[int, HexBytes, HexBytes]:
@@ -34,10 +37,10 @@ def split_response_iv(response: HexBytes) -> tuple[int, HexBytes, HexBytes]:
     Raises:
         ValueError: If the response is too short, or carries an unknown version.
     """
-    if len(response) < 1 + RESPONSE_IV_LENGTH:
+    if len(response) < MIN_RESPONSE_LEN:
         raise ValueError(
-            f"signed-read response is {len(response)} bytes, too short to carry "
-            f"a version byte and a {RESPONSE_IV_LENGTH}-byte IV",
+            f"signed-read response is {len(response)} bytes, shorter than the "
+            f"{MIN_RESPONSE_LEN}-byte minimum envelope",
         )
     version = response[0]
     if version != RESPONSE_FORMAT_VERSION:

@@ -21,6 +21,7 @@ from seismic_web3.client import (
     get_encryption,
 )
 from seismic_web3.crypto.aes import (
+    MIN_RESPONSE_LEN,
     RESPONSE_FORMAT_VERSION,
     RESPONSE_IV_LENGTH,
     AesGcmCrypto,
@@ -141,15 +142,13 @@ class TestEncryptionState:
         assert state.decrypt(encrypted_response, metadata) == response_plaintext
         assert encrypted_request != encrypted_response
 
-    def test_decrypt_rejects_response_shorter_than_iv(self):
+    def test_decrypt_rejects_response_shorter_than_envelope(self):
         """A truncated response is rejected before reaching AES-GCM."""
         state = get_encryption(_NETWORK_PK, _CLIENT_SK)
         metadata = self._make_metadata()
 
-        truncated = bytes([RESPONSE_FORMAT_VERSION]) + b"\x00" * (
-            RESPONSE_IV_LENGTH - 1
-        )
-        with pytest.raises(ValueError, match="too short to carry"):
+        truncated = bytes([RESPONSE_FORMAT_VERSION]) + b"\x00" * (MIN_RESPONSE_LEN - 2)
+        with pytest.raises(ValueError, match="shorter than the"):
             state.decrypt(HexBytes(truncated), metadata)
 
     def test_decrypt_rejects_unknown_response_version(self):
@@ -163,17 +162,18 @@ class TestEncryptionState:
         with pytest.raises(ValueError, match="unsupported signed-read response format"):
             state.decrypt(HexBytes(response), metadata)
 
-    def test_decrypt_empty_response(self):
-        """An empty response decrypts to empty bytes."""
+    def test_decrypt_rejects_empty_response(self):
+        """An intercepted response stripped to nothing must not authenticate."""
         state = get_encryption(_NETWORK_PK, _CLIENT_SK)
         metadata = self._make_metadata()
 
-        assert bytes(state.decrypt(HexBytes(b""), metadata)) == b""
+        with pytest.raises(ValueError, match="shorter than the"):
+            state.decrypt(HexBytes(b""), metadata)
 
     def test_split_response_iv_separates_version_iv_and_body(self):
         """Version byte, then 12-byte IV, then ciphertext || tag."""
         iv = bytes(range(RESPONSE_IV_LENGTH))
-        body = b"\xde\xad\xbe\xef"
+        body = b"\xef" * 20
         raw = bytes([RESPONSE_FORMAT_VERSION]) + iv + body
 
         version, split_iv, split_body = split_response_iv(HexBytes(raw))

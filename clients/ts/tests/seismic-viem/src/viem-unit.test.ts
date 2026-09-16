@@ -19,7 +19,8 @@ import {
   testTxExplorerUrlWithTab,
 } from '@sviem-tests/tests/explorerUrl.ts'
 import {
-  testSplitResponseIvAcceptsEmptyBody,
+  testSplitResponseIvAcceptsTagOnlyBody,
+  testSplitResponseIvRejectsEmptyResponse,
   testSplitResponseIvRejectsShortResponse,
   testSplitResponseIvRejectsUnknownVersion,
   testSplitResponseIvSeparatesVersionIvAndBody,
@@ -157,11 +158,14 @@ describe('signed-read response IV', () => {
   test('separates the version, IV, and ciphertext body', () => {
     testSplitResponseIvSeparatesVersionIvAndBody()
   })
-  test('accepts a response with an empty body', () => {
-    testSplitResponseIvAcceptsEmptyBody()
+  test('accepts a tag-only body', () => {
+    testSplitResponseIvAcceptsTagOnlyBody()
   })
-  test('rejects a response shorter than the IV', () => {
+  test('rejects a response shorter than the envelope', () => {
     testSplitResponseIvRejectsShortResponse()
+  })
+  test('rejects an empty response', () => {
+    testSplitResponseIvRejectsEmptyResponse()
   })
   test('rejects an unknown format version', () => {
     testSplitResponseIvRejectsUnknownVersion()

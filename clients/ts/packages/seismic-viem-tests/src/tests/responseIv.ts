@@ -1,14 +1,14 @@
 import { expect } from 'bun:test'
 import {
+  MIN_RESPONSE_LENGTH,
   RESPONSE_FORMAT_VERSION,
-  RESPONSE_IV_LENGTH,
   splitResponseIv,
 } from 'seismic-viem'
 import type { Hex } from 'viem'
 
 const VERSION: Hex = '0x01'
 const IV: Hex = '0x7da3a99bf0f90d56551d99ea'
-const BODY: Hex = '0xdeadbeef'
+const BODY: Hex = `0x${'ef'.repeat(20)}`
 
 const response = (version: Hex, body: Hex): Hex =>
   `${version}${IV.slice(2)}${body.slice(2)}` as Hex
@@ -20,15 +20,20 @@ export const testSplitResponseIvSeparatesVersionIvAndBody = () => {
   expect(body).toBe(BODY)
 }
 
-export const testSplitResponseIvAcceptsEmptyBody = () => {
-  const { iv, body } = splitResponseIv(response(VERSION, '0x'))
+export const testSplitResponseIvAcceptsTagOnlyBody = () => {
+  const tagOnly = `0x${'cd'.repeat(16)}` as Hex
+  const { iv, body } = splitResponseIv(response(VERSION, tagOnly))
   expect(iv).toBe(IV)
-  expect(body).toBe('0x')
+  expect(body).toBe(tagOnly)
 }
 
 export const testSplitResponseIvRejectsShortResponse = () => {
-  const short = `0x01${'ab'.repeat(RESPONSE_IV_LENGTH - 1)}` as Hex
-  expect(() => splitResponseIv(short)).toThrow(/too short to carry/)
+  const short = `0x${'ab'.repeat(MIN_RESPONSE_LENGTH - 1)}` as Hex
+  expect(() => splitResponseIv(short)).toThrow(/shorter than the/)
+}
+
+export const testSplitResponseIvRejectsEmptyResponse = () => {
+  expect(() => splitResponseIv('0x')).toThrow(/shorter than the/)
 }
 
 export const testSplitResponseIvRejectsUnknownVersion = () => {

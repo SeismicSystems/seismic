@@ -47,10 +47,7 @@ export const encryptionActions = (
       ciphertext: Hex | undefined,
       metadata: TxSeismicMetadata
     ) => {
-      if (!ciphertext || ciphertext === '0x') {
-        return '0x'
-      }
-      const { version, iv, body } = splitResponseIv(ciphertext)
+      const { version, iv, body } = splitResponseIv(ciphertext ?? '0x')
       const aesCipher = new AesGcmCrypto(responseEncryption)
       const aad = encodeSeismicResponseAAD(metadata, version)
       return await aesCipher.decrypt(body, iv, aad)

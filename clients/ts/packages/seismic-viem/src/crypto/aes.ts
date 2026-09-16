@@ -118,8 +118,11 @@ export class AesGcmCrypto {
 /** Length of the IV the TEE prepends to a signed-read response. */
 export const RESPONSE_IV_LENGTH = 12
 
-/** Wire format version prefixing every non-empty signed-read response. */
+/** Wire format version prefixing every signed-read response. */
 export const RESPONSE_FORMAT_VERSION = 1
+
+/** Smallest well-formed response: version, IV, and AES-GCM tag over empty plaintext. */
+export const MIN_RESPONSE_LENGTH = 1 + RESPONSE_IV_LENGTH + 16
 
 /**
  * Splits a signed-read response of the form `version || iv || ciphertext || tag`.
@@ -129,9 +132,9 @@ export const splitResponseIv = (
   response: Hex
 ): { version: number; iv: Hex; body: Hex } => {
   const bytes = hexToBytes(response)
-  if (bytes.length < 1 + RESPONSE_IV_LENGTH) {
+  if (bytes.length < MIN_RESPONSE_LENGTH) {
     throw new Error(
-      `signed-read response is ${bytes.length} bytes, too short to carry a version byte and a ${RESPONSE_IV_LENGTH}-byte IV`
+      `signed-read response is ${bytes.length} bytes, shorter than the ${MIN_RESPONSE_LENGTH}-byte minimum envelope`
     )
   }
   const version = bytes[0]

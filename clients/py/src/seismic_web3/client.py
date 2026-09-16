@@ -18,7 +18,6 @@ import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from hexbytes import HexBytes
 from web3 import AsyncHTTPProvider, AsyncWeb3, Web3, WebSocketProvider
 
 from seismic_web3._types import (
@@ -43,6 +42,8 @@ from seismic_web3.transaction.aead import (
 )
 
 if TYPE_CHECKING:
+    from hexbytes import HexBytes
+
     from seismic_web3.transaction_types import TxSeismicMetadata
 
 
@@ -109,8 +110,6 @@ class EncryptionState:
             ValueError: If the response is too short or carries an unknown version.
             cryptography.exceptions.InvalidTag: If authentication fails.
         """
-        if len(ciphertext) == 0:
-            return HexBytes(b"")
         version, iv, body = split_response_iv(ciphertext)
         aad = encode_response_aad(metadata, version)
         return self._response_crypto.decrypt(body, EncryptionNonce(bytes(iv)), aad)

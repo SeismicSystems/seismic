@@ -128,7 +128,7 @@ def decrypt(
 
 #### Raises
 
-- `ValueError` - If the response is too short, or carries an unrecognised format version
+- `ValueError` - If the response is shorter than the 29-byte minimum envelope, or carries an unrecognised format version
 - `cryptography.exceptions.InvalidTag` - If authentication fails (wrong key, tampered data, or mismatched metadata)
 
 #### Example

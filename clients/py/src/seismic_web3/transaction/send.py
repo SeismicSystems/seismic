@@ -842,10 +842,6 @@ def signed_call(
     # so the exception carries the plaintext revert reason.
     _raise_signed_rpc_error(response, encryption, metadata)
     raw_result: str = response.get("result", "0x")
-
-    if not raw_result or raw_result == "0x":
-        return HexBytes(b"")
-
     result_bytes = HexBytes(raw_result)
     return encryption.decrypt(
         result_bytes,
@@ -905,10 +901,6 @@ async def async_signed_call(
     # so the exception carries the plaintext revert reason.
     _raise_signed_rpc_error(response, encryption, metadata)
     raw_result: str = response.get("result", "0x")
-
-    if not raw_result or raw_result == "0x":
-        return HexBytes(b"")
-
     result_bytes = HexBytes(raw_result)
     return encryption.decrypt(
         result_bytes,

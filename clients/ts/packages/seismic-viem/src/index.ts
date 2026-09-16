@@ -116,6 +116,7 @@ export {
   splitResponseIv,
   RESPONSE_IV_LENGTH,
   RESPONSE_FORMAT_VERSION,
+  MIN_RESPONSE_LENGTH,
 } from '@sviem/crypto/aes.ts'
 export { randomEncryptionNonce } from '@sviem/crypto/nonce.ts'
 export type { EncryptionNonce } from '@sviem/crypto/nonce.ts'
