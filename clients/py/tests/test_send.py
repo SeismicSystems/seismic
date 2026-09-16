@@ -1,6 +1,6 @@
 """Tests for seismic_web3.transaction.send — address derivation, estimation."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -16,11 +16,12 @@ from seismic_web3._types import (
 from seismic_web3.client import get_encryption
 from seismic_web3.crypto.aes import RESPONSE_FORMAT_VERSION
 from seismic_web3.transaction.aead import encode_response_aad
-from seismic_web3.transaction.metadata import build_metadata
+from seismic_web3.transaction.metadata import async_build_metadata, build_metadata
 from seismic_web3.transaction.send import (
     _address_from_key,
     _build_metadata_params,
     _raise_signed_rpc_error,
+    async_signed_call,
     estimate_transparent_gas,
     signed_call,
 )
@@ -142,35 +143,76 @@ class TestRaiseSignedRpcError:
             _raise_signed_rpc_error(response, encryption, self._metadata())
 
 
+_BLOCK = {"number": 10, "hash": HexBytes(b"\x11" * 32)}
+
+
 def _mock_w3(result: str) -> MagicMock:
     """A Web3 double whose eth_call returns ``result`` verbatim."""
     w3 = MagicMock()
     w3.eth.chain_id = 31337
     w3.eth.gas_price = 1_000_000_000
     w3.eth.get_transaction_count.return_value = 0
-    w3.eth.get_block.return_value = {"number": 10, "hash": HexBytes(b"\x11" * 32)}
+    w3.eth.get_block.return_value = _BLOCK
     w3.provider.make_request.return_value = {"result": result}
     return w3
+
+
+def _mock_async_w3(result: str) -> MagicMock:
+    """An AsyncWeb3 double whose eth_call returns ``result`` verbatim."""
+    w3 = MagicMock()
+    w3.eth = MagicMock()
+    type(w3.eth).chain_id = _AwaitableProperty(31337)
+    type(w3.eth).gas_price = _AwaitableProperty(1_000_000_000)
+    w3.eth.get_transaction_count = AsyncMock(return_value=0)
+    w3.eth.get_block = AsyncMock(return_value=_BLOCK)
+    w3.provider.make_request = AsyncMock(return_value={"result": result})
+    return w3
+
+
+class _AwaitableProperty:
+    """Descriptor returning an awaitable, mimicking AsyncWeb3's async properties."""
+
+    def __init__(self, value):
+        self._value = value
+
+    def __get__(self, obj, objtype=None):
+        async def _coro():
+            return self._value
+
+        return _coro()
+
+
+def _empty_envelope(encryption, metadata) -> str:
+    """The envelope a node emits for an empty signed-read result."""
+    iv = b"\x07" * 12
+    aad = encode_response_aad(metadata, RESPONSE_FORMAT_VERSION)
+    tag = AESGCM(bytes(encryption.response_aes_key)).encrypt(iv, b"", aad)
+    return HexBytes(bytes([RESPONSE_FORMAT_VERSION]) + iv + tag).to_0x_hex()
+
+
+_PINNED = SeismicSecurityParams(
+    encryption_nonce=EncryptionNonce(b"\x2a" * 12),
+    recent_block_hash=Bytes32(b"\x11" * 32),
+    expires_at_block=110,
+)
 
 
 class TestSignedCallRejectsBareResults:
     """The caller must not short-circuit a `0x` result ahead of decryption.
 
-    Guards the layer the SEI-369 truncation bug actually lived at: a bare `0x`
-    reaching the caller must fail, not decode as an authenticated empty result.
+    Guards the layer the SEI-369 truncation bug lived at: a bare `0x` reaching
+    the caller must fail, not decode as an authenticated empty result. Both the
+    sync and async callers are separate code paths and need separate cover.
     """
 
     def _encryption(self):
         return get_encryption(_NETWORK_PK, _CLIENT_SK)
 
     def test_bare_0x_result_is_rejected(self):
-        encryption = self._encryption()
-        w3 = _mock_w3("0x")
-
         with pytest.raises(ValueError, match="shorter than the"):
             signed_call(
-                w3,
-                encryption=encryption,
+                _mock_w3("0x"),
+                encryption=self._encryption(),
                 private_key=ANVIL_PK,
                 to=ANVIL_ADDRESS,
                 data=HexBytes(b""),
@@ -179,32 +221,18 @@ class TestSignedCallRejectsBareResults:
     def test_valid_empty_envelope_returns_empty_plaintext(self):
         encryption = self._encryption()
         w3 = _mock_w3("0x")
-        # Pin every randomised field so the envelope below binds the same AAD
-        # that signed_call rebuilds internally.
-        security = SeismicSecurityParams(
-            encryption_nonce=EncryptionNonce(b"\x2a" * 12),
-            recent_block_hash=Bytes32(b"\x11" * 32),
-            expires_at_block=110,
-        )
-
         params = _build_metadata_params(
             ANVIL_PK,
             encryption,
             ANVIL_ADDRESS,
             0,
-            security,
+            _PINNED,
             signed_read=True,
             eip712=False,
         )
         metadata = build_metadata(w3, params)
-        iv = b"\x07" * 12
-        aad = encode_response_aad(metadata, RESPONSE_FORMAT_VERSION)
-        # The wrapper short-circuits empty plaintext, so go to the primitive:
-        # the node always produces a real tag here.
-        tag = AESGCM(bytes(encryption.response_aes_key)).encrypt(iv, b"", aad)
-        envelope = bytes([RESPONSE_FORMAT_VERSION]) + iv + tag
         w3.provider.make_request.return_value = {
-            "result": HexBytes(envelope).to_0x_hex()
+            "result": _empty_envelope(encryption, metadata)
         }
 
         out = signed_call(
@@ -213,6 +241,43 @@ class TestSignedCallRejectsBareResults:
             private_key=ANVIL_PK,
             to=ANVIL_ADDRESS,
             data=HexBytes(b""),
-            security=security,
+            security=_PINNED,
+        )
+        assert bytes(out) == b""
+
+    async def test_async_bare_0x_result_is_rejected(self):
+        with pytest.raises(ValueError, match="shorter than the"):
+            await async_signed_call(
+                _mock_async_w3("0x"),
+                encryption=self._encryption(),
+                private_key=ANVIL_PK,
+                to=ANVIL_ADDRESS,
+                data=HexBytes(b""),
+            )
+
+    async def test_async_valid_empty_envelope_returns_empty_plaintext(self):
+        encryption = self._encryption()
+        w3 = _mock_async_w3("0x")
+        params = _build_metadata_params(
+            ANVIL_PK,
+            encryption,
+            ANVIL_ADDRESS,
+            0,
+            _PINNED,
+            signed_read=True,
+            eip712=False,
+        )
+        metadata = await async_build_metadata(w3, params)
+        w3.provider.make_request = AsyncMock(
+            return_value={"result": _empty_envelope(encryption, metadata)}
+        )
+
+        out = await async_signed_call(
+            w3,
+            encryption=encryption,
+            private_key=ANVIL_PK,
+            to=ANVIL_ADDRESS,
+            data=HexBytes(b""),
+            security=_PINNED,
         )
         assert bytes(out) == b""

@@ -19,8 +19,6 @@ import {
   testTxExplorerUrlWithTab,
 } from '@sviem-tests/tests/explorerUrl.ts'
 import {
-  testDecryptRejectsBareZeroX,
-  testDecryptRejectsUndefinedResponse,
   testSplitResponseIvAcceptsTagOnlyBody,
   testSplitResponseIvRejectsEmptyResponse,
   testSplitResponseIvRejectsShortResponse,
@@ -40,6 +38,7 @@ import {
   testSerializeMissingTo,
   testSerializeValidTxDoesNotThrow,
 } from '@sviem-tests/tests/seismicTxValidation.ts'
+import { testSignedCallRejectsBareZeroX } from '@sviem-tests/tests/signedCallEnvelope.ts'
 import {
   testComputeKeyHashDifferentKeysProduceDifferentHashes,
   testComputeKeyHashIsDeterministic,
@@ -172,10 +171,10 @@ describe('signed-read response IV', () => {
   test('rejects an unknown format version', () => {
     testSplitResponseIvRejectsUnknownVersion()
   })
-  test('the decrypt action rejects a bare 0x result', async () => {
-    await testDecryptRejectsBareZeroX()
-  })
-  test('the decrypt action rejects an undefined result', async () => {
-    await testDecryptRejectsUndefinedResponse()
+})
+
+describe('signedCall envelope handling', () => {
+  test('rejects a bare 0x result', async () => {
+    await testSignedCallRejectsBareZeroX()
   })
 })
