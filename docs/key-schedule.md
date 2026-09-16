@@ -60,8 +60,14 @@ compute that row's keys.
 | `RootKeyWrap` | `seismic/root-key-wrap/aes-256-gcm/v1` | AES-256-GCM handshake key for root-key bootstrap | key-custodian wrap/unwrap |
 
 `TxRequest` and `TxResponse` are distinct because a signed read carries one
-public nonce that is used in both directions: independent keys keep every
-AES-GCM `(key, nonce)` pair unique. Nonces must still be unique per
+public nonce that was originally used in both directions. Independent keys
+stop a request and its response from sharing a `(key, nonce)` pair, but they
+do not make repeated responses unique: one signed read can be executed any
+number of times. Responses therefore carry a TEE-generated IV of their own
+(see `encrypt_response`), and the client's `encryption_nonce` is the IV for
+the request direction only. The response AAD is the request AAD with the
+one-byte response format version appended, so the two directions never share
+an AAD either. Request nonces must still be unique per
 transaction when an ECDH keypair is reused across transactions.
 
 `TxRequest` keeps `aes-gcm key`, the original label every ECDH-derived key used

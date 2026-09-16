@@ -74,7 +74,7 @@ Takes the 32-byte `shared_secret` produced by the KEM step and expands it into t
 
 **DEM (authenticated encryption)**
 
-* **AES-256-GCM**, with a 12-byte nonce supplied by the client (the `encryptionNonce` field in `TxSeismicMetadata`)
+* **AES-256-GCM**. Requests use a 12-byte nonce supplied by the client (the `encryptionNonce` field in `TxSeismicMetadata`). Signed-read responses use a 12-byte IV drawn by the TEE per response, behind a one-byte format version (`version || iv || ciphertext || tag`, version `1`). The version byte is appended to the response AAD, so it is authenticated and cannot be altered in flight; clients reject any other value rather than falling back to an older layout. Every signed-read response is a full envelope, including one whose plaintext is empty (29 bytes: version, IV, and tag), so a response stripped in transit fails to authenticate instead of decoding as an empty result — one signed read can be executed any number of times, so the client's nonce is not unique per response ciphertext
 * **AAD = RLP-encoded `TxSeismicMetadata`** — the 11-field metadata struct (`sender`, `chain_id`, tx `nonce`, `to`, `value`, `encryption_pubkey`, `encryption_nonce`, `recentBlockHash`, `expires_at_block`, `signedRead`, `messageVersion`). Binding everything that contextualizes the tx prevents ciphertext malleability across senders, replay across chains or blocks, and substitution attacks
 
 **Decryption (any validator node)**
@@ -88,7 +88,7 @@ Takes the 32-byte `shared_secret` produced by the KEM step and expands it into t
 
 ## Reference implementations
 
-All implementations produce byte-identical ciphertexts for the same inputs.
+All implementations produce byte-identical ciphertexts for the same inputs on the request path. Signed-read response encryption draws a fresh IV per call, so it is deterministic only given that IV: cross-implementation checks on the response path must decrypt to a known plaintext rather than compare ciphertext bytes.
 
 * **Rust (ECIES primitive):** [`enclave/crates/enclave/src/crypto.rs`](https://github.com/SeismicSystems/enclave/tree/seismic/crates/enclave/src/crypto.rs) in the [`seismic-enclave`](https://github.com/SeismicSystems/enclave) crate. This is the source-of-truth Rust implementation, used by both the client side (via `seismic-alloy`) and the server side (via `seismic-enclave-server`)
 * **Rust (TxSeismic wire format + tx construction):** [`seismic-alloy/crates/consensus`](https://github.com/SeismicSystems/seismic-alloy/tree/seismic/crates/consensus) — depends on `seismic-enclave` for the ECIES math

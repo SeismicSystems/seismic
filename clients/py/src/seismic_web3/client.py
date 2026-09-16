@@ -20,8 +20,13 @@ from typing import TYPE_CHECKING
 
 from web3 import AsyncHTTPProvider, AsyncWeb3, Web3, WebSocketProvider
 
-from seismic_web3._types import Bytes32, CompressedPublicKey, PrivateKey
-from seismic_web3.crypto.aes import AesGcmCrypto
+from seismic_web3._types import (
+    Bytes32,
+    CompressedPublicKey,
+    EncryptionNonce,
+    PrivateKey,
+)
+from seismic_web3.crypto.aes import AesGcmCrypto, split_response_iv
 from seismic_web3.crypto.ecdh import AesKeyDomain, generate_aes_key
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 from seismic_web3.module import (
@@ -31,12 +36,14 @@ from seismic_web3.module import (
     SeismicPublicNamespace,
 )
 from seismic_web3.rpc import async_get_tee_public_key, get_tee_public_key
-from seismic_web3.transaction.aead import encode_metadata_as_aad
+from seismic_web3.transaction.aead import (
+    encode_metadata_as_aad,
+    encode_response_aad,
+)
 
 if TYPE_CHECKING:
     from hexbytes import HexBytes
 
-    from seismic_web3._types import EncryptionNonce
     from seismic_web3.transaction_types import TxSeismicMetadata
 
 
@@ -87,24 +94,25 @@ class EncryptionState:
     def decrypt(
         self,
         ciphertext: HexBytes,
-        nonce: EncryptionNonce,
         metadata: TxSeismicMetadata,
     ) -> HexBytes:
         """Decrypt signed-read ciphertext with the response key and metadata-bound AAD.
 
         Args:
-            ciphertext: Encrypted data (includes auth tag).
-            nonce: 12-byte AES-GCM nonce.
+            ciphertext: Response bytes of the form
+                ``version || iv || ciphertext || tag``.
             metadata: Transaction metadata (used to build AAD).
 
         Returns:
             Decrypted plaintext.
 
         Raises:
+            ValueError: If the response is too short or carries an unknown version.
             cryptography.exceptions.InvalidTag: If authentication fails.
         """
-        aad = encode_metadata_as_aad(metadata)
-        return self._response_crypto.decrypt(ciphertext, nonce, aad)
+        version, iv, body = split_response_iv(ciphertext)
+        aad = encode_response_aad(metadata, version)
+        return self._response_crypto.decrypt(body, EncryptionNonce(bytes(iv)), aad)
 
 
 def get_encryption(

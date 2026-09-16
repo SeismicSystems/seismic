@@ -50,9 +50,10 @@ Client                                          Seismic Node (TEE)
                                               i. Execute with plaintext calldata
 
 6. For seismic_call responses:
-                          <----RPC-----  encrypted_response
-   a. AES-GCM-decrypt(response, aes_key, nonce, AAD)
-   b. Return plaintext result
+                          <----RPC-----  version || iv || ciphertext || tag
+   a. Check the format version byte and split off the TEE-drawn 12-byte IV
+   b. AES-GCM-decrypt(body, response_aes_key, iv, AAD || version)
+   c. Return plaintext result
 ```
 
 ## Key Generation

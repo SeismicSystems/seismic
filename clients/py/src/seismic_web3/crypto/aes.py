@@ -15,6 +15,46 @@ if TYPE_CHECKING:
     from seismic_web3._types import Bytes32, EncryptionNonce
 
 
+RESPONSE_IV_LENGTH = 12
+"""Length of the IV the TEE prepends to a signed-read response."""
+
+RESPONSE_FORMAT_VERSION = 1
+"""Wire format version prefixing every signed-read response."""
+
+MIN_RESPONSE_LEN = 1 + RESPONSE_IV_LENGTH + 16
+"""Smallest well-formed response: version, IV, and AES-GCM tag over empty plaintext."""
+
+
+def split_response_iv(response: HexBytes) -> tuple[int, HexBytes, HexBytes]:
+    """Split a signed-read response of the form ``version || iv || ciphertext || tag``.
+
+    Args:
+        response: Raw response bytes returned by the node.
+
+    Returns:
+        A ``(version, iv, body)`` triple.
+
+    Raises:
+        ValueError: If the response is too short, or carries an unknown version.
+    """
+    if len(response) < MIN_RESPONSE_LEN:
+        raise ValueError(
+            f"signed-read response is {len(response)} bytes, shorter than the "
+            f"{MIN_RESPONSE_LEN}-byte minimum envelope",
+        )
+    version = response[0]
+    if version != RESPONSE_FORMAT_VERSION:
+        raise ValueError(
+            f"unsupported signed-read response format {version}, "
+            f"expected {RESPONSE_FORMAT_VERSION}",
+        )
+    return (
+        version,
+        HexBytes(bytes(response[1 : 1 + RESPONSE_IV_LENGTH])),
+        HexBytes(bytes(response[1 + RESPONSE_IV_LENGTH :])),
+    )
+
+
 class AesGcmCrypto:
     """AES-256-GCM authenticated encryption / decryption.
 

@@ -88,3 +88,18 @@ def encode_metadata_as_aad(metadata: TxSeismicMetadata) -> bytes:
     ]
 
     return rlp.encode(fields)
+
+
+def encode_response_aad(metadata: TxSeismicMetadata, version: int) -> bytes:
+    """Encode the response AAD: the request AAD with the format version appended.
+
+    Mirrors ``TxSeismicMetadata::encode_response_aad`` in seismic-alloy.
+
+    Args:
+        metadata: Transaction metadata.
+        version: Response wire format version.
+
+    Returns:
+        The request AAD followed by the single version byte.
+    """
+    return encode_metadata_as_aad(metadata) + bytes([version])

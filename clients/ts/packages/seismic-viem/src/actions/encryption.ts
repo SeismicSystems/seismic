@@ -1,7 +1,10 @@
 import { Hex } from 'viem'
 
-import { encodeSeismicMetadataAsAAD } from '@sviem/crypto/aead.ts'
-import { AesGcmCrypto } from '@sviem/crypto/aes.ts'
+import {
+  encodeSeismicMetadataAsAAD,
+  encodeSeismicResponseAAD,
+} from '@sviem/crypto/aead.ts'
+import { AesGcmCrypto, splitResponseIv } from '@sviem/crypto/aes.ts'
 import type { TxSeismicMetadata } from '@sviem/tx/metadata.ts'
 
 export type EncryptionActions = {
@@ -44,13 +47,10 @@ export const encryptionActions = (
       ciphertext: Hex | undefined,
       metadata: TxSeismicMetadata
     ) => {
+      const { version, iv, body } = splitResponseIv(ciphertext ?? '0x')
       const aesCipher = new AesGcmCrypto(responseEncryption)
-      const aad = encodeSeismicMetadataAsAAD(metadata)
-      return await aesCipher.decrypt(
-        ciphertext,
-        metadata.seismicElements.encryptionNonce,
-        aad
-      )
+      const aad = encodeSeismicResponseAAD(metadata, version)
+      return await aesCipher.decrypt(body, iv, aad)
     },
   }
 }

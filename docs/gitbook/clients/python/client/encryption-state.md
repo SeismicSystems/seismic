@@ -99,7 +99,9 @@ assert len(ciphertext) == len(plaintext) + 16
 
 ### decrypt()
 
-Decrypt ciphertext with metadata-bound AAD.
+Decrypt a signed-read response with metadata-bound AAD.
+
+The node draws a fresh IV for every response and prepends it behind a one-byte format version, so the response is `version || iv || ciphertext || tag` and no nonce argument is needed.
 
 #### Signature
 
@@ -107,7 +109,6 @@ Decrypt ciphertext with metadata-bound AAD.
 def decrypt(
     self,
     ciphertext: HexBytes,
-    nonce: EncryptionNonce,
     metadata: TxSeismicMetadata,
 ) -> HexBytes
 ```
@@ -116,8 +117,7 @@ def decrypt(
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `ciphertext` | `HexBytes` | Encrypted data (includes 16-byte auth tag) |
-| `nonce` | [`EncryptionNonce`](../api-reference/types/encryption-nonce.md) | 12-byte AES-GCM nonce |
+| `ciphertext` | `HexBytes` | Response bytes of the form `version \|\| iv \|\| ciphertext \|\| tag` |
 | `metadata` | [`TxSeismicMetadata`](../api-reference/transaction-types/tx-seismic-metadata.md) | Transaction metadata (used to build AAD) |
 
 #### Returns
@@ -128,6 +128,7 @@ def decrypt(
 
 #### Raises
 
+- `ValueError` - If the response is shorter than the 29-byte minimum envelope, or carries an unrecognised format version
 - `cryptography.exceptions.InvalidTag` - If authentication fails (wrong key, tampered data, or mismatched metadata)
 
 #### Example
@@ -140,8 +141,7 @@ encryption = get_encryption(tee_public_key, client_private_key)
 
 try:
     plaintext = encryption.decrypt(
-        ciphertext=encrypted_data,
-        nonce=nonce,
+        ciphertext=encrypted_response,
         metadata=tx_metadata,
     )
     print(f"Decrypted: {plaintext.to_0x_hex()}")
@@ -184,7 +184,7 @@ encryption = get_encryption(tee_pk, client_sk)
 # Build transaction metadata (see TxSeismicMetadata docs)
 metadata = ...  # TxSeismicMetadata for the transaction being encrypted
 
-# Encrypt some data
+# Encrypt calldata for the request
 plaintext = HexBytes("0x1234abcd")
 nonce = os.urandom(12)
 
@@ -194,14 +194,14 @@ ciphertext = encryption.encrypt(
     metadata=metadata,
 )
 
-# Decrypt it back
-decrypted = encryption.decrypt(
-    ciphertext=ciphertext,
-    nonce=nonce,
+# Decrypt the node's signed-read response. `encrypt` and `decrypt` use
+# separate directional keys, so a client cannot round-trip its own data
+# through them -- only the node can produce input for `decrypt`.
+response = ...  # raw bytes returned by eth_call: version || iv || ciphertext || tag
+plaintext_response = encryption.decrypt(
+    ciphertext=response,
     metadata=metadata,
 )
-
-assert decrypted == plaintext
 ```
 
 ### Custom Encryption Key
@@ -227,26 +227,29 @@ encryption = get_encryption(tee_pk, client_sk)
 ```python
 from seismic_web3 import get_encryption, PrivateKey, CompressedPublicKey
 from cryptography.exceptions import InvalidTag
-import os
+from hexbytes import HexBytes
 
 encryption = get_encryption(tee_pk, client_sk)
 
-plaintext = b"Hello, Seismic!"
-nonce = os.urandom(12)
+# `response` is what eth_call returned for a signed read.
+plaintext = encryption.decrypt(response, metadata)
 
-# Encrypt
-ciphertext = encryption.encrypt(plaintext, nonce, metadata)
-
-# Decrypt with correct parameters
-assert encryption.decrypt(ciphertext, nonce, metadata) == plaintext
-
-# Decrypt with wrong nonce - should fail
-wrong_nonce = os.urandom(12)
+# The IV sits behind the version byte and is covered by the GCM tag, so
+# flipping a byte of it fails authentication rather than decoding to garbage.
+tampered = HexBytes(bytes(response[:1]) + bytes([response[1] ^ 0x01]) + bytes(response[2:]))
 try:
-    encryption.decrypt(ciphertext, wrong_nonce, metadata)
+    encryption.decrypt(tampered, metadata)
     assert False, "Should have raised InvalidTag"
 except InvalidTag:
     print("Authentication failed as expected")
+
+# A response that is not a well-formed envelope is rejected before any
+# crypto runs, so a stripped response cannot pass as an empty result.
+try:
+    encryption.decrypt(HexBytes(b""), metadata)
+    assert False, "Should have raised ValueError"
+except ValueError:
+    print("Malformed envelope rejected as expected")
 ```
 
 ## How It Works
@@ -269,7 +272,7 @@ def __post_init__(self) -> None:
 ### Decryption
 
 1. Encode metadata as AAD
-2. Call `AesGcmCrypto.decrypt(ciphertext, nonce, aad)`
+2. Check the format version byte, split off the 12-byte IV, then call `AesGcmCrypto.decrypt(body, iv, aad)` with the version appended to the AAD
 3. Verify authentication tag (raises `InvalidTag` if fails)
 4. Return plaintext
 

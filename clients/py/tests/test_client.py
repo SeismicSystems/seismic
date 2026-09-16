@@ -3,6 +3,7 @@
 import warnings
 from unittest.mock import MagicMock, patch
 
+import pytest
 from hexbytes import HexBytes
 
 from seismic_web3._types import (
@@ -19,10 +20,19 @@ from seismic_web3.client import (
     create_wallet_client,
     get_encryption,
 )
-from seismic_web3.crypto.aes import AesGcmCrypto
+from seismic_web3.crypto.aes import (
+    MIN_RESPONSE_LEN,
+    RESPONSE_FORMAT_VERSION,
+    RESPONSE_IV_LENGTH,
+    AesGcmCrypto,
+    split_response_iv,
+)
 from seismic_web3.crypto.secp import private_key_to_compressed_public_key
 from seismic_web3.module import SeismicPublicNamespace
-from seismic_web3.transaction.aead import encode_metadata_as_aad
+from seismic_web3.transaction.aead import (
+    encode_metadata_as_aad,
+    encode_response_aad,
+)
 from seismic_web3.transaction_types import (
     LegacyFields,
     SeismicElements,
@@ -114,10 +124,72 @@ class TestEncryptionState:
             == request_plaintext
         )
 
+        # The TEE draws its own response IV and prepends it to the ciphertext.
         tee_response_crypto = AesGcmCrypto(state.response_aes_key)
-        encrypted_response = tee_response_crypto.encrypt(response_plaintext, nonce, aad)
-        assert state.decrypt(encrypted_response, nonce, metadata) == response_plaintext
+        response_iv = EncryptionNonce("0x7da3a99bf0f90d56551d99ea")
+        response_aad = encode_response_aad(metadata, RESPONSE_FORMAT_VERSION)
+        encrypted_response = HexBytes(
+            bytes([RESPONSE_FORMAT_VERSION])
+            + bytes(response_iv)
+            + bytes(
+                tee_response_crypto.encrypt(
+                    response_plaintext,
+                    response_iv,
+                    response_aad,
+                ),
+            ),
+        )
+        assert state.decrypt(encrypted_response, metadata) == response_plaintext
         assert encrypted_request != encrypted_response
+
+    def test_decrypt_rejects_response_shorter_than_envelope(self):
+        """A truncated response is rejected before reaching AES-GCM."""
+        state = get_encryption(_NETWORK_PK, _CLIENT_SK)
+        metadata = self._make_metadata()
+
+        truncated = bytes([RESPONSE_FORMAT_VERSION]) + b"\x00" * (MIN_RESPONSE_LEN - 2)
+        with pytest.raises(ValueError, match="shorter than the"):
+            state.decrypt(HexBytes(truncated), metadata)
+
+    def test_decrypt_rejects_unknown_response_version(self):
+        """An unrecognised format version is rejected, not guessed at."""
+        state = get_encryption(_NETWORK_PK, _CLIENT_SK)
+        metadata = self._make_metadata()
+        response = bytes([RESPONSE_FORMAT_VERSION + 1]) + b"\x00" * (
+            RESPONSE_IV_LENGTH + 16
+        )
+
+        with pytest.raises(ValueError, match="unsupported signed-read response format"):
+            state.decrypt(HexBytes(response), metadata)
+
+    def test_decrypt_rejects_empty_response(self):
+        """An intercepted response stripped to nothing must not authenticate."""
+        state = get_encryption(_NETWORK_PK, _CLIENT_SK)
+        metadata = self._make_metadata()
+
+        with pytest.raises(ValueError, match="shorter than the"):
+            state.decrypt(HexBytes(b""), metadata)
+
+    def test_split_response_iv_separates_version_iv_and_body(self):
+        """Version byte, then 12-byte IV, then ciphertext || tag."""
+        iv = bytes(range(RESPONSE_IV_LENGTH))
+        body = b"\xef" * 20
+        raw = bytes([RESPONSE_FORMAT_VERSION]) + iv + body
+
+        version, split_iv, split_body = split_response_iv(HexBytes(raw))
+        assert version == RESPONSE_FORMAT_VERSION
+        assert bytes(split_iv) == iv
+        assert bytes(split_body) == body
+
+    def test_response_aad_binds_the_version(self):
+        """The response AAD is the request AAD plus the version byte."""
+        metadata = self._make_metadata()
+
+        base = encode_metadata_as_aad(metadata)
+        bound = encode_response_aad(metadata, RESPONSE_FORMAT_VERSION)
+
+        assert bound == base + bytes([RESPONSE_FORMAT_VERSION])
+        assert bound != encode_response_aad(metadata, RESPONSE_FORMAT_VERSION + 1)
 
     def test_encrypt_empty_data(self):
         """Encrypting empty data returns empty data."""

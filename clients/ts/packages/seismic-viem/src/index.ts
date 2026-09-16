@@ -102,7 +102,10 @@ export {
 } from '@sviem/explorer.ts'
 
 export { compressPublicKey } from '@sviem/crypto/secp.ts'
-export { encodeSeismicMetadataAsAAD } from '@sviem/crypto/aead.ts'
+export {
+  encodeSeismicMetadataAsAAD,
+  encodeSeismicResponseAAD,
+} from '@sviem/crypto/aead.ts'
 export {
   AesKeyDomain,
   AesGcmCrypto,
@@ -110,6 +113,10 @@ export {
   deriveAesKey,
   sharedKeyFromPoint,
   sharedSecretPoint,
+  splitResponseIv,
+  RESPONSE_IV_LENGTH,
+  RESPONSE_FORMAT_VERSION,
+  MIN_RESPONSE_LENGTH,
 } from '@sviem/crypto/aes.ts'
 export { randomEncryptionNonce } from '@sviem/crypto/nonce.ts'
 export type { EncryptionNonce } from '@sviem/crypto/nonce.ts'

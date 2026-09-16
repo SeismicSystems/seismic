@@ -371,15 +371,14 @@ def _raise_signed_rpc_error(
         try:
             decrypted = encryption.decrypt(
                 HexBytes(data),
-                metadata.seismic_elements.encryption_nonce,
                 metadata,
             )
             raise ContractLogicError(
                 _decode_revert_reason(decrypted), data=decrypted.to_0x_hex()
             )
-        except InvalidTag:
-            # Not ciphertext for our key (e.g. plaintext revert data from an
-            # unfixed node); surface it as-is.
+        except (InvalidTag, ValueError):
+            # Not a response envelope for our key (e.g. plaintext revert data
+            # from an unfixed node); surface it as-is.
             raise ContractLogicError(message, data=data) from None
     raise ContractLogicError(message)
 
@@ -843,14 +842,9 @@ def signed_call(
     # so the exception carries the plaintext revert reason.
     _raise_signed_rpc_error(response, encryption, metadata)
     raw_result: str = response.get("result", "0x")
-
-    if not raw_result or raw_result == "0x":
-        return HexBytes(b"")
-
     result_bytes = HexBytes(raw_result)
     return encryption.decrypt(
         result_bytes,
-        metadata.seismic_elements.encryption_nonce,
         metadata,
     )
 
@@ -907,13 +901,8 @@ async def async_signed_call(
     # so the exception carries the plaintext revert reason.
     _raise_signed_rpc_error(response, encryption, metadata)
     raw_result: str = response.get("result", "0x")
-
-    if not raw_result or raw_result == "0x":
-        return HexBytes(b"")
-
     result_bytes = HexBytes(raw_result)
     return encryption.decrypt(
         result_bytes,
-        metadata.seismic_elements.encryption_nonce,
         metadata,
     )

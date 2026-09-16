@@ -37,3 +37,18 @@ export const encodeSeismicMetadataAsAAD = ({
   ]
   return toRlp(fields as any, 'bytes')
 }
+
+/**
+ * Encodes the response AAD: the request AAD with the response format version appended.
+ * Mirrors TxSeismicMetadata::encode_response_aad in seismic-alloy.
+ */
+export const encodeSeismicResponseAAD = (
+  metadata: TxSeismicMetadata,
+  version: number
+): Uint8Array => {
+  const base = encodeSeismicMetadataAsAAD(metadata)
+  const out = new Uint8Array(base.length + 1)
+  out.set(base)
+  out[base.length] = version
+  return out
+}

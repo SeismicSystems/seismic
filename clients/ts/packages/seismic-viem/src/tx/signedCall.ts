@@ -335,7 +335,6 @@ export async function signedCall<
     }
 
     const response = await doSignedCall(client, seismicTx, { block })
-    if (response === '0x') return { data: undefined }
     const decryptedResponse = await client.decrypt(response, metadata)
     return { data: decryptedResponse }
   } catch (rawErr) {
