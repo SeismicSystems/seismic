@@ -376,9 +376,9 @@ def _raise_signed_rpc_error(
             raise ContractLogicError(
                 _decode_revert_reason(decrypted), data=decrypted.to_0x_hex()
             )
-        except InvalidTag:
-            # Not ciphertext for our key (e.g. plaintext revert data from an
-            # unfixed node); surface it as-is.
+        except (InvalidTag, ValueError):
+            # Not a response envelope for our key (e.g. plaintext revert data
+            # from an unfixed node); surface it as-is.
             raise ContractLogicError(message, data=data) from None
     raise ContractLogicError(message)
 

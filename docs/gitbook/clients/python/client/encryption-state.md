@@ -234,14 +234,22 @@ encryption = get_encryption(tee_pk, client_sk)
 # `response` is what eth_call returned for a signed read.
 plaintext = encryption.decrypt(response, metadata)
 
-# Flipping any byte of the response fails authentication: the prepended
-# IV is covered by the GCM tag, so it cannot be swapped either.
-tampered = HexBytes(bytes([response[0] ^ 0x01]) + bytes(response[1:]))
+# The IV sits behind the version byte and is covered by the GCM tag, so
+# flipping a byte of it fails authentication rather than decoding to garbage.
+tampered = HexBytes(bytes(response[:1]) + bytes([response[1] ^ 0x01]) + bytes(response[2:]))
 try:
     encryption.decrypt(tampered, metadata)
     assert False, "Should have raised InvalidTag"
 except InvalidTag:
     print("Authentication failed as expected")
+
+# A response that is not a well-formed envelope is rejected before any
+# crypto runs, so a stripped response cannot pass as an empty result.
+try:
+    encryption.decrypt(HexBytes(b""), metadata)
+    assert False, "Should have raised ValueError"
+except ValueError:
+    print("Malformed envelope rejected as expected")
 ```
 
 ## How It Works
@@ -257,7 +265,7 @@ def __post_init__(self) -> None:
 
 ### Encryption
 
-1. Encode metadata as AAD, with the response format version appended using [`encode_metadata_as_aad()`](../api-reference/transaction-types/tx-seismic-metadata.md)
+1. Encode metadata as AAD using [`encode_metadata_as_aad()`](../api-reference/transaction-types/tx-seismic-metadata.md)
 2. Call `AesGcmCrypto.encrypt(plaintext, nonce, aad)`
 3. Return ciphertext with 16-byte authentication tag
 

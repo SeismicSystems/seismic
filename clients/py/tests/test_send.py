@@ -2,11 +2,25 @@
 
 from unittest.mock import MagicMock
 
-from seismic_web3._types import CompressedPublicKey, PrivateKey
+import pytest
+from web3.exceptions import ContractLogicError
+
+from seismic_web3._types import (
+    Bytes32,
+    CompressedPublicKey,
+    EncryptionNonce,
+    PrivateKey,
+)
 from seismic_web3.client import get_encryption
 from seismic_web3.transaction.send import (
     _address_from_key,
+    _raise_signed_rpc_error,
     estimate_transparent_gas,
+)
+from seismic_web3.transaction_types import (
+    LegacyFields,
+    SeismicElements,
+    TxSeismicMetadata,
 )
 
 # Anvil account #0
@@ -77,3 +91,44 @@ class TestEstimateTransparentGas:
             "(0x4a) transaction: the node rejects plain signed txs on the "
             "raw-bytes path and strips from/value from unsigned requests"
         )
+
+
+class TestRaiseSignedRpcError:
+    def _metadata(self):
+        return TxSeismicMetadata(
+            sender=ANVIL_ADDRESS,
+            legacy_fields=LegacyFields(
+                chain_id=31337,
+                nonce=0,
+                to="0xd3e8763675e4c425df46cc3b5c0f6cbdac396046",
+                value=0,
+            ),
+            seismic_elements=SeismicElements(
+                encryption_pubkey=_NETWORK_PK,
+                encryption_nonce=EncryptionNonce("0x46a2b6020bba77fcb1e676a6"),
+                message_version=0,
+                recent_block_hash=Bytes32("0x" + "11" * 32),
+                expires_at_block=100,
+                signed_read=False,
+            ),
+        )
+
+    def test_plaintext_revert_data_surfaces_as_contract_logic_error(self):
+        """Revert data that is not a response envelope must not escape as ValueError."""
+        encryption = get_encryption(_NETWORK_PK, _CLIENT_SK)
+        # Error(string) selector: valid revert data, not a signed-read envelope.
+        plaintext_revert = "0x08c379a0" + "00" * 96
+        response = {
+            "error": {"message": "execution reverted", "data": plaintext_revert}
+        }
+
+        with pytest.raises(ContractLogicError):
+            _raise_signed_rpc_error(response, encryption, self._metadata())
+
+    def test_short_revert_data_surfaces_as_contract_logic_error(self):
+        """Revert data shorter than the minimum envelope is also not a ValueError."""
+        encryption = get_encryption(_NETWORK_PK, _CLIENT_SK)
+        response = {"error": {"message": "execution reverted", "data": "0xdeadbeef"}}
+
+        with pytest.raises(ContractLogicError):
+            _raise_signed_rpc_error(response, encryption, self._metadata())
