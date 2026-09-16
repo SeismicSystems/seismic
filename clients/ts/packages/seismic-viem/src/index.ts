@@ -101,6 +101,8 @@ export {
   tokenExplorerUrl,
 } from '@sviem/explorer.ts'
 
+export { encryptionActions } from '@sviem/actions/encryption.ts'
+export type { EncryptionActions } from '@sviem/actions/encryption.ts'
 export { compressPublicKey } from '@sviem/crypto/secp.ts'
 export {
   encodeSeismicMetadataAsAAD,

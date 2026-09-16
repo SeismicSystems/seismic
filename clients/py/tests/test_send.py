@@ -3,6 +3,8 @@
 from unittest.mock import MagicMock
 
 import pytest
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from hexbytes import HexBytes
 from web3.exceptions import ContractLogicError
 
 from seismic_web3._types import (
@@ -12,14 +14,20 @@ from seismic_web3._types import (
     PrivateKey,
 )
 from seismic_web3.client import get_encryption
+from seismic_web3.crypto.aes import RESPONSE_FORMAT_VERSION
+from seismic_web3.transaction.aead import encode_response_aad
+from seismic_web3.transaction.metadata import build_metadata
 from seismic_web3.transaction.send import (
     _address_from_key,
+    _build_metadata_params,
     _raise_signed_rpc_error,
     estimate_transparent_gas,
+    signed_call,
 )
 from seismic_web3.transaction_types import (
     LegacyFields,
     SeismicElements,
+    SeismicSecurityParams,
     TxSeismicMetadata,
 )
 
@@ -132,3 +140,79 @@ class TestRaiseSignedRpcError:
 
         with pytest.raises(ContractLogicError):
             _raise_signed_rpc_error(response, encryption, self._metadata())
+
+
+def _mock_w3(result: str) -> MagicMock:
+    """A Web3 double whose eth_call returns ``result`` verbatim."""
+    w3 = MagicMock()
+    w3.eth.chain_id = 31337
+    w3.eth.gas_price = 1_000_000_000
+    w3.eth.get_transaction_count.return_value = 0
+    w3.eth.get_block.return_value = {"number": 10, "hash": HexBytes(b"\x11" * 32)}
+    w3.provider.make_request.return_value = {"result": result}
+    return w3
+
+
+class TestSignedCallRejectsBareResults:
+    """The caller must not short-circuit a `0x` result ahead of decryption.
+
+    Guards the layer the SEI-369 truncation bug actually lived at: a bare `0x`
+    reaching the caller must fail, not decode as an authenticated empty result.
+    """
+
+    def _encryption(self):
+        return get_encryption(_NETWORK_PK, _CLIENT_SK)
+
+    def test_bare_0x_result_is_rejected(self):
+        encryption = self._encryption()
+        w3 = _mock_w3("0x")
+
+        with pytest.raises(ValueError, match="shorter than the"):
+            signed_call(
+                w3,
+                encryption=encryption,
+                private_key=ANVIL_PK,
+                to=ANVIL_ADDRESS,
+                data=HexBytes(b""),
+            )
+
+    def test_valid_empty_envelope_returns_empty_plaintext(self):
+        encryption = self._encryption()
+        w3 = _mock_w3("0x")
+        # Pin every randomised field so the envelope below binds the same AAD
+        # that signed_call rebuilds internally.
+        security = SeismicSecurityParams(
+            encryption_nonce=EncryptionNonce(b"\x2a" * 12),
+            recent_block_hash=Bytes32(b"\x11" * 32),
+            expires_at_block=110,
+        )
+
+        params = _build_metadata_params(
+            ANVIL_PK,
+            encryption,
+            ANVIL_ADDRESS,
+            0,
+            security,
+            signed_read=True,
+            eip712=False,
+        )
+        metadata = build_metadata(w3, params)
+        iv = b"\x07" * 12
+        aad = encode_response_aad(metadata, RESPONSE_FORMAT_VERSION)
+        # The wrapper short-circuits empty plaintext, so go to the primitive:
+        # the node always produces a real tag here.
+        tag = AESGCM(bytes(encryption.response_aes_key)).encrypt(iv, b"", aad)
+        envelope = bytes([RESPONSE_FORMAT_VERSION]) + iv + tag
+        w3.provider.make_request.return_value = {
+            "result": HexBytes(envelope).to_0x_hex()
+        }
+
+        out = signed_call(
+            w3,
+            encryption=encryption,
+            private_key=ANVIL_PK,
+            to=ANVIL_ADDRESS,
+            data=HexBytes(b""),
+            security=security,
+        )
+        assert bytes(out) == b""

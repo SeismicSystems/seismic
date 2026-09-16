@@ -19,6 +19,8 @@ import {
   testTxExplorerUrlWithTab,
 } from '@sviem-tests/tests/explorerUrl.ts'
 import {
+  testDecryptRejectsBareZeroX,
+  testDecryptRejectsUndefinedResponse,
   testSplitResponseIvAcceptsTagOnlyBody,
   testSplitResponseIvRejectsEmptyResponse,
   testSplitResponseIvRejectsShortResponse,
@@ -169,5 +171,11 @@ describe('signed-read response IV', () => {
   })
   test('rejects an unknown format version', () => {
     testSplitResponseIvRejectsUnknownVersion()
+  })
+  test('the decrypt action rejects a bare 0x result', async () => {
+    await testDecryptRejectsBareZeroX()
+  })
+  test('the decrypt action rejects an undefined result', async () => {
+    await testDecryptRejectsUndefinedResponse()
   })
 })
