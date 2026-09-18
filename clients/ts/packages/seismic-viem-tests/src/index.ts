@@ -136,7 +136,9 @@ export { testRngDifferentPersProducesDifferentResults } from '@sviem-tests/tests
 
 export {
   testSignedCallDirect,
+  testSignedCallWithExplicitNonce,
   testSignedCallWithSecurityParams,
+  testSignedCallWithValue,
 } from '@sviem-tests/tests/signedCallDirect.ts'
 
 export {
