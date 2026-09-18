@@ -17,8 +17,8 @@ reference, and the network-founding design.
 ## Install
 
 ```bash
-# The newest release. SEISMIC_TEE_VERSION=main for the tip of main,
-# =vX.Y.Z or =main-<sha> for one build. Installs to ~/.local/bin.
+# The newest release, into ~/.local/bin. `sh -s -- --version main` for the
+# tip of main, `--help` for every option; afterwards `seismic-tee --upgrade`.
 curl -fsSL https://raw.githubusercontent.com/SeismicSystems/seismic/main/tee/cli/install.sh | sh
 seismic-tee --version
 seismic-tee --help

@@ -22,20 +22,21 @@
 # the repo hosts other components too, so "Latest" is never consulted — the
 # newest release under the prefix is.
 #
-# Options, as flags or environment variables:
+# Options go after `sh -s --`, or in environment variables; `--help` lists
+# them:
 #
-#   --version <V>   SEISMIC_TEE_VERSION      X.Y.Z or vX.Y.Z (a release),
-#                                            main-<sha> (a prerelease), or
-#                                            main (the newest prerelease).
-#                                            Default: the newest release.
-#   --to <DIR>      SEISMIC_TEE_INSTALL_DIR  Default: ~/.local/bin
-#                   SEISMIC_TEE_REPO         Default: SeismicSystems/seismic
+#   curl -fsSL .../install.sh | sh -s -- --version main --to ~/bin
+#
+# This script is for the first install. The binary it installs replaces
+# itself afterwards — `seismic-tee --upgrade [VERSION]` fetches this script
+# and runs it — so there is no separate updater to keep around.
 #
 # Prebuilt for linux_amd64, linux_arm64 and darwin_arm64; anything else is
 # told to build from source. POSIX sh: nothing here needs bash.
 set -eu
 
 REPO=${SEISMIC_TEE_REPO:-SeismicSystems/seismic}
+INSTALLER_URL=https://raw.githubusercontent.com/$REPO/main/tee/cli/install.sh
 VERSION=${SEISMIC_TEE_VERSION:-}
 INSTALL_DIR=${SEISMIC_TEE_INSTALL_DIR:-$HOME/.local/bin}
 PREFIX=seismic-tee/
@@ -58,9 +59,43 @@ fail() {
     say "${red}error:${plain} $*"
     exit 1
 }
+# The full help on stdout for --help; the one-line form on stderr, ahead of
+# the error, for a bad option.
 usage() {
-    say "usage: install.sh [--version X.Y.Z|vX.Y.Z|main-<sha>|main] [--to DIR] [--no-color]"
-    say "  SEISMIC_TEE_VERSION, SEISMIC_TEE_INSTALL_DIR and SEISMIC_TEE_REPO set the same."
+    say "usage: install.sh [--version VERSION] [--to DIR] [--no-color]; --help for more"
+}
+help() {
+    cat <<EOF
+Installs a prebuilt seismic-tee, the Seismic TEE deploy CLI, from the GitHub
+releases of $REPO.
+
+usage: curl -fsSL $INSTALLER_URL | sh -s -- [OPTIONS]
+
+options:
+  --version VERSION  Which build. Default: the newest release.
+                       X.Y.Z, vX.Y.Z  a release
+                       main           the newest build of main
+                       main-<sha>     one build of main, by its full commit
+  --to DIR           Where the binary goes. Default: ~/.local/bin
+  --no-color         Plain messages.
+  -h, --help         This text.
+
+environment:
+  SEISMIC_TEE_VERSION, SEISMIC_TEE_INSTALL_DIR  the same as the two options
+  SEISMIC_TEE_REPO                              another <owner>/<repo>
+  GH_TOKEN or GITHUB_TOKEN                      sent to api.github.com only,
+                                                for its rate limit
+
+examples:
+  curl -fsSL $INSTALLER_URL | sh
+  curl -fsSL $INSTALLER_URL | sh -s -- --version main
+  curl -fsSL $INSTALLER_URL | sh -s -- --version v0.1.0 --to /opt/seismic/bin
+
+Every download is checked against the release's SHA256SUMS, and the binary's
+build provenance against GitHub's attestation when gh is installed and logged
+in. Once installed, the binary upgrades (or downgrades) itself:
+seismic-tee --upgrade [VERSION], with VERSION as above.
+EOF
 }
 
 while [ $# -gt 0 ]; do
@@ -83,7 +118,7 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         -h | --help)
-            usage
+            help
             exit 0
             ;;
         *)
@@ -107,6 +142,11 @@ case $arch in
     aarch64 | arm64) arch=arm64 ;;
     *) fail "unsupported architecture: $arch" ;;
 esac
+# A shell under Rosetta reports x86_64 on an Apple Silicon Mac; the native
+# build is the one to install there. Only macOS has the sysctl.
+if [ "$os" = darwin ] && [ "$arch" = amd64 ] && [ "$(sysctl -n sysctl.proc_translated 2> /dev/null)" = 1 ]; then
+    arch=arm64
+fi
 platform=${os}_${arch}
 case $platform in
     linux_amd64 | linux_arm64 | darwin_arm64) ;;
@@ -207,3 +247,4 @@ case ":$PATH:" in
     *":$INSTALL_DIR:"*) ;;
     *) say "note: $INSTALL_DIR is not on your PATH; add it: export PATH=\"$INSTALL_DIR:\$PATH\"" ;;
 esac
+say "from here on, $BIN --upgrade [VERSION] replaces this binary: no VERSION for the newest release, main for the tip of main, vX.Y.Z or main-<sha> for one build"

@@ -104,6 +104,17 @@ const VERSION: &str = concat!(
                   the auditor's verify-founding at the top level.\n\n\
                   Never provisions: every command starts at the node descriptors the Pulumi \
                   program produces, or at a network directory.",
+    // clap 4 dropped the `<name> <version>` line clap 2 and 3 opened help
+    // with; this is that line back, and the rest of the template is clap's
+    // default. A binary that replaces itself with `--upgrade` is a binary
+    // whose help should say which one it is — help pasted into a bug report
+    // carries the build commit with it.
+    help_template = "\
+{name} {version}
+{about-with-newline}
+{usage-heading} {usage}
+
+{all-args}{after-help}",
     // The listing is the parties; `--help` is the one way to ask for it.
     disable_help_subcommand = true,
     // `--completions` stands alone, and nothing at all prints this help.
