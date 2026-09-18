@@ -42,6 +42,8 @@ import {
 } from '@sviem-tests/tests/faucet.ts'
 import {
   testAesGcm,
+  testAesGcmKeepsLeadingNulPlaintextByte,
+  testAesGcmKeepsLeadingZeroCiphertextByte,
   testEcdh,
   testHkdfHex,
   testHkdfString,
@@ -403,6 +405,16 @@ describe('Seismic Precompiles', () => {
   test('AES-GCM', async () => testAesGcm({ chain, url }), {
     timeout: TIMEOUT_MS,
   })
+  test(
+    'AES-GCM keeps a leading zero ciphertext byte',
+    async () => testAesGcmKeepsLeadingZeroCiphertextByte({ chain, url }),
+    { timeout: TIMEOUT_MS }
+  )
+  test(
+    'AES-GCM keeps leading NUL plaintext bytes',
+    async () => testAesGcmKeepsLeadingNulPlaintextByte({ chain, url }),
+    { timeout: TIMEOUT_MS }
+  )
   test('secp256k1', async () => testSecp256k1({ chain, url }), {
     timeout: TIMEOUT_MS,
   })

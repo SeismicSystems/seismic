@@ -46,6 +46,8 @@ export {
 } from '@sviem-tests/tests/typedData.ts'
 export {
   testAesGcm,
+  testAesGcmKeepsLeadingNulPlaintextByte,
+  testAesGcmKeepsLeadingZeroCiphertextByte,
   testEcdh,
   testHkdfHex,
   testHkdfString,
