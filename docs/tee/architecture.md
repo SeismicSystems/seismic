@@ -84,8 +84,8 @@ that ships them, in the
 
 One port is the whole public API surface, and one more is peer-facing. The rest
 is either loopback or restricted to the operator's own address range by the
-node's cloud firewall rules
-([the port table](https://github.com/SeismicSystems/deploy/blob/main/tee/pulumi/seismic_node/__main__.py)).
+node's cloud firewall rules (the port table below; cloud firewall wiring
+lives in private deploy tooling).
 
 | Port | Source | What answers |
 | --- | --- | --- |

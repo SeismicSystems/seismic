@@ -48,7 +48,9 @@ Detailed storage projections will be published after mainnet launch.
 
 <summary>How do I run a testnet node?</summary>
 
-See the [deploy](https://github.com/SeismicSystems/deploy) repo for current instructions. Note that the deployment process is actively changing — we plan to publish detailed documentation once it has stabilized.
+See private deploy tooling for current instructions. Note that the deployment
+process is actively changing — we plan to publish detailed documentation once
+it has stabilized.
 
 </details>
 
