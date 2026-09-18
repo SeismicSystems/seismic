@@ -29,16 +29,22 @@ configuration.
 | Deposit contract | `0x00000000219ab540356cBB839Cbe05303d7705Fa` | Accepts validator deposits and maintains the deposit Merkle tree |
 | Protocol parameters | `0x0000000000000000000000000000506172616D73` | Stores owner-managed protocol configuration |
 | Shielded delegation account | `0x0000000000000000000000000000000000002001` | Experimental EIP-7702 delegation implementation with shielded session keys |
-| UpgradeOperator | `0x1000000000000000000000000000000000000001` | Stores TEE measurements permitted to participate in the network |
-| MultisigUpgradeOperator | `0x1000000000000000000000000000000000000002` | Authorizes changes to UpgradeOperator |
+| MeasurementRegistry | `0x1000000000000000000000000000000000000001` | Admission status of TEE measurement IDs; nodes consult `isAccepted(id)` when admitting a peer |
+| Measurement authority | `0x1000000000000000000000000000000000000002` | The only caller allowed to update the registry (`MeasurementAuthorityDev` on dev networks; a governance component on production networks) |
 | Directory | `0x1000000000000000000000000000000000000004` | Stores account viewing keys used by SRC20 encrypted events |
 | Intelligence | `0x1000000000000000000000000000000000000005` | Manages intelligence providers and encrypts data to their registered keys |
 | Operations sentinel | `0x1000000000000000000000000000000000000006` | Reserved target for node operations authorization messages; not an application contract |
 
-`UpgradeOperator` and `MultisigUpgradeOperator` are intended for TEE
-measurement admission. Despite their names, they do not upgrade contract
-bytecode. They are deployed at their fixed addresses but are not currently
-used by the network.
+`MeasurementRegistry` and its authority are what the genesis manifest installs
+at `0x1000…0001` and `0x1000…0002` today. See
+[chain-backed admission](https://github.com/SeismicSystems/seismic/blob/main/docs/tee/chain-backed-admission.md)
+and the [network manifest](https://github.com/SeismicSystems/seismic/blob/main/docs/tee/network-manifest.md)
+for how the registry is used.
+
+The public testnet genesis predates the registry: at those two addresses it
+still carries `UpgradeOperator` and `MultisigUpgradeOperator`, an earlier
+measurement store and its 2-of-3 multisig. Despite their names they do not
+upgrade contract bytecode, and they are not used by the network.
 
 The public testnet genesis still contains the deprecated AES Solidity library
 at `0x1000000000000000000000000000000000000003`. It is not an AES precompile.
