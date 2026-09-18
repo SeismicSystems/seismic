@@ -22,11 +22,13 @@ The compiler rejects this because event data is written to public logs, and shie
 
 Use Seismic's AES-GCM precompiles to encrypt the sensitive data before emitting it. The event carries opaque bytes that only the intended recipient can decrypt.
 
-The modified event signature uses `bytes` instead of `uint256` for the amount:
+The modified event signature uses `bytes` for the encrypted amount and an indexed `encryptKeyHash` so listeners can filter which ciphertext belongs to which key — matching the deployed [`SRC20`](https://github.com/SeismicSystems/seismic/blob/main/contracts/src/seismic-std-lib/SRC20.sol) event:
 
 ```solidity
-event Transfer(address indexed from, address indexed to, bytes encryptedAmount);
+event Transfer(address indexed from, address indexed to, bytes32 indexed encryptKeyHash, bytes encryptedAmount);
 ```
+
+`topic0` for this signature is `keccak256("Transfer(address,address,bytes32,bytes)")` = `0x80ffa007a69623ef13594f5e8178eee6c4ef2d0cba74c08329e879f695b7d3f6`. Filtering with the older three-argument form (`Transfer(address,address,bytes)`) yields a different topic and returns no logs.
 
 The `from` and `to` addresses remain as `indexed` parameters. These are public -- observers can see who is transacting with whom. Only the amount is encrypted. If you need to hide the participants as well, you can encrypt those too, but that is less common for a token.
 
@@ -142,8 +144,9 @@ function _emitEncryptedTransfer(
     bytes memory plaintext = abi.encode(uint256(amount));
     bytes memory encryptedAmount = _encrypt(encKey, nonce, plaintext);
 
-    // Emit with encrypted data
-    emit Transfer(from, to, encryptedAmount);
+    // Emit with encrypted data and the key hash used to derive the ciphertext
+    bytes32 encryptKeyHash = bytes32(encKey);
+    emit Transfer(from, to, encryptKeyHash, encryptedAmount);
 }
 ```
 
@@ -169,8 +172,8 @@ function transfer(address to, suint256 amount) public returns (bool) {
     if (recipientPubKey.length > 0) {
         _emitEncryptedTransfer(msg.sender, to, amount, recipientPubKey);
     } else {
-        // Fallback: emit with zero if recipient has no registered key
-        emit Transfer(msg.sender, to, bytes(""));
+        // Fallback: emit with zero hash and empty data if recipient has no registered key
+        emit Transfer(msg.sender, to, bytes32(0), bytes(""));
     }
 
     return true;
