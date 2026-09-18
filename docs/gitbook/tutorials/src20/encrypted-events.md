@@ -189,7 +189,7 @@ The recipient can decrypt the event data by performing the reverse of the encryp
 1. Take the contract's public key (stored on-chain and readable by anyone).
 2. Combine it with their own private key using ECDH to derive the same shared secret.
 3. Run HKDF with the same context string (`"src20-transfer-event"`) to derive the same encryption key.
-4. Decrypt the `encryptedAmount` from the event log using AES-GCM Decrypt.
+4. Select the log whose indexed `encryptKeyHash` matches your derived key hash, then decrypt the `encryptedAmount` with AES-GCM Decrypt.
 
 Decrypt events client-side using the ECDH shared secret and AES-GCM decryption. See the [seismic-viem precompiles documentation](../../clients/typescript/viem/precompiles.md) for the cryptographic primitives.
 
