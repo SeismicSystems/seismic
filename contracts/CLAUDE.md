@@ -50,11 +50,8 @@ sforge build --via-ir --unsafe-via-ir
 ## Test
 
 ```bash
-# All tests (74 pass, 1 known failure — see Troubleshooting)
+# All tests (212 pass across 18 suites)
 sforge test -vv
-
-# Skip the known-failing Intelligence test
-sforge test -vv --match-contract 'Directory|ProtocolParams|DepositContract|ShieldedDelegation'
 
 # Single test suite
 sforge test -vv --match-contract DepositContractTest
@@ -68,13 +65,10 @@ sforge test -vvvv --match-contract IntelligenceTest
 
 ### Test suites
 
-| Suite                             | Tests           | Status                                                           |
-| --------------------------------- | --------------- | ---------------------------------------------------------------- |
-| `DepositContract.t.sol`           | 26 (incl. fuzz) | Pass                                                             |
-| `ProtocolParams.t.sol`            | 34 (incl. fuzz) | Pass                                                             |
-| `ShieldedDelegationAccount.t.sol` | 12              | Pass                                                             |
-| `Directory.t.sol`                 | 2               | Pass                                                             |
-| `Intelligence.t.sol`              | 1 (setUp)       | **Fail** — requires Directory at genesis address `0x1000...0004` |
+One `*.t.sol` per contract under `test/`, plus regression suites for audit
+findings (`DirectoryNonceReuse.t.sol`, `IntelligenceZeroKeyLeak.t.sol`).
+Tests that need the genesis predeploys (`Directory`, `Intelligence`) install
+them with `deployCodeTo` at their fixed addresses.
 
 ## Scripts
 
@@ -95,21 +89,21 @@ src/
   intelligence/          Provider encryption management
     Intelligence.sol       Encrypts data to a list of providers via Directory
     IIntelligence.sol
-  enclave/               Enclave upgrade governance
-    UpgradeOperator.sol    Manages enclave defining attributes (MRTD, PCR registers)
+  enclave/               TEE measurement admission
+    MeasurementRegistry.sol       Admission status of compiled measurement IDs (genesis predeploy)
+    MeasurementAuthorityDev.sol   Dev-only single-owner authority for MeasurementRegistry
+    UpgradeOperator.sol           Legacy measurement store (not used by the network)
     MultisigUpgradeOperator.sol   2-of-3 multisig wrapper for UpgradeOperator
+  examples/              SeismicCounter, TransparentCounter, WrappedNativeTokenSrc20
   seismic-std-lib/       Seismic standard library (reusable contracts)
     ProtocolParams.sol     Owner-managed key-value parameter store (IDs 0-255)
     DepositContract.sol    Eth2-style validator deposit contract (Merkle tree, SHA-256)
-    session-keys/
-      ShieldedDelegationAccount.sol   EIP-7702 delegation with session keys (P256/WebAuthn/Secp256k1)
-      interfaces/IShieldedDelegationAccount.sol
-    utils/
-      EIP7702Utils.sol     Signature verification for multiple key types
-      MultiSend.sol        Batch call execution (from Safe)
-      SRC20.sol            Privacy-preserving ERC20 with shielded balances
-      TestToken.sol        Simple test token extending SRC20
-      precompiles/CryptoUtils.sol   RNG (0x64), AES encrypt (0x66), AES decrypt (0x67) precompile wrappers
+    SRC20.sol              Privacy-preserving ERC20 with shielded balances
+    SRC20Token.sol         Concrete SRC20 deployed by SRC20Factory.sol
+    SRC20Multicall.sol     Batch signed balance reads
+    ShieldedDelegationAccount.sol   EIP-7702 delegation with session keys (P256/WebAuthn/Secp256k1)
+    interfaces/            IDirectory, IIntelligence, ISRC20, IShieldedDelegationAccount
+    utils/precompiles/CryptoUtils.sol   RNG (0x64), AES encrypt (0x66), AES decrypt (0x67), HKDF (0x68) wrappers
 lib/
   forge-std/             Foundry test framework (submodule)
   openzeppelin-contracts/  OpenZeppelin v5.4.0 (submodule)
@@ -154,7 +148,6 @@ Managed as git submodules in `lib/` plus import remappings in `foundry.toml`:
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `forge: command not found`                                                     | Use `sforge` (at `~/.seismic/bin/sforge`), not `forge`. This is Seismic's Foundry fork.                                                                                                                                                                                         |
 | `Warning (3805): pre-release compiler version`                                 | Expected. Seismic's ssolc compiler is a pre-release fork. Safe to ignore.                                                                                                                                                                                                       |
-| `Intelligence.t.sol` setUp fails: `call to non-contract address 0x1000...0004` | Known issue. The Intelligence contract calls Directory at a hardcoded genesis address that doesn't exist in the test EVM. Requires Seismic-specific test environment or mocking. Skip with `--match-contract 'Directory\|ProtocolParams\|DepositContract\|ShieldedDelegation'`. |
 | Submodules empty (`lib/forge-std/` has no files)                               | Run `git submodule update --init --recursive`.                                                                                                                                                                                                                                  |
 | `sforge build` recompiles everything                                           | Normal on first build (45 files). Subsequent builds are incremental.                                                                                                                                                                                                            |
 | Artifact sync fails: `not found in out/`                                       | Run `sforge build` before `bash script/sync-artifacts.sh`, or just run the script (it builds first).                                                                                                                                                                            |
