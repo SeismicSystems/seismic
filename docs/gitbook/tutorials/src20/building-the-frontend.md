@@ -71,7 +71,7 @@ import { src20Abi } from "./abi";
 const SRC20_ADDRESS = "0x1234..."; // Your deployed contract address
 
 function useToken() {
-  const contract = useShieldedContract({
+  const { contract } = useShieldedContract({
     address: SRC20_ADDRESS,
     abi: src20Abi,
   });
@@ -136,15 +136,16 @@ function TransferForm() {
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
 
-  const { writeContract, isLoading, error, hash } = useShieldedWriteContract();
+  // Write config is passed at hook init — writeContract() takes no wagmi-style args.
+  const { writeContract, isLoading, error, hash } = useShieldedWriteContract({
+    address: SRC20_ADDRESS,
+    abi: src20Abi,
+    functionName: 'transfer',
+    args: [recipient as `0x${string}`, parseEther(amount || '0')],
+  });
 
   const handleTransfer = () => {
-    writeContract({
-      address: SRC20_ADDRESS,
-      abi: src20Abi,
-      functionName: 'transfer',
-      args: [recipient, parseEther(amount)],
-    });
+    writeContract();
   };
 
   return (
