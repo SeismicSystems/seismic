@@ -29,7 +29,7 @@ All repos live as siblings under the parent directory. Open `seismic/workspace/s
 ```
 seismic/                          # parent directory
 ├── CLAUDE.md                     # symlink -> seismic/workspace/CLAUDE.workspace.md
-├── seismic/                      # monorepo: docs, Solidity contracts, TS/Python clients, workspace config
+├── seismic/                      # monorepo: docs, Solidity contracts, TS/Python clients, seismic-tee CLI, workspace config
 ├── seismic-reth/                 # execution client (fork of reth)
 ├── summit/                       # consensus client
 ├── seismic-evm/                  # block execution layer (fork of alloy-evm)
@@ -43,7 +43,7 @@ seismic/                          # parent directory
 ├── seismic-compilers/            # compiler integration for sforge (fork of foundry-compilers)
 ├── enclave/                      # TEE enclave server and contracts
 ├── seismic-images/               # TDX confidential VM images (fork of flashbots-images)
-├── deploy/                       # network deployment tooling (Pulumi + tee CLIs)
+├── deploy/                       # network provisioning (Pulumi programs, devnet runbook)
 ├── seismic-solidity/             # Solidity compiler with shielded types (fork of solidity)
 ```
 

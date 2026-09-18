@@ -6,8 +6,9 @@
 # identity.
 */nodes/
 
-# Throwaway foundings (see tee/docs/runbook-devnet.md): the whole directory is
-# ignored, so a scratch cohort can be founded, torn down, and deleted
-# without touching git. A network that matters gets an unprefixed
+# Throwaway foundings (the recipe is the devnet runbook,
+# https://github.com/SeismicSystems/deploy/blob/main/tee/docs/runbook-devnet.md):
+# the whole directory is ignored, so a scratch cohort can be founded, torn
+# down, and deleted without touching git. A network that matters gets an unprefixed
 # directory — its identity is committed.
 tmp-*/

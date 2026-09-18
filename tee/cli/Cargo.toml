@@ -8,9 +8,6 @@
 # it comes from the Pulumi program and the cohort helper beside it, for one
 # node or N.
 #
-# The workspace is scoped to this directory rather than the repo root: deploy
-# is a multi-purpose repo and this is one subsystem in it.
-#
 # Five library crates, split by who may depend on whom, and one binary that
 # mounts them. The split is a rule the compiler enforces:
 #
@@ -48,7 +45,7 @@ members = [
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-repository = "https://github.com/SeismicSystems/deploy"
+repository = "https://github.com/SeismicSystems/seismic"
 authors = ["Seismic Systems"]
 
 [workspace.dependencies]
@@ -61,7 +58,7 @@ seismic-tee-admission = { path = "admission" }
 # Enclave libraries, pinned by rev — the same mechanism seismic-reth uses for
 # seismic-crypto. Every rule the network's identity depends on has exactly one
 # implementation, and linking it rather than reimplementing it is what keeps
-# deploy's answer and a node's answer the same answer.
+# the CLI's answer and a node's answer the same answer.
 seismic-network-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
 seismic-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
 seismic-measurement-admission = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }

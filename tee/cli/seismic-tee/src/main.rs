@@ -73,10 +73,10 @@ const COMPLETE_VAR: &str = "COMPLETE";
 
 /// The repository the releases are cut from, `<owner>/<repo>`. The same
 /// default the installer carries; `--upgrade` fetches the installer from here.
-const REPO: &str = "SeismicSystems/deploy";
+const REPO: &str = "SeismicSystems/seismic";
 
 /// The installer's path in [`REPO`], on the default branch.
-const INSTALLER_PATH: &str = "tee/install.sh";
+const INSTALLER_PATH: &str = "tee/cli/install.sh";
 
 /// What `--version` prints after the name: the crate version, then the
 /// commit the binary was built from, stamped by `build.rs` — `-dirty` when
@@ -153,8 +153,7 @@ struct Cli {
                      command.\n\n\
                      Fetches and runs this repository's installer, which checks the download \
                      against the release's SHA256SUMS and, through `gh`, the binary's build \
-                     provenance attestation. While the repository is private that fetch needs \
-                     `gh`, logged in."
+                     provenance attestation, when `gh` is installed and logged in."
     )]
     upgrade: Option<Option<String>>,
 
@@ -314,42 +313,19 @@ fn run_upgrade(version: Option<String>) -> anyhow::Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-/// The installer's source, over `gh` when it is there and logged in — which
-/// is what reads a private repository — and over plain curl otherwise, for
-/// the day the repository is public. The installer makes the same choice for
-/// the release assets themselves.
+/// The installer's source, over curl from the default branch — the same
+/// fetch its one-liner makes. The installer needs curl anyway, and the
+/// binary's build provenance check inside it is the one step that wants `gh`.
 fn fetch_installer() -> anyhow::Result<Vec<u8>> {
-    let logged_in = Process::new("gh")
-        .args(["auth", "status"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .is_ok_and(|status| status.success());
-
-    if logged_in {
-        let out = Process::new("gh")
-            .args(["api", "-H", "Accept: application/vnd.github.raw"])
-            .arg(format!("repos/{REPO}/contents/{INSTALLER_PATH}"))
-            .output()
-            .context("running gh to fetch the installer")?;
-        if !out.status.success() {
-            bail!(
-                "gh could not fetch {INSTALLER_PATH} from {REPO}: {}",
-                String::from_utf8_lossy(&out.stderr).trim()
-            );
-        }
-        return Ok(out.stdout);
-    }
-
     let url = format!("https://raw.githubusercontent.com/{REPO}/main/{INSTALLER_PATH}");
     let out = Process::new("curl")
         .args(["-fsSL", &url])
         .output()
-        .context("running curl to fetch the installer (it needs curl, or gh logged in)")?;
+        .context("running curl to fetch the installer")?;
     if !out.status.success() {
         bail!(
-            "could not fetch the installer from {url} — while the repository is private this \
-             needs gh: log in with `gh auth login` and re-run"
+            "could not fetch the installer from {url}: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
         );
     }
     Ok(out.stdout)

@@ -78,7 +78,7 @@ which is why it stays gitignored.
 Throwaway foundings go in a `tmp-*` directory instead — those are
 gitignored wholesale, so a scratch cohort can be founded, torn down, and
 `rm -rf`'d without touching git (the copy-pasteable recipe is
-[../docs/runbook-devnet.md](../docs/runbook-devnet.md)). If a throwaway
+[the devnet runbook](https://github.com/SeismicSystems/deploy/blob/main/tee/docs/runbook-devnet.md)). If a throwaway
 turns out to matter, renaming the directory is enough to commit it —
 `network_id` is minted from the manifest bytes, not the path — but the
 manifest keeps the `tmp-*` name it was assembled under (the name is part
@@ -103,9 +103,9 @@ every committed directory that carries an archive
 (`tee/cli/network/tests/replay.rs`), so a change to the verifier, the
 record schema, or the policy or manifest schema in the pinned enclave
 crates goes red on the PR that bumps the pin, against quotes a real TDX
-cohort produced, rather than at the next founding. `make test-drift`
-adds the gates that need `seismic-reth` and the sibling repos' current
-state.
+cohort produced, rather than at the next founding. `make -C tee/cli
+drift` adds the gates that need `seismic-reth` and the sibling repos'
+current state.
 
 **Not a network anyone runs.** The cohort was torn down the day it was
 founded, and nothing can be brought up from its identity: the keys the

@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use seismic_tee_common::NetworkDir;
 use seismic_tee_common::network_dir::MANIFEST_FILENAME;
 
-/// The deploy repo root: this crate is `tee/cli/network/`.
+/// The repo root: this crate is `tee/cli/network/`.
 pub fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .ancestors()

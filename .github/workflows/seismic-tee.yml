@@ -1,0 +1,109 @@
+# Checks the Rust deploy CLI under tee/cli: its own Cargo workspace, with its
+# own Makefile, pinned toolchain and lockfile, so nothing here reaches the rest
+# of the monorepo. Path-filtered like the other component workflows.
+#
+# Two jobs build the workspace. `check` is the required one and is hermetic:
+# fmt, clippy, and the test suite, which replays the committed founding
+# archive (tee/networks/fixture-devnet) through the pinned enclave verifier,
+# so a pin bump that judges those quotes differently goes red here. `drift`
+# runs the guards that reach outside the repo — the network's published
+# inputs, `seismic-reth genesis-hash` — and is not required, since the world
+# it checks against moves without a commit here.
+name: seismic-tee
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tee/**"
+      - ".github/workflows/seismic-tee.yml"
+      - ".github/actions/setup-sreth/**"
+  pull_request:
+    paths:
+      - "tee/**"
+      - ".github/workflows/seismic-tee.yml"
+      - ".github/actions/setup-sreth/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+
+      # rust-toolchain.toml pins the build/clippy/test toolchain, and rustup
+      # installs it on first use; nightly is here only to format with. Both are
+      # installed by hand rather than by dtolnay/rust-toolchain, which would
+      # make whichever it installed last the default — and the default is what
+      # rust-cache reads below.
+      - name: Install toolchains
+        working-directory: tee/cli
+        run: |
+          # Installs the pin and prints "<pin> (overridden by .../rust-toolchain.toml)".
+          rustup default "$(rustup show active-toolchain | head -1 | cut -d' ' -f1)"
+          rustup toolchain install nightly --profile minimal --component rustfmt
+
+      # `workspaces`: the Cargo workspace is under tee/cli, not at the repo
+      # root, so the cache action has to be told where the lockfile is. It has
+      # no such input for its own working directory, though, and it derives part
+      # of the key by running `rustc -vV` — at the repo root, where
+      # rust-toolchain.toml does not apply. Hence the `rustup default` above:
+      # without it the key carries today's nightly version and rotates daily,
+      # and the cache never hits.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tee/cli
+      - uses: taiki-e/install-action@nextest
+
+      # Fails unless Cargo.lock already agrees with Cargo.toml, so CI builds the
+      # committed resolution and the pinned enclave rev cannot drift. Ordered
+      # before `check`, which would silently rewrite a stale lock first.
+      - run: make -C tee/cli locked
+      - run: make -C tee/cli check
+
+  # The installer (tee/cli/install.sh) is POSIX sh that operators run through
+  # `| sh` on machines this repo knows nothing about, so it is held to
+  # ShellCheck here on every change. Its real test — installing a release it
+  # just published, on each platform — is seismic-tee-release.yml's `install`
+  # job.
+  check-install-script:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - run: shellcheck --shell=sh tee/cli/install.sh
+
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+
+      # The drift guards (tee/cli/network/tests/drift.rs) link the enclave
+      # crates at the rev the workspace pins, so the rev under test is the
+      # pinned one, and moving it is a PR that bumps the pin, not something CI
+      # discovers. Same toolchain setup as `check`.
+      - name: Install toolchains
+        working-directory: tee/cli
+        run: rustup default "$(rustup show active-toolchain | head -1 | cut -d' ' -f1)"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tee/cli
+      - uses: taiki-e/install-action@nextest
+
+      # The gates recompute each manifest's eth.genesis_hash with
+      # `seismic-reth genesis-hash`.
+      - uses: ./.github/actions/setup-sreth
+        with:
+          version: nightly
+
+      - run: make -C tee/cli locked
+      - run: make -C tee/cli drift

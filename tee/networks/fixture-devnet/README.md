@@ -13,7 +13,7 @@ change in the pinned enclave crates before the next real founding does.
 
 | | |
 |---|---|
-| Founded | 2026-09-15, by hand, from [the devnet runbook](../../docs/runbook-devnet.md) |
+| Founded | 2026-09-15, by hand, from [the devnet runbook](https://github.com/SeismicSystems/deploy/blob/main/tee/docs/runbook-devnet.md) |
 | Image | `seismic-dev_2026-08-27.5c012e` (a `seismic-dev_*` build: no seismic-images release, so no release tag to pin) |
 | `measurement_id` | `seismic-dev_2026-08-27.5c012e.vhd` (`inputs/measurements.json`) |
 | Records | 4, `inputs/harvest/tmp-devnet-1-{1..4}.json`, record `version` 1 |

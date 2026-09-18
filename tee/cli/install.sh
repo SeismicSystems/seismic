@@ -1,30 +1,24 @@
 #!/bin/sh
 # Installs a prebuilt `seismic-tee` — the Seismic TEE deploy CLI — from this
-# repo's GitHub releases.
+# repo's GitHub releases:
 #
-# While the repo is private, the script and the release assets both need a
-# GitHub login, so the one-liner goes through `gh`:
+#   curl -fsSL https://raw.githubusercontent.com/SeismicSystems/seismic/main/tee/cli/install.sh | sh
 #
-#   gh api -H 'Accept: application/vnd.github.raw' \
-#       repos/SeismicSystems/deploy/contents/tee/install.sh | sh
-#
-# The public form is the same script with its `gh` branch idle:
-#
-#   curl -fsSL https://raw.githubusercontent.com/SeismicSystems/deploy/main/tee/install.sh | sh
-#
-# The script has one fork. If `gh` is on PATH and logged in (a GH_TOKEN in
-# the environment counts, which is how CI runs it), every network request —
-# listing the releases, downloading the tarball and SHA256SUMS — goes through
-# gh, which is what works while the repo is private. Otherwise the same
-# requests go through plain curl against the public API and download URLs,
-# for the day the repo is public. After the download the two paths are
-# identical.
+# Everything is fetched with curl: one GitHub API call to pick the release
+# (skipped when the version is spelled out) and two downloads from the
+# release. The API call is anonymous unless GH_TOKEN or GITHUB_TOKEN is set,
+# in which case it is sent as a bearer token — the anonymous limit is 60
+# requests an hour per IP, which a shared CI runner can exhaust and a person
+# never will. The token goes to api.github.com only, never to a download URL,
+# which redirects to a storage host. `gh` is used for exactly one thing, the
+# build provenance check, which has no curl equivalent.
 #
 # What it does: picks the release, downloads the tarball for this machine and
 # the release's SHA256SUMS, checks the tarball against it, verifies the
-# binary's build provenance with `gh attestation` when `gh` can, and installs
-# `seismic-tee` into ~/.local/bin. Releases are tagged `seismic-tee/v<X.Y.Z>`
-# (versions) and `seismic-tee/main-<sha>` (a prerelease per merge to main);
+# binary's build provenance with `gh attestation` when `gh` is installed and
+# logged in, and installs `seismic-tee` into ~/.local/bin. Releases are tagged
+# `seismic-tee/v<X.Y.Z>` (versions) and `seismic-tee/main-<sha>` (a prerelease
+# per merge to main);
 # the repo hosts other components too, so "Latest" is never consulted — the
 # newest release under the prefix is.
 #
@@ -35,13 +29,13 @@
 #                                            main (the newest prerelease).
 #                                            Default: the newest release.
 #   --to <DIR>      SEISMIC_TEE_INSTALL_DIR  Default: ~/.local/bin
-#                   SEISMIC_TEE_REPO         Default: SeismicSystems/deploy
+#                   SEISMIC_TEE_REPO         Default: SeismicSystems/seismic
 #
 # Prebuilt for linux_amd64, linux_arm64 and darwin_arm64; anything else is
 # told to build from source. POSIX sh: nothing here needs bash.
 set -eu
 
-REPO=${SEISMIC_TEE_REPO:-SeismicSystems/deploy}
+REPO=${SEISMIC_TEE_REPO:-SeismicSystems/seismic}
 VERSION=${SEISMIC_TEE_VERSION:-}
 INSTALL_DIR=${SEISMIC_TEE_INSTALL_DIR:-$HOME/.local/bin}
 PREFIX=seismic-tee/
@@ -121,17 +115,14 @@ esac
 
 # --- Transport ---------------------------------------------------------------
 
-have_gh=false
-if command -v gh > /dev/null 2>&1 && gh auth status > /dev/null 2>&1; then
-    have_gh=true
-else
-    command -v curl > /dev/null 2>&1 || fail "curl is required (or gh, logged in)"
-fi
+command -v curl > /dev/null 2>&1 || fail "curl is required"
 
-# GET a GitHub API path; JSON on stdout.
+# GET a GitHub API path; JSON on stdout. Authenticated when a token is in
+# the environment (GH_TOKEN, else GITHUB_TOKEN), for the rate limit alone.
+token=${GH_TOKEN:-${GITHUB_TOKEN:-}}
 api() {
-    if $have_gh; then
-        gh api "$1"
+    if [ -n "$token" ]; then
+        curl -fsSL -H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $token" "https://api.github.com/$1"
     else
         curl -fsSL -H 'Accept: application/vnd.github+json' "https://api.github.com/$1"
     fi
@@ -139,16 +130,15 @@ api() {
 
 # Download release asset $1 of $tag into $tmp.
 download() {
-    if $have_gh; then
-        gh release download "$tag" --repo "$REPO" --pattern "$1" --dir "$tmp" ||
-            fail "could not download $1 from release $tag of $REPO"
-    else
-        curl -fsSL -o "$tmp/$1" "https://github.com/$REPO/releases/download/$tag/$1" ||
-            fail "could not download $1 from release $tag of $REPO — if the repo is private, log in with \`gh auth login\` and re-run"
-    fi
+    curl -fsSL -o "$tmp/$1" "https://github.com/$REPO/releases/download/$tag/$1" ||
+        fail "could not download $1 from release $tag of $REPO"
 }
 
 # The newest release (the API lists newest first) whose tag starts with $1.
+# One page only: this repo's releases include a `seismic-tee/main-<sha>`
+# prerelease per merge and the other components' releases, so once more than
+# a page of those have landed since the newest version tag, a bare install
+# finds nothing. Page (or prune old prereleases) if that ever happens.
 newest_tag() {
     api "repos/$REPO/releases?per_page=100" |
         grep -o "\"tag_name\": *\"$1[^\"]*\"" |
@@ -199,7 +189,7 @@ tar -xzf "$tmp/$asset" -C "$tmp" "$BIN"
 # says the release's binary was built by this repo's workflow from the commit
 # the release names. Verified when gh can (gh 2.49+, logged in), skipped with
 # a note otherwise — never silently.
-if $have_gh && gh attestation --help > /dev/null 2>&1; then
+if command -v gh > /dev/null 2>&1 && gh auth status > /dev/null 2>&1 && gh attestation --help > /dev/null 2>&1; then
     gh attestation verify "$tmp/$BIN" --repo "$REPO" > /dev/null ||
         fail "$BIN from $tag has no valid build provenance attestation from $REPO"
     say "build provenance verified: attested by $REPO's release workflow"

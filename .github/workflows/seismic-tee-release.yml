@@ -1,8 +1,8 @@
 # Publishes prebuilt `seismic-tee` binaries — the Rust deploy CLI under
 # tee/cli — as GitHub releases of this repo:
 #
-#   - every push to `main` that touches tee/cli (or this workflow, or the
-#     installer) publishes a *prerelease* tagged `seismic-tee/main-<sha>` at
+#   - every push to `main` that touches tee/cli (the installer included) or
+#     this workflow publishes a *prerelease* tagged `seismic-tee/main-<sha>` at
 #     the built commit, so each merge has a permanent download URL that
 #     follows from the commit alone. Prereleases never become the
 #     repository's "Latest" release, and nothing prunes them: every main
@@ -32,10 +32,11 @@
 #   - a bad release that was live long enough to be downloaded: cut the next
 #     version. A release someone may have verified is immutable.
 #
-# The tags carry the component's name because deploy is a multi-purpose
-# repo, and because the CLI is headed for the seismic monorepo: nothing here
-# changes on the move but the repo, which no file names — the workflow reads
-# GITHUB_REPOSITORY and the installer (tee/install.sh) has it in one variable.
+# The tag prefix is `seismic-tee/`, not the `<package>@` the TS and Python
+# clients use: the installer and `--upgrade` parse it, and it predates the
+# move here from the deploy repo. No file here names the repo: the workflow
+# reads GITHUB_REPOSITORY and the installer (tee/cli/install.sh) has it in one
+# variable.
 #
 # Three native builds and no cross-compilation: linux amd64 and arm64 on
 # ubuntu-22.04, macOS arm64 on macos-14. Every runner is pinned, never
@@ -51,7 +52,7 @@
 # Each release ships
 # seismic-tee_<version>_<os>_<arch>.tar.gz per target, one SHA256SUMS over
 # all of them, and a build provenance attestation per binary, verifiable
-# with `gh attestation verify seismic-tee --repo <this repo>`. tee/install.sh
+# with `gh attestation verify seismic-tee --repo <this repo>`. tee/cli/install.sh
 # downloads, checks and installs them, and is run here, the way its one-liner
 # runs it, against every release the moment it is published.
 #
@@ -68,8 +69,7 @@ on:
     # not apply `paths` to tag pushes, so a version tag always builds.
     paths:
       - "tee/cli/**"
-      - "tee/install.sh"
-      - ".github/workflows/release.yml"
+      - ".github/workflows/seismic-tee-release.yml"
     tags: ["seismic-tee/v*.*.*"]
   workflow_dispatch:
 
@@ -95,7 +95,7 @@ jobs:
       version: ${{ steps.info.outputs.version }}
       prerelease: ${{ steps.info.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # The version check below compares against every released tag.
           fetch-tags: true
@@ -184,9 +184,9 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      # Same toolchain dance as ci.yml, for the same reason: rust-cache reads
+      # Same toolchain dance as seismic-tee.yml, for the same reason: rust-cache reads
       # the default toolchain at the repo root, where tee/cli's
       # rust-toolchain.toml does not apply, so the pin has to be made the
       # default or the cache key rotates with the runner's stable.
@@ -198,7 +198,7 @@ jobs:
           workspaces: tee/cli
           cache-on-failure: true
 
-      # `--locked`: the committed resolution, as ci.yml asserts it. The
+      # `--locked`: the committed resolution, as seismic-tee.yml asserts it. The
       # binary stamps itself with the commit it was built from (build.rs
       # asks git), so the smoke run also prints what this release is of.
       # The dynamic-library listing is the compatibility baseline made
@@ -268,7 +268,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # The notes list the commits since the previous release of the
           # same kind, so the whole history and every tag are needed.
@@ -318,16 +318,16 @@ jobs:
             echo "## Install"
             echo
             echo '```sh'
-            echo "gh api -H 'Accept: application/vnd.github.raw' repos/$GITHUB_REPOSITORY/contents/tee/install.sh |"
+            echo "curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/tee/cli/install.sh |"
             echo "    SEISMIC_TEE_VERSION=$VERSION sh"
             echo '```'
             echo
             echo "## Changes"
             echo
             # One line per merge to main (--first-parent) that touched the
-            # CLI, its installer or this workflow: deploy carries other
-            # components, whose merges are not this release's changes.
-            git log --first-parent --format='- %s' "$range" -- tee/cli tee/install.sh .github/workflows/release.yml
+            # CLI (its installer included) or this workflow: the monorepo
+            # carries other components, whose merges are not this release's.
+            git log --first-parent --format='- %s' "$range" -- tee/cli .github/workflows/seismic-tee-release.yml
             if [ -n "$prev" ]; then
               echo
               echo "Full changelog: https://github.com/$GITHUB_REPOSITORY/compare/$prev...$TAG"
@@ -363,7 +363,10 @@ jobs:
 
   # The installer against the release just published, on each platform it
   # serves, spelled exactly as its one-liner is — fetched from this commit
-  # rather than from a checkout, so what is tested is what a teammate runs.
+  # rather than from a checkout, so what is tested is what an operator runs.
+  # GH_TOKEN is what lets gh, already on the runner, verify the build
+  # provenance attestation rather than skip it. (The version is spelled out,
+  # so the installer makes no API call here.)
   install:
     name: install on ${{ matrix.target.platform }}
     needs: [plan, publish]
@@ -386,8 +389,7 @@ jobs:
           SEISMIC_TEE_VERSION: ${{ needs.plan.outputs.version }}
           SEISMIC_TEE_REPO: ${{ github.repository }}
         run: |
-          gh api -H 'Accept: application/vnd.github.raw' \
-            "repos/$GITHUB_REPOSITORY/contents/tee/install.sh?ref=$GITHUB_SHA" | sh
+          curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$GITHUB_SHA/tee/cli/install.sh" | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Check what was installed

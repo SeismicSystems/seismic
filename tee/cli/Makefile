@@ -1,6 +1,5 @@
-# Convenience targets for the Rust deploy CLI. Self-contained on purpose: this
-# directory is meant to be liftable — the whole workspace is headed for a
-# public repo — so no recipe here reaches outside the workspace.
+# Convenience targets for the Rust deploy CLI. Self-contained on purpose: no
+# recipe here reaches outside the workspace.
 #
 # Run from anywhere with `make -C tee/cli <target>`.
 

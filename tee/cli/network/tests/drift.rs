@@ -1,5 +1,4 @@
-//! Cross-repo drift guards (run via `make -C tee/cli drift`, or the
-//! repo-root `make test-drift`).
+//! Cross-repo drift guards (run via `make -C tee/cli drift`).
 //!
 //! These check this repo against the current state of its sibling repos,
 //! reached either by fetching a pinned artifact over HTTP or by running a
@@ -21,20 +20,20 @@
 //!
 //! The enclave crates under test — the admission compiler, the manifest
 //! renderer and schema — are linked at the rev the workspace pins, so moving
-//! them is a deploy PR that bumps the pin, not something CI discovers.
+//! them is a PR that bumps the pin, not something CI discovers.
 //!
-//! The committed network directories get one more check that is *not* here:
-//! replaying their founding archives through the pinned verifier reaches
-//! nothing outside the workspace, so it runs in the hermetic suite
-//! (`replay.rs`). Both walk the list `support::committed_network_dirs` yields.
+//! Two more checks over the pinned enclave crates are *not* here because they
+//! reach nothing outside the workspace, so they run in the hermetic suite:
+//! replaying the committed founding archives through the pinned verifier
+//! (`replay.rs`, walking the same `support::committed_network_dirs` list),
+//! and holding the admission crate's registry runtime-code pin to this repo's
+//! contract artifact (`registry_pin.rs`).
 
 mod support;
 
 use std::collections::BTreeSet;
 
-use alloy_primitives::keccak256;
 use seismic_manifest::render;
-use seismic_measurement_admission::genesis::REGISTRY_RUNTIME_CODE_HASH;
 use seismic_tee_network::founding::Validator;
 use seismic_tee_network::gates::{ArtifactSet, run_validation_gates};
 use seismic_tee_network::shell_outs::{Derivations, ShellOuts};
@@ -66,24 +65,6 @@ async fn fetch_live(url: &str) -> Vec<u8> {
         }
     }
     panic!("cross-repo artifact unreachable after retry: {last:?}");
-}
-
-/// The registry runtime-code pin. The admission crate pins keccak256 of the
-/// canonical MeasurementRegistry deployed bytecode; the gates enforce that pin
-/// against the genesis alloc, so a stale pin already fails assembly loudly.
-/// This is the early warning: the crate's pin must match the artifact the reth
-/// genesis builder installs.
-#[tokio::test]
-#[ignore = "cross-repo: fetches the seismic repo's contract artifact"]
-async fn admission_crate_pins_current_registry_runtime() {
-    const URL: &str = "https://raw.githubusercontent.com/SeismicSystems/seismic/main/\
-                       contracts/artifacts/MeasurementRegistry.json";
-    let artifact: serde_json::Value = serde_json::from_slice(&fetch_live(URL).await).unwrap();
-    let runtime = artifact["deployedBytecode"]["object"]
-        .as_str()
-        .expect("deployedBytecode.object");
-    let runtime = hex::decode(runtime.strip_prefix("0x").unwrap_or(runtime)).unwrap();
-    assert_eq!(keccak256(&runtime), REGISTRY_RUNTIME_CODE_HASH);
 }
 
 /// The committed starter summit genesis tracks summit's parameter set.
