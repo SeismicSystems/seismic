@@ -319,7 +319,7 @@ jobs:
             echo
             echo '```sh'
             echo "curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/tee/cli/install.sh |"
-            echo "    SEISMIC_TEE_VERSION=$VERSION sh"
+            echo "    sh -s -- --version $VERSION"
             echo '```'
             echo
             echo "## Changes"
@@ -362,11 +362,12 @@ jobs:
           files: dist/*
 
   # The installer against the release just published, on each platform it
-  # serves, spelled exactly as its one-liner is — fetched from this commit
-  # rather than from a checkout, so what is tested is what an operator runs.
-  # GH_TOKEN is what lets gh, already on the runner, verify the build
-  # provenance attestation rather than skip it. (The version is spelled out,
-  # so the installer makes no API call here.)
+  # serves, spelled the way the release notes above spell it — and fetched
+  # from this commit rather than from a checkout, so what is tested is what
+  # an operator copies off the release page. GH_TOKEN is what lets gh,
+  # already on the runner, verify the build provenance attestation rather
+  # than skip it. (The version is spelled out, so the installer makes no API
+  # call here.)
   install:
     name: install on ${{ matrix.target.platform }}
     needs: [plan, publish]
@@ -386,10 +387,11 @@ jobs:
       - name: Run the installer
         env:
           GH_TOKEN: ${{ github.token }}
-          SEISMIC_TEE_VERSION: ${{ needs.plan.outputs.version }}
+          VERSION: ${{ needs.plan.outputs.version }}
           SEISMIC_TEE_REPO: ${{ github.repository }}
         run: |
-          curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$GITHUB_SHA/tee/cli/install.sh" | sh
+          curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$GITHUB_SHA/tee/cli/install.sh" |
+              sh -s -- --version "$VERSION"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Check what was installed

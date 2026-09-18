@@ -87,9 +87,20 @@ environment:
                                                 for its rate limit
 
 examples:
+  # the newest release, into ~/.local/bin
   curl -fsSL $INSTALLER_URL | sh
-  curl -fsSL $INSTALLER_URL | sh -s -- --version main
-  curl -fsSL $INSTALLER_URL | sh -s -- --version v0.1.0 --to /opt/seismic/bin
+
+  # the tip of main, for a change that is merged but not released yet
+  curl -fsSL $INSTALLER_URL |
+      sh -s -- --version main
+
+  # one release, into a directory you choose
+  curl -fsSL $INSTALLER_URL |
+      sh -s -- --version v0.1.0 --to /opt/seismic/bin
+
+  # the same in the environment, for a CI job that sets it once
+  curl -fsSL $INSTALLER_URL |
+      SEISMIC_TEE_VERSION=v0.1.0 SEISMIC_TEE_INSTALL_DIR=/opt/seismic/bin sh
 
 Every download is checked against the release's SHA256SUMS, and the binary's
 build provenance against GitHub's attestation when gh is installed and logged
