@@ -6,12 +6,19 @@ This repository contains solidity smart contracts and libraries designed for the
 
 This project uses [Seismic-Foundry](https://github.com/SeismicSystems/seismic-foundry), which is needed to compile any contracts with shielded types or seismic precompiles.
 
-We recommend using our [Makefile](./Makefile) to run common tasks, as these will also be used in CI:
+Contract tasks live in [`mise.toml`](./mise.toml). From the `contracts/` directory:
+
 ```bash
-make build
-make test
-make fmt
-...
+mise run test
+mise run fmt
+mise run fmt-check
+```
+
+To invoke `sforge` directly through mise (for example `build`):
+
+```bash
+mise run sforge -- build
+mise run sforge -- test
 ```
 
 ## Project Structure
@@ -45,7 +52,7 @@ contracts/
 
 The `artifacts/` directory contains compiled contract artifacts, including ABIs and bytecode. These are used for deployment and interaction with the contracts.
 
-These artifacts are currently generated manually using `make sync-artifacts`.
+These artifacts are currently generated with `mise run artifacts::sync`.
 
 TODO: we need to figure out a way to version these and make it more explicit which of these are deployed on each network, and at which block (or genesis).
 
