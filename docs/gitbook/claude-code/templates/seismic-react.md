@@ -1,217 +1,296 @@
----
-description: CLAUDE.md template for React frontend development with seismic-react
-icon: react
----
+# Template: Seismic React Client
 
-# Seismic React
+Generate a complete React application with Seismic's shielded contract hooks for private blockchain interactions.
 
-Use this template when your project uses `seismic-react` to build React frontends that interact with Seismic contracts. This SDK wraps `seismic-viem` with React hooks and providers, and integrates with wallet connectors like RainbowKit, Privy, and AppKit.
+## Overview
 
-## The template
+This template creates a React app that:
+1. Connects to Seismic Testnet via ShieldedWalletProvider
+2. Reads public and shielded contract state
+3. Writes public and shielded transactions
+4. Handles wallet connection and transaction status
 
-Copy the entire block below and save it as `CLAUDE.md` in your project root.
+## Prerequisites
 
-````markdown
-# [Your Project Name]
+- Node.js 18+
+- MetaMask or compatible wallet
+- Seismic Testnet configured in wallet
 
-## Seismic Overview
+## Template Prompt
 
-Seismic is an EVM-compatible L1 with on-chain privacy. Nodes run inside TEEs (Intel TDX). The Solidity compiler adds shielded types (`suint256`, `saddress`, `sbool`) that are invisible outside the TEE. Client libraries handle transaction encryption and signed reads automatically.
+```
+Create a React application for interacting with Seismic shielded contracts.
 
-## Key Concepts
+Requirements:
+1. Use Vite + React + TypeScript
+2. Install and configure @seismic-systems/seismic-react and wagmi
+3. Wrap the app with ShieldedWalletProvider (chain: seismicDevnet)
+4. Show connection status and wallet address
+5. Include examples for:
+   - Public reads via wagmi's useReadContract
+   - Shielded reads via useShieldedContract().read
+   - Public writes via wagmi's useWriteContract
+   - Shielded writes via useShieldedWriteContract
+6. Display transaction hashes and status
+7. Handle loading and error states
+8. Clean, modern UI with Tailwind CSS
 
-- **Shielded types**: `suint256`, `saddress`, `sbool` — on-chain private state, only readable via signed reads
-- **TxSeismic (type 0x4A)**: Encrypts calldata before broadcast. The SDK handles this automatically.
-- **Signed reads**: `eth_call` zeroes `msg.sender` on Seismic. Hooks like `useShieldedRead` handle this.
-- **Encryption pubkeys**: 33-byte compressed secp256k1 keys. The provider fetches and manages these.
-- **Legacy gas**: Seismic transactions use `gas_price` + `gas_limit`, NOT EIP-1559.
+Contract ABI (example Counter):
+[
+  {
+    "type": "function",
+    "name": "getNumber",
+    "inputs": [],
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getShieldedNumber",
+    "inputs": [],
+    "outputs": [{"name": "", "type": "suint256"}],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setNumber",
+    "inputs": [{"name": "newNumber", "type": "uint256"}],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setShieldedNumber",
+    "inputs": [{"name": "newNumber", "type": "suint256"}],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  }
+]
 
-## SDK: seismic-react
-
-### Install
-
-```bash
-npm install seismic-react
-# or
-bun add seismic-react
+Contract address: [USER_PROVIDES_ADDRESS]
 ```
 
-### Key exports
+## Expected Output Structure
+
+```
+seismic-react-app/
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+├── index.html
+├── src/
+│   ├── main.tsx
+│   ├── App.tsx
+│   ├── vite-env.d.ts
+│   ├── config/
+│   │   └── wagmi.ts
+│   ├── contracts/
+│   │   └── abi.ts
+│   └── components/
+│       ├── ConnectWallet.tsx
+│       ├── PublicCounter.tsx
+│       └── ShieldedCounter.tsx
+└── README.md
+```
+
+## Key Code Patterns
+
+### Wagmi + Seismic Provider Setup
 
 ```typescript
-import {
-  ShieldedWalletProvider,
-  useShieldedWallet,
-  useShieldedContract,
-  useShieldedRead,
-  useShieldedWrite,
-} from "seismic-react";
+// src/config/wagmi.ts
+import { http, createConfig } from 'wagmi'
+import { seismicDevnet } from '@seismic-systems/seismic-react'
+
+export const config = createConfig({
+  chains: [seismicDevnet],
+  transports: {
+    [seismicDevnet.id]: http(),
+  },
+})
 ```
 
-## Core Patterns
-
-### Wrap your app with ShieldedWalletProvider
-
 ```tsx
-import { ShieldedWalletProvider } from "seismic-react";
+// src/main.tsx
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { WagmiProvider } from 'wagmi'
+import { ShieldedWalletProvider } from '@seismic-systems/seismic-react'
+import { config } from './config/wagmi'
+import { seismicDevnet } from '@seismic-systems/seismic-react'
+import App from './App'
+import './index.css'
 
-function App() {
-  return (
-    <ShieldedWalletProvider>
-      {/* Your app components */}
-      <MyDapp />
-    </ShieldedWalletProvider>
-  );
-}
-```
+const queryClient = new QueryClient()
 
-### Access the shielded wallet
-
-```tsx
-import { useShieldedWallet } from "seismic-react";
-
-function MyComponent() {
-  const { walletClient, isConnected, address } = useShieldedWallet();
-
-  if (!isConnected) return <p>Connect your wallet</p>;
-  return <p>Connected: {address}</p>;
-}
-```
-
-### Create a shielded contract instance
-
-```tsx
-import { useShieldedContract } from "seismic-react";
-
-function MyComponent() {
-  const contract = useShieldedContract({
-    abi: myContractAbi,
-    address: "0xCONTRACT_ADDRESS",
-  });
-
-  // contract.read.* for signed reads
-  // contract.write.* for shielded writes
-}
-```
-
-### Read shielded data (signed read)
-
-```tsx
-import { useShieldedRead } from "seismic-react";
-
-function BalanceDisplay({ userAddress }: { userAddress: `0x${string}` }) {
-  const { data: balance, isLoading } = useShieldedRead({
-    abi: myContractAbi,
-    address: "0xCONTRACT_ADDRESS",
-    functionName: "getBalance",
-    args: [userAddress],
-  });
-
-  if (isLoading) return <p>Loading...</p>;
-  return <p>Balance: {balance?.toString()}</p>;
-}
-```
-
-### Write shielded data (encrypted transaction)
-
-```tsx
-import { useShieldedWrite } from "seismic-react";
-
-function TransferButton() {
-  const { write, isLoading } = useShieldedWrite({
-    abi: myContractAbi,
-    address: "0xCONTRACT_ADDRESS",
-    functionName: "transfer",
-  });
-
-  return (
-    <button
-      onClick={() => write({ args: [recipientAddress, amount] })}
-      disabled={isLoading}
-    >
-      Transfer
-    </button>
-  );
-}
-```
-
-### Wallet integration: RainbowKit
-
-```tsx
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { ShieldedWalletProvider } from "seismic-react";
-import { WagmiProvider } from "wagmi";
-
-function App() {
-  return (
-    <WagmiProvider config={wagmiConfig}>
-      <RainbowKitProvider>
-        <ShieldedWalletProvider>
-          <MyDapp />
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <ShieldedWalletProvider config={config} chain={seismicDevnet}>
+          <App />
         </ShieldedWalletProvider>
-      </RainbowKitProvider>
+      </QueryClientProvider>
     </WagmiProvider>
-  );
-}
+  </StrictMode>,
+)
 ```
 
-### Wallet integration: Privy
+### Contract ABI
+
+```typescript
+// src/contracts/abi.ts
+export const COUNTER_ADDRESS = '0x...' as const // user-provided
+
+export const counterAbi = [
+  {
+    type: 'function',
+    name: 'getNumber',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'getShieldedNumber',
+    inputs: [],
+    outputs: [{ name: '', type: 'suint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'setNumber',
+    inputs: [{ name: 'newNumber', type: 'uint256' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'setShieldedNumber',
+    inputs: [{ name: 'newNumber', type: 'suint256' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+] as const
+```
+
+### Public Reads and Writes (wagmi)
 
 ```tsx
-import { PrivyProvider } from "@privy-io/react-auth";
-import { ShieldedWalletProvider } from "seismic-react";
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { COUNTER_ADDRESS, counterAbi } from '../contracts/abi'
 
-function App() {
-  return (
-    <PrivyProvider appId="YOUR_PRIVY_APP_ID">
-      <ShieldedWalletProvider>
-        <MyDapp />
-      </ShieldedWalletProvider>
-    </PrivyProvider>
-  );
+export function PublicCounter() {
+  const { data: number, isLoading, error, refetch } = useReadContract({
+    address: COUNTER_ADDRESS,
+    abi: counterAbi,
+    functionName: 'getNumber',
+  })
+
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+
+  const setNumber = (value: bigint) => {
+    writeContract({
+      address: COUNTER_ADDRESS,
+      abi: counterAbi,
+      functionName: 'setNumber',
+      args: [value],
+    })
+  }
+
+  // ...render UI with number, loading/error, setNumber controls, hash/status
 }
 ```
 
-## Common Mistakes
+### Shielded Reads (`useShieldedContract`)
 
-1. **Using standard wagmi hooks** — `useContractRead`/`useContractWrite` from wagmi won't encrypt calldata or sign reads. Use `useShieldedRead`/`useShieldedWrite` from `seismic-react`.
-2. **Forgetting the ShieldedWalletProvider** — All `useShielded*` hooks require `ShieldedWalletProvider` in the component tree. Wrap it around your app.
-3. **Using EIP-1559 gas params** — Seismic uses legacy gas. Do NOT pass `maxFeePerGas`/`maxPriorityFeePerGas` to write hooks.
-4. **Wrong import path** — The package is `seismic-react`, not `@seismic/react` or `seismic-viem/react`.
-5. **Reading shielded data without wallet connection** — Signed reads require a connected wallet (they need the user's private key to sign). Show a "connect wallet" prompt first.
+`useShieldedContract` returns a contract instance. Call shielded view methods through `read`, and check wallet/session status with `isShielded` / `isError`:
 
-## Networks
+```tsx
+import { useShieldedContract } from '@seismic-systems/seismic-react'
+import { COUNTER_ADDRESS, counterAbi } from '../contracts/abi'
 
-| Network        | Chain ID | RPC URL                             |
-| -------------- | -------- | ----------------------------------- |
-| Testnet         | 5124     | `https://testnet-1.seismictest.net/rpc` |
-| Testnet (WS)    | 5124     | `wss://testnet-1.seismictest.net/ws`    |
-| Local (sanvil) | 31337    | `http://127.0.0.1:8545`             |
+export function ShieldedCounter() {
+  const { read, isShielded, isError } = useShieldedContract({
+    abi: counterAbi,
+    address: COUNTER_ADDRESS,
+  })
 
-Faucet: https://faucet.seismictest.net/
+  // Example: read.getShieldedNumber()
+  // Gate UI on isShielded; surface isError when the shielded session is unavailable
+}
+```
 
-## Links
+### Shielded Writes (`useShieldedWriteContract`)
 
-- [seismic-react Installation](https://docs.seismic.systems/client-libraries/seismic-react/installation)
-- [ShieldedWalletProvider](https://docs.seismic.systems/client-libraries/seismic-react/shielded-wallet-provider)
-- [Hooks Reference](https://docs.seismic.systems/client-libraries/seismic-react/hooks/)
-- [RainbowKit Guide](https://docs.seismic.systems/client-libraries/seismic-react/wallet-guides/rainbowkit)
-- [Privy Guide](https://docs.seismic.systems/client-libraries/seismic-react/wallet-guides/privy)
-- [GitHub: seismic-client](https://github.com/SeismicSystems/seismic-client)
-````
+Pass contract config when creating the hook. The returned `writeContractAsync` only takes the call (`functionName` + `args`):
 
-## What this teaches Claude
+```tsx
+import { useShieldedWriteContract } from '@seismic-systems/seismic-react'
+import { COUNTER_ADDRESS, counterAbi } from '../contracts/abi'
 
-- **Correct hook names and import paths** — Claude will use `useShieldedRead`/`useShieldedWrite` instead of standard wagmi hooks
-- **Provider hierarchy** — Claude will wrap the app with `ShieldedWalletProvider` in the correct order relative to wallet connectors
-- **Signed reads in components** — Claude will use shielded hooks that handle identity-proving reads
-- **Wallet integration patterns** — Claude knows how to combine RainbowKit/Privy with Seismic's provider
+export function ShieldedCounterWrite() {
+  const { writeContractAsync, data: hash, isPending, error } = useShieldedWriteContract({
+    address: COUNTER_ADDRESS,
+    abi: counterAbi,
+  })
 
-## Customizing
+  const setShieldedNumber = async (value: bigint) => {
+    await writeContractAsync({
+      functionName: 'setShieldedNumber',
+      args: [value],
+    })
+  }
 
-After pasting the template:
+  // ...render UI with write controls, hash, pending/error states
+}
+```
 
-- Replace `[Your Project Name]` with your project name
-- Add your contract ABIs and addresses
-- Specify which wallet connector you use (RainbowKit, Privy, AppKit) so Claude defaults to the right integration pattern
-- Add your wagmi config setup if you have custom chain definitions
+## Common Customizations
+
+### Different Contract
+
+```
+Modify the template to work with this ERC20-like contract instead:
+[PASTE ABI]
+
+Focus on balanceOf (read) and transfer (write) functions.
+```
+
+### Add Event Listening
+
+```
+Add event listening for NumberSet and ShieldedNumberSet events.
+Display a live feed of recent events.
+```
+
+### Multi-Contract Dashboard
+
+```
+Create a dashboard that interacts with multiple contracts:
+1. Counter contract at 0x...
+2. Token contract at 0x...
+
+Show balances and allow interactions with both.
+```
+
+## Troubleshooting Hints for Claude
+
+If generation fails or produces incorrect code, remind Claude:
+
+1. **`useShieldedRead` / `useShieldedWrite` do not exist** — use `useShieldedContract` for shielded reads and `useShieldedWriteContract` for shielded writes
+2. Must wrap app with `ShieldedWalletProvider` (and typically `WagmiProvider` + `QueryClientProvider`)
+3. Use `seismicDevnet` from `@seismic-systems/seismic-react` for the chain config
+4. Shielded writes: contract `address`/`abi` go into `useShieldedWriteContract({...})`; `writeContractAsync` only gets `functionName`/`args`
+5. Public reads/writes use standard wagmi hooks (`useReadContract`, `useWriteContract`)
+6. Always handle `isPending` / loading and `error` states
+7. Contract address must be a valid checksummed address
+
+## Related Documentation
+
+- [Building a Frontend](https://docs.seismic.systems/building-with-seismic/building-a-frontend) — seismic-react setup and hooks
+- [seismic-react on npm](https://www.npmjs.com/package/@seismic-systems/seismic-react)
+- [Contract Compatibility](https://docs.seismic.systems/building-with-seismic/contract-compatibility)
+- [Network Information](https://docs.seismic.systems/developers/network-information)
