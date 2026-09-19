@@ -1,5 +1,6 @@
 import { describe, test } from 'bun:test'
 
+import { testChainsExposeWebSocketUrls } from '@sviem-tests/tests/chainDefinitions.ts'
 import {
   testAddressExplorerUrlBuildsCorrectUrl,
   testAddressExplorerUrlReturnsNullWithoutExplorer,
@@ -144,5 +145,12 @@ describe('Seismic EIP-712 typed data', () => {
   test(
     'includes authorizationListHash',
     testTypedDataIncludesAuthorizationListHash
+  )
+})
+
+describe('Chain definitions', () => {
+  test(
+    'expose WebSocket URLs under rpcUrls.default.webSocket',
+    testChainsExposeWebSocketUrls
   )
 })
