@@ -3,6 +3,7 @@
 // auth-list `contractAddress` -> RPC `address` translation.
 import { formatTransactionRequest, toHex } from 'viem'
 import type {
+  Address,
   BlockIdentifier,
   BlockNumber,
   BlockTag,
@@ -56,11 +57,17 @@ const hasSeismicFields = (request: SeismicTransactionRequest) => {
   )
 }
 
+// viem <2.24 names the delegation target `contractAddress`, newer versions
+// name it `address`; accept whichever the caller's viem produced.
+type AuthorizationWithAddress = NonNullable<
+  TransactionRequestEIP7702['authorizationList']
+>[number] & { address?: Address; contractAddress?: Address }
+
 const formatAuthorizationList = (
   authorizationList: NonNullable<TransactionRequestEIP7702['authorizationList']>
 ) =>
-  authorizationList.map((authorization) => ({
-    address: authorization.contractAddress,
+  (authorizationList as AuthorizationWithAddress[]).map((authorization) => ({
+    address: authorization.address ?? authorization.contractAddress,
     r: authorization.r,
     s: authorization.s,
     chainId: toHex(authorization.chainId),

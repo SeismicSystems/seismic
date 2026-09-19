@@ -1,6 +1,13 @@
 import { describe, test } from 'bun:test'
 
 import {
+  testAuthorizationAcceptsAddressField,
+  testAuthorizationDerivesYParityFromV,
+  testAuthorizationRSAreTrimmed,
+  testAuthorizationWithoutAddressThrows,
+  testAuthorizationZeroFieldsEncodeEmpty,
+} from '@sviem-tests/tests/authorizationList.ts'
+import {
   testAddressExplorerUrlBuildsCorrectUrl,
   testAddressExplorerUrlReturnsNullWithoutExplorer,
   testAddressExplorerUrlWithTab,
@@ -145,4 +152,15 @@ describe('Seismic EIP-712 typed data', () => {
     'includes authorizationListHash',
     testTypedDataIncludesAuthorizationListHash
   )
+})
+
+describe('Seismic EIP-7702 authorization list encoding', () => {
+  test('trims padded r and s', testAuthorizationRSAreTrimmed)
+  test('encodes zero fields as empty', testAuthorizationZeroFieldsEncodeEmpty)
+  test(
+    'accepts `address` as well as `contractAddress`',
+    testAuthorizationAcceptsAddressField
+  )
+  test('derives yParity from v', testAuthorizationDerivesYParityFromV)
+  test('throws without an address', testAuthorizationWithoutAddressThrows)
 })
