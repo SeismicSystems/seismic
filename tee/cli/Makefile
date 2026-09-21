@@ -12,7 +12,7 @@ help:
 	@echo "  fmt-check   cargo +nightly fmt --check"
 	@echo "  lint        cargo clippy, warnings denied"
 	@echo "  test        cargo nextest run (hermetic; replays the committed founding archive)"
-	@echo "  drift       cross-repo drift guards (network + seismic-reth on PATH; own CI job)"
+	@echo "  drift       cross-repo drift guards (needs network access, and seismic-reth + summit on PATH; own CI job)"
 	@echo "  locked      assert Cargo.lock needs no re-resolve (run before check)"
 
 check: fmt-check lint test
