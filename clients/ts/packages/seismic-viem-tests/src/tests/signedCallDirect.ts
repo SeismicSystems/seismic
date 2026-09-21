@@ -1,5 +1,5 @@
 import { expect } from 'bun:test'
-import { getShieldedContract } from 'seismic-viem'
+import { getShieldedContract, sanvil } from 'seismic-viem'
 import type { Account, Chain } from 'viem'
 import { decodeFunctionResult, encodeFunctionData, parseEther } from 'viem'
 
@@ -103,18 +103,29 @@ export const testSignedCallWithExplicitNonce = async ({
     abi: seismicCounterAbi,
     functionName: 'isOdd',
   })
-  const nonce = await publicClient.getTransactionCount({
+  // Differ from the pending nonce so the old implementation cannot silently
+  // use the same value despite ignoring the explicit metadata override.
+  const pendingNonce = await publicClient.getTransactionCount({
     address: account.address,
     blockTag: 'pending',
   })
+  const nonce = pendingNonce + 5
 
-  const { data } = await walletClient.signedCall({
+  const call = walletClient.signedCall({
     to: address,
     data: calldata,
     account: account.address,
     nonce,
   })
 
+  if (chain.id === sanvil.id) {
+    // Sanvil validates the nonce after authenticating the calldata.
+    await expect(call).rejects.toThrow(/nonce too high/i)
+    return
+  }
+
+  // Reth clears the authenticated nonce before eth_call execution.
+  const { data } = await call
   expect(data).toBeDefined()
   const isOdd = decodeFunctionResult({
     abi: seismicCounterAbi,
