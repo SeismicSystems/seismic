@@ -823,7 +823,7 @@
             return (
               'import { createPublicClient, http } from "viem";\n\nconst client = createPublicClient({\n  transport: http("' +
               ep +
-              '"),\n});\n\nconst balance = await client.getBalance({\n  address: "' +
+              '"),\n});\n\n// On reth with PR #502 this returns a compatibility placeholder, not funds.\n// For native funds use seismic-viem getNativeBalance(client, { address }).\nconst balance = await client.getBalance({\n  address: "' +
               addr +
               '",\n});\nconsole.log(balance);'
             );

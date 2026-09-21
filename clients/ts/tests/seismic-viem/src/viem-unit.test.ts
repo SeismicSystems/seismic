@@ -1,6 +1,11 @@
 import { describe, test } from 'bun:test'
 
 import {
+  testNativeBalanceBlockSelection,
+  testNativeBalanceModes,
+  testNativeBalanceNeverFallsBack,
+} from '@sviem-tests/tests/balance.ts'
+import {
   testAddressExplorerUrlBuildsCorrectUrl,
   testAddressExplorerUrlReturnsNullWithoutExplorer,
   testAddressExplorerUrlWithTab,
@@ -18,6 +23,15 @@ import {
   testTxExplorerUrlReturnsNullWithoutChain,
   testTxExplorerUrlWithTab,
 } from '@sviem-tests/tests/explorerUrl.ts'
+import {
+  testCheckFaucetSurfacesRejection,
+  testCheckFaucetWaitsForConfirmation,
+  testCheckFaucetWithoutBalanceCheck,
+  testParseFaucetResponseHashNoPrefix,
+  testParseFaucetResponseHashThrowsOnInvalidLength,
+  testParseFaucetResponseHashThrowsOnMissingHexPrefix,
+  testParseFaucetResponseHashValid,
+} from '@sviem-tests/tests/faucet.ts'
 import {
   testSerializeMissingChainId,
   testSerializeMissingData,
@@ -44,6 +58,46 @@ import {
   testEmptyAuthorizationListHash,
   testTypedDataIncludesAuthorizationListHash,
 } from '@sviem-tests/tests/typedDataUnit.ts'
+
+describe('Native balance', () => {
+  test(
+    'separates native funds from compatibility balances',
+    testNativeBalanceModes
+  )
+  test(
+    'preserves block selectors, including genesis',
+    testNativeBalanceBlockSelection
+  )
+  test(
+    'never falls back to a placeholder on errors',
+    testNativeBalanceNeverFallsBack
+  )
+})
+
+describe('Faucet', () => {
+  test(
+    'claims without reading the recipient balance',
+    testCheckFaucetWithoutBalanceCheck
+  )
+  test('waits for confirmation', testCheckFaucetWaitsForConfirmation)
+  test(
+    'surfaces server rejection and malformed hashes',
+    testCheckFaucetSurfacesRejection
+  )
+  test('extracts valid hash', testParseFaucetResponseHashValid)
+  test(
+    'returns null when prefix is missing',
+    testParseFaucetResponseHashNoPrefix
+  )
+  test(
+    'rejects invalid hash length',
+    testParseFaucetResponseHashThrowsOnInvalidLength
+  )
+  test(
+    'rejects missing hex prefix',
+    testParseFaucetResponseHashThrowsOnMissingHexPrefix
+  )
+})
 
 describe('Explorer URL utilities', () => {
   test(

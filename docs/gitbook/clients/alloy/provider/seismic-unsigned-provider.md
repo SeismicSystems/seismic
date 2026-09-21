@@ -7,6 +7,8 @@ icon: globe
 
 Read-only provider for public operations. No wallet or signing capabilities.
 
+> **Balance RPC migration:** On reth with PR #502, `provider.get_balance()` returns a compatibility placeholder, not native or sUSDC holdings. See [Balance RPCs](../../../reference/balance-rpcs.md) for explicit native queries.
+
 ## Overview
 
 `SeismicUnsignedProvider<N: SeismicNetwork>` is a lightweight provider for reading public data from Seismic nodes. It does not carry a wallet, cannot sign transactions, and cannot decrypt responses from `seismic_call`. Use it for:

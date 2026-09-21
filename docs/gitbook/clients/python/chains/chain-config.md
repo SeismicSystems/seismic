@@ -7,6 +7,8 @@ icon: gear
 
 Immutable configuration for a Seismic network, including RPC endpoints, chain ID, and client factory methods.
 
+> Balance semantics depend on the backend, not the chain configuration. On reth with PR #502, `get_balance()` returns a compatibility placeholder, not native or sUSDC holdings. See [Balance RPCs](../../../reference/balance-rpcs.md).
+
 ## Overview
 
 `ChainConfig` is a frozen dataclass that encapsulates all information needed to connect to a Seismic network. Instead of passing RPC URLs and chain IDs separately, you create a `ChainConfig` once and use its convenience methods to create clients.

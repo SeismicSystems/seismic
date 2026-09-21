@@ -7,6 +7,8 @@ icon: arrows-spin
 
 Create an asynchronous `AsyncWeb3` instance with full Seismic wallet capabilities.
 
+> **Balance RPC migration:** On reth with PR #502, `await w3.eth.get_balance()` returns a compatibility placeholder, not native or sUSDC holdings. A signing wallet does not change this RPC's behavior. See [Balance RPCs](../../../reference/balance-rpcs.md) for explicit native queries.
+
 ## Overview
 
 `create_async_wallet_client()` is the async factory function for creating a client that can perform shielded writes, signed reads, and deposits. It supports both HTTP and WebSocket connections, fetches the TEE public key asynchronously, derives encryption state via [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman), and attaches a fully-configured [`w3.seismic`](../namespaces/async-seismic-namespace.md) namespace.
@@ -136,10 +138,10 @@ async def main():
     block = await w3.eth.get_block("latest")
     print(f"Latest block: {block['number']}")
 
-    # Get balance
+    # Compatibility balance on updated reth, not spendable funds
     address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
     balance = await w3.eth.get_balance(address)
-    print(f"Balance: {w3.from_wei(balance, 'ether')} ETH")
+    print(f"Compatibility balance: {balance}")
 
 asyncio.run(main())
 ```

@@ -132,6 +132,13 @@ export {
 
 export { testSeismicTxCalldataIsEncrypted } from '@sviem-tests/tests/privacy.ts'
 
+export {
+  testNativeBalanceModes,
+  testNativeBalanceBlockSelection,
+  testNativeBalanceNeverFallsBack,
+  testNativeBalanceOnNode,
+} from '@sviem-tests/tests/balance.ts'
+
 export { testRngDifferentPersProducesDifferentResults } from '@sviem-tests/tests/rngUniqueness.ts'
 
 export {
@@ -145,11 +152,9 @@ export {
 } from '@sviem-tests/tests/concurrency.ts'
 
 export {
-  testParseMinBalanceDefaultsToHalfEther,
-  testParseMinBalanceUsesWeiWhenProvided,
-  testParseMinBalanceUsesEtherWhenProvided,
-  testParseMinBalancePrefersWeiOverEther,
-  testParseMinBalanceHandlesNumericWei,
+  testCheckFaucetWithoutBalanceCheck,
+  testCheckFaucetWaitsForConfirmation,
+  testCheckFaucetSurfacesRejection,
   testParseFaucetResponseHashValid,
   testParseFaucetResponseHashNoPrefix,
   testParseFaucetResponseHashThrowsOnInvalidLength,

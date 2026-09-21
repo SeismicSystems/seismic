@@ -47,12 +47,31 @@ const publicClient = createShieldedPublicClient({
   transport: http(),
 });
 
-// Standard viem public actions work as usual
 const blockNumber = await publicClient.getBlockNumber();
-const balance = await publicClient.getBalance({
-  address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+// Actual native funds, not the default eth_getBalance placeholder.
+const balance = await publicClient.getNativeBalance({
+  address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
 });
 ```
+
+## Native Balance
+
+`getNativeBalance({ address, blockNumber?, blockTag? })` returns `Promise<bigint>` in native base units. Choose either `blockNumber` or `blockTag`; the default is `"latest"`, and `blockNumber: 0n` explicitly selects genesis.
+
+Available on both shielded public and wallet clients. It uses the native `balance` field of `eth_getAccountInfo(address, block)` with exactly two arguments, which works on updated reth and Sanvil without relying on reth's third `eth_getBalance` argument. It also fetches the account's nonce and code, though the helper returns only the balance. Unsupported-method and block errors propagate; there is no fallback to a placeholder.
+
+For an ordinary viem client, use the standalone helper:
+
+```typescript
+import { getNativeBalance } from "seismic-viem";
+
+const nativeBalance = await getNativeBalance(publicClient, {
+  address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  blockTag: "latest",
+});
+```
+
+Ordinary `getBalance()` remains unchanged and returns a compatibility placeholder on reth with PR #502, **not real native or sUSDC funds**. Use `getNativeBalance()` for native transfers, native-wallet funding thresholds, and native balance-change assertions. See [Balance RPCs](../../../reference/balance-rpcs.md) for server migration and parameter rules.
 
 ## Actions
 
@@ -60,6 +79,7 @@ const balance = await publicClient.getBalance({
 
 | Action                        | Return Type      | Description                                                            |
 | ----------------------------- | ---------------- | ---------------------------------------------------------------------- |
+| `getNativeBalance(params)` | `Promise<bigint>` | Actual public native balance via `eth_getAccountInfo` |
 | `getTeePublicKey()`           | `Promise<Hex>`   | Fetch the TEE's secp256k1 public key via `seismic_getTeePublicKey` RPC |
 | `getStorageAt()`              | --               | Throws error (not supported on Seismic)                                |
 | `publicRequest()`             | `Promise<any>`   | Raw RPC request to the node                                            |

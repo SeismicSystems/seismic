@@ -12,6 +12,7 @@ import { createPublicClient, formatUnits, http, parseEther } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
 import SlackNotifier from '@sbot/slack'
+import { getNativeBalance } from '@sviem/actions/getNativeBalance.ts'
 import {
   type ShieldedWalletClient,
   createShieldedWalletClient,
@@ -124,16 +125,14 @@ export class FaucetManager {
   }
 
   /**
-   * Retrieves the faucet balance and logs it.
+   * Native-wallet funding only, not the public faucet contract's sUSDC inventory.
    */
   private async getBalance(address: Address): Promise<bigint> {
-    return await this.publicClient.getBalance({
-      address,
-    })
+    return getNativeBalance(this.publicClient, { address })
   }
 
   /**
-   * Funds the faucet if its balance is below 100 ETH (in wei).
+   * Funds a native wallet if its balance is below MIN_ETH_REFILL.
    */
   private async fundAddressIfNeeded(address: Address) {
     const originalBalance = await this.getBalance(address)

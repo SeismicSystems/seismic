@@ -7,6 +7,8 @@ icon: wallet
 
 Create a synchronous `Web3` instance with full Seismic wallet capabilities.
 
+> **Balance RPC migration:** On reth with PR #502, `w3.eth.get_balance()` returns a compatibility placeholder, not native or sUSDC holdings. A signing wallet does not change this RPC's behavior. See [Balance RPCs](../../../reference/balance-rpcs.md) for explicit native queries.
+
 ## Overview
 
 `create_wallet_client()` is the primary factory function for creating a sync client that can perform shielded writes, signed reads, and deposits. It fetches the TEE public key, derives encryption state via [ECDH](https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman), and attaches a fully-configured [`w3.seismic`](../namespaces/seismic-namespace.md) namespace to a standard `Web3` instance.

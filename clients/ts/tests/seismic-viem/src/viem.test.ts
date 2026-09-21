@@ -9,6 +9,7 @@ import {
   TEST_ACCOUNT_PRIVATE_KEY,
 } from '@sviem-tests/constants.ts'
 import { testAesKeygen } from '@sviem-tests/tests/aesKeygen.ts'
+import { testNativeBalanceOnNode } from '@sviem-tests/tests/balance.ts'
 import {
   testConcurrentReads,
   testConcurrentShieldedTransactions,
@@ -29,17 +30,6 @@ import {
   testWriteWithExplicitGasSkipsEstimation,
   testWriteWithoutExplicitGasSucceeds,
 } from '@sviem-tests/tests/estimateGas.ts'
-import {
-  testParseFaucetResponseHashNoPrefix,
-  testParseFaucetResponseHashThrowsOnInvalidLength,
-  testParseFaucetResponseHashThrowsOnMissingHexPrefix,
-  testParseFaucetResponseHashValid,
-  testParseMinBalanceDefaultsToHalfEther,
-  testParseMinBalanceHandlesNumericWei,
-  testParseMinBalancePrefersWeiOverEther,
-  testParseMinBalanceUsesEtherWhenProvided,
-  testParseMinBalanceUsesWeiWhenProvided,
-} from '@sviem-tests/tests/faucet.ts'
 import {
   testAesGcm,
   testEcdh,
@@ -639,28 +629,8 @@ describe('Concurrent transactions', () => {
   )
 })
 
-describe('Faucet parseMinBalance', () => {
-  test('defaults to 0.5 ether', testParseMinBalanceDefaultsToHalfEther)
-  test('uses wei when provided', testParseMinBalanceUsesWeiWhenProvided)
-  test('uses ether when provided', testParseMinBalanceUsesEtherWhenProvided)
-  test('prefers wei over ether', testParseMinBalancePrefersWeiOverEther)
-  test('handles numeric wei', testParseMinBalanceHandlesNumericWei)
-})
-
-describe('parseFaucetResponseHash', () => {
-  test('extracts valid hash', testParseFaucetResponseHashValid)
-  test(
-    'returns null when prefix is missing',
-    testParseFaucetResponseHashNoPrefix
-  )
-  test(
-    'throws on invalid hash length',
-    testParseFaucetResponseHashThrowsOnInvalidLength
-  )
-  test(
-    'throws when 0x prefix is missing',
-    testParseFaucetResponseHashThrowsOnMissingHexPrefix
-  )
+describe('Native balance', () => {
+  test('reads real native funds', () => testNativeBalanceOnNode({ chain, url }))
 })
 
 describe('WebSocket extended', () => {
