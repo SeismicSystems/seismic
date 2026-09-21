@@ -1,0 +1,23 @@
+[package]
+name = "seismic-tee-admission"
+description = "The `admission` command group of the Seismic TEE deploy CLI: measurement admission from the human side — the policies that decide which images a network accepts"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Governance's crate depends on neither side of the workspace: reviewing a
+# policy reads no descriptor and no network directory, only the enclave's
+# admission compiler. The dependencies the mutation half will bring — a
+# transaction client and a signer for the authority contract — land here,
+# where the founder and operator crates never see them.
+seismic-measurement-admission.workspace = true
+
+anyhow.workspace = true
+clap.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile.workspace = true

@@ -161,9 +161,9 @@ render`, built on the schema crate every node parses with, so emitter and
 parser cannot disagree — and renders deterministically: 2-space indent, key-sorted,
 single trailing newline. The file is never hand-typed. It is emitted into a
 committed
-[network directory](https://github.com/SeismicSystems/deploy/blob/main/tee/networks/README.md)
+[network directory](../../tee/networks/README.md)
 holding the artifacts it pins, whose
-[provenance diagram](https://github.com/SeismicSystems/deploy/blob/main/tee/networks/network-dir.svg)
+[provenance diagram](../../tee/networks/network-dir.svg)
 traces where each one came from.
 
 ## `network_id` = SHA-256 of the exact bytes
@@ -393,7 +393,9 @@ evidence, whose quote binds `network_id`:
   "created_at": "2026-06-11T00:00:00Z",
   "tx_io": { "pk": "0x02… 33-byte compressed secp256k1 …", "epoch": 0 },
   "evidence": { "… attestation exchange message …": "…" },
-  "dcap_collateral": { "… PCK chain, TCB Info, QE Identity, CRLs …": "…" }
+  "verified_at": 1780000000,
+  "dcap_collateral": { "… TCB Info, QE Identity, CRLs, issuer chains …": "…" },
+  "trust_anchors": { "… digests of the verifying build's compiled-in roots …": "…" }
 }
 ```
 
@@ -415,11 +417,15 @@ Identity, and CRLs carry `nextUpdate` on a roughly 30-day cadence, and the
 platform AK chain is ordinary X.509 with `notAfter`. So the addendum is verified
 with validity-at-creation semantics: chains and TCB status are evaluated as of
 `created_at`, never as of now. To make that possible offline the addendum must
-be self-contained, which is what `dcap_collateral` is for — the DCAP collateral
-current at creation, archived. The alternative is evaluating genesis-era
-evidence against today's collateral, which is exactly the drift to avoid; the
-verification entry points that take an explicit timestamp and explicit
-collateral already exist, so this is supported usage rather than a fork.
+be self-contained, which is what the bundle fields are for: `dcap_collateral` is
+the DCAP collateral the verification consumed, `verified_at` the instant every
+freshness check was evaluated at, and `trust_anchors` digests of the roots
+compiled into the verifying build — the same re-verification bundle the founding
+archive keeps per harvested node (`seismic-verify-quote`'s archive document), so
+the addendum is produced in bundle form rather than migrated to it later. The
+alternative is evaluating genesis-era evidence against today's collateral, which
+is exactly the drift to avoid; the archived-replay entry point that takes the
+bundle already exists, so this is supported usage rather than a fork.
 
 Two things keep archived evidence from ever carrying trust on its own: the
 joiner's load-bearing check is the commitment comparison rather than a quote

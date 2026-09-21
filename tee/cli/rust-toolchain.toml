@@ -1,0 +1,7 @@
+# Pinned so `make -C tee/cli check` and CI agree, and so a new stable's clippy lints never
+# fail a PR that didn't touch the code. Nothing here ships inside the TDX image,
+# so this pin is independent of the enclave's (which the image measurement ties
+# to the compiler); bump it when there's a reason to.
+[toolchain]
+channel = "1.95.0"
+components = ["clippy", "rustfmt"]

@@ -1,0 +1,143 @@
+# The Rust deploy CLI: one binary, `seismic-tee`, over three library crates.
+#
+# Provisioning is out of scope in both directions — the CLI neither creates a
+# machine nor destroys one. The work spans both sides of a machine's
+# existence: deriving the artifact set that is a network's identity needs no
+# machine at all, while configuring a node and verifying its attestation needs
+# one already running. The node descriptor is where those two halves meet, and
+# it comes from the Pulumi program and the cohort helper beside it, for one
+# node or N.
+#
+# Five library crates, split by who may depend on whom, and one binary that
+# mounts them. The split is a rule the compiler enforces:
+#
+#   common       node descriptor, network-directory layout, HTTP and error
+#                types. Depends on neither side.
+#   context      the config file that remembers which network and node the
+#                commands act on: pointers only, no credentials. Depends on
+#                neither side, on common alone, so every group may read it.
+#   node         the `node` command group: stand up and appraise one node.
+#                Cloud-agnostic. Depends only on common and context.
+#   network      the `network` group and `verify-founding`: found a network,
+#                audit a founding. The only crate allowed to depend on both.
+#   admission    the `admission` group: review what a measurement policy
+#                compiles to. Depends on neither side.
+#   seismic-tee  the binary. Mounts the three command-bearing crates and owns
+#                nothing else.
+#
+# The whole workspace is headed for a public repo. The split is what keeps each
+# party's crate free of the others' dependencies — the operator half free of
+# founder-only ones, the founder half free of governance's — and it needs no
+# second binary to enforce it: the command groups follow the trust model's
+# parties, one crate each (see seismic-tee/src/main.rs).
+[workspace]
+resolver = "3"
+members = [
+    "common",      # -> seismic-tee-common  (library)
+    "context",     # -> seismic-tee-context (library)
+    "node",        # -> seismic-tee-node    (library)
+    "network",     # -> seismic-tee-network (library)
+    "admission",   # -> seismic-tee-admission (library)
+    "seismic-tee", # -> seismic-tee         (binary)
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/SeismicSystems/seismic"
+authors = ["Seismic Systems"]
+
+[workspace.dependencies]
+seismic-tee-common = { path = "common" }
+seismic-tee-context = { path = "context" }
+seismic-tee-node = { path = "node" }
+seismic-tee-network = { path = "network" }
+seismic-tee-admission = { path = "admission" }
+
+# Enclave libraries, pinned by rev — the same mechanism seismic-reth uses for
+# seismic-crypto. Every rule the network's identity depends on has exactly one
+# implementation, and linking it rather than reimplementing it is what keeps
+# the CLI's answer and a node's answer the same answer.
+seismic-network-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
+seismic-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
+seismic-measurement-admission = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
+seismic-verify-quote = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
+# The schema of the config POSTed to tdx-init, as the type tdx-init itself
+# deserializes: a field it would reject fails to compile here.
+tdx-init-config = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
+
+# The 20- and 32-byte words the registry gate compares — genesis storage
+# slots and the compile report's — and keccak256 over the registry's runtime
+# code. Already in the graph through seismic-measurement-admission, whose
+# report is typed in these; one copy, at the enclave's version.
+alloy-primitives = { version = "1", default-features = false, features = ["std", "serde"] }
+# The dimmed style of the context narration on stderr, and the stderr
+# handle that knows when to render it: `anstream::eprintln!` strips the
+# escapes when stderr is not a terminal and honours NO_COLOR, CLICOLOR_FORCE
+# and TERM=dumb, the clig.dev rules, and it is the same pair clap's own help
+# output uses, so both are already in the graph and colour is decided once.
+anstream = "1"
+anstyle = "1"
+anyhow = "1.0"
+base64 = "0.22"
+# "env": ContextArgs's `--context` also reads `SEISMIC_CONTEXT`, so a shell
+# pinned to a selection (`eval "$(seismic-tee env)"`) is read by every command.
+# "unstable-ext": `Arg::add`, the hook the completion candidates below attach
+# through.
+clap = { version = "4.5", features = ["derive", "env", "unstable-ext"] }
+# Tab completion. "unstable-dynamic" is the engine that re-enters the binary
+# on every tab press, so `ctx use <TAB>` can offer the names in the context
+# file rather than only flags; a static script could not. Unstable means
+# semver-exempt: the lockfile pins it, and a `cargo update` that moves it is
+# a change to review, not a routine bump.
+clap_complete = { version = "4.6", features = ["unstable-dynamic"] }
+hex = "0.4"
+# The JSON-RPC client, for the attestation service's status reads. Already
+# in the graph through seismic-verify-quote, which reaches the same port with
+# it; the version must stay the enclave's so there is one copy. Only the HTTP
+# client: the binary serves nothing and opens no websockets.
+jsonrpsee = { version = "0.26", default-features = false, features = ["http-client"] }
+# default-features off drops native-tls: an operator downloads one binary, so
+# it must not link the host's OpenSSL. (The one OpenSSL that does reach the
+# graph, through attested-tls, is vendored — see `openssl` below.)
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
+# Not called by any crate here: this entry exists for its feature. attested-tls's
+# `azure-verifier` (reached through the enclave's seismic-attestation) verifies
+# the Azure vTPM quote with the `openssl` crate, which otherwise links the
+# host's OpenSSL — libssl.so.3 on Linux, Homebrew's dylib by absolute path on
+# macOS — and a downloaded binary can assume neither. `vendored` compiles
+# OpenSSL from source (openssl-src; perl and make at build time) and links it
+# statically, and Cargo unifies the feature onto the one copy in the graph.
+# Delete this once https://linear.app/seismic-systems/issue/SEI-572 lands and
+# the enclave pin moves: azure-verifier then takes its algorithms from the
+# rustls provider this binary already installs, and `openssl` leaves the graph.
+openssl = { version = "0.10", features = ["vendored"] }
+# The process-level crypto provider `node verify` installs; see there.
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std"] }
+# The harvest's per-box nonce. At the enclave's version, like jsonrpsee.
+rand = "0.9"
+serde = { version = "1.0", features = ["derive"] }
+# `preserve_order`: the reth genesis `assemble` re-emits with the registry
+# storage injected keeps its authored key order, so a re-assembly diffs as the
+# injection and nothing else. The manifest renderer sorts its own keys and
+# does not depend on this.
+serde_json = { version = "1.0", features = ["preserve_order"] }
+sha2 = "0.10"
+# The terminal width the cohort dashboard truncates its rows to.
+terminal_size = "0.4"
+thiserror = "2.0"
+# `signal` for ctrl-C during a node's first-boot watch, `time` for the polls,
+# `process` for the foreign-repo shell-outs (`seismic-reth genesis-hash`,
+# `summit genesis`), `sync` for the cohort dashboard's status channel.
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs", "process", "signal", "sync", "time"] }
+toml = "0.9"
+# Comment-preserving writes of the context file: `ctx use` sets one key in a
+# file a human wrote, so the rest of it must survive the write. Already in the
+# graph as toml's own dependency.
+toml_edit = "0.25"
+
+tempfile = "3"
