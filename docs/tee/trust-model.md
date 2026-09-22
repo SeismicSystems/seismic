@@ -274,8 +274,7 @@ open design work.
   pins which contract may change the accepted measurement set, and today
   that role is filled by a dev authority. Who holds it on mainnet — a
   multisig, a governance contract, a council — decides who can admit code
-  into the trust domain, and the same decision gates the fork-schedule
-  amendment path ([what the genesis hash does not cover](network-manifest.md#validation-gates)).
+  into the trust domain.
 - **Root-key rotation** — must close before any purpose key ships a nonzero
   epoch. Nothing introduces fresh entropy after genesis, and the holder set
   only grows: a retired operator's TEE keeps `root_key` in RAM indefinitely.

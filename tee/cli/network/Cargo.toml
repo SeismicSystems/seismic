@@ -1,0 +1,43 @@
+[package]
+name = "seismic-tee-network"
+description = "The `network` command group and `verify-founding` of the Seismic TEE deploy CLI: found a network, audit a founding"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# The founder side is the only crate allowed to depend on both sides: founding
+# a network is configuring and verifying each of its nodes, plus everything
+# only a founder does. Declared ahead of their first callers because the edges
+# are the deliverable — see ../node/Cargo.toml.
+seismic-tee-common.workspace = true
+seismic-tee-context.workspace = true
+seismic-tee-node.workspace = true
+
+seismic-manifest.workspace = true
+seismic-measurement-admission.workspace = true
+seismic-verify-quote.workspace = true
+
+alloy-primitives.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+hex.workspace = true
+jsonrpsee.workspace = true
+rand.workspace = true
+reqwest.workspace = true
+rustls.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+# The shell-outs take paths, and `assemble` hashes artifacts that exist only
+# as bytes until they are written.
+tempfile.workspace = true
+terminal_size.workspace = true
+tokio.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+seismic-tee-common = { workspace = true, features = ["test-support"] }

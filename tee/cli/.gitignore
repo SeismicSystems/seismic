@@ -1,0 +1,3 @@
+# Cargo build output. Lives here rather than in the repo-root .gitignore so
+# the workspace stays liftable with its ignore rules.
+/target/

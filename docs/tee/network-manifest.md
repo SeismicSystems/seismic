@@ -18,18 +18,23 @@ flowchart TD
     subgraph RGF["reth-genesis.json"]
         REG["MeasurementRegistry account:<br/>canonical runtime code +<br/>genesis storage = the founding accepted IDs"]
         ALLOC["the rest of the alloc:<br/>other predeploys, prefunds"]
+        CFG["config: fork activation times,<br/>blob schedule, deposit contract —<br/>outside the header, so outside the hash;<br/>operator configuration, left unpinned"]
     end
-    M -->|"eth.genesis_hash<br/>keccak(rlp(header))"| RGF
+    M -->|"eth.genesis_hash<br/>keccak(rlp(header))"| REG
+    M -->|"eth.genesis_hash"| ALLOC
     M -->|"summit.genesis_config_digest"| SG["summit-genesis.toml<br/>consensus parameters +<br/>the complete founding validator set"]
     M -->|"summit.namespace"| NS["the BLS signing domain"]
     M -->|"measurements.bootstrap_policy_hash<br/>SHA-256(file bytes)"| MP["measurement-policy-bootstrap.json:<br/>the same accepted set,<br/>readable without a chain"]
     MP -.->|"must match —<br/>no hash forces it,<br/>anyone can check it"| REG
     M -->|"eth.chain_id"| CID["the chain id (EIP-155)<br/>not in reth's genesis block header,<br/>so it is pinned on its own"]
+    CID -.->|"must equal config.chainId —<br/>the one config key<br/>the manifest commits to"| CFG
 
     classDef pinned fill:#dbeafe,stroke:#1e3a5f,color:#111;
     classDef root fill:#a7f3d0,stroke:#047857,color:#111;
+    classDef unpinned fill:#f8fafc,stroke:#94a3b8,stroke-dasharray:4,color:#475569;
     class M,SG,MP,REG,ALLOC,CID,NS pinned;
     class NID root;
+    class CFG unpinned;
     style RGF fill:#eff6ff,stroke:#1e3a5f,color:#111;
 ```
 
@@ -151,12 +156,14 @@ never silently change `network_id`.
 **File profile.** UTF-8, no BOM, LF endings, integers only, lowercase
 `0x`-prefixed hex, no duplicate keys. These are authoring rules, not
 verification rules: the hash covers whatever bytes are published. The deploy
-tool is the sole emitter and renders deterministically — 2-space indent,
-key-sorted, single trailing newline — and the file is never hand-typed. It is
-emitted into a committed
-[network directory](https://github.com/SeismicSystems/deploy/blob/main/tee/networks/README.md)
+tool is the sole emitter — through the enclave repo's `seismic-manifest
+render`, built on the schema crate every node parses with, so emitter and
+parser cannot disagree — and renders deterministically: 2-space indent, key-sorted,
+single trailing newline. The file is never hand-typed. It is emitted into a
+committed
+[network directory](../../tee/networks/README.md)
 holding the artifacts it pins, whose
-[provenance diagram](https://github.com/SeismicSystems/deploy/blob/main/tee/networks/network-dir.svg)
+[provenance diagram](../../tee/networks/network-dir.svg)
 traces where each one came from.
 
 ## `network_id` = SHA-256 of the exact bytes
@@ -241,16 +248,16 @@ boot:
   needs the authority key, not an edited JSON file.
 
 **What `eth.genesis_hash` covers, and what it does not.** The genesis hash
-commits to the header, and fork activation times live in the genesis file's
-`config` section, outside it — so two genesis files differing only in a
-future-dated fork time hash identically, and the founding fork schedule is
-pinned by nothing. Every fork activates at genesis today, so the schedule the
-header commits to is the whole schedule. Byte-pinning the genesis file is not
-the fix, because `network_id` survives forks and a hardfork must not re-issue
-the manifest: what the schedule needs is a founding pin plus an authorized
-amendment path, decided together with the registry's mutation authority.
-Keeping fork times in the config POST rather than in the image is what lets one
-measured hardfork image serve devnet, testnet, and mainnet on different clocks.
+commits to the header. The genesis file's `config` section — fork activation
+times, the blob schedule, the deposit contract address — lives outside the
+header, so two genesis files differing only in a future-dated fork time hash
+identically. The manifest deliberately leaves `config` unpinned: the fork
+schedule is operator configuration, not a network-defining commitment
+([Design rationale](#design-rationale)). Only `config.chainId` is committed,
+through `eth.chain_id`. Keeping fork times in the config POST rather than in
+the image is what lets one measured hardfork image serve devnet, testnet, and
+mainnet on different clocks, and a hardfork changes no manifest field, so
+`network_id` survives every fork.
 
 ## Consumers of `network_id`
 
@@ -386,7 +393,9 @@ evidence, whose quote binds `network_id`:
   "created_at": "2026-06-11T00:00:00Z",
   "tx_io": { "pk": "0x02… 33-byte compressed secp256k1 …", "epoch": 0 },
   "evidence": { "… attestation exchange message …": "…" },
-  "dcap_collateral": { "… PCK chain, TCB Info, QE Identity, CRLs …": "…" }
+  "verified_at": 1780000000,
+  "dcap_collateral": { "… TCB Info, QE Identity, CRLs, issuer chains …": "…" },
+  "trust_anchors": { "… digests of the verifying build's compiled-in roots …": "…" }
 }
 ```
 
@@ -408,11 +417,15 @@ Identity, and CRLs carry `nextUpdate` on a roughly 30-day cadence, and the
 platform AK chain is ordinary X.509 with `notAfter`. So the addendum is verified
 with validity-at-creation semantics: chains and TCB status are evaluated as of
 `created_at`, never as of now. To make that possible offline the addendum must
-be self-contained, which is what `dcap_collateral` is for — the DCAP collateral
-current at creation, archived. The alternative is evaluating genesis-era
-evidence against today's collateral, which is exactly the drift to avoid; the
-verification entry points that take an explicit timestamp and explicit
-collateral already exist, so this is supported usage rather than a fork.
+be self-contained, which is what the bundle fields are for: `dcap_collateral` is
+the DCAP collateral the verification consumed, `verified_at` the instant every
+freshness check was evaluated at, and `trust_anchors` digests of the roots
+compiled into the verifying build — the same re-verification bundle the founding
+archive keeps per harvested node (`seismic-verify-quote`'s archive document), so
+the addendum is produced in bundle form rather than migrated to it later. The
+alternative is evaluating genesis-era evidence against today's collateral, which
+is exactly the drift to avoid; the archived-replay entry point that takes the
+bundle already exists, so this is supported usage rather than a fork.
 
 Two things keep archived evidence from ever carrying trust on its own: the
 joiner's load-bearing check is the commitment comparison rather than a quote
@@ -471,6 +484,31 @@ network, while prose invites churn on a file that must never change. Strip them
 before hashing, and that is half a canonical form, with the multi-language
 transform risk back again and no canonicalization standard to lean on. JSON's
 inability to carry comments is the feature.
+
+**The fork schedule stays out of the manifest** ([validation
+gates](#validation-gates)) — no byte-pin of the reth genesis file, and no
+amendment path for one. The test for whether a setting belongs in a
+network-defining commitment is who a wrong value hurts. A wrong measurement
+policy admits a bad image into the trust domain and hands it `root_key`: that
+harms every user, so it is pinned and governed. A wrong fork time only harms
+the node that set it. Block validity is checked by re-execution against the
+header's state and receipts roots, so a node on the wrong side of a fork
+computes different roots, rejects the cohort's blocks, and stalls; it cannot
+make the honest majority accept a bad block, and it holds the same keys and
+decrypts the same calldata it did before, so nothing leaks. That is the
+guarantee every Ethereum hardfork has relied on, and TEEs change none of it.
+Pinning would also have forced an amendment path — `network_id` survives forks,
+so a pinned schedule needs an authority that can revise the pin without
+re-issuing the manifest — for a setting that gains nothing from governance. The
+lever for a setting that turns out to be dangerous is the measurement policy:
+ship an image that no longer reads it, and deprecate the old one. Two costs are
+accepted. There is no forkid-style early warning — summit has no devp2p peer
+handshake, so a misconfigured validator boots cleanly and surfaces only at the
+fork block, which deploy-side checks against the network's shipped genesis file
+cover without touching the manifest. And no hardware receipt records which
+schedule a node booted; extending a runtime measurement register with the
+genesis bytes would add one, as auditability rather than as a correctness
+mechanism.
 
 **Two files rather than one document with a hashed subsection** ([the attested
 addendum](#the-attested-addendum)) — the `tx_io` pin inside the file but outside

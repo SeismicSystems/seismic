@@ -1,0 +1,42 @@
+[package]
+name = "seismic-tee-node"
+description = "The `node` command group of the Seismic TEE deploy CLI: configure a node on first boot, and verify its attestation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# The dependency direction the library crates are split on, as a Cargo edge:
+# the operator half may reach the shared foundation and nothing else in this
+# workspace. Where the seam runs is this file's decision, not that of whichever
+# command first needs it.
+seismic-tee-common.workspace = true
+seismic-tee-context.workspace = true
+
+# The enclave libraries an operator's commands are built on. `configure`
+# constructs the config POST as the type tdx-init deserializes it; `verify`
+# runs the relying-party check as the library call it is, and promotes an
+# operator's own measurements with the same compiler the founding used.
+seismic-measurement-admission.workspace = true
+seismic-verify-quote.workspace = true
+tdx-init-config.workspace = true
+
+anyhow.workspace = true
+base64.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+hex.workspace = true
+jsonrpsee.workspace = true
+reqwest.workspace = true
+rustls.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tokio.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+seismic-tee-common = { workspace = true, features = ["test-support"] }
+tempfile.workspace = true

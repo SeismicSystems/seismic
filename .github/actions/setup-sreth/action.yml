@@ -21,27 +21,19 @@ runs:
       env:
         SRETH_VERSION: ${{ inputs.version }}
       run: |
-        case "$(uname -s)" in
-          Linux) platform=linux ;;
-          Darwin) platform=darwin ;;
-          *)
-            echo "Unsupported platform: $(uname -s)" >&2
-            exit 1
-            ;;
-        esac
-        case "$(uname -m)" in
-          x86_64) arch=amd64 ;;
-          aarch64 | arm64) arch=arm64 ;;
-          *)
-            echo "Unsupported architecture: $(uname -m)" >&2
-            exit 1
-            ;;
-        esac
+        # seismic-reth's release matrix is one entry, linux amd64, and every
+        # release carries that asset alone: any other platform here would
+        # spell a URL no release has and fail in `tar` rather than on its own
+        # terms. Widen this when the matrix widens.
+        [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ] || {
+          echo "seismic-reth publishes linux amd64 only; this runner is $(uname -s) $(uname -m)" >&2
+          exit 1
+        }
 
         # Tarball published by seismic-reth's seismic-release.yml
         # (https://github.com/SeismicSystems/seismic-reth/blob/seismic/.github/workflows/seismic-release.yml);
         # the asset name embeds the version, which is "nightly" on the rolling release.
-        url="https://github.com/SeismicSystems/seismic-reth/releases/download/${SRETH_VERSION}/seismic-reth_${SRETH_VERSION}_${platform}_${arch}.tar.gz"
+        url="https://github.com/SeismicSystems/seismic-reth/releases/download/${SRETH_VERSION}/seismic-reth_${SRETH_VERSION}_linux_amd64.tar.gz"
         SEISMIC_BIN="${XDG_CONFIG_HOME:-$HOME}/.seismic/bin"
         mkdir -p "$SEISMIC_BIN"
         curl -fsSL "$url" | tar -xz -C "$SEISMIC_BIN"

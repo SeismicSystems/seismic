@@ -1,0 +1,14 @@
+# The cohort's descriptor map (the Pulumi stack's `nodes` output, saved as
+# nodes/nodes.json), the founding bootnode set beside it, and the per-node
+# `<node>.init-config.toml` records of what `configure` POSTed — runtime
+# output (live IPs, regenerated each deploy, gone with the stack), never
+# committed. Everything else in a network directory is its committable
+# identity.
+*/nodes/
+
+# Throwaway foundings (the recipe is the devnet runbook,
+# https://github.com/SeismicSystems/deploy/blob/main/tee/runbook-devnet.md):
+# the whole directory is ignored, so a scratch cohort can be founded, torn
+# down, and deleted without touching git. A network that matters gets an unprefixed
+# directory — its identity is committed.
+tmp-*/

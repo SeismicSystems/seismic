@@ -1,0 +1,67 @@
+name: Setup summit
+description: Install a prebuilt summit release binary
+
+inputs:
+  version:
+    description: >-
+      summit release to install: a version tag (vX.Y.Z), the main build at a
+      commit (main-<40-char sha>), or `main` for the newest main build.
+    required: false
+    default: main
+  token:
+    description: >-
+      Token for the one API call that resolves `main` to the newest release.
+      The download itself is anonymous — summit is public — so a pinned
+      version needs no token at all.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  summit-path:
+    description: Absolute path to the installed summit binary
+    value: ${{ steps.install.outputs.summit-path }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      name: Install summit (${{ inputs.version }})
+      shell: bash
+      env:
+        SUMMIT_VERSION: ${{ inputs.version }}
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        # summit's release workflow builds one target
+        # (https://github.com/SeismicSystems/summit/blob/main/.github/workflows/release.yml),
+        # on the oldest Ubuntu runner offered, so the binary needs glibc 2.35
+        # or newer and nothing else from the host.
+        [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ] || {
+          echo "summit publishes linux amd64 only; this runner is $(uname -s) $(uname -m)" >&2
+          exit 1
+        }
+
+        # Every push to summit's main publishes a prerelease tagged with the
+        # built commit, and prereleases never become the repository's
+        # "Latest", so `main` is the newest such tag rather than a
+        # releases/latest lookup.
+        tag="$SUMMIT_VERSION"
+        if [ "$tag" = main ] || [ -z "$tag" ]; then
+          tag=$(gh api 'repos/SeismicSystems/summit/releases?per_page=100' \
+            --jq '[.[] | select(.draft | not) | select(.tag_name | startswith("main-"))]
+                  | sort_by(.created_at) | last | .tag_name')
+          [ -n "$tag" ] || { echo "summit has published no main-* release" >&2; exit 1; }
+          echo "newest summit main build is $tag"
+        fi
+
+        url="https://github.com/SeismicSystems/summit/releases/download/${tag}/summit_${tag}_linux_amd64.tar.gz"
+        SEISMIC_BIN="${XDG_CONFIG_HOME:-$HOME}/.seismic/bin"
+        mkdir -p "$SEISMIC_BIN"
+        curl -fsSL "$url" | tar -xz -C "$SEISMIC_BIN" || {
+          echo "no summit release at $tag ($url)." >&2
+          echo "Releases are published for pushes to main and for vX.Y.Z tags; a commit that never landed on main, or one from before summit's release workflow, has none." >&2
+          exit 1
+        }
+        # TODO: `--version` once summit reports one (SEI-560).
+        "$SEISMIC_BIN/summit" --help > /dev/null
+        echo "$SEISMIC_BIN" >> "$GITHUB_PATH"
+        echo "summit-path=$SEISMIC_BIN/summit" >> "$GITHUB_OUTPUT"

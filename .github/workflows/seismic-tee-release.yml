@@ -1,0 +1,410 @@
+# Publishes prebuilt `seismic-tee` binaries — the Rust deploy CLI under
+# tee/cli — as GitHub releases of this repo:
+#
+#   - every push to `main` that touches tee/cli (the installer included) or
+#     this workflow publishes a *prerelease* tagged `seismic-tee/main-<sha>` at
+#     the built commit, so each merge has a permanent download URL that
+#     follows from the commit alone. Prereleases never become the
+#     repository's "Latest" release, and nothing prunes them: every main
+#     build stays downloadable.
+#   - pushing a `seismic-tee/vX.Y.Z` tag publishes a versioned release,
+#     "Latest" unless the version carries a pre-release suffix
+#     (`seismic-tee/v0.1.0-rc.1`). The version must equal the
+#     `[workspace.package] version` in tee/cli/Cargo.toml, and must be
+#     higher than every version already released: releases only go up, so a
+#     rerun of an old tag or a maintenance release behind the newest is
+#     refused before anything is built — cut the next version instead.
+#   - a manual dispatch on `main` behaves like a push to it; on any other ref,
+#     a version tag included, it only builds — a dry run of the workflow —
+#     and publishes nothing. Only a *pushed* tag publishes a version, so no
+#     button rebuilds a live release: its checksums and attestation are what
+#     people verified against.
+#
+# When a release run fails:
+#   - a transient failure (runner, network, attestation service): re-run the
+#     run (`gh run rerun <id> --failed`). A re-run keeps its push event and
+#     publishes; a release created before the failure is updated in place.
+#   - a broken workflow: fix it on main, dry-run the fix by dispatching on a
+#     branch, delete any partial release (`gh release delete <tag>`), then
+#     move the tag to the fixed commit and push it again — a fresh push
+#     event. Nothing was ever downloadable under the tag, so nothing the move
+#     could invalidate exists.
+#   - a bad release that was live long enough to be downloaded: cut the next
+#     version. A release someone may have verified is immutable.
+#
+# The tag prefix is `seismic-tee/`, not the `<package>@` the TS and Python
+# clients use: the installer and `--upgrade` parse it, and it predates the
+# move here from the deploy repo. No file here names the repo: the workflow
+# reads GITHUB_REPOSITORY and the installer (tee/cli/install.sh) has it in one
+# variable.
+#
+# Three native builds and no cross-compilation: linux amd64 and arm64 on
+# ubuntu-22.04, macOS arm64 on macos-14. Every runner is pinned, never
+# `-latest`: the Linux binaries link glibc dynamically and need the build
+# host's version or newer at run time, so the build host IS the
+# compatibility floor — glibc 2.35, i.e. Ubuntu 22.04 / Debian 12 and later
+# — and a floating image would move it with no change in the repo. Nothing
+# else is linked from the host: TLS is rustls on aws-lc-rs and the OpenSSL
+# that attested-tls needs is vendored into the binary (tee/cli/Cargo.toml),
+# which the build step asserts. Native runners because aws-lc-rs and
+# OpenSSL both want a C compiler (and cmake, perl, make) for the target,
+# which a native runner has and a cross toolchain would have to be given.
+# Each release ships
+# seismic-tee_<version>_<os>_<arch>.tar.gz per target, one SHA256SUMS over
+# all of them, and a build provenance attestation per binary, verifiable
+# with `gh attestation verify seismic-tee --repo <this repo>`. tee/cli/install.sh
+# downloads, checks and installs them, and is run here, the way its one-liner
+# runs it, against every release the moment it is published.
+#
+# Only the publish job holds `contents: write`. The builds, which run the
+# workspace's build scripts, keep the read-only default plus the two
+# permissions attestation needs. The tag is created by the release itself, at
+# publish time, so a failed build leaves no dangling tag.
+name: release seismic-tee
+
+on:
+  push:
+    branches: [main]
+    # Branch pushes only build when the CLI could have changed; GitHub does
+    # not apply `paths` to tag pushes, so a version tag always builds.
+    paths:
+      - "tee/cli/**"
+      - ".github/workflows/seismic-tee-release.yml"
+    tags: ["seismic-tee/v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+
+jobs:
+  # Names the release once, for every build to share: the tag, its version
+  # part (what asset names and the installer use), whether it is a
+  # prerelease, and whether this run publishes at all.
+  plan:
+    name: plan the release
+    # 24.04 for python 3.12's tomllib (the version check); builds nothing.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      publish: ${{ steps.info.outputs.publish }}
+      tag: ${{ steps.info.outputs.tag }}
+      version: ${{ steps.info.outputs.version }}
+      prerelease: ${{ steps.info.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The version check below compares against every released tag.
+          fetch-tags: true
+
+      - name: Name the release
+        id: info
+        env:
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          publish=true
+          if [[ "$REF" == refs/tags/seismic-tee/v* ]]; then
+            version=${REF_NAME#seismic-tee/}
+            # A semver pre-release (v0.1.0-rc.1) is a GitHub prerelease too.
+            if [[ "$version" == *-* ]]; then prerelease=true; else prerelease=false; fi
+            # Only the tag's push publishes it; a dispatch on the tag is a
+            # dry run, so no button can rebuild a live release.
+            [[ "$EVENT" == push ]] || publish=false
+          else
+            version=main-$SHA
+            prerelease=true
+            [[ "$REF" == refs/heads/main ]] || publish=false
+          fi
+          {
+            echo "publish=$publish"
+            echo "tag=seismic-tee/$version"
+            echo "version=$version"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+          echo "tag seismic-tee/$version, prerelease $prerelease, publish $publish"
+
+      # Before any build, so a mistyped tag fails in seconds, not after three
+      # of them. The binary inherits the workspace version (`version.workspace
+      # = true`), so the workspace's is the one to compare.
+      - name: Check the tag against tee/cli/Cargo.toml
+        if: startsWith(github.ref, 'refs/tags/seismic-tee/v')
+        env:
+          VERSION: ${{ steps.info.outputs.version }}
+        run: |
+          workspace=$(python3 -c '
+          import tomllib
+          with open("tee/cli/Cargo.toml", "rb") as f:
+              print(tomllib.load(f)["workspace"]["package"]["version"])')
+          [ "${VERSION#v}" = "$workspace" ] || {
+            cat >&2 <<EOF
+          tag seismic-tee/$VERSION is at a commit whose tee/cli/Cargo.toml has [workspace.package] version = "$workspace", not "${VERSION#v}".
+          The version is bumped in the repo before the tag is pushed. Nothing was built or published, so the tag can move:
+            1. set version = "${VERSION#v}" in tee/cli/Cargo.toml, run \`cargo update --workspace\` in tee/cli, and merge that to main
+            2. git push origin :refs/tags/seismic-tee/$VERSION
+            3. git tag -f seismic-tee/$VERSION <merge commit> && git push origin seismic-tee/$VERSION
+          EOF
+            exit 1
+          }
+
+      # Versions only go up. The installer and GitHub's "Latest" marker both
+      # take the newest release by creation date, so a version published out
+      # of order is what a bare install would get; and the release notes'
+      # baseline — the highest other version tag — is the previous release
+      # only while releases are in order. Refused here, before any build, and
+      # the answer is the next version, never a rerun of an old one.
+      # `versionsort.suffix=-` sorts v0.2.0-rc.1 below v0.2.0, as semver does.
+      - name: Check the version only goes up
+        if: startsWith(github.ref, 'refs/tags/seismic-tee/v')
+        env:
+          TAG: ${{ steps.info.outputs.tag }}
+        run: |
+          highest=$(git -c versionsort.suffix=- tag -l 'seismic-tee/v*.*.*' --sort=-v:refname | head -n1)
+          [ "$highest" = "$TAG" ] || {
+            echo "$TAG is not the highest seismic-tee version tag ($highest is). Releases only go up: a rerun of an older release, or a version behind the newest, is refused — cut the next version instead." >&2
+            exit 1
+          }
+
+  build:
+    name: build ${{ matrix.target.platform }}
+    needs: plan
+    strategy:
+      fail-fast: true
+      matrix:
+        target:
+          - platform: linux_amd64
+            runner: ubuntu-22.04
+          - platform: linux_arm64
+            runner: ubuntu-22.04-arm
+          - platform: darwin_arm64
+            runner: macos-14
+    runs-on: ${{ matrix.target.runner }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v6
+
+      # Same toolchain dance as seismic-tee.yml, for the same reason: rust-cache reads
+      # the default toolchain at the repo root, where tee/cli's
+      # rust-toolchain.toml does not apply, so the pin has to be made the
+      # default or the cache key rotates with the runner's stable.
+      - name: Install the toolchain
+        working-directory: tee/cli
+        run: rustup default "$(rustup show active-toolchain | head -1 | cut -d' ' -f1)"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tee/cli
+          cache-on-failure: true
+
+      # `--locked`: the committed resolution, as seismic-tee.yml asserts it. The
+      # binary stamps itself with the commit it was built from (build.rs
+      # asks git), so the smoke run also prints what this release is of.
+      # The dynamic-library listing is the compatibility baseline made
+      # visible, and the grep holds it to libc: an OpenSSL that slipped
+      # back to dynamic linking would fail here, not on an operator's box.
+      - name: Build seismic-tee
+        working-directory: tee/cli
+        run: |
+          cargo build --release --locked --bin seismic-tee
+          bin=target/release/seismic-tee
+          file "$bin"
+          du -h "$bin"
+          "$bin" --version
+          if [ "$RUNNER_OS" = Linux ]; then
+            ldd "$bin"
+            ! ldd "$bin" | grep -Eq 'libssl|libcrypto' || {
+              echo "seismic-tee links the host's OpenSSL; the vendored build did not take" >&2
+              exit 1
+            }
+          else
+            otool -L "$bin"
+            ! otool -L "$bin" | grep -Eq 'libssl|libcrypto' || {
+              echo "seismic-tee links a host OpenSSL dylib; the vendored build did not take" >&2
+              exit 1
+            }
+          fi
+
+      - name: Archive seismic-tee
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+          PLATFORM: ${{ matrix.target.platform }}
+        run: |
+          mkdir dist
+          tar -czvf "dist/seismic-tee_${VERSION}_${PLATFORM}.tar.gz" -C tee/cli/target/release seismic-tee
+
+      - name: Attest build provenance
+        if: needs.plan.outputs.publish == 'true'
+        id: attest
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: tee/cli/target/release/seismic-tee
+
+      - name: Record the attestation URL
+        if: needs.plan.outputs.publish == 'true'
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+          PLATFORM: ${{ matrix.target.platform }}
+          ATTESTATION_URL: ${{ steps.attest.outputs.attestation-url }}
+        run: echo "$ATTESTATION_URL" > "dist/seismic-tee_${VERSION}_${PLATFORM}.attestation.txt"
+
+      # Hand-off to the publish job. A day is plenty: the release is the
+      # durable copy.
+      - name: Upload the assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: seismic-tee-${{ matrix.target.platform }}
+          path: dist
+          retention-days: 1
+          if-no-files-found: error
+
+  publish:
+    name: publish ${{ needs.plan.outputs.tag }}
+    needs: [plan, build]
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The notes list the commits since the previous release of the
+          # same kind, so the whole history and every tag are needed.
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: seismic-tee-*
+          merge-multiple: true
+          path: dist
+
+      # One checksum file over every target, written here where all three
+      # tarballs are first in one place. The installer reads its own line.
+      - name: Write SHA256SUMS
+        working-directory: dist
+        run: |
+          sha256sum -- *.tar.gz > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Write the release notes
+        env:
+          TAG: ${{ needs.plan.outputs.tag }}
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          if [[ "$VERSION" == v* ]]; then
+            # The highest other version tag of this component — the previous
+            # release, since versions only go up (checked in `plan`).
+            prev=$(git -c versionsort.suffix=- tag -l 'seismic-tee/v*.*.*' --sort=-v:refname | grep -v "^$TAG$" | head -n1)
+          else
+            # The nearest earlier main build reachable from this commit's
+            # parent: normally the previous merge that touched the CLI, or
+            # further back if its run never published.
+            prev=$(git describe --tags --match 'seismic-tee/main-*' --abbrev=0 HEAD^ 2>/dev/null || true)
+          fi
+          if [ -n "$prev" ]; then
+            range="$prev..HEAD"
+          elif [[ "$VERSION" == v* ]]; then
+            range=HEAD
+          else
+            range=HEAD^..HEAD
+          fi
+          echo "previous release: ${prev:-none}; listing $range"
+
+          {
+            echo "\`seismic-tee\` built from https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA."
+            echo
+            echo "## Install"
+            echo
+            echo '```sh'
+            echo "curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/tee/cli/install.sh |"
+            echo "    sh -s -- --version $VERSION"
+            echo '```'
+            echo
+            echo "## Changes"
+            echo
+            # One line per merge to main (--first-parent) that touched the
+            # CLI (its installer included) or this workflow: the monorepo
+            # carries other components, whose merges are not this release's.
+            git log --first-parent --format='- %s' "$range" -- tee/cli .github/workflows/seismic-tee-release.yml
+            if [ -n "$prev" ]; then
+              echo
+              echo "Full changelog: https://github.com/$GITHUB_REPOSITORY/compare/$prev...$TAG"
+            fi
+            echo
+            echo "## Verify"
+            echo
+            echo 'Each tarball holds the `seismic-tee` binary for its platform. The Linux binaries need glibc 2.35 or newer (Ubuntu 22.04, Debian 12, and later) and nothing else from the host; TLS and OpenSSL are built in. SHA256SUMS covers all of them, and each binary'"'"'s build provenance is attested by GitHub:'
+            echo
+            echo '```sh'
+            echo "sha256sum -c --ignore-missing SHA256SUMS"
+            echo "tar -xzf seismic-tee_${VERSION}_linux_amd64.tar.gz"
+            echo "gh attestation verify seismic-tee --repo $GITHUB_REPOSITORY"
+            echo '```'
+          } > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+
+      # Creates the tag at the built commit when it does not exist yet (the
+      # main-<sha> case). Re-running a run that died after this step updates
+      # the release and replaces same-named assets instead of failing. Pinned
+      # to the commit behind v2.2.2 rather than the tag: this step holds
+      # `contents: write`.
+      - name: Publish the release
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        with:
+          tag_name: ${{ needs.plan.outputs.tag }}
+          name: ${{ needs.plan.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ needs.plan.outputs.prerelease == 'true' }}
+          body_path: ${{ runner.temp }}/notes.md
+          fail_on_unmatched_files: true
+          files: dist/*
+
+  # The installer against the release just published, on each platform it
+  # serves, spelled the way the release notes above spell it — and fetched
+  # from this commit rather than from a checkout, so what is tested is what
+  # an operator copies off the release page. GH_TOKEN is what lets gh,
+  # already on the runner, verify the build provenance attestation rather
+  # than skip it. (The version is spelled out, so the installer makes no API
+  # call here.)
+  install:
+    name: install on ${{ matrix.target.platform }}
+    needs: [plan, publish]
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - platform: linux_amd64
+            runner: ubuntu-22.04
+          - platform: linux_arm64
+            runner: ubuntu-22.04-arm
+          - platform: darwin_arm64
+            runner: macos-14
+    runs-on: ${{ matrix.target.runner }}
+    timeout-minutes: 10
+    steps:
+      - name: Run the installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          SEISMIC_TEE_REPO: ${{ github.repository }}
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$GITHUB_SHA/tee/cli/install.sh" |
+              sh -s -- --version "$VERSION"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Check what was installed
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          seismic-tee --version
+          # The build stamp is the commit this release was built from.
+          seismic-tee --version | grep -F "(${SHA:0:9})"
+          seismic-tee --help > /dev/null

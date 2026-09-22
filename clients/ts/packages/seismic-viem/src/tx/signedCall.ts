@@ -274,9 +274,13 @@ export async function signedCall<
       })
     }
 
+    // nonce and value are part of the AEAD metadata, so the values bound
+    // here must be the ones that end up in the signed request below.
     metadata = await buildTxSeismicMetadata(client, {
       account,
+      nonce: nonce_,
       to: to!,
+      value,
       blocksWindow,
       encryptionNonce,
       recentBlockHash,
@@ -300,9 +304,9 @@ export async function signedCall<
       maxFeePerBlobGas,
       maxFeePerGas,
       maxPriorityFeePerGas,
-      nonce: nonce_,
+      nonce: metadata.legacyFields.nonce,
       to,
-      value,
+      value: metadata.legacyFields.value,
       // prepareTransactionRequest will fill the required fields using legacy spec
       type: 'legacy',
     } as any

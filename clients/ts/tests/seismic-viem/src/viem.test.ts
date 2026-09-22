@@ -54,7 +54,9 @@ import { testRngDifferentPersProducesDifferentResults } from '@sviem-tests/tests
 import { testDwriteContractUsesSecurityParams } from '@sviem-tests/tests/securityParams.ts'
 import {
   testSignedCallDirect,
+  testSignedCallWithExplicitNonce,
   testSignedCallWithSecurityParams,
+  testSignedCallWithValue,
 } from '@sviem-tests/tests/signedCallDirect.ts'
 import {
   testEstimateGasDecryptsRevertReason,
@@ -593,6 +595,16 @@ describe('SignedCall standalone', () => {
   test(
     'signedCall with custom security params',
     async () => await testSignedCallWithSecurityParams({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'signedCall with an explicit nonce',
+    async () => await testSignedCallWithExplicitNonce({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'signedCall with a value',
+    async () => await testSignedCallWithValue({ chain, url, account }),
     { timeout: CONTRACT_TIMEOUT_MS }
   )
   test(

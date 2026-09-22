@@ -1,0 +1,42 @@
+eth_genesis_hash = "0xd0752c416c36a7132ff6a5fcd25328931874cfe67761897b6ad83d523bcfebbb"
+leader_timeout_ms = 2000
+notarization_timeout_ms = 4000
+nullify_timeout_ms = 4000
+activity_timeout_views = 256
+skip_timeout_views = 32
+max_message_size_bytes = 10485760
+namespace = "tmp-devnet-1"
+validator_minimum_stake = 32000000000
+blocks_per_epoch = 10000
+allowed_timestamp_future_ms = 10000
+treasury_address = "0x0000000000000000000000000000000000000000"
+max_deposits_per_epoch = 3
+max_withdrawals_per_epoch = 16
+observers_per_validator = 5
+minimum_validator_count = 3
+invalid_deposit_tax = 0
+max_pending_withdrawals_per_validator = 3
+
+[[validators]]
+node_public_key = "3073ec90b53178d116cc24a7d520c10b6c047d2acac51befa68ece15b312171f"
+consensus_public_key = "8684c004d0f4159b5c13f58eeec508c38a603eaafa4812dabbcb62e4edce22706638837c0bf3df14068d1065f83008bb"
+ip_address = "20.228.234.255:18551"
+withdrawal_credentials = "0x0000000000000000000000000000000000000003"
+
+[[validators]]
+node_public_key = "503b1875619a9c4480f76745dc4989b51329f40723c4b1173ac28c77d6a3175c"
+consensus_public_key = "a55a6e8589c95f1714ba60d9da439cc46686c447c48c3f2a851fe1286c41eb1d80d4e0d80bb4aa48afe7c1fac547baf2"
+ip_address = "20.25.28.229:18551"
+withdrawal_credentials = "0x0000000000000000000000000000000000000001"
+
+[[validators]]
+node_public_key = "5cd7a2c5f953312319e5601f327c44ac2b6655215ee74f75e553cf7ce037b0d0"
+consensus_public_key = "a8d8a940cefffeadd509d316f76353bf556ff9729b066f2bc67b4cedf24825511a6da387d3fe63888f81c31976d25960"
+ip_address = "172.203.162.89:18551"
+withdrawal_credentials = "0x0000000000000000000000000000000000000004"
+
+[[validators]]
+node_public_key = "d65d81ca1e61ada991ec22f0eceba4998ebbbfb6d22759acac000aee8b9c3b3b"
+consensus_public_key = "957cee22c39ec42ab475eef87892bdd262a6b6e4c69461ebcdb1139ea41f17e5b1b80bd6eed55bf96564ac07ad12b34d"
+ip_address = "4.246.220.20:18551"
+withdrawal_credentials = "0x0000000000000000000000000000000000000002"
