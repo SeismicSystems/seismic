@@ -130,8 +130,8 @@ impl DerivationArgs {
         if let Err(why) = image::host_runs_image_binaries() {
             bail!(
                 "image {}'s own seismic-reth and summit cannot run here: {why}. The derivations \
-                 must still be theirs — build both at the revs inputs/image.json pins (or take \
-                 summit's `main-<sha>` release) and pass --reth-bin and --summit-bin",
+                 must still be theirs — put both on PATH, built at the revs inputs/image.json \
+                 pins under `sources`, and pass --reth-bin seismic-reth --summit-bin summit",
                 release.tag()
             );
         }

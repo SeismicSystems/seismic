@@ -60,7 +60,7 @@ pub const FETCH_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// The runbook's provisioning section, by URL: the CLI may be installed where
 /// the repo is not.
-pub const RUNBOOK_PROVISION_URL: &str = "https://github.com/SeismicSystems/deploy/blob/main/tee/docs/runbook-devnet.md#2-provision-the-cohort";
+pub const RUNBOOK_PROVISION_URL: &str = "https://github.com/SeismicSystems/deploy/blob/main/tee/runbook-devnet.md#2-provision-the-cohort";
 
 /// Suffix for parse-gate errors on fetched content: the classic mistake is
 /// pasting a GitHub HTML page URL, which fetches fine but isn't the file.

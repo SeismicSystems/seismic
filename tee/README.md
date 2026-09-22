@@ -144,25 +144,19 @@ seismic-images release `inputs/image.json` names and verified against its
 boot. Those binaries are x86-64 Linux, so a Mac cannot run them — nor can an
 arm64 Linux box, nor a Linux VM on Apple silicon where the kernel executes
 x86-64 through Rosetta, since the image's `summit` crashes there. `assemble`
-refuses on all three and names the way out. Either run it in an amd64 Linux
-container, where the default path works:
-
-```bash
-docker run --platform linux/amd64 -v "$PWD:/w" -w /w seismic-tee \
-    network assemble tee/networks/<name>
-```
-
-or point it at binaries this host can run:
+refuses on all three and names the way out: put both on PATH, built at the revs
+`inputs/image.json` pins under `sources`, and name them:
 
 ```bash
 seismic-tee network assemble tee/networks/<name> \
-    --reth-bin <path> --summit-bin <path>
+    --reth-bin seismic-reth --summit-bin summit
 ```
 
-Neither seismic-reth nor summit publishes a macOS build today, so the second
-spelling means building both from source at the revs `inputs/image.json`
-pins. A rebuild at those revs computes the same digests — it just no longer
-proves they came from the image.
+Neither seismic-reth nor summit publishes a macOS build today, so that means
+building both from source. A build at those revs computes the same digests — it
+just no longer proves they came from the image. An amd64 container on Apple
+silicon is no way round it either: Docker Desktop runs those through Rosetta
+by default.
 
 ## Development
 
