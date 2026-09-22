@@ -1,0 +1,37 @@
+[package]
+name = "seismic-tee"
+description = "The Seismic TEE deploy CLI: found a network, stand up and appraise a node, review a measurement policy, audit a founding"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# The mount point for the three command-bearing crates, and nothing else: the
+# groups' code lives in the libraries, whose one-way dependency rule
+# (../Cargo.toml) a binary that links them all leaves untouched.
+seismic-tee-admission.workspace = true
+seismic-tee-context.workspace = true
+seismic-tee-network.workspace = true
+seismic-tee-node.workspace = true
+
+anyhow.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+# For its `vendored` feature alone — a downloaded binary must not link the
+# host's OpenSSL. Why the graph has OpenSSL at all, and when this goes:
+# ../Cargo.toml, and https://linear.app/seismic-systems/issue/SEI-572.
+openssl.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+# The fake server this crate's black-box tests bind a node's attestation RPC
+# to, so a status command reaching a real port has something real to reach.
+seismic-tee-common = { workspace = true, features = ["test-support"] }
+serde_json.workspace = true
+tempfile.workspace = true
+
+[[bin]]
+name = "seismic-tee"
+path = "src/main.rs"

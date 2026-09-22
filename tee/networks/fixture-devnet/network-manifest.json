@@ -1,0 +1,19 @@
+{
+  "eth": {
+    "chain_id": 5124,
+    "genesis_hash": "0xd0752c416c36a7132ff6a5fcd25328931874cfe67761897b6ad83d523bcfebbb"
+  },
+  "manifest_version": 1,
+  "measurements": {
+    "bootstrap_policy_hash": "0x3aba5ce79429fdaac959b8d1d1228e614e37c7b14d7b4bb7b934c9bcb0b37801",
+    "contracts": {
+      "authority": "0x1000000000000000000000000000000000000002",
+      "registry": "0x1000000000000000000000000000000000000001"
+    }
+  },
+  "name": "tmp-devnet-1",
+  "summit": {
+    "genesis_config_digest": "0x5907f7cc8a68d5746880b267f230f4b0a9e126b116c28b0a4bb61a08a16814c5",
+    "namespace": "tmp-devnet-1"
+  }
+}

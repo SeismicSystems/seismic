@@ -1,0 +1,27 @@
+[package]
+name = "seismic-tee-context"
+description = "The context file of the Seismic TEE deploy CLI: which network and node the commands act on"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Depends on neither side: resolving a selection means reading the descriptor
+# map and building the node's RPC URL, both of which are common's. Every
+# command group reads this crate, so nothing party-specific belongs in it.
+seismic-tee-common.workspace = true
+
+anstream.workspace = true
+anstyle.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+serde.workspace = true
+toml.workspace = true
+toml_edit.workspace = true
+
+[dev-dependencies]
+seismic-tee-common = { workspace = true, features = ["test-support"] }
+tempfile.workspace = true

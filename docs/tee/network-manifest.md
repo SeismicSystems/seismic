@@ -161,9 +161,9 @@ render`, built on the schema crate every node parses with, so emitter and
 parser cannot disagree — and renders deterministically: 2-space indent, key-sorted,
 single trailing newline. The file is never hand-typed. It is emitted into a
 committed
-[network directory](https://github.com/SeismicSystems/deploy/blob/main/tee/networks/README.md)
+[network directory](../../tee/networks/README.md)
 holding the artifacts it pins, whose
-[provenance diagram](https://github.com/SeismicSystems/deploy/blob/main/tee/networks/network-dir.svg)
+[provenance diagram](../../tee/networks/network-dir.svg)
 traces where each one came from.
 
 ## `network_id` = SHA-256 of the exact bytes

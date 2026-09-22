@@ -245,12 +245,12 @@ One stage per repo, each owning an artifact the next one consumes:
 | Admission at join time, and the freshness gate | enclave | [`attestation-service`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/attestation-service/src/admission.rs), reading the chain through the narrow `isAccepted` binding in `measurement-registry-client`. |
 | The registry contract and its artifact | seismic | [`MeasurementRegistry.sol`](../../contracts/src/enclave/MeasurementRegistry.sol), its [tests](../../contracts/test/MeasurementRegistry.t.sol), and the published artifact the genesis builder consumes. |
 | Policy-free genesis templates | seismic-reth | The [genesis builder](https://github.com/SeismicSystems/seismic-reth/tree/seismic/crates/seismic/genesis-builder) and its [contract manifest](https://github.com/SeismicSystems/seismic-reth/blob/seismic/crates/seismic/chainspec/res/genesis/manifest.toml): the registry ships with canonical runtime and empty storage, which fails closed. |
-| Genesis assembly, and revision deltas | deploy | [`tee/cli`](https://github.com/SeismicSystems/deploy/tree/main/tee/cli): promote, compile, inject the storage map, and prove genesis consistency. |
+| Genesis assembly, and revision deltas | seismic | [`tee/cli`](../../tee/cli/), the `seismic-tee` CLI: promote, compile, inject the storage map, and prove genesis consistency. |
 
 Two boundaries hold each artifact to one implementation: the enclave repo
 carries only the registry's read interface, held to the canonical ABI by a CI
-check, and deploy shells out to the admission CLI rather than reimplementing
-promotion and storage derivation in Python. What a second copy of either would
+check, and `seismic-tee` shells out to the admission CLI rather than
+reimplementing promotion and storage derivation. What a second copy of either would
 cost is in the [design rationale](#design-rationale).
 
 ### One image release, end to end
@@ -264,7 +264,7 @@ flowchart LR
         P["promote<br/>one-record document"]
         CO["compile<br/>IDs + policy hash<br/>+ storage map"]
     end
-    subgraph deployrepo [deploy]
+    subgraph teecli ["seismic — seismic-tee CLI"]
         H["harvest<br/>DCAP-verify founding quotes<br/>against this document"]
         AS["assemble<br/>inject storage, pin the hash,<br/>mint network_id"]
     end
@@ -341,7 +341,7 @@ policy revision. The read path stays O(1) and the deployed bytecode stays put.
 
 **One implementation of the predicate rather than a copy per repo**
 ([cross-repo wiring](#cross-repo-wiring)). A second Solidity copy and Foundry
-build in enclave, or a second policy compiler in Python in deploy, would each
+build in enclave, or a second policy compiler in `seismic-tee`, would each
 be a place the two halves of the system could drift on what an admission ID
 means — and the drift would surface as a join that fails against genesis
 storage nobody can reproduce. Promotion and storage derivation are schema
