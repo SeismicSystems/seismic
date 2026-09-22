@@ -61,6 +61,23 @@
 			"../seismic-solidity/deps/range-v3",
 			"../seismic-solidity/deps/fmtlib",
 		],
+		"rust-analyzer.linkedProjects": [
+			// Needed since monorepo doesn't contain a Cargo.toml in its rootdir.
+			"tee/cli/Cargo.toml"
+		],
+		// Run the rustup shim rather than the extension's bundled binary, so the
+		// proc-macro expander comes from the toolchain each rust-toolchain.toml
+		// pins. Cargo builds a proc macro with the pinned rustc, the expander
+		// loads that dylib into itself, and the two ABIs have to match: with the
+		// bundled server, every repo pinned below the extension's rustc fails to
+		// expand tokio::test and every derive. Needs the component once per
+		// pinned toolchain:
+		//
+		//   rustup component add rust-analyzer --toolchain 1.95.0
+		//
+		// rustup installs to the same path on macOS and Linux, and the extension
+		// expands the ~.
+		"rust-analyzer.server.path": "~/.cargo/bin/rust-analyzer",
 		"rust-analyzer.rustfmt.extraArgs": [
 			"+nightly"
 		],
