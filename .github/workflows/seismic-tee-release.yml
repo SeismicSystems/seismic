@@ -142,7 +142,13 @@ jobs:
           with open("tee/cli/Cargo.toml", "rb") as f:
               print(tomllib.load(f)["workspace"]["package"]["version"])')
           [ "${VERSION#v}" = "$workspace" ] || {
-            echo "tag seismic-tee/$VERSION does not match the workspace version $workspace in tee/cli/Cargo.toml" >&2
+            cat >&2 <<EOF
+          tag seismic-tee/$VERSION is at a commit whose tee/cli/Cargo.toml has [workspace.package] version = "$workspace", not "${VERSION#v}".
+          The version is bumped in the repo before the tag is pushed. Nothing was built or published, so the tag can move:
+            1. set version = "${VERSION#v}" in tee/cli/Cargo.toml, run \`cargo update --workspace\` in tee/cli, and merge that to main
+            2. git push origin :refs/tags/seismic-tee/$VERSION
+            3. git tag -f seismic-tee/$VERSION <merge commit> && git push origin seismic-tee/$VERSION
+          EOF
             exit 1
           }
 

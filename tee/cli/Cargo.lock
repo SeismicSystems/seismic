@@ -4358,7 +4358,7 @@ dependencies = [
 
 [[package]]
 name = "seismic-tee"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -4376,7 +4376,7 @@ dependencies = [
 
 [[package]]
 name = "seismic-tee-admission"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -4387,7 +4387,7 @@ dependencies = [
 
 [[package]]
 name = "seismic-tee-common"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "hex",
  "jsonrpsee",
@@ -4403,7 +4403,7 @@ dependencies = [
 
 [[package]]
 name = "seismic-tee-context"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anstream",
  "anstyle",
@@ -4419,7 +4419,7 @@ dependencies = [
 
 [[package]]
 name = "seismic-tee-network"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -4447,7 +4447,7 @@ dependencies = [
 
 [[package]]
 name = "seismic-tee-node"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
