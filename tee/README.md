@@ -136,6 +136,34 @@ CLI's answer and a node's answer are the same answer. Helpers whose only
 implementation is a foreign repo's binary (`summit genesis`, `seismic-reth
 genesis-hash`) stay shell-outs.
 
+### `assemble` on macOS
+
+`assemble` runs the image's own `seismic-reth` and `summit`, fetched from the
+seismic-images release `inputs/image.json` names and verified against its
+`SHA256SUMS`, so the digests the manifest pins come from the bytes the nodes
+boot. Those binaries are x86-64 Linux, so a Mac cannot run them — nor can an
+arm64 Linux box, nor a Linux VM on Apple silicon where the kernel executes
+x86-64 through Rosetta, since the image's `summit` crashes there. `assemble`
+refuses on all three and names the way out. Either run it in an amd64 Linux
+container, where the default path works:
+
+```bash
+docker run --platform linux/amd64 -v "$PWD:/w" -w /w seismic-tee \
+    network assemble tee/networks/<name>
+```
+
+or point it at binaries this host can run:
+
+```bash
+seismic-tee network assemble tee/networks/<name> \
+    --reth-bin <path> --summit-bin <path>
+```
+
+Neither seismic-reth nor summit publishes a macOS build today, so the second
+spelling means building both from source at the revs `inputs/image.json`
+pins. A rebuild at those revs computes the same digests — it just no longer
+proves they came from the image.
+
 ## Development
 
 ```bash

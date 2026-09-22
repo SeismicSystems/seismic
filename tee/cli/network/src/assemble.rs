@@ -10,9 +10,11 @@
 //! measurement policy and injects the registry storage
 //! into its copy of the reth genesis, completes the summit genesis with the
 //! derived `eth_genesis_hash` and the founding validator set through summit's
-//! own emitter, renders the manifest through the enclave's renderer, runs
-//! every gate over the result, and writes the four artifacts at the
-//! directory's top level. Everything top-level is hash-pinned by the manifest;
+//! own emitter — both by the image's own `seismic-reth` and `summit`, fetched
+//! from the release `inputs/image.json` names and verified against its
+//! `SHA256SUMS` ([`crate::shell_outs`]) — renders the manifest through the
+//! enclave's renderer, runs every gate over the result, and writes the four
+//! artifacts at the directory's top level. Everything top-level is hash-pinned by the manifest;
 //! everything under `inputs/` is provenance.
 //!
 //! Each artifact is its input with derived fields filled in — never authored
@@ -526,6 +528,11 @@ pub async fn run(args: AssembleArgs) -> anyhow::Result<ExitCode> {
     // the committed directory afterwards.
     verify_harvest_records(&dir, &founding.records, &policy)?;
 
+    // The image's own binaries, unless told otherwise — after every gate
+    // that needs no network, so a directory with nothing to assemble is
+    // refused before anything is fetched.
+    let shell_outs = args.derivations.resolve(&dir).await?;
+
     let assembled = assemble(
         &AssembleInputs {
             name: &name,
@@ -536,7 +543,7 @@ pub async fn run(args: AssembleArgs) -> anyhow::Result<ExitCode> {
             registry: args.registry,
             authority: args.authority,
         },
-        &args.derivations.shell_outs(),
+        &shell_outs,
     )
     .await?;
     for warning in &assembled.warnings {
@@ -928,9 +935,10 @@ pub(crate) mod tests {
             &net,
             &crate::init::InitInputs {
                 name: "testnet-1",
-                reth_genesis: authored.reth_genesis.to_str().unwrap(),
-                measurements: raw.to_str().unwrap(),
-                summit_genesis: authored.summit_genesis.to_str().unwrap(),
+                image: None,
+                measurements: Some(raw.to_str().unwrap()),
+                reth_genesis: Some(authored.reth_genesis.to_str().unwrap()),
+                summit_genesis: Some(authored.summit_genesis.to_str().unwrap()),
                 founders: 1,
             },
             false,
@@ -1144,7 +1152,9 @@ pub(crate) mod tests {
         assert_eq!(args.attestation_type, DEFAULT_ATTESTATION_TYPE);
         assert!(!args.force);
         assert!(!args.check);
-        assert_eq!(args.derivations.reth_bin, "seismic-reth");
+        // No binary named: the image's own, from inputs/image.json.
+        assert_eq!(args.derivations.reth_bin, None);
+        assert_eq!(args.derivations.summit_bin, None);
         assert_eq!(args.dir.dir.as_deref(), Some(Path::new("/nets/x")));
     }
 

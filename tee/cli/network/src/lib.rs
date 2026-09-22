@@ -56,6 +56,7 @@ pub mod dashboard;
 pub mod founding;
 pub mod gates;
 pub mod harvest;
+pub mod image;
 pub mod init;
 pub mod launch;
 pub mod shell_outs;

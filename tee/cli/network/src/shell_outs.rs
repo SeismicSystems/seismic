@@ -20,6 +20,13 @@
 //! (see `gates`), so admission compilation and manifest rendering have no
 //! counterpart here.
 //!
+//! Which build of each binary matters as much as running it: the digest the
+//! manifest pins must come from the code the nodes run. For a directory
+//! `init --image` made, [`DerivationArgs::resolve`] runs the image's own
+//! binaries, fetched from its seismic-images release and verified against
+//! the release's `SHA256SUMS` ([`crate::image`]); `--reth-bin` /
+//! `--summit-bin` point elsewhere for a host that cannot run them.
+//!
 //! Each method owns one subcommand's contract — argv, what travels on
 //! stdin/stdout, what a failure means — and every failure names the command
 //! that produced it. [`Derivations`] is the trait the gates and `assemble` are
@@ -33,12 +40,16 @@ use std::time::Duration;
 
 use anyhow::{Context as _, bail};
 use clap::Args;
+use seismic_tee_common::NetworkDir;
 
 use crate::founding::Validator;
+use crate::image::{self, ImageRecord};
 
 /// The execution client. Its `genesis-hash` subcommand parses a genesis file
 /// down the same path `seismic-reth node --chain` takes, so the hash it prints
-/// is the one a node booted from that file computes.
+/// is the one a node booted from that file computes. This is the PATH name
+/// [`ShellOuts::default`] runs — the drift suite's binaries; a founding runs
+/// the image's own instead ([`DerivationArgs::resolve`]).
 pub const DEFAULT_RETH_BIN: &str = "seismic-reth";
 
 /// Summit's node binary. Its `genesis digest` subcommand computes
@@ -81,26 +92,75 @@ pub trait Derivations {
 }
 
 /// The `--reth-bin` / `--summit-bin` flags every command that derives carries.
+///
+/// Neither is needed for a directory `init --image` made: the derivations
+/// then run the image's own binaries, fetched from its seismic-images
+/// release and verified against the release's `SHA256SUMS`, so the hash a
+/// node computes at boot is computed here by the very same bytes. The flags
+/// are for a host that cannot run them (they are x86-64 Linux) and for a
+/// directory scaffolded from loose files.
 #[derive(Debug, Clone, Args)]
 pub struct DerivationArgs {
     /// seismic-reth binary whose `genesis-hash` subcommand computes
-    /// eth.genesis_hash.
-    #[arg(long, value_name = "BIN", default_value = DEFAULT_RETH_BIN)]
-    pub reth_bin: String,
+    /// eth.genesis_hash. Default: the image's own, from the seismic-images
+    /// release inputs/image.json names, verified against its SHA256SUMS.
+    #[arg(long, value_name = "BIN")]
+    pub reth_bin: Option<String>,
 
     /// summit binary whose `genesis digest` subcommand computes
     /// summit.genesis_config_digest (and `genesis set-validators` emits the
-    /// completed genesis).
-    #[arg(long, value_name = "BIN", default_value = DEFAULT_SUMMIT_BIN)]
-    pub summit_bin: String,
+    /// completed genesis). Default: the image's own, as for --reth-bin.
+    #[arg(long, value_name = "BIN")]
+    pub summit_bin: Option<String>,
 }
 
 impl DerivationArgs {
-    pub fn shell_outs(&self) -> ShellOuts {
-        ShellOuts {
-            reth_bin: self.reth_bin.clone(),
-            summit_bin: self.summit_bin.clone(),
+    /// The binaries this founding derives with: each flag as given, else the
+    /// image's own from its release, cached under
+    /// [`crate::image::default_cache_dir`] and re-verified on every use.
+    pub async fn resolve(&self, dir: &NetworkDir) -> anyhow::Result<ShellOuts> {
+        if let (Some(reth_bin), Some(summit_bin)) = (&self.reth_bin, &self.summit_bin) {
+            return Ok(ShellOuts {
+                reth_bin: reth_bin.clone(),
+                summit_bin: summit_bin.clone(),
+            });
         }
+        let record = ImageRecord::read(dir)?;
+        let release = record.release();
+        if let Err(why) = image::host_runs_image_binaries() {
+            bail!(
+                "image {}'s own seismic-reth and summit cannot run here: {why}. The derivations \
+                 must still be theirs — build both at the revs inputs/image.json pins (or take \
+                 summit's `main-<sha>` release) and pass --reth-bin and --summit-bin",
+                release.tag()
+            );
+        }
+        let cache = image::default_cache_dir()?;
+        let client = image::download_client()?;
+        let sums = image::fetch_sums(&client, &release).await?;
+        let mut resolved = Vec::with_capacity(2);
+        for (given, asset) in [
+            (&self.reth_bin, image::RETH_BIN_ASSET),
+            (&self.summit_bin, image::SUMMIT_BIN_ASSET),
+        ] {
+            resolved.push(match given {
+                Some(bin) => bin.clone(),
+                None => image::fetch_binary(&client, &release, &sums, asset, &cache)
+                    .await?
+                    .display()
+                    .to_string(),
+            });
+        }
+        let [reth_bin, summit_bin] = <[String; 2]>::try_from(resolved).expect("two binaries");
+        eprintln!(
+            "deriving with image {}'s own binaries, verified against its release's SHA256SUMS: \
+             {reth_bin}, {summit_bin}",
+            release.tag()
+        );
+        Ok(ShellOuts {
+            reth_bin,
+            summit_bin,
+        })
     }
 }
 
@@ -311,6 +371,85 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.contains("set-validators"), "{err}");
+    }
+
+    /// Both flags given: no record, no release, no network — the flags are
+    /// the answer. One or none given: the directory must carry the record
+    /// `init --image` leaves, and the error says so with the way out.
+    #[tokio::test]
+    async fn the_flags_win_outright_and_a_recordless_directory_is_named() {
+        let dir = tempfile::tempdir().unwrap();
+        let network = NetworkDir::new(dir.path());
+        let both = DerivationArgs {
+            reth_bin: Some("/x/seismic-reth".into()),
+            summit_bin: Some("/x/summit".into()),
+        };
+        let resolved = both.resolve(&network).await.unwrap();
+        assert_eq!(resolved.reth_bin, "/x/seismic-reth");
+        assert_eq!(resolved.summit_bin, "/x/summit");
+
+        let one = DerivationArgs {
+            reth_bin: Some("/x/seismic-reth".into()),
+            summit_bin: None,
+        };
+        let err = one.resolve(&network).await.unwrap_err().to_string();
+        assert!(err.contains("image.json not found"), "{err}");
+        assert!(err.contains("init --image"), "{err}");
+        assert!(err.contains("--summit-bin"), "{err}");
+    }
+
+    /// With the record in place, the missing binary comes from the release —
+    /// on a host that can run it; elsewhere the error names the host and the
+    /// flags. Either way the given flag is kept as given.
+    #[tokio::test]
+    async fn a_missing_binary_comes_from_the_images_release() {
+        use crate::image::tests::{TAG, release_files, serve_release};
+
+        let dir = tempfile::tempdir().unwrap();
+        let network = NetworkDir::new(dir.path().join("net"));
+        std::fs::create_dir_all(network.inputs()).unwrap();
+        let files = release_files(TAG);
+        std::fs::write(network.input_image(), &files[image::IMAGE_JSON_ASSET]).unwrap();
+        let (_server, release) = serve_release(TAG, files);
+        // The record names GitHub; the test's release is local. Resolve the
+        // way `resolve` does, against the local one.
+        let sums = image::fetch_sums(&image::download_client().unwrap(), &release)
+            .await
+            .unwrap();
+        let cache = tempfile::tempdir().unwrap();
+        let summit = image::fetch_binary(
+            &image::download_client().unwrap(),
+            &release,
+            &sums,
+            image::SUMMIT_BIN_ASSET,
+            cache.path(),
+        )
+        .await
+        .unwrap();
+        // The fetched "binary" is a script printing a digest: the shell-out
+        // contract holds end to end over a fetched file.
+        let shell_outs = ShellOuts {
+            reth_bin: "unused".into(),
+            summit_bin: summit.display().to_string(),
+        };
+        assert_eq!(
+            shell_outs.summit_config_digest(b"").await.unwrap(),
+            [0x22; 32]
+        );
+
+        // And `resolve` itself against the real record: on a host that
+        // cannot run x86-64 Linux binaries the refusal names the host; on one
+        // that can, it would reach GitHub, which a unit test does not.
+        if let Err(why) = image::host_runs_image_binaries() {
+            let args = DerivationArgs {
+                reth_bin: None,
+                summit_bin: Some("/x/summit".into()),
+            };
+            let err = args.resolve(&network).await.unwrap_err().to_string();
+            assert!(err.contains(&why), "{err}");
+            assert!(err.contains(TAG), "{err}");
+            assert!(err.contains("--reth-bin"), "{err}");
+        }
     }
 
     /// A nonzero exit is the command's stderr, named by the command.

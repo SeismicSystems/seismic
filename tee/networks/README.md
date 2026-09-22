@@ -20,6 +20,9 @@ genesis seats.
 ```text
 tee/networks/<name>/
 ├── inputs/                       provenance (authored + harvested)
+│   ├── image.json                  the image's release record, verbatim from
+│   │                               seismic-images (`init --image`): which
+│   │                               image, built from what, bytes where
 │   ├── reth-genesis.json           authored: policy-free EL genesis
 │   ├── summit-genesis.toml         authored: consensus parameter choices
 │   ├── measurements.json           authored: raw PCRs from `make measure`,
@@ -115,9 +118,11 @@ to refresh it from a fresh founding.
 
 To found any network, throwaway or real, don't reuse or copy this
 directory: run `init <new-dir>`, author fresh inputs, and follow
-the founding workflow in the tee README. Start the summit genesis from
-[`summit-genesis-starter.toml`](summit-genesis-starter.toml) (in this
-directory; a drift test pins its parameter set against summit's).
+the founding workflow in the tee README. Start both genesis files from
+the image's seismic-images release: it carries `reth-genesis.json` and
+`summit-genesis-starter.toml` as the image's own code has them, the
+starter's parameter set checked against the image's `summit` when the
+image is built.
 `namespace` (the BLS signature domain separator) and `chainId` must be
 unique per network that matters (cohorts sharing them can cross-replay
 signatures).

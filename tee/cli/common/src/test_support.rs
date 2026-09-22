@@ -1,5 +1,5 @@
-//! An HTTP/1.1 server small enough to live in the tests: canned responses,
-//! recorded requests, and a way to get a refused port.
+//! HTTP/1.1 servers small enough to live in the tests: canned responses,
+//! a directory of files, recorded requests, and a way to get a refused port.
 //!
 //! Every network interaction the CLI has is a request to a node and a
 //! read of the reply, so a test needs no more than this to exercise the real
@@ -7,9 +7,11 @@
 //! yet. Shared by the node and network crates' tests through the
 //! `test-support` feature; nothing here is compiled into a release binary.
 
+use std::collections::BTreeMap;
 use std::io::{Read as _, Write as _};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -163,6 +165,76 @@ impl Drop for FakeServer {
     fn drop(&mut self) {
         // The thread ends on its own once its responses are consumed, or when
         // the process exits; never block a test on it.
+        drop(self.handle.take());
+    }
+}
+
+/// A server that answers `GET <path>` with the bytes filed under `path`, as
+/// many times as asked, and 404s any other path — a release's asset
+/// directory, for the code that fetches an image's founding inputs. Serves
+/// until dropped.
+pub struct FileServer {
+    /// `http://127.0.0.1:<port>`, with no trailing slash.
+    pub url: String,
+    addr: SocketAddr,
+    stop: Arc<AtomicBool>,
+    requests: Arc<Mutex<Vec<String>>>,
+    handle: Option<JoinHandle<()>>,
+}
+
+impl FileServer {
+    pub fn serve(files: BTreeMap<String, Vec<u8>>) -> Self {
+        let listener = bind_loopback();
+        let addr = listener.local_addr().unwrap();
+        let stop = Arc::new(AtomicBool::new(false));
+        let requests = Arc::new(Mutex::new(Vec::new()));
+        let (stopped, recorded) = (Arc::clone(&stop), Arc::clone(&requests));
+        let handle = std::thread::spawn(move || {
+            while let Ok((mut stream, _)) = listener.accept() {
+                if stopped.load(Ordering::SeqCst) {
+                    return;
+                }
+                let request = read_request(&mut stream);
+                recorded.lock().unwrap().push(request.path.clone());
+                let response = match files.get(&request.path) {
+                    Some(body) => {
+                        let mut response = format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\n\
+                             Content-Length: {}\r\nConnection: close\r\n\r\n",
+                            body.len()
+                        )
+                        .into_bytes();
+                        response.extend_from_slice(body);
+                        response
+                    }
+                    None => b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: \
+                              close\r\n\r\n"
+                        .to_vec(),
+                };
+                let _ = stream.write_all(&response);
+                let _ = stream.flush();
+            }
+        });
+        Self {
+            url: format!("http://{addr}"),
+            addr,
+            stop,
+            requests,
+            handle: Some(handle),
+        }
+    }
+
+    /// The paths requested so far, in order.
+    pub fn requests(&self) -> Vec<String> {
+        self.requests.lock().unwrap().clone()
+    }
+}
+
+impl Drop for FileServer {
+    fn drop(&mut self) {
+        // `accept` blocks; one connection of our own wakes it to see the flag.
+        self.stop.store(true, Ordering::SeqCst);
+        let _ = TcpStream::connect(self.addr);
         drop(self.handle.take());
     }
 }
