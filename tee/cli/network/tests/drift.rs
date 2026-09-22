@@ -15,8 +15,9 @@
 //!
 //! - network reach to raw.githubusercontent.com (the cross-repo tests fetch
 //!   pinned artifacts from sibling repos);
-//! - `seismic-reth` on PATH, for the `genesis-hash` subcommand (CI installs a
-//!   prebuilt release with the setup-sreth action).
+//! - `seismic-reth` and `summit` on PATH, for the `genesis-hash` and `genesis
+//!   digest` subcommands (CI installs a prebuilt release of each, with the
+//!   setup-sreth and setup-summit actions).
 //!
 //! The enclave crates under test — the admission compiler, the manifest
 //! renderer and schema — are linked at the rev the workspace pins, so moving
@@ -34,9 +35,8 @@ mod support;
 use std::collections::BTreeSet;
 
 use seismic_manifest::render;
-use seismic_tee_network::founding::Validator;
 use seismic_tee_network::gates::{ArtifactSet, run_validation_gates};
-use seismic_tee_network::shell_outs::{Derivations, ShellOuts};
+use seismic_tee_network::shell_outs::ShellOuts;
 use support::{committed_network_dirs, networks_dir};
 
 /// Fetch a cross-repo artifact, failing the calling test if it can't.
@@ -116,31 +116,6 @@ fn committed_manifests_are_the_renderers_bytes() {
     }
 }
 
-/// The real `seismic-reth genesis-hash`, with the committed digest fed back
-/// in for summit's half: summit publishes no release binary.
-struct RethOnly {
-    reth: ShellOuts,
-    committed_digest: [u8; 32],
-}
-
-impl Derivations for RethOnly {
-    async fn reth_genesis_hash(&self, genesis: &[u8]) -> anyhow::Result<[u8; 32]> {
-        self.reth.reth_genesis_hash(genesis).await
-    }
-
-    async fn summit_config_digest(&self, _genesis: &[u8]) -> anyhow::Result<[u8; 32]> {
-        Ok(self.committed_digest)
-    }
-
-    async fn summit_set_validators(
-        &self,
-        _template: &[u8],
-        _validators: &[Validator],
-    ) -> anyhow::Result<Vec<u8>> {
-        unreachable!("validation never emits a genesis")
-    }
-}
-
 /// Committed network directories still pass their own gates.
 ///
 /// `tee/networks/fixture-devnet/` is a real founding's artifact set, committed
@@ -150,20 +125,16 @@ impl Derivations for RethOnly {
 /// in the admission compiler or in reth's genesis-header encoding into a
 /// failure here rather than a surprise at the next `assemble`.
 ///
-/// One gate does not recompute here: `summit genesis digest` needs a summit
-/// build, and summit publishes no release binary, so this test feeds the
-/// committed digest back in. Every other gate — genesis hash, chain id, policy
-/// hash, contract accounts, and the exact registry-account storage — runs
-/// against the real artifacts.
+/// Every gate recomputes for real — genesis hash, summit's genesis config
+/// digest, chain id, policy hash, contract accounts, and the exact
+/// registry-account storage — against the sibling binaries on PATH, which is
+/// what makes this a cross-repo guard rather than a re-read of the manifest.
 #[tokio::test]
-#[ignore = "cross-repo: needs seismic-reth on PATH"]
+#[ignore = "cross-repo: needs seismic-reth and summit on PATH"]
 async fn committed_network_dirs_pass_their_gates() {
     for dir in committed_network_dirs() {
         let set = ArtifactSet::load(&dir).unwrap();
-        let derive = RethOnly {
-            reth: ShellOuts::default(),
-            committed_digest: set.manifest.summit.genesis_config_digest,
-        };
+        let derive = ShellOuts::default();
         let warnings = run_validation_gates(&set, &derive)
             .await
             .unwrap_or_else(|e| panic!("{}: {e:?}", dir.root().display()));

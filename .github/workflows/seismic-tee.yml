@@ -7,8 +7,8 @@
 # archive (tee/networks/fixture-devnet) through the pinned enclave verifier,
 # so a pin bump that judges those quotes differently goes red here. `drift`
 # runs the guards that reach outside the repo — the network's published
-# inputs, `seismic-reth genesis-hash` — and is not required, since the world
-# it checks against moves without a commit here.
+# inputs, `seismic-reth genesis-hash`, `summit genesis digest` — and is not
+# required, since the world it checks against moves without a commit here.
 name: seismic-tee
 
 on:
@@ -18,11 +18,13 @@ on:
       - "tee/**"
       - ".github/workflows/seismic-tee.yml"
       - ".github/actions/setup-sreth/**"
+      - ".github/actions/setup-summit/**"
   pull_request:
     paths:
       - "tee/**"
       - ".github/workflows/seismic-tee.yml"
       - ".github/actions/setup-sreth/**"
+      - ".github/actions/setup-summit/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -100,10 +102,17 @@ jobs:
       - uses: taiki-e/install-action@nextest
 
       # The gates recompute each manifest's eth.genesis_hash with
-      # `seismic-reth genesis-hash`.
+      # `seismic-reth genesis-hash` and its summit.genesis_config_digest with
+      # `summit genesis digest`. Both are the newest published build, not the
+      # rev any particular network was founded with: a committed archive that
+      # stops passing its own gates under today's binaries is the drift this
+      # job exists to name.
       - uses: ./.github/actions/setup-sreth
         with:
           version: nightly
+      - uses: ./.github/actions/setup-summit
+        with:
+          version: main
 
       - run: make -C tee/cli locked
       - run: make -C tee/cli drift
