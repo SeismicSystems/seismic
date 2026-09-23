@@ -143,10 +143,13 @@ export { testRngDifferentPersProducesDifferentResults } from '@sviem-tests/tests
 
 export {
   testSignedCallDirect,
+  testSignedCallHistoricalState,
   testSignedCallWithExplicitNonce,
   testSignedCallWithSecurityParams,
   testSignedCallWithValue,
 } from '@sviem-tests/tests/signedCallDirect.ts'
+
+export { testSignedCallBlockSelection } from '@sviem-tests/tests/signedCallBlockSelection.ts'
 
 export {
   testConcurrentShieldedTransactions,

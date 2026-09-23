@@ -4,5 +4,8 @@
 node_modules
 dist
 
+# Generated package archives
+*.tgz
+
 # Place this in repository root
 .env

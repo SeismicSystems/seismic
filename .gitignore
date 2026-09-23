@@ -23,6 +23,10 @@ Thumbs.db
 !.vscode/settings.json
 !.vscode/extensions.json
 
+# Foundry artifacts generated from the repository root
+/cache/
+/out/
+
 # Node (future)
 node_modules/
 

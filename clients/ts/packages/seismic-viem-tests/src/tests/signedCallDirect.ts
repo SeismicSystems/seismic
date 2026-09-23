@@ -54,6 +54,66 @@ export const testSignedCallDirect = async ({
   expect(isOdd).toBe(true)
 }
 
+export const testSignedCallHistoricalState = async ({
+  chain,
+  url,
+  account,
+}: SignedCallTestArgs) => {
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
+  const address = await deploySeismicCounter({ publicClient, walletClient })
+  const contract = getShieldedContract({
+    abi: seismicCounterAbi,
+    address,
+    client: walletClient,
+  })
+
+  const oddHash = await contract.write.setNumber([ODD_COUNTER_VALUE])
+  const oddReceipt = await publicClient.waitForTransactionReceipt({
+    hash: oddHash,
+  })
+  expect(oddReceipt.status).toBe('success')
+  const evenHash = await contract.write.setNumber([ODD_COUNTER_VALUE + 1n])
+  const evenReceipt = await publicClient.waitForTransactionReceipt({
+    hash: evenHash,
+  })
+  expect(evenReceipt.status).toBe('success')
+  expect(evenReceipt.blockNumber).toBeGreaterThan(oddReceipt.blockNumber)
+
+  const calldata = encodeFunctionData({
+    abi: seismicCounterAbi,
+    functionName: 'isOdd',
+  })
+  for (const [selector, expected] of [
+    [{ blockTag: 'latest' }, false],
+    [{ blockNumber: oddReceipt.blockNumber }, true],
+  ] as const) {
+    const { data } = await walletClient.signedCall({
+      to: address,
+      data: calldata,
+      ...selector,
+    })
+    expect(data).toBeDefined()
+    expect(
+      decodeFunctionResult({
+        abi: seismicCounterAbi,
+        functionName: 'isOdd',
+        data: data!,
+      })
+    ).toBe(expected)
+
+    // The high-level signed contract action must preserve the selector too.
+    expect(
+      await walletClient.sreadContract({
+        address,
+        abi: seismicCounterAbi,
+        functionName: 'isOdd',
+        ...selector,
+      })
+    ).toBe(expected)
+  }
+}
+
 export const testSignedCallWithSecurityParams = async ({
   chain,
   url,

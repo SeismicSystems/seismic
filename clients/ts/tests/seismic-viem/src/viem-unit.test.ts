@@ -45,6 +45,7 @@ import {
   testSerializeMissingTo,
   testSerializeValidTxDoesNotThrow,
 } from '@sviem-tests/tests/seismicTxValidation.ts'
+import { testSignedCallBlockSelection } from '@sviem-tests/tests/signedCallBlockSelection.ts'
 import {
   testComputeKeyHashDifferentKeysProduceDifferentHashes,
   testComputeKeyHashIsDeterministic,
@@ -97,6 +98,24 @@ describe('Faucet', () => {
     'rejects missing hex prefix',
     testParseFaucetResponseHashThrowsOnMissingHexPrefix
   )
+})
+
+describe('Signed call block selection', () => {
+  for (const mode of ['local', 'json-rpc', 'raw'] as const) {
+    for (const [label, selector, expected] of [
+      ['default', {}, 'latest'],
+      ['genesis', { blockNumber: 0n }, '0x0'],
+      ['historical', { blockNumber: 42n }, '0x2a'],
+      ['latest', { blockTag: 'latest' }, 'latest'],
+      ['pending', { blockTag: 'pending' }, 'pending'],
+      ['safe', { blockTag: 'safe' }, 'safe'],
+      ['finalized', { blockTag: 'finalized' }, 'finalized'],
+      ['earliest', { blockTag: 'earliest' }, 'earliest'],
+    ] as const) {
+      test(`${mode}: forwards ${label}`, () =>
+        testSignedCallBlockSelection(mode, selector, expected))
+    }
+  }
 })
 
 describe('Explorer URL utilities', () => {

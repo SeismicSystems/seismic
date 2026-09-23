@@ -44,6 +44,7 @@ import { testRngDifferentPersProducesDifferentResults } from '@sviem-tests/tests
 import { testDwriteContractUsesSecurityParams } from '@sviem-tests/tests/securityParams.ts'
 import {
   testSignedCallDirect,
+  testSignedCallHistoricalState,
   testSignedCallWithExplicitNonce,
   testSignedCallWithSecurityParams,
   testSignedCallWithValue,
@@ -580,6 +581,11 @@ describe('SignedCall standalone', () => {
   test(
     'signedCall directly reads contract state',
     async () => await testSignedCallDirect({ chain, url, account }),
+    { timeout: CONTRACT_TIMEOUT_MS }
+  )
+  test(
+    'signedCall preserves historical block selection',
+    async () => await testSignedCallHistoricalState({ chain, url, account }),
     { timeout: CONTRACT_TIMEOUT_MS }
   )
   test(

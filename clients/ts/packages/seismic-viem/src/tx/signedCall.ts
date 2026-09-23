@@ -57,7 +57,7 @@ const doSignedCall = async <
     // @ts-ignore
     const response: Hex = await client.publicRequest({
       method: 'eth_call',
-      params: [{ data: typedData, signature }],
+      params: [{ data: typedData, signature }, block],
     })
     return response
   }
@@ -253,8 +253,8 @@ export async function signedCall<
     } as ExactPartial<SendTransactionParameters>
     assertRequest(assertRequestParams)
 
-    const blockNumberHex = blockNumber ? numberToHex(blockNumber) : undefined
-    const block = blockNumberHex || blockTag
+    const block =
+      blockNumber !== undefined ? numberToHex(blockNumber) : blockTag
 
     const chainFormat = client.chain?.formatters?.transactionRequest?.format
 
