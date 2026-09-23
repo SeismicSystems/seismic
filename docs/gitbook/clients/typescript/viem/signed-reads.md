@@ -110,6 +110,8 @@ Signed reads accept `blockNumber` or `blockTag`, including through `signedCall()
 
 The selector is forwarded as the second `eth_call` parameter for both typed-data requests (local and JSON-RPC accounts) and raw signed transactions. Historical reads use the requested block's state, not the latest state. The backend must retain that historical state; calls to contracts that did not yet exist at the selected block cannot return their current state.
 
+If `nonce` is omitted, the SDK fetches the caller's transaction count at the selected block (default `"latest"`) and uses it for both encryption metadata and signing. An explicit nonce, including `0`, is preserved without a lookup; it must be valid for the selected state on backends that validate call nonces.
+
 `securityParams.recentBlockHash` and `expiresAtBlock` control request freshness, **not** which state is read. They remain independent of the historical block selector; normally leave them at their defaults.
 
 ---

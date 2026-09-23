@@ -8,7 +8,7 @@ import type {
   TypedDataDefinition,
   UnionOmit,
 } from 'viem'
-import { custom, numberToHex } from 'viem'
+import { custom, fromRlp, hexToNumber, numberToHex, slice } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
 import {
@@ -20,8 +20,11 @@ import {
 export const testSignedCallBlockSelection = async (
   mode: 'local' | 'json-rpc' | 'raw',
   selector: UnionOmit<GetBalanceParameters, 'address'>,
-  expectedBlock: Hex | BlockTag
+  expectedBlock: Hex | BlockTag,
+  nonce?: number
 ) => {
+  const resolvedNonce = 7
+  const expectedNonce = nonce ?? resolvedNonce
   const signer = privateKeyToAccount(TEST_ACCOUNT_PRIVATE_KEY)
   // The raw fallback needs a signer outside the local/json-rpc branches.
   // This minimal fixture exercises serialization, not smart-account support.
@@ -42,7 +45,8 @@ export const testSignedCallBlockSelection = async (
           case 'eth_chainId':
             return numberToHex(sanvil.id)
           case 'eth_getTransactionCount':
-            return '0x0'
+            expect(params[1]).toBe(expectedBlock)
+            return numberToHex(resolvedNonce)
           case 'eth_signTypedData_v4':
             expect(String(params[0]).toLowerCase()).toBe(
               signer.address.toLowerCase()
@@ -75,7 +79,7 @@ export const testSignedCallBlockSelection = async (
         data: '0x12345678',
         gas: 100_000n,
         gasPrice: 1n,
-        nonce: 0,
+        nonce,
         ...selector,
       },
       {
@@ -85,6 +89,11 @@ export const testSignedCallBlockSelection = async (
     )
   ).toEqual({ data: undefined })
 
+  const nonceRequests = calls.filter(
+    ({ method }) => method === 'eth_getTransactionCount'
+  )
+  expect(nonceRequests).toHaveLength(nonce === undefined ? 1 : 0)
+
   const callRequests = calls.filter(({ method }) => method === 'eth_call')
   expect(callRequests).toHaveLength(1)
   expect(callRequests[0].params).toHaveLength(2)
@@ -93,8 +102,15 @@ export const testSignedCallBlockSelection = async (
   if (mode === 'raw') {
     expect(typeof envelope).toBe('string')
     expect(String(envelope).startsWith('0x4a')).toBe(true)
+    const fields = fromRlp(slice(envelope as Hex, 1), 'hex')
+    const encodedNonce = fields[1] as Hex
+    expect(encodedNonce === '0x' ? 0 : hexToNumber(encodedNonce)).toBe(
+      expectedNonce
+    )
   } else {
-    expect(envelope).toHaveProperty('data')
+    expect(envelope).toMatchObject({
+      data: { message: { nonce: BigInt(expectedNonce) } },
+    })
     expect(envelope).toHaveProperty('signature')
   }
   expect(

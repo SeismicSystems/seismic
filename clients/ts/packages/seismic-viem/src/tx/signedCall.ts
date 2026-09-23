@@ -15,6 +15,7 @@ import type {
 import {
   BaseError,
   assertRequest,
+  hexToNumber,
   numberToHex,
   offchainLookup,
   offchainLookupSignature,
@@ -274,11 +275,24 @@ export async function signedCall<
       })
     }
 
+    // Signed calls may validate the nonce against the selected block's state.
+    // Resolve it before encryption so the AEAD metadata and signature agree.
+    // Use the encoded selector directly: viem 2.23's getTransactionCount
+    // treats blockNumber: 0n as falsy and would query latest instead.
+    const nonce =
+      nonce_ ??
+      hexToNumber(
+        await client.request({
+          method: 'eth_getTransactionCount',
+          params: [fromAddress, block],
+        })
+      )
+
     // nonce and value are part of the AEAD metadata, so the values bound
     // here must be the ones that end up in the signed request below.
     metadata = await buildTxSeismicMetadata(client, {
       account,
-      nonce: nonce_,
+      nonce,
       to: to!,
       value,
       blocksWindow,

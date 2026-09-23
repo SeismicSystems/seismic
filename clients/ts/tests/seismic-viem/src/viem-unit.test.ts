@@ -112,8 +112,14 @@ describe('Signed call block selection', () => {
       ['finalized', { blockTag: 'finalized' }, 'finalized'],
       ['earliest', { blockTag: 'earliest' }, 'earliest'],
     ] as const) {
-      test(`${mode}: forwards ${label}`, () =>
-        testSignedCallBlockSelection(mode, selector, expected))
+      for (const [nonceLabel, nonce] of [
+        ['implicit nonce', undefined],
+        ['explicit zero nonce', 0],
+        ['explicit nonzero nonce', 3],
+      ] as const) {
+        test(`${mode}: forwards ${label} with ${nonceLabel}`, () =>
+          testSignedCallBlockSelection(mode, selector, expected, nonce))
+      }
     }
   }
 })
