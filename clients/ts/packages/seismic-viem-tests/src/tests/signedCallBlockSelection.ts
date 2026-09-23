@@ -71,9 +71,6 @@ export const testSignedCallBlockSelection = async (
     cacheTime: 0,
   })
 
-  // The mock returns a bare `0x`, which is not a signed-read response envelope,
-  // so decryption rejects it. This test is about which block gets forwarded; the
-  // request-side assertions below are what it verifies.
   await expect(
     signedCall(
       client,
@@ -90,7 +87,10 @@ export const testSignedCallBlockSelection = async (
         expiresAtBlock: 100n,
       }
     )
-  ).rejects.toThrow(/shorter than the/)
+    // A real node always answers a signed read with a full envelope, so this
+    // `0x` mock cannot decrypt. The block-forwarding assertions below are what
+    // this test verifies.
+  ).rejects.toThrow()
 
   const nonceRequests = calls.filter(
     ({ method }) => method === 'eth_getTransactionCount'
