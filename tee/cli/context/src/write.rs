@@ -66,6 +66,29 @@ pub fn set_nodes(path: &Path, name: &str, nodes: &Descriptors) -> anyhow::Result
     })
 }
 
+/// Remove `[networks.<name>]` — its pointers, its nodes and any comment on
+/// it — and clear `current` and `previous` where they select it, so neither
+/// the selection nor `ctx use -` points at a network the file no longer
+/// holds.
+pub fn remove_network(path: &Path, name: &str) -> anyhow::Result<()> {
+    edit(path, |doc| {
+        if let Some(networks) = doc.get_mut("networks").and_then(Item::as_table_mut) {
+            networks.remove(name);
+        }
+        for key in ["current", "previous"] {
+            let selects = doc
+                .get(key)
+                .and_then(Item::as_str)
+                .and_then(|raw| raw.parse::<Selection>().ok())
+                .is_some_and(|selection| selection.network == name);
+            if selects {
+                doc.remove(key);
+            }
+        }
+        Ok(())
+    })
+}
+
 /// The `[networks]` table, created implicit (no bare `[networks]` header) the
 /// first time anything is written under it.
 fn networks_table(doc: &mut DocumentMut) -> anyhow::Result<&mut Table> {
@@ -425,6 +448,62 @@ mod tests {
         assert_eq!(config.current, None);
         assert_eq!(config.previous.as_deref(), Some("devnet-0"));
         assert!(config.networks.contains_key("devnet-1"));
+    }
+
+    #[test]
+    fn remove_network_drops_the_entry_its_nodes_and_the_selections_naming_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "current = \"devnet-1/alpha\"\nprevious = \"devnet-1\"\n\n\
+             # the throwaway\n[networks.devnet-1]\ndir = \"/x\"\n\n[networks.devnet-1.nodes]\n\
+             alpha = { public_ip = \"203.0.113.7\", fqdn = \"a.example.com\" }\n\n\
+             # kept\n[networks.partner-net]\nmanifest = \"/m.json\"\n",
+        )
+        .unwrap();
+
+        remove_network(&path, "devnet-1").unwrap();
+
+        let text = read(&path);
+        assert!(text.contains("# kept"), "{text}");
+        assert!(!text.contains("# the throwaway"), "{text}");
+        let config: Config = toml::from_str(&text).unwrap();
+        assert_eq!(config.current, None);
+        assert_eq!(config.previous, None);
+        assert_eq!(config.networks.keys().collect::<Vec<_>>(), ["partner-net"]);
+    }
+
+    #[test]
+    fn remove_network_leaves_a_selection_of_another_network() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "current = \"partner-net\"\nprevious = \"devnet-1\"\n\n[networks.devnet-1]\ndir = \
+             \"/x\"\n\n[networks.partner-net]\nmanifest = \"/m.json\"\n",
+        )
+        .unwrap();
+
+        remove_network(&path, "devnet-1").unwrap();
+
+        let config: Config = toml::from_str(&read(&path)).unwrap();
+        assert_eq!(config.current.as_deref(), Some("partner-net"));
+        assert_eq!(config.previous, None);
+    }
+
+    #[test]
+    fn removing_the_last_network_leaves_no_bare_networks_header() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "[networks.devnet-1]\ndir = \"/x\"\n").unwrap();
+
+        remove_network(&path, "devnet-1").unwrap();
+
+        let text = read(&path);
+        assert!(!text.contains("[networks]"), "{text}");
+        let config: Config = toml::from_str(&text).unwrap();
+        assert!(config.networks.is_empty());
     }
 
     #[test]

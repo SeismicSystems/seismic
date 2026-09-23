@@ -160,6 +160,21 @@ impl NetworkDir {
         self.root.join(NODES_DIRNAME)
     }
 
+    /// Every top-level entry the layout owns, whether or not it exists: the
+    /// authored inputs and the harvest (`inputs/`), the derived artifact set,
+    /// and the infra state (`nodes/`). What `init --force` starts over and
+    /// the most `network rm` finds in a directory it deletes.
+    pub fn top_level(&self) -> [PathBuf; 6] {
+        [
+            self.inputs(),
+            self.manifest(),
+            self.policy(),
+            self.reth_genesis(),
+            self.summit_genesis(),
+            self.nodes(),
+        ]
+    }
+
     pub fn bootnodes(&self) -> PathBuf {
         self.nodes().join(BOOTNODES_FILENAME)
     }

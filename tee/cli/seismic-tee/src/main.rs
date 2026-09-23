@@ -199,7 +199,8 @@ enum Command {
         after_help = "Commands are listed in the order they should be run: init → harvest → \
                       assemble → configure. Between init and harvest, provision the cohort with \
                       the seismic_node Pulumi program (tee/pulumi/seismic_node); pulumi destroy \
-                      tears it down.\n\n\
+                      tears it down, and rm then deletes the network directory and its \
+                      context entry.\n\n\
                       Checking an assembled set later — after a merge, or when it may have \
                       drifted from its inputs — is `assemble --check`: the same derivation, \
                       compared with what is on disk instead of written. Checking a launched \
@@ -455,7 +456,7 @@ mod tests {
         );
         assert_eq!(
             group("network"),
-            ["init", "harvest", "assemble", "configure"]
+            ["init", "harvest", "assemble", "configure", "rm"]
         );
         assert_eq!(group("node"), ["configure", "verify", "status"]);
         assert_eq!(group("admission"), ["promote", "compile"]);
@@ -504,6 +505,7 @@ mod tests {
         assert!(arg(&["network", "configure"], "genesis_node"));
         assert!(arg(&["network", "configure"], "join"));
         assert!(arg(&["network", "harvest"], "context"));
+        assert!(arg(&["network", "rm"], "name"));
         assert!(arg(&["verify-founding"], "context"));
         // A path is not a name: the file arguments complete as files.
         assert!(!arg(&["node", "configure"], "node"));
@@ -772,6 +774,9 @@ mod tests {
                 "--context",
                 "devnet-1",
             ],
+            vec!["network", "rm", "tmp-devnet-1"],
+            vec!["network", "rm", "tmp-devnet-1", "--force"],
+            vec!["network", "remove", "tmp-devnet-1"],
             // node
             vec![
                 "node",

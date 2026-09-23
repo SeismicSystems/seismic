@@ -260,23 +260,15 @@ pub struct InitInputs<'a> {
     pub founders: usize,
 }
 
-/// Everything the layout owns under `dir` that exists: the authored inputs
-/// and the harvest (`inputs/`), the derived artifact set, and the infra
-/// state (`nodes/`). This is what `--force` starts over — and nothing else
-/// in the directory, so a `--force` aimed at the wrong directory removes no
-/// file that is not a network directory's.
+/// Everything the layout owns under `dir` that exists. This is what
+/// `--force` starts over — and nothing else in the directory, so a `--force`
+/// aimed at the wrong directory removes no file that is not a network
+/// directory's.
 fn network_state(dir: &NetworkDir) -> Vec<PathBuf> {
-    [
-        dir.inputs(),
-        dir.manifest(),
-        dir.policy(),
-        dir.reth_genesis(),
-        dir.summit_genesis(),
-        dir.nodes(),
-    ]
-    .into_iter()
-    .filter(|path| path.exists())
-    .collect()
+    dir.top_level()
+        .into_iter()
+        .filter(|path| path.exists())
+        .collect()
 }
 
 /// The image's release, opened: its record and its `SHA256SUMS`, which every
