@@ -1,4 +1,6 @@
-import { describe, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
+import { AesGcmCrypto } from 'seismic-viem'
+import type { Hex } from 'viem'
 
 import {
   testAddressExplorerUrlBuildsCorrectUrl,
@@ -145,4 +147,28 @@ describe('Seismic EIP-712 typed data', () => {
     'includes authorizationListHash',
     testTypedDataIncludesAuthorizationListHash
   )
+})
+
+describe('AES-GCM numeric nonce bounds', () => {
+  const crypto = new AesGcmCrypto(
+    '0x0000000000000000000000000000000000000000000000000000000000000000' as Hex
+  )
+
+  test('rejects negative nonces', () => {
+    expect(() => crypto.createNonce(-1)).toThrow(
+      'Nonce must fit in an unsigned 64-bit integer'
+    )
+  })
+
+  test('rejects unsafe numeric nonces', () => {
+    expect(() => crypto.createNonce(Number.MAX_SAFE_INTEGER + 2)).toThrow(
+      'Nonce must be a safe integer'
+    )
+  })
+
+  test('rejects nonces larger than u64', () => {
+    expect(() => crypto.createNonce(0x1_0000_0000_0000_0000n)).toThrow(
+      'Nonce must fit in an unsigned 64-bit integer'
+    )
+  })
 })
