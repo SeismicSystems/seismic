@@ -189,5 +189,5 @@ You do not need to populate these fields manually. The shielded wallet client's 
 
 - [Installation](installation.md) -- Install seismic-viem and viem
 - [Seismic Viem Overview](./) -- Full SDK overview and architecture
-- Shielded Wallet Client -- Create a client using a chain config
-- Encryption -- How calldata encryption uses chain-level formatters
+- [Shielded Wallet Client](shielded-wallet-client.md) -- Create a client using a chain config
+- [Encryption](encryption.md) -- How calldata encryption uses chain-level formatters
