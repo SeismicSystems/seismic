@@ -13,7 +13,7 @@ import type { WatchSRC20EventsParams } from '@sviem/extensions/src20/types.ts'
  *
  * @example
  *
- * const unwatch = await client.watchSRC20EventsWithKey({
+ * const unwatch = await client.watchSRC20EventsWithKey(viewingKey, {
  *   address: '0x...',
  *   onTransfer: (log) => console.log(`Received ${log.decryptedAmount} from ${log.from}`),
  *   onApproval: (log) => console.log(`Approved ${log.decryptedAmount} to ${log.spender}`),
