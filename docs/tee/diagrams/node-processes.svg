@@ -137,6 +137,7 @@
 
   <line class="flow" x1="1330" y1="780" x2="546" y2="930" marker-end="url(#arrow)"/>
   <text class="flow-label" x="900" y="930" text-anchor="middle">bootstrap · wrap · tx-io public key</text>
+  <text class="flow-label" x="900" y="952" text-anchor="middle">retire the founding policy</text>
 
   <!-- ================= peer planes — the bus to the right ================= -->
   <path class="flow" d="M 900,760 L 900,820 L 1960,820 L 1960,766" marker-end="url(#arrow)"/>

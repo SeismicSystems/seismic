@@ -213,24 +213,20 @@ detects the rewind. The instances:
   is internally consistent, MAC and all, and restores cleanly. Everything
   under `/persistent` — reth's datadir, summit's database, certbot state —
   can be rewound together.
-- **A chain view can be rewound to block 0.** That lands the responder's
-  admission gate in its genesis window, where no timestamp check bites and
+- **A chain view can be held at block 0.** That lands the responder's
+  admission gate on the founding policy, where no timestamp check bites and
   "still at genesis" is indistinguishable from "chain withheld" from inside
-  the guest. The genesis check bounds what the rewind buys to the founding
-  accepted set — a reviewed list, never an image of the attacker's choosing —
-  but a founding image deprecated for a vulnerability is exactly what it
-  would revive. Nor does disaster recovery clear it: `network_id` and the
-  genesis block survive recovery, so block-0 policy keeps listing what it
-  listed. Hardening the gate further is open work.
-- **An in-process latch is the strongest local defense available.** The gate
-  latches the genesis window shut the first time it sees the chain past
-  block 0 — in process memory, so a restart reopens it. That is not a
-  shortcut to fix later: persisting the latch would store it on a disk the
-  same host owns, so it would rewind with everything else. A hardware counter
-  is not the alternative either — no property here rests on platform-specific
-  durable state ([the host
-  platform](#the-host-platform-and-what-it-is-trusted-for)).
-- **TPM sealing was rejected partly on the same grounds.** Sealed durability
+  the guest. So not every responder honors the founding policy: only the
+  custodian that minted `root_key` does, and only until the chain is seen past
+  block 0, which rules out rewinding any joined node and rewinding the genesis
+  node after block 1. What remains is the genesis node's own host keeping it
+  at block 0 from birth: it never retires the founding policy. The genesis check bounds
+  that to the founding accepted set — a reviewed list, never an image of the
+  attacker's choosing — but a founding image deprecated for a vulnerability
+  is exactly what it would revive. It is visible, since that validator never
+  takes part in consensus, and a genesis-timestamp deadline would close it
+  absent clock control; that belongs with the freshness-evidence decision.
+- **TPM sealing was rejected partly on rollback grounds.** Sealed durability
   for founding keys would rest on vTPM clone and rollback semantics the
   platform defines ([the host
   platform](#the-host-platform-and-what-it-is-trusted-for)) — and a cloned consensus key is

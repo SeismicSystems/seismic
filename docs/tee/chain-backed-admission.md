@@ -63,7 +63,7 @@ verifies, before the custodian wraps anything.
 
 ```mermaid
 sequenceDiagram
-    participant JC as joiner custodian<br/>(holds root_key)
+    participant JC as joiner custodian<br/>(no root_key yet)
     participant J as joiner<br/>(attestation-service)
     participant R as responder<br/>(attestation-service)
     participant C as responder custodian<br/>(holds root_key)
@@ -72,9 +72,15 @@ sequenceDiagram
     J->>J: 1. quote over<br/>root_key_request_binding(network_id, nonce, eph_pk)
     J->>R: RootKeyRequest {nonce, eph_pk, evidence}
     R->>R: 2a. verify the quote chain, its freshness,<br/>and that report_data carries the binding recomputed<br/>from the responder's OWN network_id
-    R->>N: 2b. isAccepted(admissionId) at a fresh finalized block<br/>of the manifest-pinned chain
-    N-->>R: true
-    R->>C: 3. WrapRootKey(request binding, joiner eph_pk)
+    alt reth at block 0
+        R->>N: 2b. isAccepted(admissionId) at block 0<br/>of the manifest-pinned chain — the founding policy
+        N-->>R: true
+    else reth past block 0
+        R->>N: 2b. isAccepted(admissionId) at a fresh finalized block<br/>of the manifest-pinned chain — the live policy
+        N-->>R: true
+    end
+    R->>C: 3. WrapRootKey(request binding, joiner eph_pk,<br/>admitted_on)
+    Note over C: a founding-policy wrap needs the<br/>custodian to still honor it
     C-->>R: wrapped root_key + responder eph_pk
     R->>R: 4. quote over root_key_response_binding(...)
     R-->>J: RootKeyResponse {eph_pk, wrapped, evidence}
@@ -106,7 +112,9 @@ What each step establishes:
 - **Wrapping** happens in the custodian, a separate local process with no
   network listener. Calling `WrapRootKey` *is* the authorization assertion;
   the AEAD's AAD is the verified request binding, so the ciphertext belongs
-  to this handshake and no other.
+  to this handshake and no other. A request admitted on the founding policy
+  says so, and the custodian wraps it only while it still honors that policy
+  ([the founding policy](#the-readiness-and-freshness-gate)).
 - **Installing** is the symmetric call on the joiner's own custodian. Raw
   evidence never crosses into it: `InstallRootKeyFromVerifiedBootstrapResponse`
   takes only the already-verified request binding, the responder's ephemeral
@@ -128,26 +136,47 @@ allowlist the network has left behind. Emergency deprecation must not be
 bypassable by holding one node back, or by handing it a different chain.
 
 The responder therefore decides only at chain state it can prove is both this
-network's and current:
+network's and current. The one branch that cannot prove currency — the
+founding policy, at block 0 — needs a second yes, from the custodian, when it
+wraps `root_key`:
 
 ```mermaid
 flowchart TD
-    L["read latest"] --> Z{"number == 0?"}
-    Z -- yes --> P0{"its hash ==<br/>manifest genesis?"}
-    P0 -- no --> D0["deny: not the chain<br/>network_id commits to"]
-    P0 -- yes --> G{"progress latched<br/>in this process?"}
-    G -- no --> OK1["genesis window:<br/>read the policy at block 0"]
-    G -- yes --> D1["deny: the chain<br/>regressed to genesis"]
-    Z -- no --> P{"read block 0: hash ==<br/>manifest genesis?"}
-    P -- no --> D0
-    P -- "yes — latches<br/>progress observed" --> F["read finalized"]
-    F --> A{"now − block timestamp<br/>≤ 60s?"}
-    A -- no --> D2["deny: stale policy view"]
-    A -- yes --> OK2["read isAccepted(id)<br/>pinned to that block hash"]
+    subgraph AS["attestation-service — every read is to its local reth"]
+        L["read latest"] --> Z{"number == 0?"}
+        Z -- "yes: FoundingPolicy" --> P0{"its hash ==<br/>manifest genesis?"}
+        P0 -- no --> D0["deny: not the chain<br/>network_id commits to"]
+        P0 -- yes --> FP["isAccepted(id)<br/>at block 0"]
+        Z -- "no: LivePolicy" --> P{"read block 0: hash ==<br/>manifest genesis?"}
+        P -- no --> D0
+        P -- yes --> F["read finalized"]
+        F --> A{"now − block timestamp<br/>≤ 60s?"}
+        A -- no --> D2["deny: stale policy view"]
+        A -- yes --> LP["isAccepted(id)<br/>pinned to that block hash"]
+    end
+    subgraph CU["custodian — holds root_key and the latch"]
+        C{"still honors the<br/>founding policy?"}
+        D1["deny: only the minting<br/>custodian, before block 1"]
+        W["wrap root_key"]
+    end
+    FP -- "WrapRootKey<br/>admitted_on: FoundingPolicy" --> C
+    C -- no --> D1
+    C -- yes --> W
+    LP -- "WrapRootKey<br/>admitted_on: LivePolicy" --> W
     classDef deny fill:#fde8e8,stroke:#c81e1e,color:#111;
     classDef ok fill:#dbeafe,stroke:#1e3a5f,color:#111;
     class D0,D1,D2 deny;
-    class OK1,OK2 ok;
+    class W ok;
+```
+
+Whether the custodian still honors the founding policy is state it keeps next
+to `root_key`, and it only ever moves one way:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Honored: root_key minted here
+    [*] --> Retired: root_key installed from a peer
+    Honored --> Retired: chain seen past block 0
 ```
 
 The decisions behind it:
@@ -171,41 +200,52 @@ The decisions behind it:
   answered at exactly the finalized block hash, not at whatever `latest`
   became a moment later, so the freshness proof and the policy answer
   describe the same state.
-- **The genesis window.** A chain still at block 0 has no finality to publish
+- **The founding policy.** A chain still at block 0 has no finality to publish
   and a genesis timestamp that is arbitrarily old. Reading the policy there is
   reading the policy `network_id` itself commits to — the genesis check above
   is what makes those the same thing — and no deprecation can predate the
   chain, so this is what lets the founding cohort join before consensus
-  starts. The window latches shut for the rest of the process the first time
-  the chain is seen past genesis: a reth back at block 0 after progress has
-  been wiped or replaced, and must not admit on its say-so. The latch lives in
-  the deciding process, so an operator who wipes reth and restarts the service
-  reopens the window — bounded by the genesis check to the founding accepted
-  set, and covered below.
+  starts. But a chain view at block 0 is host-supplied, and from inside the
+  guest "still at genesis" looks exactly like "chain withheld", so only the
+  custodian that minted `root_key` may act on such a verdict. It honors the
+  founding policy from minting until a watcher in the attestation service sees
+  the chain past block 0, whether or not any join arrives, and never again. An installed key never
+  honors it. A host that holds a joined node at block 0, or rewinds the
+  genesis node after block 1, gets an "unavailable" answer, and the joiner
+  asks the next peer; founding joiners are only ever pointed at the genesis
+  node. Bringing the founding policy back means restarting the custodian,
+  which loses `root_key`: the node comes back as a joiner. If the genesis node
+  dies before block 1, the founders it admitted cannot stand in for it, and
+  the remedy is to re-found.
 - **Every failure denies.** An unreachable reth, a chain that is not this
-  network's, a missing finalized block, a stale view, a chain back at genesis,
-  a failed registry read, and a false `isAccepted` all refuse the join.
+  network's, a missing finalized block, a stale view, a founding-policy
+  admission the custodian no longer honors, a failed registry read, and a
+  false `isAccepted` all refuse the join.
   Everything but the last is the responder failing to *decide* rather than a
   verdict on the joiner, so the joiner is told admission is unavailable and
   knows to ask another peer. Those that time can fix are also retried a few
   times inside the handshake: the joiner's quote is already spent, and a reth
   that is restarting or just catching back under the bound deserves a couple
   of seconds before the joiner has to start over. A registry verdict is final
-  and never retried; so is a genesis mismatch, which no waiting repairs.
+  and never retried; so are a genesis mismatch and a retired founding policy,
+  which no waiting repairs.
 
 **Where the gate lives**: inside the admission decision itself
 ([`admission.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/attestation-service/src/admission.rs)),
 evaluated per handshake — which is also what makes the pinned read possible,
 since the state that was checked and the state that answers must be the same
-block. Why it does not sit in front of the port instead: [design
-rationale](#design-rationale).
+block. The one exception is whether the founding policy is still honored,
+which lives in the custodian
+([`state.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/custodian-service/src/state.rs))
+so that it lasts exactly as long as `root_key` does. Why the gate does not sit
+in front of the port instead: [design rationale](#design-rationale).
 
 **What the gate does not defend against**: a host that controls its guest's
 clock while eclipsing it can have an honest enclave compute a fresh-looking
-verdict; a host that rewinds its guest's chain view to block 0 lands in the
-genesis window, bounded by the genesis check to the founding accepted set; and
-one responder's yes is enough — the handshake requires no corroboration across
-independent responders. Deprecation therefore takes effect network-wide
+verdict; the genesis node's own host can keep it at block 0 from birth, so it
+never retires the founding policy, bounded by the genesis check to the
+founding accepted set; and one responder's yes is enough — the handshake requires no
+corroboration across independent responders. Deprecation therefore takes effect network-wide
 against every adversary except one holding host control of a node that already
 holds `root_key`. All three residuals are accepted host influence under the
 TEE threat model; [the trust model](trust-model.md#accepted-risks) states each

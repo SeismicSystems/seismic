@@ -553,7 +553,9 @@ silent network fork — so the founding tooling configures a whole cohort in one
 step, where exactly one minting node is representable.
 
 Three roles get called "the leader" and are worth keeping apart. The **minting
-node** is the one that generates `root_key` and then serves it to the rest. The
+node** is the one that generates `root_key` and then serves it to the rest;
+until the chain passes block 0 it is the only node that may admit anyone
+([the founding policy](chain-backed-admission.md#the-readiness-and-freshness-gate)). The
 **orchestrator** is the operator machine that provisions boxes, harvests
 pubkeys, and POSTs configuration; it holds no secrets at all, because the
 founding keys are TEE-born and it only ever sees public halves and quotes. The
