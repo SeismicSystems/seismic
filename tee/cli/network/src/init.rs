@@ -11,9 +11,10 @@
 //! `image.json`, copied in as the record of which image this network is
 //! founded on; its measurements; and both genesis templates as the image's
 //! own `seismic-reth` and `summit` have them — every one of them verified
-//! against the release's `SHA256SUMS`, and the measurements additionally
-//! gated on being stamped for that very image. Each of the three can still
-//! be given as a
+//! against the release's `SHA256SUMS`, whose build provenance is verified
+//! first (`gh attestation verify`, so `gh` must be installed and logged in),
+//! and the measurements additionally gated on being stamped for that very
+//! image. Each of the three can still be given as a
 //! local path or an `https://` URL (`--reth-genesis`, `--summit-genesis`,
 //! `--measurements`), overriding the release's copy or, all three together,
 //! standing in for a release that does not exist — an image built by hand
@@ -271,8 +272,8 @@ fn network_state(dir: &NetworkDir) -> Vec<PathBuf> {
         .collect()
 }
 
-/// The image's release, opened: its record and its `SHA256SUMS`, which every
-/// asset taken from it is checked against.
+/// The image's release, opened: its record and its attested `SHA256SUMS`,
+/// which every asset taken from it is checked against.
 struct OpenedRelease {
     release: ImageRelease,
     client: reqwest::Client,
@@ -462,7 +463,9 @@ pub struct InitArgs {
     /// below unless each is given: its image.json (copied in as
     /// inputs/image.json, the record assemble and the provisioner read),
     /// its measurements, and both genesis templates as the image's own
-    /// binaries have them, each verified against the release's SHA256SUMS.
+    /// binaries have them, each verified against the release's SHA256SUMS
+    /// — itself verified as built by seismic-images' publishing workflow,
+    /// with `gh attestation verify`, so gh must be installed and logged in.
     /// Without it all three inputs are required, and no image.json is
     /// written — assemble then needs --reth-bin and --summit-bin.
     #[arg(

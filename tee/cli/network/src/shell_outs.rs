@@ -103,7 +103,8 @@ pub trait Derivations {
 pub struct DerivationArgs {
     /// seismic-reth binary whose `genesis-hash` subcommand computes
     /// eth.genesis_hash. Default: the image's own, from the seismic-images
-    /// release inputs/image.json names, verified against its SHA256SUMS.
+    /// release inputs/image.json names, verified against its SHA256SUMS,
+    /// whose build provenance gh verifies first.
     #[arg(long, value_name = "BIN")]
     pub reth_bin: Option<String>,
 
@@ -153,8 +154,8 @@ impl DerivationArgs {
         }
         let [reth_bin, summit_bin] = <[String; 2]>::try_from(resolved).expect("two binaries");
         eprintln!(
-            "deriving with image {}'s own binaries, verified against its release's SHA256SUMS: \
-             {reth_bin}, {summit_bin}",
+            "deriving with image {}'s own binaries, verified against its release's attested \
+             SHA256SUMS: {reth_bin}, {summit_bin}",
             release.tag()
         );
         Ok(ShellOuts {
@@ -257,7 +258,7 @@ impl Derivations for ShellOuts {
 }
 
 /// Materialize bytes for a path-taking subcommand. Dropped with the guard.
-fn temp_file(bytes: &[u8], suffix: &str) -> anyhow::Result<tempfile::NamedTempFile> {
+pub(crate) fn temp_file(bytes: &[u8], suffix: &str) -> anyhow::Result<tempfile::NamedTempFile> {
     let mut file = tempfile::Builder::new()
         .suffix(suffix)
         .tempfile()
@@ -268,14 +269,14 @@ fn temp_file(bytes: &[u8], suffix: &str) -> anyhow::Result<tempfile::NamedTempFi
     Ok(file)
 }
 
-fn path_str(path: &Path) -> &str {
+pub(crate) fn path_str(path: &Path) -> &str {
     path.to_str().expect("a temporary file path is valid UTF-8")
 }
 
 /// Run `argv` to completion and return its stdout. A missing binary is
 /// reported with `not_found_hint`; a nonzero exit with the command's stderr; a
 /// hang past [`SHELL_OUT_TIMEOUT`] as a timeout.
-async fn run(argv: &[&str], not_found_hint: &str) -> anyhow::Result<Vec<u8>> {
+pub(crate) async fn run(argv: &[&str], not_found_hint: &str) -> anyhow::Result<Vec<u8>> {
     let (bin, args) = argv.split_first().expect("argv has a binary");
     let command = argv.join(" ");
     let child = tokio::process::Command::new(bin)

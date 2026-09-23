@@ -13,6 +13,13 @@
 //! same `SHA256SUMS`, instead of two binaries on PATH at a rev derived by
 //! hand across two repos.
 //!
+//! `SHA256SUMS` comes from the same release as what it lists, so whoever
+//! could swap an asset could swap it too. Before anything is checked against
+//! it, its build provenance is: a Sigstore attestation that seismic-images'
+//! publishing workflow, on its publishing branch, produced exactly these
+//! bytes ([`RELEASE_SIGNER`]). Every other asset matches an attested
+//! `SHA256SUMS` or is refused, so each is attested bytes by the same check.
+//!
 //! Every fetch here is of a release asset, spelled from the tag; the
 //! founder's own inputs (a locally authored genesis, a dev image's
 //! measurements) go through `init`'s path-or-URL arguments instead.
@@ -29,6 +36,16 @@ use sha2::{Digest as _, Sha256};
 
 /// Where seismic-images' releases download from; `<tag>/<asset>` follows.
 pub const RELEASES_URL: &str = "https://github.com/SeismicSystems/seismic-images/releases/download";
+
+/// The repository whose attestations a release's provenance is looked up in.
+pub const RELEASE_REPO: &str = "SeismicSystems/seismic-images";
+
+/// The identity a release's `SHA256SUMS` must be attested under, matched
+/// exactly against the signing certificate: the workflow that publishes
+/// releases, on the branch it publishes from. The workflow and the ref, not
+/// the repository alone, so bytes signed by another workflow or another ref
+/// — a pull request's run included — are refused.
+pub const RELEASE_SIGNER: &str = "https://github.com/SeismicSystems/seismic-images/.github/workflows/seismic.yml@refs/heads/seismic";
 
 /// The release's assets, by the names seismic-images gives them.
 pub const IMAGE_JSON_ASSET: &str = "image.json";
@@ -48,6 +65,9 @@ pub const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(600);
 pub struct ImageRelease {
     tag: String,
     base: String,
+    /// The GitHub CLI that verifies `SHA256SUMS`'s build provenance; `None`
+    /// only for a test's local release, which no workflow built.
+    gh: Option<String>,
 }
 
 impl ImageRelease {
@@ -61,7 +81,14 @@ impl ImageRelease {
         Self {
             tag: tag.to_string(),
             base: base.trim_end_matches('/').to_string(),
+            gh: Some("gh".to_string()),
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn verified_with(mut self, gh: Option<&str>) -> Self {
+        self.gh = gh.map(str::to_string);
+        self
     }
 
     pub fn tag(&self) -> &str {
@@ -242,7 +269,9 @@ async fn get(
         .map_err(|e| anyhow::anyhow!("failed to fetch {url}: {e}"))
 }
 
-/// The release's `SHA256SUMS`, the record every other fetch is checked against.
+/// The release's `SHA256SUMS`, the record every other fetch is checked
+/// against — so the one asset whose build provenance is verified here, before
+/// it is trusted with anything.
 pub async fn fetch_sums(
     client: &reqwest::Client,
     release: &ImageRelease,
@@ -252,7 +281,67 @@ pub async fn fetch_sums(
         .bytes()
         .await
         .with_context(|| format!("reading {}", release.url(SHA256SUMS_ASSET)))?;
+    verify_provenance(release, &bytes).await?;
     Sha256Sums::parse(&bytes).with_context(|| release.url(SHA256SUMS_ASSET))
+}
+
+/// `sums` carry a build provenance attestation signed as [`RELEASE_SIGNER`],
+/// as `gh attestation verify` checks one: the signature, the certificate's
+/// chain to Sigstore's root and its identity, and the transparency-log entry.
+/// Mandatory, with no checksum-only fallback: a founding on a release whose
+/// provenance could not be checked is a founding on whatever the release
+/// holds.
+async fn verify_provenance(release: &ImageRelease, sums: &[u8]) -> anyhow::Result<()> {
+    const GH_HINT: &str = "install the GitHub CLI (https://cli.github.com) and run `gh auth login`";
+    let Some(gh) = &release.gh else {
+        return Ok(());
+    };
+    let file = crate::shell_outs::temp_file(sums, "")?;
+    let path = crate::shell_outs::path_str(file.path());
+    let verify = [
+        gh.as_str(),
+        "attestation",
+        "verify",
+        path,
+        "--repo",
+        RELEASE_REPO,
+    ];
+    let pinned = [&verify[..], &["--cert-identity", RELEASE_SIGNER]].concat();
+    let Err(refusal) = crate::shell_outs::run(&pinned, GH_HINT).await else {
+        return Ok(());
+    };
+    // gh's refusal of an identity says only that verification failed. Asked
+    // again without the pin, it reports whom the certificates do name — for
+    // the message alone; the pinned check above is the one that decided.
+    let unpinned = [&verify[..], &["--format", "json"]].concat();
+    let found = match crate::shell_outs::run(&unpinned, GH_HINT).await {
+        Ok(json) => format!("its attestation is signed by {}", signers(&json)),
+        Err(_) => refusal.to_string(),
+    };
+    bail!(
+        "refusing seismic-images release {}: its SHA256SUMS is not attested as built by \
+         {RELEASE_SIGNER} — {found}",
+        release.tag()
+    )
+}
+
+/// The signing identities in `gh attestation verify --format json` output.
+fn signers(json: &[u8]) -> String {
+    let names: Vec<String> = serde_json::from_slice::<Vec<serde_json::Value>>(json)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|verified| {
+            verified
+                .pointer("/verificationResult/signature/certificate/subjectAlternativeName")?
+                .as_str()
+                .map(str::to_string)
+        })
+        .collect();
+    if names.is_empty() {
+        "an identity gh did not report".to_string()
+    } else {
+        names.join(", ")
+    }
 }
 
 /// Fetch a small asset into memory and check it against `sums`. An asset
@@ -471,8 +560,95 @@ pub(crate) mod tests {
             .map(|(name, bytes)| (format!("/{tag}/{name}"), bytes))
             .collect();
         let server = FileServer::serve(served);
-        let release = ImageRelease::at(&server.url, tag);
+        let release = ImageRelease::at(&server.url, tag).verified_with(None);
         (server, release)
+    }
+
+    /// A stand-in `gh` in `dir`: appends its arguments to `dir/args`, keeps
+    /// the file it was asked about as `dir/subject`, then runs `pinned` when
+    /// asked with `--cert-identity` and `unpinned` otherwise.
+    fn fake_gh(dir: &Path, pinned: &str, unpinned: &str) -> String {
+        let gh = dir.join("gh");
+        let d = dir.display();
+        std::fs::write(
+            &gh,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" >> {d}/args\ncat \"$3\" > {d}/subject\n\
+                 case \"$*\" in *--cert-identity*) {pinned} ;; *) {unpinned} ;; esac\n"
+            ),
+        )
+        .unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            std::fs::set_permissions(&gh, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        gh.display().to_string()
+    }
+
+    /// SHA256SUMS is taken only with its provenance verified: gh is asked
+    /// about exactly the bytes served, pinned to the publishing workflow and
+    /// its branch. A refusal names the release, the signer expected and the
+    /// signer found (or gh's own error, when nothing verifies at all); no gh
+    /// is a refusal too, never a fallback to the checksums alone.
+    #[tokio::test]
+    async fn sha256sums_must_carry_the_publishing_workflows_provenance() {
+        let files = release_files(TAG);
+        let (_server, release) = serve_release(TAG, files.clone());
+        let client = download_client().unwrap();
+        let with = |gh: &str| release.clone().verified_with(Some(gh));
+
+        let dir = tempfile::tempdir().unwrap();
+        let gh = fake_gh(dir.path(), "exit 0", "exit 1");
+        fetch_sums(&client, &with(&gh)).await.unwrap();
+        let args = std::fs::read_to_string(dir.path().join("args")).unwrap();
+        let args: Vec<&str> = args.lines().collect();
+        assert_eq!(args[..2], ["attestation", "verify"]);
+        assert_eq!(
+            args[3..],
+            ["--repo", RELEASE_REPO, "--cert-identity", RELEASE_SIGNER]
+        );
+        assert_eq!(
+            std::fs::read(dir.path().join("subject")).unwrap(),
+            files[SHA256SUMS_ASSET]
+        );
+
+        // Attested by this repository, but by another workflow.
+        let other = "https://github.com/SeismicSystems/seismic-images/.github/workflows/other.yml@refs/heads/seismic";
+        let json = format!(
+            r#"[{{"verificationResult":{{"signature":{{"certificate":{{"subjectAlternativeName":"{other}"}}}}}}}}]"#
+        );
+        let dir = tempfile::tempdir().unwrap();
+        let gh = fake_gh(
+            dir.path(),
+            "echo 'Error: verifying with issuer' >&2; exit 1",
+            &format!("echo '{json}'"),
+        );
+        let err = fetch_sums(&client, &with(&gh))
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains(&format!("release {TAG}")), "{err}");
+        assert!(err.contains(RELEASE_SIGNER), "{err}");
+        assert!(err.contains(&format!("signed by {other}")), "{err}");
+
+        // Not attested at all: gh's own word for it.
+        let dir = tempfile::tempdir().unwrap();
+        let fail = "echo 'Error: no attestations found' >&2; exit 1";
+        let gh = fake_gh(dir.path(), fail, fail);
+        let err = fetch_sums(&client, &with(&gh))
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains(RELEASE_SIGNER), "{err}");
+        assert!(err.contains("no attestations found"), "{err}");
+
+        let err = fetch_sums(&client, &with("/nonexistent/gh"))
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains(RELEASE_SIGNER), "{err}");
+        assert!(err.contains("https://cli.github.com"), "{err}");
     }
 
     #[test]
