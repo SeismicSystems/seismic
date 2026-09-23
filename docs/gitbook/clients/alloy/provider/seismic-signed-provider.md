@@ -7,6 +7,8 @@ icon: lock
 
 Full-featured provider with wallet integration, automatic calldata encryption, and response decryption.
 
+> **Balance RPC migration:** On reth with PR #502, `provider.get_balance()` returns a compatibility placeholder, not native or sUSDC holdings. Using a signed provider does not change ordinary balance requests. See [Balance RPCs](../../../reference/balance-rpcs.md).
+
 ## Overview
 
 `SeismicSignedProvider<N: SeismicNetwork>` is the primary provider type for interacting with Seismic nodes. It wraps an Alloy provider with a filler chain that automatically:

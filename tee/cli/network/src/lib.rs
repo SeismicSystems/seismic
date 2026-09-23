@@ -21,7 +21,9 @@
 //! one genesis node plus its joiners — and asserts the launch against what
 //! the manifest pins (and, with `--check`, re-asserts a live cohort's launch
 //! without configuring anything). Between `init` and `harvest` the cohort is provisioned
-//! with the Pulumi program; `pulumi destroy` tears it down.
+//! with the Pulumi program; `pulumi destroy` tears it down, and [`rm`] — the
+//! counterpart of `init` — then deletes the network directory and its
+//! context entry.
 //!
 //! One more command lives in this crate without being a founding step.
 //! [`verify_founding`] is the audit of one: it re-verifies a committed
@@ -59,6 +61,7 @@ pub mod harvest;
 pub mod image;
 pub mod init;
 pub mod launch;
+pub mod rm;
 pub mod shell_outs;
 pub mod verify_founding;
 
@@ -67,7 +70,8 @@ use std::process::ExitCode;
 use clap::Subcommand;
 
 /// The `network` command group, declared in founding order — the order
-/// `--help` lists them in.
+/// `--help` lists them in — and then the one that ends a network's life on
+/// this machine.
 #[derive(Debug, Subcommand)]
 pub enum NetworkCommand {
     /// Scaffold a network directory's authored inputs.
@@ -81,6 +85,10 @@ pub enum NetworkCommand {
     /// (--check: re-assert the launch against the manifest's pins instead of
     /// configuring).
     Configure(configure::ConfigureArgs),
+    /// Delete a network directory and its context entry, by name — once its
+    /// stack is destroyed (the counterpart of init).
+    #[command(visible_alias = "remove")]
+    Rm(rm::RmArgs),
 }
 
 /// Run one `network` command.
@@ -90,6 +98,7 @@ pub async fn run(command: NetworkCommand) -> anyhow::Result<ExitCode> {
         NetworkCommand::Harvest(args) => harvest::run(args).await,
         NetworkCommand::Assemble(args) => assemble::run(args).await,
         NetworkCommand::Configure(args) => configure::run(args).await,
+        NetworkCommand::Rm(args) => rm::run(args).await,
     }
 }
 
@@ -111,9 +120,9 @@ mod tests {
         Probe::command().debug_assert();
     }
 
-    /// The four founding commands in founding order — and nothing else: the
-    /// audit sits at the binary's top level, the policy review in its own
-    /// group, and checking an assembled set or a launched cohort is a
+    /// The four founding commands in founding order, then `rm` — and nothing
+    /// else: the audit sits at the binary's top level, the policy review in
+    /// its own group, and checking an assembled set or a launched cohort is a
     /// `--check` on the command that produced it, not a command.
     #[test]
     fn the_commands_are_listed_in_founding_order() {
@@ -121,6 +130,6 @@ mod tests {
             .get_subcommands()
             .map(|c| c.get_name().to_string())
             .collect();
-        assert_eq!(names, ["init", "harvest", "assemble", "configure"]);
+        assert_eq!(names, ["init", "harvest", "assemble", "configure", "rm"]);
     }
 }

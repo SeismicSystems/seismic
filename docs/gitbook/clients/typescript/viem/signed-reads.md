@@ -51,6 +51,8 @@ import { signedReadContract } from "seismic-viem";
 | `functionName` | `string` | Yes      | Name of the view/pure function |
 | `args`         | `array`  | No       | Function arguments             |
 | `nonce`        | `number` | No       | Override the nonce             |
+| `blockNumber`  | `bigint` | No       | Read state at this block number; `0n` selects genesis |
+| `blockTag`     | `BlockTag` | No     | Read state at this block tag; defaults to `"latest"` |
 
 The optional third argument `securityParams: SeismicSecurityParams` accepts advanced Seismic metadata overrides (see [Security Parameters](shielded-writes.md#security-parameters)). Most callers should omit these; they are mainly useful for deterministic tests/debugging, explicit expiry control, and low-level interop.
 
@@ -102,6 +104,18 @@ const result = await signedCall(client, {
 
 ---
 
+## Block Selection
+
+Signed reads accept `blockNumber` or `blockTag`, including through `signedCall()`, `signedReadContract()`, and `walletClient.sreadContract()`. Choose one selector; the default is `"latest"`. An explicit `blockNumber: 0n` selects genesis rather than falling back to latest.
+
+The selector is forwarded as the second `eth_call` parameter for both typed-data requests (local and JSON-RPC accounts) and raw signed transactions. Historical reads use the requested block's state, not the latest state. The backend must retain that historical state; calls to contracts that did not yet exist at the selected block cannot return their current state.
+
+If `nonce` is omitted, the SDK fetches the caller's transaction count at the selected block (default `"latest"`) and uses it for both encryption metadata and signing. An explicit nonce, including `0`, is preserved without a lookup; it must be valid for the selected state on backends that validate call nonces.
+
+`securityParams.recentBlockHash` and `expiresAtBlock` control request freshness, **not** which state is read. They remain independent of the historical block selector; normally leave them at their defaults.
+
+---
+
 ## How It Works
 
 When you call `signedReadContract` (or `contract.sread.functionName`), the SDK performs the following steps:
@@ -110,8 +124,8 @@ When you call `signedReadContract` (or `contract.sread.functionName`), the SDK p
 2. **Build Seismic metadata** with `signedRead: true`
 3. **Encrypt calldata** with AES-GCM using the shared key derived via ECDH
 4. **Sign the transaction:**
-   - For **local accounts** (private key): sign as a raw Seismic transaction, send to `eth_call`
-   - For **JSON-RPC accounts** (MetaMask): sign EIP-712 typed data via `eth_signTypedData_v4`, send the typed data + signature to `eth_call`
+   - For **local accounts** (private key): sign EIP-712 typed data locally, send the typed data + signature and block selector to `eth_call`
+   - For **JSON-RPC accounts** (MetaMask): sign EIP-712 typed data via `eth_signTypedData_v4`, send the typed data + signature and block selector to `eth_call`
 5. **Decrypt the response** returned by the node
 6. **Decode the ABI output** into the expected return type
 

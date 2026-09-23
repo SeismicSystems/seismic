@@ -80,7 +80,7 @@ which is why it stays gitignored.
 
 Throwaway foundings go in a `tmp-*` directory instead — those are
 gitignored wholesale, so a scratch cohort can be founded, torn down, and
-`rm -rf`'d without touching git (the copy-pasteable recipe is
+deleted with `seismic-tee network rm <name>` without touching git (the copy-pasteable recipe is
 [the devnet runbook](https://github.com/SeismicSystems/deploy/blob/main/tee/runbook-devnet.md)). If a throwaway
 turns out to matter, renaming the directory is enough to commit it —
 `network_id` is minted from the manifest bytes, not the path — but the

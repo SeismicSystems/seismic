@@ -7,6 +7,8 @@ icon: eye
 
 Create a synchronous `Web3` instance with public (read-only) Seismic access.
 
+> **Balance RPC migration:** On reth with PR #502, `w3.eth.get_balance()` returns a compatibility placeholder, not native or sUSDC holdings. Do not use it for funding decisions. See [Balance RPCs](../../../reference/balance-rpcs.md) for explicit native queries.
+
 ## Overview
 
 `create_public_client()` creates a client for read-only operations on the Seismic network. No private key is required. The [`w3.seismic`](../namespaces/seismic-public-namespace.md) namespace provides only public read operations: [`get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md), [`get_deposit_root()`](../namespaces/methods/get-deposit-root.md), [`get_deposit_count()`](../namespaces/methods/get-deposit-count.md), and [`contract()`](../contract/) (with `.tread` only).
@@ -96,7 +98,7 @@ block = w3.eth.get_block("latest")
 print(f"Latest block: {block['number']}")
 
 balance = w3.eth.get_balance("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-print(f"Balance: {w3.from_wei(balance, 'ether')} ETH")
+print(f"Compatibility balance (not funds on updated reth): {balance}")
 
 chain_id = w3.eth.chain_id
 print(f"Chain ID: {chain_id}")

@@ -1,5 +1,4 @@
 import type { Hex, PublicClient } from 'viem'
-import { parseEther } from 'viem/utils'
 
 import { txExplorerUrl } from '@sviem/explorer.ts'
 
@@ -7,38 +6,12 @@ export type CheckFaucetParams = {
   address: Hex
   publicClient: PublicClient
   faucetUrl: string
-  minBalanceWei?: bigint | number
-  minBalanceEther?: bigint | number
 }
 
-export type CheckFaucetResult =
-  | { sent: false }
-  | { sent: true; hash: Hex; txUrl?: string }
+export type CheckFaucetResult = { sent: true; hash: Hex; txUrl?: string }
 
-const DEFAULT_MIN_BALANCE_WEI = parseEther('0.5')
 const TXHASH_PREFIX = 'Txhash: '
 const HASH_HEX_LENGTH = 66
-
-export const parseMinBalance = (
-  minBalanceWei?: bigint | number,
-  minBalanceEther?: bigint | number
-): bigint => {
-  if (minBalanceWei && minBalanceEther) {
-    if (BigInt(minBalanceWei) !== parseEther(minBalanceEther.toString())) {
-      console.warn(
-        'Both minBalanceWei and minBalanceEther provided, using minBalanceWei'
-      )
-    }
-  }
-
-  if (minBalanceWei) {
-    return BigInt(minBalanceWei)
-  }
-  if (minBalanceEther) {
-    return parseEther(minBalanceEther.toString())
-  }
-  return DEFAULT_MIN_BALANCE_WEI
-}
 
 /**
  * Extract a tx hash from a faucet response message of the form
@@ -56,18 +29,19 @@ export const parseFaucetResponseHash = (msg: string): Hex | null => {
   return hash as Hex
 }
 
+/**
+ * Request funds without inspecting the recipient's balance. Claim eligibility
+ * belongs to the faucet server, not the public balance RPC.
+ *
+ * Requires the legacy POST /api/claim API returning { msg: 'Txhash: 0x...' }.
+ * This is not an adapter for the public faucet's authenticated /api/claim/new API.
+ * Each invocation attempts a claim; rejection is surfaced as an error.
+ */
 export const checkFaucet = async ({
   address,
   publicClient,
   faucetUrl,
-  minBalanceWei,
-  minBalanceEther,
 }: CheckFaucetParams): Promise<CheckFaucetResult> => {
-  const balance = await publicClient.getBalance({ address })
-  const minBalance = parseMinBalance(minBalanceWei, minBalanceEther)
-  if (balance > minBalance) {
-    return { sent: false }
-  }
   const response = await fetch(`${faucetUrl}/api/claim`, {
     method: 'POST',
     body: JSON.stringify({ address }),
@@ -84,7 +58,7 @@ export const checkFaucet = async ({
   }
   const txUrl = txExplorerUrl({ chain: publicClient.chain, txHash: hash })
   if (txUrl) {
-    console.debug(`Faucet sent eth to ${address}: ${txUrl}`)
+    console.debug(`Faucet sent funds to ${address}: ${txUrl}`)
   }
   // only return after the tx is confirmed, to prevent double-requesting
   await publicClient.waitForTransactionReceipt({ hash })

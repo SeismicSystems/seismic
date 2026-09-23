@@ -80,7 +80,9 @@ export const testSeismicTxTypedData = async ({
 
   const client = await httpWalletClient({ chain, url, account, encryptionSk })
 
-  const preTxBalance = await client.getBalance({ address: recipientAddress })
+  const preTxBalance = await client.getNativeBalance({
+    address: recipientAddress,
+  })
 
   const nonce = await client.getTransactionCount({
     address: account.address,
@@ -115,6 +117,8 @@ export const testSeismicTxTypedData = async ({
   const receipt = await client.waitForTransactionReceipt({ hash })
   expect(receipt.status).toBe('success')
 
-  const postTxBalance = await client.getBalance({ address: recipientAddress })
+  const postTxBalance = await client.getNativeBalance({
+    address: recipientAddress,
+  })
   expect(postTxBalance).toBe(preTxBalance + value)
 }

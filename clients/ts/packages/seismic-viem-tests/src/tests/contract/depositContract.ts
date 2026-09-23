@@ -256,7 +256,7 @@ export const testDepositContract = async ({
 
   const validatorData = generateValidatorData()
 
-  const initialAccountBalance = await publicClient.getBalance({
+  const initialAccountBalance = await publicClient.getNativeBalance({
     address: account.address,
   })
 
@@ -279,11 +279,11 @@ export const testDepositContract = async ({
 
   expect(depositReceipt.logs.length).toBeGreaterThan(0)
 
-  const finalAccountBalance = await publicClient.getBalance({
+  const finalAccountBalance = await publicClient.getNativeBalance({
     address: account.address,
   })
 
-  const contractBalance = await publicClient.getBalance({
+  const contractBalance = await publicClient.getNativeBalance({
     address: deployedContractAddress,
   })
 

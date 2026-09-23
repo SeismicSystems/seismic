@@ -7,6 +7,8 @@ icon: cloud
 
 Pre-defined [`ChainConfig`](chain-config.md) for the Seismic public testnet (GCP node 1).
 
+> On reth with PR #502, `w3.eth.get_balance()` returns a compatibility placeholder, not spendable funds. See [Balance RPCs](../../../reference/balance-rpcs.md) before using balance queries.
+
 ## Overview
 
 `SEISMIC_TESTNET` is a ready-to-use chain configuration pointing to the primary Seismic testnet instance. It's the recommended starting point for developers building on Seismic.

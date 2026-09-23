@@ -1,42 +1,133 @@
-import { expect } from 'bun:test'
-import { parseFaucetResponseHash, parseMinBalance } from 'seismic-viem'
-import { parseEther } from 'viem/utils'
+import { expect, spyOn } from 'bun:test'
+import { checkFaucet, parseFaucetResponseHash } from 'seismic-viem'
+import type { TransactionReceipt } from 'viem'
+import { createPublicClient, custom } from 'viem'
 
-import { SAMPLE_TX_HASH } from '@sviem-tests/constants.ts'
+const ADDRESS = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
+const HASH = `0x${'ab'.repeat(32)}` as const
+const FAUCET_URL = 'https://faucet.example'
 
-export const testParseMinBalanceDefaultsToHalfEther = () => {
-  const result = parseMinBalance()
-  expect(result).toBe(parseEther('0.5'))
+const faucetClient = () =>
+  createPublicClient({
+    transport: custom({
+      request: async ({ method }) => {
+        throw new Error(`Unexpected RPC: ${method}`)
+      },
+    }),
+  })
+
+export const testCheckFaucetWithoutBalanceCheck = async () => {
+  const publicClient = faucetClient()
+  const getBalance = spyOn(publicClient, 'getBalance').mockResolvedValue(
+    2n ** 255n
+  )
+  const wait = spyOn(
+    publicClient,
+    'waitForTransactionReceipt'
+  ).mockResolvedValue({
+    transactionHash: HASH,
+    status: 'success',
+  } as TransactionReceipt)
+  const fetchClaim = spyOn(globalThis, 'fetch').mockResolvedValue(
+    Response.json({ msg: `Txhash: ${HASH}` })
+  )
+  try {
+    const result = await checkFaucet({
+      address: ADDRESS,
+      publicClient,
+      faucetUrl: FAUCET_URL,
+    })
+    expect(result).toEqual({ sent: true, hash: HASH, txUrl: undefined })
+    expect(getBalance).not.toHaveBeenCalled()
+    expect(fetchClaim).toHaveBeenCalledTimes(1)
+    expect(fetchClaim).toHaveBeenCalledWith(`${FAUCET_URL}/api/claim`, {
+      method: 'POST',
+      body: JSON.stringify({ address: ADDRESS }),
+    })
+    expect(wait).toHaveBeenCalledWith({ hash: HASH })
+  } finally {
+    getBalance.mockRestore()
+    wait.mockRestore()
+    fetchClaim.mockRestore()
+  }
 }
 
-export const testParseMinBalanceUsesWeiWhenProvided = () => {
-  const result = parseMinBalance(1000n)
-  expect(result).toBe(1000n)
+export const testCheckFaucetWaitsForConfirmation = async () => {
+  const publicClient = faucetClient()
+  let confirm = () => {}
+  const confirmation = new Promise<void>((resolve) => {
+    confirm = resolve
+  })
+  let waiting = () => {}
+  const startedWaiting = new Promise<void>((resolve) => {
+    waiting = resolve
+  })
+  const wait = spyOn(
+    publicClient,
+    'waitForTransactionReceipt'
+  ).mockImplementation(async () => {
+    waiting()
+    await confirmation
+    return { transactionHash: HASH, status: 'success' } as TransactionReceipt
+  })
+  const fetchClaim = spyOn(globalThis, 'fetch').mockResolvedValue(
+    Response.json({ msg: `Txhash: ${HASH}` })
+  )
+  try {
+    let settled = false
+    const claim = checkFaucet({
+      address: ADDRESS,
+      publicClient,
+      faucetUrl: FAUCET_URL,
+    }).then((result) => {
+      settled = true
+      return result
+    })
+    await startedWaiting
+    expect(settled).toBe(false)
+    confirm()
+    expect((await claim).sent).toBe(true)
+  } finally {
+    confirm()
+    wait.mockRestore()
+    fetchClaim.mockRestore()
+  }
 }
 
-export const testParseMinBalanceUsesEtherWhenProvided = () => {
-  const result = parseMinBalance(undefined, 2)
-  expect(result).toBe(parseEther('2'))
-}
-
-export const testParseMinBalancePrefersWeiOverEther = () => {
-  const result = parseMinBalance(999n, 1)
-  expect(result).toBe(999n)
-}
-
-export const testParseMinBalanceHandlesNumericWei = () => {
-  const result = parseMinBalance(5000)
-  expect(result).toBe(5000n)
+export const testCheckFaucetSurfacesRejection = async () => {
+  const publicClient = faucetClient()
+  const wait = spyOn(publicClient, 'waitForTransactionReceipt')
+  const fetchClaim = spyOn(globalThis, 'fetch')
+  try {
+    for (const [response, message] of [
+      [new Response('Cooldown', { status: 429 }), 'status 429: Cooldown'],
+      [
+        Response.json({ msg: 'Already claimed' }),
+        'Faucet claim failed: Already claimed',
+      ],
+      [
+        Response.json({ msg: 'Txhash: 0xshort' }),
+        'Invalid hash from faucet claim',
+      ],
+    ] as const) {
+      fetchClaim.mockResolvedValueOnce(response)
+      await expect(
+        checkFaucet({ address: ADDRESS, publicClient, faucetUrl: FAUCET_URL })
+      ).rejects.toThrow(message)
+    }
+    expect(wait).not.toHaveBeenCalled()
+  } finally {
+    wait.mockRestore()
+    fetchClaim.mockRestore()
+  }
 }
 
 export const testParseFaucetResponseHashValid = () => {
-  const hash = parseFaucetResponseHash(`Txhash: ${SAMPLE_TX_HASH}`)
-  expect(hash).toBe(SAMPLE_TX_HASH)
+  expect(parseFaucetResponseHash(`Txhash: ${HASH}`)).toBe(HASH)
 }
 
 export const testParseFaucetResponseHashNoPrefix = () => {
-  const hash = parseFaucetResponseHash('Some other message')
-  expect(hash).toBeNull()
+  expect(parseFaucetResponseHash('Some other message')).toBeNull()
 }
 
 export const testParseFaucetResponseHashThrowsOnInvalidLength = () => {
@@ -46,8 +137,7 @@ export const testParseFaucetResponseHashThrowsOnInvalidLength = () => {
 }
 
 export const testParseFaucetResponseHashThrowsOnMissingHexPrefix = () => {
-  const hashWithout0x = SAMPLE_TX_HASH.slice(2)
-  expect(() => parseFaucetResponseHash(`Txhash: ${hashWithout0x}`)).toThrow(
+  expect(() => parseFaucetResponseHash(`Txhash: ${HASH.slice(2)}`)).toThrow(
     'Invalid hash from faucet claim'
   )
 }

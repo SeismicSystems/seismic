@@ -75,11 +75,16 @@ export type {
 
 export type { ShieldedContract } from '@sviem/contract/contract.ts'
 
-export type { CheckFaucetParams } from '@sviem/extensions/faucet.ts'
+export { getNativeBalance } from '@sviem/actions/getNativeBalance.ts'
+export type { GetNativeBalanceParameters } from '@sviem/actions/getNativeBalance.ts'
+
+export type {
+  CheckFaucetParams,
+  CheckFaucetResult,
+} from '@sviem/extensions/faucet.ts'
 export {
   checkFaucet,
   parseFaucetResponseHash,
-  parseMinBalance,
 } from '@sviem/extensions/faucet.ts'
 
 export type {

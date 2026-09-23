@@ -7,6 +7,8 @@ icon: tower-observation
 
 Create an asynchronous `AsyncWeb3` instance with public (read-only) Seismic access.
 
+> **Balance RPC migration:** On reth with PR #502, `await w3.eth.get_balance()` returns a compatibility placeholder, not native or sUSDC holdings. See [Balance RPCs](../../../reference/balance-rpcs.md) for explicit native queries.
+
 ## Overview
 
 `create_async_public_client()` creates an async client for read-only operations on the Seismic network. No private key is required. The [`w3.seismic`](../namespaces/async-seismic-public-namespace.md) namespace provides only public read operations: [`get_tee_public_key()`](../namespaces/methods/get-tee-public-key.md), [`get_deposit_root()`](../namespaces/methods/get-deposit-root.md), [`get_deposit_count()`](../namespaces/methods/get-deposit-count.md), and [`contract()`](../contract/) (with `.tread` only).
@@ -101,10 +103,10 @@ async def main():
     block = await w3.eth.get_block("latest")
     print(f"Latest block: {block['number']}")
 
-    # Get balance
+    # Compatibility balance on updated reth, not spendable funds
     address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
     balance = await w3.eth.get_balance(address)
-    print(f"Balance: {w3.from_wei(balance, 'ether')} ETH")
+    print(f"Compatibility balance: {balance}")
 
     # Query deposit info
     deposit_count = await w3.seismic.get_deposit_count()

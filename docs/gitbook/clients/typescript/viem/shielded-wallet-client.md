@@ -124,6 +124,8 @@ The wallet client also includes all actions from `ShieldedPublicClient`:
 
 {% hint style="info" %}
 The wallet client automatically includes all public client actions -- you can call `getBlockNumber()`, `getBalance()`, etc. directly on it.
+
+Use [`getNativeBalance()`](shielded-public-client.md#native-balance) for actual native funds. Ordinary `getBalance()` returns a compatibility placeholder on reth with PR #502; it is not a native or sUSDC funds check. Signing capability does not change ordinary `getBalance()` semantics.
 {% endhint %}
 
 ## Examples

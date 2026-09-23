@@ -43,7 +43,7 @@ for (const pk of devnetPrivateKeys) {
     transport: http(),
     account,
   })
-  const balance = await client.getBalance({ address: account.address })
+  const balance = await client.getNativeBalance({ address: account.address })
   console.log(`Balance for ${account.address}: ${balance}`)
   const hash = await client.sendTransaction({
     to: SWEEP_ADDRESS,

@@ -101,6 +101,7 @@ credential.
 | `network harvest` | founder, once per network | Collect and DCAP-verify the founding cohort's summit keys into `inputs/harvest/` — the provenance `assemble` pins the validator set from. |
 | `network assemble` | founder, once per network | Derive the artifact set from a network directory's inputs: pins the harvested founding set and mints `network_id`. `--check` re-derives and compares with what is on disk. |
 | `network configure` | founder | Configure a cohort in parallel (one genesis node + N joiners), then run the launch assertions against the manifest's pins. `--check` re-runs those assertions alone on a live cohort. |
+| `network rm` | founder, once the stack is destroyed | Delete a network directory and its context entry, by name — the counterpart of `init`. Refuses a directory git does not ignore, and one with nodes still registered unless `--force`. |
 | `node configure` | any operator, on first boot | POST the node TOML to tdx-init, recording the exact body under `nodes/`; runs `verify` once the node is up. |
 | `node verify` | any operator, whenever they rely on a node | Deploy-verify one node's TDX attestation against the network manifest and the measurement policy it pins. Read-only and re-runnable. |
 | `node status` | any operator | Watch the node's first-boot disk wipe to completion. |

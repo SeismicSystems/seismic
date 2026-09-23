@@ -7,6 +7,8 @@ icon: play
 
 This example demonstrates how to create Seismic providers in both signed and unsigned variants, verify the connection, and query basic chain state.
 
+> **Balance RPC migration:** On reth with PR #502, `provider.get_balance()` returns a compatibility placeholder, not native or sUSDC holdings. This applies even to signed providers. See [Balance RPCs](../../../reference/balance-rpcs.md) for explicit native queries.
+
 ## Prerequisites
 
 ```bash
@@ -75,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tee_pubkey = provider.get_tee_pubkey().await?;
     println!("TEE public key: {:?}", tee_pubkey);
 
-    // Check balance of the wallet address (derived from the signer)
+    // Compatibility balance on updated reth, not spendable funds
     let balance = provider.get_balance(address).await?;
     println!("Address: {address}");
     println!("Balance: {balance} wei");
@@ -112,7 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tee_pubkey = provider.get_tee_pubkey().await?;
     println!("TEE public key: {:?}", tee_pubkey);
 
-    // Check any address balance
+    // Ordinary balance requests return a placeholder on updated reth
     let address = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266".parse()?;
     let balance = provider.get_balance(address).await?;
     println!("Balance: {balance} wei");
@@ -245,7 +247,7 @@ Block number: 12345
 Chain ID: 5124
 TEE public key: PublicKey(028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a0)
 Address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-Balance: 10000000000000000000 wei
+Balance: <compatibility placeholder on updated reth> wei
 ```
 
 ## Next Steps

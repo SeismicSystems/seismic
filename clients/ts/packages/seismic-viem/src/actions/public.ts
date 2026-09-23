@@ -11,6 +11,10 @@ import type {
   Transport,
 } from 'viem'
 
+import {
+  type GetNativeBalanceParameters,
+  getNativeBalance,
+} from '@sviem/actions/getNativeBalance.ts'
 import type { ShieldedPublicClient } from '@sviem/client.ts'
 import {
   GetAddressExplorerOptions,
@@ -130,6 +134,8 @@ export type ShieldedPublicActions<
   rpcSchema extends RpcSchema | undefined = undefined,
 > = {
   getTeePublicKey: () => Promise<Hex | string>
+  /** Actual native funds; ordinary getBalance returns a placeholder on reth. */
+  getNativeBalance: (args: GetNativeBalanceParameters) => Promise<bigint>
   getStorageAt: (
     args: GetStorageAtParameters
   ) => Promise<GetStorageAtReturnType>
@@ -187,6 +193,7 @@ export const shieldedPublicActions = <
 >(
   client: ShieldedPublicClient<TTransport, TChain, TAccount, TRpcSchema>
 ): ShieldedPublicActions => ({
+  getNativeBalance: (args) => getNativeBalance(client, args),
   getTeePublicKey: async () => {
     // @ts-ignore
     const key: Hex | string = await client.request({

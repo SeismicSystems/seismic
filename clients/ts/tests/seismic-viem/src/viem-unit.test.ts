@@ -1,6 +1,11 @@
 import { describe, test } from 'bun:test'
 
 import {
+  testNativeBalanceBlockSelection,
+  testNativeBalanceModes,
+  testNativeBalanceNeverFallsBack,
+} from '@sviem-tests/tests/balance.ts'
+import {
   testAddressExplorerUrlBuildsCorrectUrl,
   testAddressExplorerUrlReturnsNullWithoutExplorer,
   testAddressExplorerUrlWithTab,
@@ -18,6 +23,15 @@ import {
   testTxExplorerUrlReturnsNullWithoutChain,
   testTxExplorerUrlWithTab,
 } from '@sviem-tests/tests/explorerUrl.ts'
+import {
+  testCheckFaucetSurfacesRejection,
+  testCheckFaucetWaitsForConfirmation,
+  testCheckFaucetWithoutBalanceCheck,
+  testParseFaucetResponseHashNoPrefix,
+  testParseFaucetResponseHashThrowsOnInvalidLength,
+  testParseFaucetResponseHashThrowsOnMissingHexPrefix,
+  testParseFaucetResponseHashValid,
+} from '@sviem-tests/tests/faucet.ts'
 import {
   testSplitResponseIvAcceptsTagOnlyBody,
   testSplitResponseIvRejectsEmptyResponse,
@@ -38,6 +52,7 @@ import {
   testSerializeMissingTo,
   testSerializeValidTxDoesNotThrow,
 } from '@sviem-tests/tests/seismicTxValidation.ts'
+import { testSignedCallBlockSelection } from '@sviem-tests/tests/signedCallBlockSelection.ts'
 import { testSignedCallRejectsBareZeroX } from '@sviem-tests/tests/signedCallEnvelope.ts'
 import {
   testComputeKeyHashDifferentKeysProduceDifferentHashes,
@@ -52,6 +67,70 @@ import {
   testEmptyAuthorizationListHash,
   testTypedDataIncludesAuthorizationListHash,
 } from '@sviem-tests/tests/typedDataUnit.ts'
+
+describe('Native balance', () => {
+  test(
+    'separates native funds from compatibility balances',
+    testNativeBalanceModes
+  )
+  test(
+    'preserves block selectors, including genesis',
+    testNativeBalanceBlockSelection
+  )
+  test(
+    'never falls back to a placeholder on errors',
+    testNativeBalanceNeverFallsBack
+  )
+})
+
+describe('Faucet', () => {
+  test(
+    'claims without reading the recipient balance',
+    testCheckFaucetWithoutBalanceCheck
+  )
+  test('waits for confirmation', testCheckFaucetWaitsForConfirmation)
+  test(
+    'surfaces server rejection and malformed hashes',
+    testCheckFaucetSurfacesRejection
+  )
+  test('extracts valid hash', testParseFaucetResponseHashValid)
+  test(
+    'returns null when prefix is missing',
+    testParseFaucetResponseHashNoPrefix
+  )
+  test(
+    'rejects invalid hash length',
+    testParseFaucetResponseHashThrowsOnInvalidLength
+  )
+  test(
+    'rejects missing hex prefix',
+    testParseFaucetResponseHashThrowsOnMissingHexPrefix
+  )
+})
+
+describe('Signed call block selection', () => {
+  for (const mode of ['local', 'json-rpc', 'raw'] as const) {
+    for (const [label, selector, expected] of [
+      ['default', {}, 'latest'],
+      ['genesis', { blockNumber: 0n }, '0x0'],
+      ['historical', { blockNumber: 42n }, '0x2a'],
+      ['latest', { blockTag: 'latest' }, 'latest'],
+      ['pending', { blockTag: 'pending' }, 'pending'],
+      ['safe', { blockTag: 'safe' }, 'safe'],
+      ['finalized', { blockTag: 'finalized' }, 'finalized'],
+      ['earliest', { blockTag: 'earliest' }, 'earliest'],
+    ] as const) {
+      for (const [nonceLabel, nonce] of [
+        ['implicit nonce', undefined],
+        ['explicit zero nonce', 0],
+        ['explicit nonzero nonce', 3],
+      ] as const) {
+        test(`${mode}: forwards ${label} with ${nonceLabel}`, () =>
+          testSignedCallBlockSelection(mode, selector, expected, nonce))
+      }
+    }
+  }
+})
 
 describe('Explorer URL utilities', () => {
   test(
