@@ -21,23 +21,19 @@ A TEE network answers three questions, in this order:
 3. **Who is let in, and who decides?** A joining node asks an existing node for
    `root_key`; the responder reads the answer off the chain.
 
-## A network's life
+## The trust chain
 
-```mermaid
-flowchart LR
-    F["found — once, supervised<br/>boxes boot identity-free<br/>and serve {summit pubkeys, quote};<br/>deploy verifies the quotes,<br/>pins every founding artifact"]
-    NID(["network_id =<br/>SHA-256(network-manifest.json)"])
-    B["boot — every node, every boot<br/>one config POST carries manifest<br/>+ reth genesis + summit genesis;<br/>tdx-init fans them out,<br/>the custodian mints or installs<br/>root_key, LUKS opens,<br/>reth and summit start"]
-    J["join — every node after the first<br/>the root-key handshake: one round,<br/>both halves attested,<br/>both bound to network_id"]
-    AD["admit — the responder's step<br/>inside that handshake<br/>verified guest measurements<br/>become one admission ID, and<br/>MeasurementRegistry.isAccepted(id)<br/>answers on the pinned chain"]
-    OP["operate — forever<br/>one authority transaction<br/>admits a new image<br/>or deprecates a compromised one"]
-    F --> NID --> B --> J --> AD --> OP
-    OP -.->|"the next handshake reads it —<br/>no node reconfigured"| AD
-    classDef pinned fill:#dbeafe,stroke:#1e3a5f,color:#111;
-    classDef root fill:#a7f3d0,stroke:#047857,color:#111;
-    class F,B,J,AD,OP pinned;
-    class NID root;
-```
+One rule runs through every doc here: a verifier trusts only what `network_id`
+commits to, or what an authority it commits to signs. Founding produces the
+manifest; the manifest's pins seed the chain; the validator set and the
+registry authority those pins name move the chain and its policy forward; and
+every party that checks something reaches back to `network_id` along one of
+these arrows. Each band's title names the doc that owns it.
+
+![The trust chain: roots published out of band, founding, the manifest's pins,
+the summit chain block by block, and the three parties that rely on it — a
+client, an operator admitting an image, and a node joining at
+boot](diagrams/trust-chain.svg)
 
 **Identity.** `network-manifest.json` is nine fields naming the network, and
 `network_id` is the SHA-256 of its exact bytes. It pins the reth genesis, the

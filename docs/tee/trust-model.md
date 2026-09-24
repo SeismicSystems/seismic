@@ -49,9 +49,9 @@ caveat per mechanism.
   its one real exit, freshness evidence a host cannot mint — is
   [collected below](#the-rollback-family).
 - **The open decisions have deadlines.** Disaster recovery and the registry's
-  mainnet mutation authority must close before mainnet; the post-genesis
-  binding of validator keys to a TEE must close before staking opens to
-  outside operators; root-key rotation must close before any purpose key
+  mainnet mutation authority must close before mainnet; validator key
+  custody must close before staking opens to outside operators; root-key
+  rotation must close before any purpose key
   ships a nonzero epoch.
 
 ## Assumptions
@@ -252,8 +252,9 @@ open design work.
   Whatever wins, recovery rotates the key commitment so a recovered network
   is a client-visible event, never a silent fork
   ([the addendum's recovery rule](network-manifest.md#the-attested-addendum)).
-- **Post-genesis binding of validator keys to a TEE** — must close before
-  staking opens to outside operators. Founding validators have the binding:
+- **Validator key custody** — must close before staking opens to outside
+  operators. It has two halves. The first is the post-genesis binding of
+  validator keys to a TEE. Founding validators have the binding:
   [the harvest quote](network-founding.md#the-key-holder) proves both pubkeys
   were generated inside a measured guest. A deposit-path validator today
   registers keys with no hardware binding, so nothing stops its consensus
@@ -266,6 +267,17 @@ open design work.
   verified at admission and recorded in the ledger. The same decision covers
   the reverse case — whether a read-only full node may receive `root_key`
   without ever staking, and what pre-root identity staking should register.
+  The second half is one live copy per key, and it applies to founding
+  validators too. TEE custody does not keep a key to one signer: the LUKS key
+  is network-shared ([the keys](architecture.md#the-keys)), so any admitted
+  guest can open any node's volume. A host that copies a validator's disk to
+  a second VM on an accepted image, and boots both, has two summits signing
+  with one validator's keys; each runs reviewed code, and together they can
+  vote twice at the same height. Nothing ties a volume to the VM that
+  formatted it, and summit logs a detected equivocation but does not slash
+  for it. A check at admission meets the
+  storage cycle again: on a reboot the keys are on the volume `root_key`
+  unlocks, so they cannot be presented before the fetch.
 - **Registry mutation authority** — must close before mainnet. The manifest
   pins which contract may change the accepted measurement set, and today
   that role is filled by a dev authority. Who holds it on mainnet — a

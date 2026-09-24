@@ -1,0 +1,430 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 2080"
+     font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <style>
+    text { fill: #374151; font-size: 14px; }
+    .title    { font-size: 30px; font-weight: 700; fill: #1e40af; }
+    .subtitle { font-size: 15px; fill: #64748b; }
+    .b        { font-weight: 700; font-size: 15px; }
+    .sub      { font-size: 13px; fill: #64748b; }
+    .band > rect  { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.5; }
+    .band > text  { font-size: 16px; font-weight: 600; fill: #1e40af; text-anchor: end; }
+    /* status of a mechanism: border style carries it */
+    .shipped { fill: #dbeafe; stroke: #1e3a5f; stroke-width: 2; }
+    .planned { fill: #ffffff; stroke: #1e3a5f; stroke-width: 2; stroke-dasharray: 8 5; }
+    .open    { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 2; stroke-dasharray: 2 5; stroke-linecap: round; }
+    .open-text { fill: #64748b; }
+    /* roots a verifier holds before it trusts any node */
+    .root    { fill: #a7f3d0; stroke: #047857; stroke-width: 2; }
+    .rail    { fill: #f5f3ff; stroke: #7c3aed; stroke-width: 2; stroke-dasharray: 12 6; }
+    .rail-label { font-size: 16px; font-weight: 600; fill: #6d28d9; }
+    .url       { font-size: 13px; fill: #1e40af; }
+    .col-head  { font-size: 13px; font-weight: 600; fill: #6d28d9; }
+    .oob     { stroke: #7c3aed; stroke-width: 2.5; fill: none; }
+    .oob.planned-oob { stroke-dasharray: 7 6; }
+    .oob-label { font-size: 13px; fill: #6d28d9; }
+    /* the manifest drawn as a record */
+    .doc     { fill: #ffffff; stroke: #1e3a5f; stroke-width: 2; }
+    /* a summit block: header over payload, finality signatures underneath */
+    .hdr     { fill: #eff6ff; stroke: #1e3a5f; stroke-width: 2; }
+    .payload { fill: #ffffff; stroke: #1e3a5f; stroke-width: 2; }
+    .cert    { fill: #fef3c7; stroke: #b45309; stroke-width: 1.5; }
+    .cert-text { fill: #78350f; font-size: 13px; }
+    .bracket { stroke: #1e3a5f; stroke-width: 1.5; fill: none; }
+    .flow    { stroke: #64748b; stroke-width: 2; fill: none; }
+    .flow.planned-flow { stroke-dasharray: 7 6; }
+    .flow.open-flow { stroke: #94a3b8; stroke-dasharray: 2 5; stroke-linecap: round; }
+    .flow-label { font-size: 13px; fill: #374151; }
+  </style>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <marker id="arrow-oob" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed"/>
+    </marker>
+  </defs>
+
+  <rect width="2400" height="2080" fill="#ffffff"/>
+
+  <text class="title" x="40" y="52">The trust chain</text>
+  <text class="subtitle" x="40" y="80">every check reaches back to network_id, or to an authority it commits to</text>
+
+
+  <!-- ================= main column, shifted right of the rail ================= -->
+  <g transform="translate(400,0)">
+  <!-- ================= legend ================= -->
+  <rect class="shipped" x="880" y="30" width="120" height="30" rx="7"/>
+  <text x="940" y="50" text-anchor="middle">shipped</text>
+  <rect class="planned" x="1020" y="30" width="200" height="30" rx="7"/>
+  <text x="1120" y="50" text-anchor="middle">decided, not built</text>
+  <rect class="open" x="1240" y="30" width="150" height="30" rx="7"/>
+  <text class="open-text" x="1315" y="50" text-anchor="middle">open decision</text>
+  <line class="oob" x1="1415" y1="45" x2="1475" y2="45" marker-end="url(#arrow-oob)"/>
+  <text class="oob-label" x="1485" y="50">published out of band</text>
+
+
+  <!-- ================= band: founding ================= -->
+  <g class="band">
+    <rect x="480" y="100" width="1480" height="320" rx="14"/>
+    <text x="1940" y="128">founding, once — network-founding.md</text>
+  </g>
+
+  <g transform="translate(500,150)">
+    <rect class="shipped" width="400" height="240" rx="12"/>
+    <text class="b" x="18" y="30">deploy · assemble</text>
+    <text x="18" y="58">DCAP-verifies each harvest</text>
+    <text x="18" y="80">quote against the accepted</text>
+    <text x="18" y="102">measurements, pins the</text>
+    <text x="18" y="124">founding validator set</text>
+    <text x="18" y="146">and one box's tx_io_pk@0,</text>
+    <text x="18" y="168">and emits</text>
+    <text x="18" y="190">network-manifest.json</text>
+  </g>
+
+  <!-- the founding boxes, stacked: one per founding validator -->
+  <rect class="shipped" x="1130" y="150" width="800" height="220" rx="12" opacity="0.45"/>
+  <rect class="shipped" x="1115" y="160" width="800" height="220" rx="12" opacity="0.7"/>
+  <g transform="translate(1100,170)">
+    <rect class="shipped" width="800" height="220" rx="12"/>
+    <text class="b" x="20" y="32">founding box × N</text>
+    <text class="sub" x="20" y="54">the measured image, booted identity-free</text>
+    <rect class="shipped" x="20" y="76" width="760" height="54" rx="9" fill="#ffffff"/>
+    <text x="40" y="108">key holder: summit BLS + Ed25519 keypairs, born in RAM</text>
+    <rect class="planned" x="20" y="146" width="760" height="54" rx="9"/>
+    <text x="40" y="178">custodian: a candidate root_key and its tx_io_pk@0</text>
+  </g>
+
+  <line class="flow" x1="1100" y1="300" x2="902" y2="300" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="918" y="286">harvest quote</text>
+  <text class="flow-label" x="918" y="322">{pubkeys, tx_io_pk@0}</text>
+  <text class="flow-label" x="918" y="340">bound to a nonce</text>
+
+  <!-- ================= band: identity ================= -->
+  <g class="band">
+    <rect x="480" y="440" width="1480" height="520" rx="14"/>
+    <text x="1940" y="468">identity — network-manifest.md</text>
+  </g>
+
+  <line class="flow" x1="880" y1="390" x2="880" y2="488" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="892" y="434">emits, once</text>
+
+  <g transform="translate(500,490)">
+    <rect class="root" width="420" height="70" rx="35"/>
+    <text class="b" x="210" y="41" text-anchor="middle">network_id = SHA-256(bytes)</text>
+  </g>
+
+  <line class="flow" x1="710" y1="560" x2="710" y2="598" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="724" y="586">commits to every byte of</text>
+
+  <g transform="translate(500,600)">
+    <rect class="doc" width="1440" height="150" rx="10"/>
+    <text class="b" x="20" y="26">network-manifest.json</text>
+    <text class="sub" x="236" y="26">name, manifest_version, and the fields below</text>
+  </g>
+  <g transform="translate(520,640)">
+    <rect class="shipped" width="300" height="95" rx="8"/>
+    <text x="14" y="26">eth.genesis_hash</text>
+    <text x="14" y="48">eth.chain_id</text>
+  </g>
+  <g transform="translate(840,640)">
+    <rect class="shipped" width="320" height="95" rx="8"/>
+    <text x="14" y="26">summit.genesis_config_digest</text>
+    <text x="14" y="48">summit.namespace</text>
+  </g>
+  <g transform="translate(1180,640)">
+    <rect class="shipped" width="340" height="95" rx="8"/>
+    <text x="14" y="26">measurements.</text>
+    <text x="14" y="48">  bootstrap_policy_hash</text>
+    <text x="14" y="70">contracts: registry, authority</text>
+  </g>
+  <g transform="translate(1540,640)">
+    <rect class="planned" width="380" height="95" rx="8"/>
+    <text x="14" y="26">tx_io_pk@0, the root_key</text>
+    <text x="14" y="48">commitment (here or in the</text>
+    <text x="14" y="70">summit genesis: undecided)</text>
+  </g>
+
+  <line class="flow" x1="670" y1="735" x2="670" y2="798" marker-end="url(#arrow)"/>
+  <line class="flow" x1="1000" y1="735" x2="1000" y2="798" marker-end="url(#arrow)"/>
+  <line class="flow" x1="1350" y1="735" x2="1350" y2="798" marker-end="url(#arrow)"/>
+
+  <g transform="translate(520,800)">
+    <rect class="shipped" width="300" height="130" rx="10"/>
+    <text class="b" x="14" y="28">reth-genesis.json</text>
+    <text x="14" y="54">alloc: MeasurementRegistry</text>
+    <text x="14" y="76">holding the founding</text>
+    <text x="14" y="98">accepted set; the authority</text>
+  </g>
+  <g transform="translate(840,800)">
+    <rect class="shipped" width="320" height="130" rx="10"/>
+    <text class="b" x="14" y="28">summit-genesis.toml</text>
+    <text x="14" y="54">founding validator set V0:</text>
+    <text x="14" y="76">BLS + Ed25519 pubkeys,</text>
+    <text x="14" y="98">withdrawal credentials</text>
+  </g>
+  <g transform="translate(1180,800)">
+    <rect class="shipped" width="340" height="130" rx="10"/>
+    <text class="b" x="14" y="28">bootstrap policy</text>
+    <text x="14" y="54">the accepted measurements</text>
+    <text x="14" y="76">at left, pinned as a file</text>
+    <text x="14" y="98">a joiner can read offline</text>
+  </g>
+
+
+  <!-- ================= band: the chain ================= -->
+  <g class="band">
+    <rect x="480" y="980" width="1480" height="450" rx="14"/>
+    <text x="1940" y="1008">the chain — summit blocks, finalized by the epoch's validators</text>
+  </g>
+
+  <line class="flow" x1="670" y1="930" x2="670" y2="1058" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="682" y="1000">block 0 state</text>
+  <line class="flow" x1="900" y1="930" x2="795" y2="1058" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="870" y="1000">V0</text>
+
+  <!-- epoch brackets -->
+  <path class="bracket" d="M 500 1052 V 1042 H 1530 V 1052"/>
+  <text x="960" y="1034">epoch 0 · signed by V0</text>
+  <path class="bracket" d="M 1580 1052 V 1042 H 1890 V 1052"/>
+  <text x="1596" y="1034">epoch 1 · signed by V1</text>
+
+  <!-- block 0 -->
+  <g transform="translate(500,1060)">
+    <rect class="hdr" width="310" height="170"/>
+    <text class="b" x="14" y="26">block 0</text>
+    <text x="14" y="50">the pinned genesis</text>
+    <text x="14" y="74">V0 = summit genesis</text>
+    <text x="14" y="98">digest = eth genesis hash</text>
+    <rect class="payload" y="170" width="310" height="120"/>
+    <text class="b" x="14" y="196">genesis state</text>
+    <text x="14" y="220">MeasurementRegistry =</text>
+    <text x="14" y="242">the founding accepted set</text>
+    <text class="sub" x="150" y="330">pinned, not signed</text>
+  </g>
+
+  <!-- block h: an ordinary block -->
+  <g transform="translate(860,1060)">
+    <rect class="hdr" width="310" height="170"/>
+    <text class="b" x="14" y="26">block h</text>
+    <text x="14" y="50">parent</text>
+    <text x="14" y="74">epoch 0 · height h</text>
+    <text x="14" y="98">payload_hash</text>
+    <text x="14" y="122">execution_request_hash</text>
+    <rect class="payload" y="170" width="310" height="120"/>
+    <text class="b" x="14" y="196">payload</text>
+    <text x="14" y="220">authority tx → registry:</text>
+    <text x="14" y="242">admit or deprecate an image</text>
+    <text x="14" y="264">deposit: a new validator</text>
+    <rect class="cert" y="302" width="310" height="38" rx="6"/>
+    <text class="cert-text" x="14" y="326">finalized: ≥ 2/3 of V0 sign</text>
+  </g>
+
+  <text class="b" x="1195" y="1146" text-anchor="middle">…</text>
+
+  <!-- the last block of epoch 0 carries the next validator set -->
+  <g transform="translate(1220,1060)">
+    <rect class="hdr" width="310" height="170"/>
+    <text class="b" x="14" y="26">last block of epoch 0</text>
+    <text x="14" y="50">parent · payload_hash · …</text>
+    <text x="14" y="74">added / removed validators</text>
+    <text x="14" y="96">  → V1</text>
+    <rect class="open" x="8" y="118" width="294" height="44" rx="6"/>
+    <text class="open-text" x="18" y="145">key record, e.g. tx_io_pk@1</text>
+    <rect class="payload" y="170" width="310" height="120"/>
+    <text class="b" x="14" y="196">payload</text>
+    <rect class="cert" y="302" width="310" height="38" rx="6"/>
+    <text class="cert-text" x="14" y="326">finalized: ≥ 2/3 of V0 sign</text>
+  </g>
+
+  <!-- the first block of epoch 1 -->
+  <g transform="translate(1580,1060)">
+    <rect class="hdr" width="310" height="170"/>
+    <text class="b" x="14" y="26">first block of epoch 1</text>
+    <text x="14" y="50">parent</text>
+    <text x="14" y="74">prev_epoch_header_hash</text>
+    <text x="14" y="98">payload_hash · …</text>
+    <rect class="payload" y="170" width="310" height="120"/>
+    <text class="b" x="14" y="196">payload</text>
+    <text x="14" y="220">live registry state:</text>
+    <text x="14" y="242">what a responder reads</text>
+    <rect class="cert" y="302" width="310" height="38" rx="6"/>
+    <text class="cert-text" x="14" y="326">finalized: ≥ 2/3 of V1 sign</text>
+  </g>
+
+  <!-- parent links point back along the chain -->
+  <line class="flow" x1="860" y1="1086" x2="812" y2="1086" marker-end="url(#arrow)"/>
+  <line class="flow" x1="1220" y1="1086" x2="1172" y2="1086" marker-end="url(#arrow)"/>
+  <line class="flow" x1="1580" y1="1086" x2="1532" y2="1086" marker-end="url(#arrow)"/>
+
+  <!-- ================= band: a client ================= -->
+  <g class="band">
+    <rect x="480" y="1460" width="460" height="240" rx="14"/>
+    <text x="920" y="1486">a client — architecture.md</text>
+  </g>
+  <g transform="translate(500,1500)">
+    <rect class="planned" width="420" height="180" rx="12"/>
+    <text class="b" x="18" y="28">sends TxSeismic, signed eth_call</text>
+    <text x="18" y="54">network_id in its chain</text>
+    <text x="18" y="76">definition; hash-checks the</text>
+    <text x="18" y="98">manifest for tx_io_pk@0 and</text>
+    <text x="18" y="120">encrypts calldata to it</text>
+    <text class="open-text" x="18" y="150">later epochs: light client (open)</text>
+  </g>
+
+  <!-- ================= band: admitting an image ================= -->
+  <g class="band">
+    <rect x="960" y="1460" width="640" height="240" rx="14"/>
+    <text x="1580" y="1486">admitting an image — chain-backed-admission.md</text>
+  </g>
+  <g transform="translate(980,1500)">
+    <rect class="shipped" width="600" height="180" rx="12"/>
+    <text class="b" x="18" y="28">an operator admits or deprecates an image</text>
+    <text x="18" y="54">make measure → promote → compile the next</text>
+    <text x="18" y="76">document; diff its admission IDs; send one</text>
+    <text x="18" y="98">applyPolicyUpdate through the authority.</text>
+    <text x="18" y="120">No genesis, no restart, no node touched.</text>
+    <text class="open-text" x="18" y="150">mainnet authority: open (a dev one today)</text>
+  </g>
+
+  <!-- ================= band: a node joining ================= -->
+  <g class="band">
+    <rect x="480" y="1720" width="1480" height="330" rx="14"/>
+    <text x="1940" y="2034">a node joining, every boot — architecture.md · chain-backed-admission.md</text>
+  </g>
+  <g transform="translate(500,1770)">
+    <rect class="shipped" width="240" height="110" rx="12"/>
+    <text class="b" x="16" y="28">config POST</text>
+    <text x="16" y="54">manifest bytes +</text>
+    <text x="16" y="76">reth + summit genesis</text>
+  </g>
+  <g transform="translate(770,1770)">
+    <rect class="shipped" width="220" height="110" rx="12"/>
+    <text class="b" x="16" y="28">tdx-init</text>
+    <text x="16" y="54">writes them to</text>
+    <text x="16" y="76">/run/seismic/conf</text>
+  </g>
+  <g transform="translate(1020,1770)">
+    <rect class="planned" width="360" height="110" rx="12"/>
+    <text class="b" x="18" y="28">custodian</text>
+    <text x="18" y="54">keeps its candidate if it</text>
+    <text x="18" y="76">matches the pin; else fetches</text>
+    <text x="18" y="98">root_key, checks it vs the pin</text>
+  </g>
+  <g transform="translate(1020,1920)">
+    <rect class="shipped" width="360" height="90" rx="12"/>
+    <text class="b" x="18" y="28">LUKS opens</text>
+    <text x="18" y="54">reth and summit start;</text>
+    <text x="18" y="76">summit keys persist</text>
+  </g>
+  <g transform="translate(1600,1770)">
+    <rect class="shipped" width="340" height="150" rx="12"/>
+    <text class="b" x="16" y="28">responder</text>
+    <text x="16" y="54">an existing node holding</text>
+    <text x="16" y="76">root_key: verifies the</text>
+    <text x="16" y="98">joiner's quote, derives its</text>
+    <text x="16" y="120">admission ID, isAccepted(id)</text>
+    <text x="16" y="142">at a fresh finalized block</text>
+  </g>
+
+  <line class="flow" x1="740" y1="1825" x2="768" y2="1825" marker-end="url(#arrow)"/>
+  <line class="flow" x1="990" y1="1825" x2="1018" y2="1825" marker-end="url(#arrow)"/>
+  <line class="flow" x1="1200" y1="1880" x2="1200" y2="1918" marker-end="url(#arrow)"/>
+  <line class="flow" x1="1382" y1="1840" x2="1598" y2="1840" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1392" y="1786">root-key handshake:</text>
+  <text class="flow-label" x="1392" y="1804">one round, both</text>
+  <text class="flow-label" x="1392" y="1822">halves attested,</text>
+  <text class="flow-label" x="1392" y="1864">both bind network_id</text>
+
+  <!-- ================= links from the chain to the parties ================= -->
+  <line class="flow open-flow" x1="560" y1="1498" x2="560" y2="1352" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="572" y="1422">light client, from genesis</text>
+  <line class="flow" x1="1100" y1="1498" x2="1100" y2="1402" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1112" y="1422">authority tx, in a block</text>
+  <line class="flow" x1="1770" y1="1402" x2="1770" y2="1768" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1782" y="1590">live policy</text>
+
+  <!-- the epoch-0 pin is the base case of every later key record -->
+  <path class="flow open-flow" d="M 1555 735 V 1198 H 1534" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1568" y="778">base case of later key records</text>
+  </g>
+
+  <!-- ================= out-of-band rail: the roots, then what carries them ================= -->
+  <rect class="rail" x="40" y="100" width="760" height="1950" rx="16"/>
+  <text class="rail-label" x="60" y="130">published out of band</text>
+  <text class="sub" x="60" y="152">what a verifier holds before it trusts any node, and how it gets it</text>
+  <text class="col-head" x="80" y="180">the root</text>
+  <text class="col-head" x="440" y="180">carried by</text>
+
+  <g transform="translate(80,190)">
+    <rect class="root" width="300" height="100" rx="10"/>
+    <text class="b" x="16" y="28">platform roots</text>
+    <text x="16" y="52">Intel DCAP and Azure vTPM</text>
+    <text x="16" y="74">root certificates</text>
+  </g>
+  <g transform="translate(80,330)">
+    <rect class="root" width="300" height="100" rx="10"/>
+    <text class="b" x="16" y="28">accepted measurements</text>
+    <text x="16" y="52">make measure output for</text>
+    <text x="16" y="74">a reviewed image build</text>
+  </g>
+  <g transform="translate(80,480)">
+    <rect class="root" width="300" height="130" rx="10"/>
+    <text class="b" x="16" y="28">network_id +</text>
+    <text class="b" x="16" y="50">manifest bytes</text>
+    <text x="16" y="76">emitted once, by founding</text>
+  </g>
+
+  <g transform="translate(440,190)">
+    <rect class="shipped" width="340" height="140" rx="10"/>
+    <text class="b" x="16" y="28">seismic-tee CLI release</text>
+    <text x="16" y="52">roots compiled in (verify-quote)</text>
+    <text x="16" y="74">install.sh: checksum always;</text>
+    <text x="16" y="96">build provenance only if gh</text>
+    <text x="16" y="118">is installed and logged in</text>
+  </g>
+  <g transform="translate(440,350)">
+    <rect class="shipped" width="340" height="160" rx="10"/>
+    <text class="b" x="16" y="28">seismic-images release</text>
+    <text x="16" y="52">the image, image.json and the</text>
+    <text x="16" y="74">measurements; init refuses it</text>
+    <text x="16" y="96">unless its build provenance</text>
+    <text x="16" y="118">names the pinned signer;</text>
+    <text x="16" y="140">its services carry the roots</text>
+  </g>
+  <g transform="translate(440,1530)">
+    <rect class="planned" width="340" height="120" rx="10"/>
+    <text class="b" x="16" y="28">SDK chain definition</text>
+    <text x="16" y="52">network_id in, e.g.,</text>
+    <text x="16" y="74">seismic-viem's defineChain</text>
+  </g>
+  <g transform="translate(440,1740)">
+    <rect class="shipped" width="340" height="186" rx="10"/>
+    <text class="b" x="16" y="28">network directory</text>
+    <text x="16" y="52">committed in the monorepo:</text>
+    <text class="url" x="16" y="76">https://github.com/SeismicSystems/</text>
+    <text class="url" x="16" y="96">seismic/tree/main/tee/networks/</text>
+    <text class="url" x="16" y="116">&lt;name&gt;/</text>
+    <text x="16" y="144">verify-founding re-checks it,</text>
+    <text x="16" y="166">node configure POSTs from it</text>
+  </g>
+
+  <!-- root -> carrier -->
+  <line class="oob" x1="380" y1="240" x2="438" y2="240" marker-end="url(#arrow-oob)"/>
+  <line class="oob" x1="380" y1="280" x2="438" y2="390" marker-end="url(#arrow-oob)"/>
+  <line class="oob" x1="380" y1="420" x2="438" y2="420" marker-end="url(#arrow-oob)"/>
+  <path class="oob planned-oob" d="M 380 560 H 420 V 1590 H 438" marker-end="url(#arrow-oob)"/>
+  <path class="oob" d="M 380 590 H 405 V 1825 H 438" marker-end="url(#arrow-oob)"/>
+
+  <!-- founding publishes network_id into the rail -->
+  <line class="oob" x1="900" y1="525" x2="382" y2="525" marker-end="url(#arrow-oob)"/>
+  <text class="oob-label" x="450" y="545">published</text>
+
+  <!-- carrier -> consumer; the image line hops the three it crosses -->
+  <line class="oob" x1="780" y1="240" x2="898" y2="240" marker-end="url(#arrow-oob)"/>
+  <line class="oob" x1="780" y1="380" x2="898" y2="380" marker-end="url(#arrow-oob)"/>
+  <line class="oob planned-oob" x1="780" y1="1590" x2="898" y2="1590" marker-end="url(#arrow-oob)"/>
+  <line class="oob" x1="780" y1="1825" x2="898" y2="1825" marker-end="url(#arrow-oob)"/>
+  <path class="oob" d="M 780 490 H 840 V 513 a 12 12 0 0 1 0 24 V 1578 a 12 12 0 0 1 0 24 V 1813 a 12 12 0 0 1 0 24 V 1990 H 878" marker-end="url(#arrow-oob)"/>
+  <text class="oob-label" x="892" y="1985">every node boots the image</text>
+</svg>

@@ -296,7 +296,9 @@ TPM-sealed key durability was considered and rejected unless RAM-only proves
 unacceptable for mainnet founding: it adds a second sealing policy that must
 stay in lockstep with the measurement policy, unknown vTPM clone/rollback
 semantics (a duplicated consensus key is accidental equivocation), and
-sealed-blob migration and scrubbing machinery.
+sealed-blob migration and scrubbing machinery. Sealing is not what SGX
+networks use to escape this either: the host stores the sealed blob and can
+serve an old one back.
 
 ## Founding-window security
 

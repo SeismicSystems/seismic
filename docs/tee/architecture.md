@@ -563,22 +563,16 @@ founding keys are TEE-born and it only ever sees public halves and quotes. The
 no special consensus standing, and validators that arrive later join through the
 deposit path instead.
 
-**Whether `root_key` provenance should be a consensus decision is open.** Today
-it is a peer exchange: one node mints, and everyone else asks a peer that already
-holds it. Making consensus arbitrate would move the two-minting-nodes footgun
-from tooling into the protocol. Any such design meets one structural constraint
-first: summit's keys live in a keystore on the volume `root_key` unlocks, so
-summit cannot sign before LUKS opens, and LUKS cannot open before `root_key`
-arrives. Breaking that cycle means either moving validator identity out of that
-volume, or narrowing consensus arbitration to rotation and leaving the first mint
-where it is.
+**`root_key` provenance is a peer exchange, not a consensus decision.** One
+node mints, and everyone else asks a peer that already holds it; the validator
+set has no part in choosing the key
+([design rationale](#design-rationale)).
 
-A second axis, independent of the first, is whether admission should be
-two-phase: verify a node once, issue it a durable credential, and let later
-fetches be cheap. It is attractive for exactly the reason above — a RAM-only
-`root_key` forces a fresh verification on every reboot — and it trades
-measurement freshness for credential expiry and revocation machinery. Today
-every fetch is one verify-and-release exchange.
+**Whether admission should be two-phase is open:** verify a node once, issue
+it a durable credential, and let later fetches be cheap. It is attractive
+because a RAM-only `root_key` forces a fresh verification on every reboot, and
+it trades measurement freshness for credential expiry and revocation
+machinery. Today every fetch is one verify-and-release exchange.
 
 **Clear the flag after the genesis node's first successful boot.** It is
 correct exactly once, for the very first boot of a brand-new network. Genesis
@@ -688,6 +682,29 @@ make the flag harmless on a restart. But it needs an answer to "how long do we
 wait for peers before minting?", and every answer is a way to fork the network
 by timeout. A boot-time refusal that wedges one node until the operator fixes
 its config is the better trade.
+
+**Peer fetch rather than consensus arbitration of `root_key`**
+([boot](#boot-power-on-to-serving)). Letting the validator set pick the
+canonical key would make the protocol, rather than the founding tooling,
+responsible for there being one minter, but it cannot reach the first mint:
+summit's keys live in a keystore
+on the volume `root_key` unlocks, so summit cannot sign before LUKS opens, and
+LUKS cannot open before `root_key` exists. The same cycle holds after a
+whole-fleet restart. Breaking it means moving validator identity off that
+volume, either onto the host, which hands operators their keys, or under a
+platform seal, which [founding rejects](network-founding.md#key-custody-ram-only-no-tpm-sealing).
+Once the network runs, the validators could arbitrate a joiner's fetch, but
+what that would guard against, a responder admitting on a stale view, is
+[the freshness gate](chain-backed-admission.md#the-readiness-and-freshness-gate)'s
+job, and the case the gate misses, a host that eclipses its guest and also
+controls its clock, is an [accepted risk](trust-model.md#accepted-risks) whose
+candidate fixes are freshness evidence, not a vote. A deliberate second mint
+under the real manifest is a founding-integrity problem. Its answer, decided
+but not yet built, is for `network_id` itself to commit to the key: founding
+pins `tx_io_pk@0` next to the validator set, and only the custodian whose key
+matches the pin keeps it. Whether a later rotation is authorized by a
+consensus event is a separate question, open in
+[the trust model](trust-model.md#open-decisions).
 
 **Three planes rather than one multiplexed transport**
 ([the planes](#three-networking-planes)). One transport with one identity would
