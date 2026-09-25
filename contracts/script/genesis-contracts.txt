@@ -1,5 +1,3 @@
-MultisigUpgradeOperator
-UpgradeOperator
 MeasurementRegistry
 MeasurementAuthorityDev
 ShieldedDelegationAccount
