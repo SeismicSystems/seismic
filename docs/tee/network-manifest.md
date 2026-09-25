@@ -141,9 +141,9 @@ documentation is this table.
 
 Both contract fields are named by role, not by contract class, so a contract
 rename never touches the hashed schema. Today the roles are filled by
-[`MeasurementRegistry.sol`](../../contracts/src/enclave/MeasurementRegistry.sol)
+[`MeasurementRegistry.sol`](../../contracts/src/predeploys/MeasurementRegistry.sol)
 and
-[`MeasurementAuthorityDev.sol`](../../contracts/src/enclave/MeasurementAuthorityDev.sol),
+[`MeasurementAuthorityDev.sol`](../../contracts/src/predeploys/MeasurementAuthorityDev.sol),
 predeployed at the addresses above.
 
 **Strictness.** A v1 parser rejects unknown keys; new fields mean

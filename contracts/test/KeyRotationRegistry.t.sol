@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Test, Vm} from "forge-std/Test.sol";
-import {KeyRotationRegistry} from "../src/enclave/KeyRotationRegistry.sol";
+import {KeyRotationRegistry} from "../src/predeploys/KeyRotationRegistry.sol";
 
 contract KeyRotationRegistryTest is Test {
     KeyRotationRegistry public registry;

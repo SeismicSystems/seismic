@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
-import {ProtocolParams} from "../src/seismic-std-lib/ProtocolParams.sol";
+import {ProtocolParams} from "../src/predeploys/ProtocolParams.sol";
 
 contract ProtocolParamsTest is Test {
     ProtocolParams public protocolParams;

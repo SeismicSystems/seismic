@@ -6,8 +6,8 @@ import {console} from "forge-std/console.sol";
 
 import {CryptoUtils} from "seismic-std-lib/utils/precompiles/CryptoUtils.sol";
 
-import {Directory} from "../src/directory/Directory.sol";
-import {Intelligence} from "../src/intelligence/Intelligence.sol";
+import {Directory} from "../src/predeploys/Directory.sol";
+import {Intelligence} from "../src/predeploys/Intelligence.sol";
 
 contract IntelligenceTest is Test {
     Intelligence intelligence;

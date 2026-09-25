@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 
-import {Directory} from "../src/directory/Directory.sol";
+import {Directory} from "../src/predeploys/Directory.sol";
 
 contract DirectoryTest is Test {
     Directory directory;

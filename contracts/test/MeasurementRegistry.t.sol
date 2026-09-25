@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {MeasurementRegistry} from "../src/enclave/MeasurementRegistry.sol";
+import {MeasurementRegistry} from "../src/predeploys/MeasurementRegistry.sol";
 
 bytes32 constant REGISTRY_STORAGE_LOCATION = 0xa3ae60943e4f183142036d77b94858085814dd428f131289aea7e42703fb0b00;
 
