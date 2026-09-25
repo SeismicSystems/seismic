@@ -1,8 +1,7 @@
 [tools]
 # Downloads this release: https://github.com/SeismicSystems/seismic-solidity/releases/tag/2ebb36d
-# This is likely not needed in most cases as compilation should be done via sforge which manages its own ssolc.
-# However, this can be useful if we want to test with a different version of ssolc than the one that sforge manages.
-# The `mise run sforge-XYZ` tasks in contracts/mise.toml inject this mise managed ssolc version.
+# The `mise run sforge-XYZ` tasks in contracts/mise.toml inject this ssolc, so it is the compiler
+# contracts/artifacts/ are built with. Bumping it changes predeploy bytecode: re-sync the artifacts.
 ssolc = { version = "2ebb36d", bin = "ssolc" }
 
 # Used by clients/ts/

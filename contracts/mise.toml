@@ -1,11 +1,9 @@
 # Set MISE_SFORGE_TASK env var to choose which sforge to use.
 # One of "sforge" (default), "sforge-local", or "sforge-local-patch".
 
-# TODO(samlaf): we skip artifacts::check in CI because it isn't deterministic.
-# Need to figure out a way to make it.
 [tasks.ci]
-description = "Run full CI (fmt-check, check-artifacts, test)"
-run = { tasks = ["fmt-check", "test"] }
+description = "Run full CI (fmt-check, artifacts::check, test)"
+run = { tasks = ["fmt-check", "artifacts::check", "test"] }
 
 [tasks.test]
 description = "Run contract tests"
@@ -27,8 +25,13 @@ run = "bash script/sync-artifacts.sh"
 description = "Check artifacts are up to date"
 depends = ["artifacts::sync"]
 run = """
-git diff --exit-code artifacts/ || \
-  (echo "Artifacts are out of date. Run 'mise run sync-artifacts' and commit." && exit 1)
+untracked=$(git ls-files --others --exclude-standard -- artifacts/)
+if ! git diff --quiet -- artifacts/ || [ -n "$untracked" ]; then
+  git diff --stat -- artifacts/
+  [ -n "$untracked" ] && echo "untracked: $untracked"
+  echo "Artifacts are out of date. Run 'mise run artifacts::sync' and commit."
+  exit 1
+fi
 """
 
 ########## sforge aliases (used by high-level tasks above, but can be used individually) ##########

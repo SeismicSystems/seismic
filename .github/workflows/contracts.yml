@@ -43,3 +43,14 @@ jobs:
       - uses: ./.github/actions/setup-sfoundry
       - uses: jdx/mise-action@v2
       - run: mise run fmt-check
+
+  contracts-artifacts-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: ./.github/actions/setup-sfoundry
+      - uses: jdx/mise-action@v2
+      - run: mise run artifacts::check
