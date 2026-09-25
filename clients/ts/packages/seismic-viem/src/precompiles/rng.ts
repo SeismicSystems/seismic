@@ -18,8 +18,16 @@ import {
 } from '@sviem/precompiles/precompile.ts'
 
 export const RNG_ADDRESS = '0x0000000000000000000000000000000000000064'
-const RNG_INIT_BASE_GAS = 3500n
-const STROBE_128_WORD_GAS = 5n
+// Gas schedule of the node's RNG precompile:
+// https://github.com/SeismicSystems/seismic-revm/blob/seismic/crates/seismic/src/precompiles/rng/precompile.rs
+const RNG_BASE_GAS = 3500n
+const RNG_PERS_WORD_GAS = 5n
+const RNG_ROUND_BASE_GAS = 120n
+const RNG_ROUND_WORD_GAS = 24n
+// Each HKDF expansion round hashes the 121-byte domain-separation prefix, the
+// personalization, the previous 32-byte block and the 1-byte round counter.
+const RNG_INFO_PREFIX_LEN = 121
+const HKDF_ROUND_OVERHEAD_LEN = 33
 
 const persToBytes = (pers?: Hex | ByteArray): ByteArray => {
   if (!pers) {
@@ -52,8 +60,7 @@ export type RngParams = {
  * @property {Hex} address - The address of the random number generator precompile contract.
  * @property {Function} gasCost - Function that calculates the gas cost for the RNG operation.
  *   - Calculates an initialization cost based on the length of the personalization string.
- *   - Calculates a fill cost based on the number of bytes requested.
- *   - Returns the sum of initialization and fill costs.
+ *   - Adds the cost of one HKDF expansion round per 32 bytes requested.
  * @property {Function} encodeParams - Function that encodes the input parameters for the precompile call.
  *   - Validates that numBytes is a number or bigint and is less than or equal to 32.
  *   - Encodes numBytes as a 4-byte hex value.
@@ -66,20 +73,19 @@ export type RngParams = {
 export const rngPrecompile: Precompile<RngParams, bigint> = {
   address: RNG_ADDRESS,
   gasCost: ({ numBytes, pers }) => {
-    // calls to rng from here will always require an init cost,
-    // so we assume it in the gas calculation.
-    // if one tx makes multiple calls to rng, it will only pay the init cost once.
+    const persLen = persToBytes(pers).length
     const initCost = calcLinearGasCostU32({
-      len: persToBytes(pers).length,
-      base: RNG_INIT_BASE_GAS,
-      word: STROBE_128_WORD_GAS,
+      len: persLen,
+      base: RNG_BASE_GAS,
+      word: RNG_PERS_WORD_GAS,
     })
-    const fillCost = calcLinearGasCostU32({
-      len: Number(numBytes),
-      base: 0n,
-      word: STROBE_128_WORD_GAS,
+    const roundCost = calcLinearGasCostU32({
+      len: RNG_INFO_PREFIX_LEN + persLen + HKDF_ROUND_OVERHEAD_LEN,
+      base: RNG_ROUND_BASE_GAS,
+      word: RNG_ROUND_WORD_GAS,
     })
-    return initCost + fillCost
+    const rounds = BigInt(Math.ceil(Number(numBytes) / 32))
+    return initCost + rounds * roundCost
   },
   encodeParams: ({ numBytes, pers }) => {
     if (typeof numBytes !== 'bigint' && typeof numBytes !== 'number') {
