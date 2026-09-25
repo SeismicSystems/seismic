@@ -1,6 +1,6 @@
 # Seismic Contracts
 
-On-chain smart contracts for the [Seismic network](https://seismic.systems) — a privacy-preserving blockchain platform. These contracts handle validator deposits, encrypted communication, enclave upgrade governance, session key management, and protocol parameters. They use Seismic-specific shielded types (`suint256`) and cryptographic precompiles (AES-256-GCM, HKDF, RNG) that only exist on the Seismic EVM.
+On-chain smart contracts for the [Seismic network](https://seismic.systems) — a privacy-preserving blockchain platform. These contracts handle validator deposits, encrypted communication, TEE measurement admission, key rotation, session key management, and protocol parameters. They use Seismic-specific shielded types (`suint256`) and cryptographic precompiles (AES-256-GCM, HKDF, RNG) that only exist on the Seismic EVM.
 
 ## Build
 
@@ -95,9 +95,10 @@ src/
   intelligence/          Provider encryption management
     Intelligence.sol       Encrypts data to a list of providers via Directory
     IIntelligence.sol
-  enclave/               Enclave upgrade governance
-    UpgradeOperator.sol    Manages enclave defining attributes (MRTD, PCR registers)
-    MultisigUpgradeOperator.sol   2-of-3 multisig wrapper for UpgradeOperator
+  enclave/               TEE measurement admission and key rotation
+    MeasurementRegistry.sol       Admission status of compiled measurement IDs
+    MeasurementAuthorityDev.sol   Interim dev forwarder authorized to update MeasurementRegistry
+    KeyRotationRegistry.sol       Schedule of purpose-key rotations
   seismic-std-lib/       Seismic standard library (reusable contracts)
     ProtocolParams.sol     Owner-managed key-value parameter store (IDs 0-255)
     DepositContract.sol    Eth2-style validator deposit contract (Merkle tree, SHA-256)
@@ -136,7 +137,7 @@ Managed as git submodules in `lib/` plus import remappings in `foundry.toml`:
 
 - **Shielded types**: `suint256` variables use confidential storage (`CSTORE`/`CLOAD` opcodes). Only available on Seismic EVM.
 - **Precompiles**: Crypto operations at fixed addresses — RNG (`0x64`), AES encrypt (`0x66`), AES decrypt (`0x67`), HKDF (`0x68`).
-- **Genesis addresses**: Several contracts are deployed at fixed genesis addresses (e.g., UpgradeOperator at `0x1000...0001`, Directory at `0x1000...0004`). The Intelligence contract hardcodes these.
+- **Genesis addresses**: Several contracts are deployed at fixed genesis addresses (e.g., MeasurementRegistry at `0x1000...0001`, Directory at `0x1000...0004`). The Intelligence contract hardcodes these.
 - **`via_ir = true`**: All compilation goes through the Yul IR pipeline (set in `foundry.toml`).
 - **EIP-7702**: ShieldedDelegationAccount uses custom storage slot layout via assembly to avoid collision with delegated accounts.
 
