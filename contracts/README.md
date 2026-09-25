@@ -6,11 +6,11 @@ This repository contains solidity smart contracts and libraries designed for the
 
 This project uses [Seismic-Foundry](https://github.com/SeismicSystems/seismic-foundry), which is needed to compile any contracts with shielded types or seismic precompiles.
 
-We recommend using our [Makefile](./Makefile) to run common tasks, as these will also be used in CI:
+We recommend using our [mise tasks](./mise.toml), as these are also used in CI:
 ```bash
-make build
-make test
-make fmt
+mise run test
+mise run fmt
+mise run artifacts::sync
 ...
 ```
 
@@ -45,7 +45,9 @@ contracts/
 
 The `artifacts/` directory contains compiled contract artifacts, including ABIs and bytecode. These are used for deployment and interaction with the contracts.
 
-These artifacts are currently generated manually using `make sync-artifacts`.
+They are built with the ssolc pinned in the root [`mise.toml`](../mise.toml) and trimmed to the ABI and bytecode. After changing a contract, run `mise run artifacts::sync` and commit the result; CI's `artifacts::check` fails otherwise.
+
+`MeasurementRegistry.json` is frozen: its runtime code hash is pinned outside this repo, so the sync leaves it alone (see `script/sync-artifacts.sh`).
 
 TODO: we need to figure out a way to version these and make it more explicit which of these are deployed on each network, and at which block (or genesis).
 
