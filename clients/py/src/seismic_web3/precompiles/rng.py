@@ -19,8 +19,16 @@ if TYPE_CHECKING:
     from web3 import AsyncWeb3, Web3
 
 RNG_ADDRESS = "0x0000000000000000000000000000000000000064"
-_RNG_INIT_BASE_GAS = 3500
-_STROBE_128_WORD_GAS = 5
+# Gas schedule of the node's RNG precompile:
+# https://github.com/SeismicSystems/seismic-revm/blob/seismic/crates/seismic/src/precompiles/rng/precompile.rs
+_RNG_BASE_GAS = 3500
+_RNG_PERS_WORD_GAS = 5
+_RNG_ROUND_BASE_GAS = 120
+_RNG_ROUND_WORD_GAS = 24
+# Each HKDF expansion round hashes the 121-byte domain-separation prefix, the
+# personalization, the previous 32-byte block and the 1-byte round counter.
+_RNG_INFO_PREFIX_LEN = 121
+_HKDF_ROUND_OVERHEAD_LEN = 33
 
 
 @dataclass(frozen=True)
@@ -39,15 +47,16 @@ class RngParams:
 def _rng_gas_cost(params: RngParams) -> int:
     init_cost = calc_linear_gas_cost_u32(
         length=len(params.pers),
-        base=_RNG_INIT_BASE_GAS,
-        word=_STROBE_128_WORD_GAS,
+        base=_RNG_BASE_GAS,
+        word=_RNG_PERS_WORD_GAS,
     )
-    fill_cost = calc_linear_gas_cost_u32(
-        length=params.num_bytes,
-        base=0,
-        word=_STROBE_128_WORD_GAS,
+    round_cost = calc_linear_gas_cost_u32(
+        length=_RNG_INFO_PREFIX_LEN + len(params.pers) + _HKDF_ROUND_OVERHEAD_LEN,
+        base=_RNG_ROUND_BASE_GAS,
+        word=_RNG_ROUND_WORD_GAS,
     )
-    return init_cost + fill_cost
+    rounds = -(-params.num_bytes // 32)
+    return init_cost + rounds * round_cost
 
 
 def _rng_encode(params: RngParams) -> bytes:

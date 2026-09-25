@@ -9,7 +9,7 @@ Generate cryptographically secure random bytes on-chain using Mercury EVM's RNG 
 
 ## Overview
 
-The RNG precompile at address `0x64` generates random bytes directly on the Seismic node using the Strobe128 construction. The random value is returned as raw bytes (padded to 32 bytes).
+The RNG precompile at address `0x64` generates random bytes directly on the Seismic node, derived with HKDF-SHA256 from the node's RNG key. The random value is returned as raw bytes (padded to 32 bytes).
 
 ## Precompile Address
 
@@ -199,25 +199,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 1. **Encode parameters** — `num_bytes` is encoded as a 4-byte big-endian integer, followed by optional `personalization` bytes
 2. **Call precompile** — Issues an `eth_call` to address `0x64` with estimated gas
-3. **Generate randomness** — The precompile uses Strobe128 internally for cryptographic security
+3. **Generate randomness** — The precompile derives the bytes with HKDF-SHA256, domain-separated by the transaction hash, remaining gas and personalization
 4. **Decode result** — Result bytes are padded to 32 bytes and returned as big-endian
 
 ## Gas Cost
 
-The gas cost is calculated as:
+The node charges, with each division rounded up:
 
 ```
-init_cost = 3500 + (len(pers) / 136) * 5
-fill_cost = (num_bytes / 136) * 5
-total_gas = init_cost + fill_cost
+init_cost  = 3500 + (len(pers) / 32) * 5
+round_cost = 120 + ((121 + len(pers) + 33) / 32) * 24
+total_gas  = init_cost + (num_bytes / 32) * round_cost
 ```
 
-The base cost is **3500 gas**, with 5 gas per 136-byte block for personalization and output.
+Each 32-byte block of output is one HKDF expansion round, which hashes a 121-byte domain-separation prefix, the personalization, the previous block and a round counter. A 32-byte request without personalization costs **3740 gas**.
 
 ## Notes
 
 - `num_bytes` must be between 1 and 32 (inclusive)
-- The RNG uses Strobe128 internally for cryptographic security
 - Each call generates independent random values
 - The personalization string can be used to domain-separate random values
 - The result is padded to 32 bytes and returned as a big-endian value

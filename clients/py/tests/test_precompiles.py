@@ -126,23 +126,21 @@ class TestRngEncoding:
 
 
 class TestRngGasCost:
-    def test_minimal_no_pers(self):
-        params = RngParams(num_bytes=1)
-        # init = 3500 + ceil(0/32)*5 = 3500
-        # fill = 0 + ceil(1/32)*5 = 5
-        assert _rng_gas_cost(params) == 3505
-
-    def test_32_bytes_no_pers(self):
-        params = RngParams(num_bytes=32)
-        # init = 3500
-        # fill = ceil(32/32)*5 = 5
-        assert _rng_gas_cost(params) == 3505
-
-    def test_with_pers(self):
-        params = RngParams(num_bytes=16, pers=b"x" * 64)
-        # init = 3500 + ceil(64/32)*5 = 3510
-        # fill = ceil(16/32)*5 = 5
-        assert _rng_gas_cost(params) == 3515
+    # Expected values from seismic-revm's test_rng_gas_exact_thresholds.
+    @pytest.mark.parametrize(
+        ("pers_len", "num_bytes", "expected"),
+        [
+            (0, 1, 3740),
+            (0, 32, 3740),
+            (6, 32, 3745),
+            (7, 32, 3769),
+            (32, 32, 3769),
+            (33, 32, 3774),
+        ],
+    )
+    def test_matches_node_schedule(self, pers_len, num_bytes, expected):
+        params = RngParams(num_bytes=num_bytes, pers=b"\xaa" * pers_len)
+        assert _rng_gas_cost(params) == expected
 
 
 # ---------------------------------------------------------------------------

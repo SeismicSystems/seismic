@@ -81,20 +81,20 @@ async def main():
 
 ## Gas Cost
 
-The SDK uses:
+The SDK matches the node's gas schedule. Each 32-byte block of output is one HKDF expansion round, which hashes a 121-byte domain-separation prefix, the personalization, the previous block and a round counter:
 
 ```python
 from math import ceil
 
 init_cost = 3500 + ceil(len(pers) / 32) * 5
-fill_cost = ceil(num_bytes / 32) * 5
-total_gas = init_cost + fill_cost
+round_cost = 120 + ceil((121 + len(pers) + 33) / 32) * 24
+total_gas = init_cost + ceil(num_bytes / 32) * round_cost
 ```
 
 Examples:
-- `num_bytes=1`, empty `pers`: `3505`
-- `num_bytes=32`, empty `pers`: `3505`
-- `num_bytes=16`, `len(pers)=64`: `3515`
+- `num_bytes=1`, empty `pers`: `3740`
+- `num_bytes=32`, empty `pers`: `3740`
+- `num_bytes=32`, `len(pers)=33`: `3774`
 
 ## Notes
 
