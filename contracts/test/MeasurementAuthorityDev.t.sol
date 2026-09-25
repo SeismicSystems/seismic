@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
-import {MeasurementRegistry} from "../src/enclave/MeasurementRegistry.sol";
-import {MeasurementAuthorityDev} from "../src/enclave/MeasurementAuthorityDev.sol";
+import {MeasurementRegistry} from "../src/predeploys/MeasurementRegistry.sol";
+import {MeasurementAuthorityDev} from "../src/predeploys/MeasurementAuthorityDev.sol";
 
 contract MeasurementAuthorityDevTest is Test {
     bytes32 internal constant REGISTRY_STORAGE_LOCATION =

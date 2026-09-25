@@ -6,7 +6,7 @@ manages a Merkle tree of deposits.  Validators deposit ETH (minimum
 and withdrawal credentials.
 
 This ABI matches the ``IDepositContract`` interface defined in
-``contracts/src/seismic-std-lib/DepositContract.sol``.
+``contracts/src/predeploys/DepositContract.sol``.
 """
 
 from __future__ import annotations

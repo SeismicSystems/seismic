@@ -19,24 +19,26 @@ mise run artifacts::sync
 ```
 contracts/
 ├── src/
-│   ├── directory/
+│   ├── predeploys/                # Installed at fixed addresses in genesis (script/genesis-contracts.txt)
+│   │   ├── DepositContract.sol    # Eth2 staking deposits
 │   │   ├── Directory.sol          # Key management contract
-│   │   └── IDirectory.sol
-│   ├── intelligence/
 │   │   ├── Intelligence.sol       # Multi-provider encryption
-│   │   └── IIntelligence.sol
-│   └── seismic-std-lib/
-│       ├── DepositContract.sol    # Eth2 staking deposits
-│       ├── ProtocolParams.sol     # Protocol configuration
-│       ├── SRC20.sol              # SRC20 token standard
-│       ├── session-keys/
-│       │   ├── ShieldedDelegationAccount.sol
-│       │   └── IShieldedDelegationAccount.sol
-│       └── utils/
-│           ├── MultiSend.sol      # Batch execution (from Safe)
-│           ├── EIP7702Utils.sol   # Signature verification
-│           ├── precompiles/
-│               └── CryptoUtils.sol
+│   │   ├── KeyRotationRegistry.sol
+│   │   ├── MeasurementAuthorityDev.sol
+│   │   ├── MeasurementRegistry.sol
+│   │   ├── ProtocolParams.sol     # Protocol configuration
+│   │   └── ShieldedDelegationAccount.sol
+│   ├── seismic-std-lib/           # Published library for contracts building on Seismic
+│   │   ├── SRC20.sol              # SRC20 token standard
+│   │   ├── SRC20Factory.sol
+│   │   ├── SRC20Multicall.sol
+│   │   ├── SRC20Token.sol
+│   │   ├── interfaces/            # Including the predeploys that dApps call
+│   │   └── utils/
+│   │       ├── TxUtils.sol
+│   │       └── precompiles/
+│   │           └── CryptoUtils.sol
+│   └── examples/
 ├── test/                          # Foundry tests
 └── artifacts/                     # Compiled contracts
 ```
@@ -53,7 +55,7 @@ TODO: we need to figure out a way to version these and make it more explicit whi
 
 ## Contracts
 
-### Directory (`src/directory/Directory.sol`)
+### Directory (`src/predeploys/Directory.sol`)
 
 A key management and encryption service that allows users to register encryption keys and enables others to encrypt messages to them.
 
@@ -77,7 +79,7 @@ On standard Ethereum, this contract would be **impossible to implement securely*
 
 ---
 
-### Intelligence (`src/intelligence/Intelligence.sol`)
+### Intelligence (`src/predeploys/Intelligence.sol`)
 
 A multi-provider encryption orchestration contract that encrypts data to multiple registered providers simultaneously.
 
@@ -104,7 +106,7 @@ With Seismic, the entire workflow happens trustlessly on-chain with cryptographi
 
 ---
 
-### ShieldedDelegationAccount (`src/seismic-std-lib/ShieldedDelegationAccount.sol`)
+### ShieldedDelegationAccount (`src/predeploys/ShieldedDelegationAccount.sol`)
 
 An experimental [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702) delegation contract that supports session keys with spend limits and encrypted transaction execution.
 

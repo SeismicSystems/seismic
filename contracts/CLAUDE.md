@@ -89,28 +89,22 @@ bash script/sync-artifacts.sh
 
 ```
 src/
-  directory/             Encrypted key directory (AES-256-GCM via precompiles)
-    Directory.sol          Stores per-user encryption keys using suint256 (shielded)
-    IDirectory.sol
-  intelligence/          Provider encryption management
-    Intelligence.sol       Encrypts data to a list of providers via Directory
-    IIntelligence.sol
-  enclave/               TEE measurement admission and key rotation
+  predeploys/            Installed at fixed addresses in genesis (script/genesis-contracts.txt)
+    DepositContract.sol           Eth2-style validator deposit contract (Merkle tree, SHA-256)
+    ProtocolParams.sol            Owner-managed key-value parameter store (IDs 0-255)
+    Directory.sol                 Stores per-user encryption keys using suint256 (shielded)
+    Intelligence.sol              Encrypts data to a list of providers via Directory
     MeasurementRegistry.sol       Admission status of compiled measurement IDs
     MeasurementAuthorityDev.sol   Interim dev forwarder authorized to update MeasurementRegistry
     KeyRotationRegistry.sol       Schedule of purpose-key rotations
-  seismic-std-lib/       Seismic standard library (reusable contracts)
-    ProtocolParams.sol     Owner-managed key-value parameter store (IDs 0-255)
-    DepositContract.sol    Eth2-style validator deposit contract (Merkle tree, SHA-256)
-    session-keys/
-      ShieldedDelegationAccount.sol   EIP-7702 delegation with session keys (P256/WebAuthn/Secp256k1)
-      interfaces/IShieldedDelegationAccount.sol
+    ShieldedDelegationAccount.sol EIP-7702 delegation with session keys (P256/WebAuthn/Secp256k1)
+  seismic-std-lib/       Published library (soldeer) for contracts building on Seismic
+    SRC20.sol, SRC20Token.sol, SRC20Factory.sol, SRC20Multicall.sol
+    interfaces/          ISRC20, and the predeploys dApps call: IDirectory, IIntelligence, IShieldedDelegationAccount
     utils/
-      EIP7702Utils.sol     Signature verification for multiple key types
-      MultiSend.sol        Batch call execution (from Safe)
-      SRC20.sol            Privacy-preserving ERC20 with shielded balances
-      TestToken.sol        Simple test token extending SRC20
-      precompiles/CryptoUtils.sol   RNG (0x64), AES encrypt (0x66), AES decrypt (0x67) precompile wrappers
+      TxUtils.sol        Tx-context precompile helpers
+      precompiles/CryptoUtils.sol   RNG (0x64), AES encrypt (0x66), AES decrypt (0x67), HKDF (0x68) wrappers
+  examples/              Example contracts (SUSDC, counters, wrapped native token)
 lib/
   forge-std/             Foundry test framework (submodule)
   openzeppelin-contracts/  OpenZeppelin v5.4.0 (submodule)

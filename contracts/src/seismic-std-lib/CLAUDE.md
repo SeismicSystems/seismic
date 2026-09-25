@@ -4,13 +4,11 @@ Seismic's standard library contracts — SRC20 token standard, interfaces, and m
 
 ## Contracts
 
-- **SRC20.sol** — Abstract ERC20 with confidential (shielded) balances and transfers, EIP-2612 permit support, encrypted event emission via Directory/Intelligence precompiles, and signed balance reads (`balanceOfSigned`).
+- **SRC20.sol** — Abstract ERC20 with confidential (shielded) balances and transfers, EIP-2612 permit support, encrypted event emission via the Directory/Intelligence predeploys, and signed balance reads (`balanceOfSigned`).
+- **SRC20Token.sol** / **SRC20Factory.sol** — Concrete SRC20 token and its factory.
 - **SRC20Multicall.sol** — Batch reader for SRC20 shielded balances across multiple tokens using `balanceOfSigned`.
-- **interfaces/ISRC20.sol** — Minimal interface for the SRC20 `balanceOfSigned` function.
-- **DepositContract.sol** — Eth2-style validator deposit contract (Merkle tree, SHA-256).
-- **ProtocolParams.sol** — Owner-managed key-value parameter store (IDs 0-255).
-- **session-keys/** — EIP-7702 delegation with session keys (P256/WebAuthn/Secp256k1).
-- **utils/** — EIP7702 signature verification, MultiSend batch calls, and cryptographic precompile wrappers.
+- **interfaces/** — `ISRC20`, plus the interfaces of the predeploys dApps call (`IDirectory`, `IIntelligence`, `IShieldedDelegationAccount`). Their implementations live in `../predeploys/`, since dApps call the genesis instances rather than deploy their own.
+- **utils/** — Tx-context precompile helpers (`TxUtils`) and cryptographic precompile wrappers (`precompiles/CryptoUtils`).
 
 ## Origin
 

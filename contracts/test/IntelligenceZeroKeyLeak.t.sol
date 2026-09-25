@@ -4,8 +4,8 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 
 import {MockSRC20} from "./utils/MockSRC20.sol";
-import {Directory} from "../src/directory/Directory.sol";
-import {Intelligence} from "../src/intelligence/Intelligence.sol";
+import {Directory} from "../src/predeploys/Directory.sol";
+import {Intelligence} from "../src/predeploys/Intelligence.sol";
 import {IDirectory} from "seismic-std-lib/interfaces/IDirectory.sol";
 import {IIntelligence} from "seismic-std-lib/interfaces/IIntelligence.sol";
 
