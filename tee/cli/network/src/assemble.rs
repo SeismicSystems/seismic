@@ -923,19 +923,23 @@ pub(crate) mod tests {
     /// derived artifact set at the top level, the inputs untouched.
     #[tokio::test]
     async fn init_then_assemble_share_a_directory() {
+        use crate::image::tests::{TAG, local_release, release_files};
+
         let authored = authored();
         let net = NetworkDir::new(authored.dir.path().join("networks").join("testnet-1"));
         let raw = write_file(
             &authored.dir,
             "raw-measurements.json",
-            br#"{"measurement_id": "img.vhd", "measurements": {"4": {"expected": "ab"}}}"#,
+            format!(r#"{{"measurement_id": "{TAG}.vhd", "measurements": {{"4": {{"expected": "ab"}}}}}}"#)
+                .as_bytes(),
         );
+        let (_, image) = local_release(&authored.dir.path().join("build"), &release_files(TAG));
         crate::init::init_network_dir(
             &crate::init::fetch_client().unwrap(),
             &net,
             &crate::init::InitInputs {
                 name: "testnet-1",
-                image: None,
+                image,
                 measurements: Some(raw.to_str().unwrap()),
                 reth_genesis: Some(authored.reth_genesis.to_str().unwrap()),
                 summit_genesis: Some(authored.summit_genesis.to_str().unwrap()),

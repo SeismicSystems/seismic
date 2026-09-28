@@ -3,23 +3,25 @@
 //! The first step of a founding, and the one that names the image:
 //!
 //! ```text
-//! seismic-tee network init tee/networks/devnet-3 --image seismic_2026-09-22.2ee71c --founders 4
+//! seismic-tee network init tee/networks/devnet-3 --founders 4 \
+//!     --image-json https://github.com/SeismicSystems/seismic-images/releases/download/seismic_2026-09-22.2ee71c/image.json
 //! ```
 //!
-//! `--image` is a seismic-images release tag, and that one release supplies
-//! everything the founding takes from the image ([`crate::image`]): its
-//! `image.json`, copied in as the record of which image this network is
+//! `--image-json` is the image's seismic-images record, a local path or an
+//! `https://` URL, and the directory it sits in supplies everything the
+//! founding takes from the image ([`crate::image`]): the record itself,
+//! copied in byte for byte as the record of which image this network is
 //! founded on; its measurements; and both genesis templates as the image's
 //! own `seismic-reth` and `summit` have them — every one of them verified
-//! against the release's `SHA256SUMS`, whose build provenance is verified
+//! against the `SHA256SUMS` beside it, whose build provenance is verified
 //! first (`gh attestation verify`, so `gh` must be installed and logged in),
 //! and the measurements additionally gated on being stamped for that very
-//! image. Each of the three can still be given as a
-//! local path or an `https://` URL (`--reth-genesis`, `--summit-genesis`,
-//! `--measurements`), overriding the release's copy or, all three together,
-//! standing in for a release that does not exist — an image built by hand
-//! has none — in which case no `image.json` is written and `assemble` needs
-//! `--reth-bin` and `--summit-bin`.
+//! image. A release's download directory is one such directory; a local
+//! build's `build/` is another, founded on with `--allow-unattested`, which
+//! skips the provenance check and nothing else. Each of the three inputs
+//! can still be given as a local path or an `https://` URL
+//! (`--reth-genesis`, `--summit-genesis`, `--measurements`), overriding the
+//! image's copy.
 //!
 //! The inputs are copied into `inputs/` verbatim, each gated on parsing as
 //! its format — except that a summit genesis with an empty or missing
@@ -214,10 +216,10 @@ pub fn require_measurement_id(raw: &[u8], source: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Gate a measurements input on being the given image's: stamped `<tag>.vhd`
-/// (or, for a promoted policy, carrying a record so stamped). The whole point
-/// of `--image` is that the directory names one image; a measurements
-/// override for some other image would leave `image.json` and the PCRs
+/// Gate a measurements input on being the given image's: stamped
+/// `<image>.vhd` (or, for a promoted policy, carrying a record so stamped).
+/// The whole point of `--image-json` is that the directory names one image;
+/// measurements for some other image would leave `image.json` and the PCRs
 /// disagreeing about which.
 pub fn require_measurement_of(raw: &[u8], vhd: &str, source: &str) -> anyhow::Result<()> {
     let value: serde_json::Value = serde_json::from_slice(raw)
@@ -235,8 +237,8 @@ pub fn require_measurement_of(raw: &[u8], vhd: &str, source: &str) -> anyhow::Re
     };
     if !ids.contains(&vhd) {
         bail!(
-            "{source} measures {}, not {vhd} — the image --image names; pass the measurements of \
-             that image, or name the image these measure",
+            "{source} measures {}, not {vhd} — the image --image-json names; pass the \
+             measurements of that image, or name the image these measure",
             if ids.is_empty() {
                 "no named image".to_string()
             } else {
@@ -249,12 +251,11 @@ pub fn require_measurement_of(raw: &[u8], vhd: &str, source: &str) -> anyhow::Re
 
 /// What `init` scaffolds a network directory from: the image's release, and
 /// whichever inputs are given as loose files (a local path or an `https://`
-/// URL) instead of taken from it. Without a release, all three loose files
-/// are required.
+/// URL) instead of taken from it.
 #[derive(Debug, Clone)]
 pub struct InitInputs<'a> {
     pub name: &'a str,
-    pub image: Option<ImageRelease>,
+    pub image: ImageRelease,
     pub measurements: Option<&'a str>,
     pub reth_genesis: Option<&'a str>,
     pub summit_genesis: Option<&'a str>,
@@ -285,18 +286,26 @@ struct OpenedRelease {
 impl OpenedRelease {
     async fn open(release: ImageRelease) -> anyhow::Result<Self> {
         let client = image::download_client()?;
-        let sums = image::fetch_sums(&client, &release).await?;
+        if !release.is_attested() {
+            eprintln!(
+                "not verifying the build provenance of {} (--allow-unattested): every input is \
+                 still checked against it, but nothing checks who built it",
+                release.url(image::SHA256SUMS_ASSET)
+            );
+        }
+        let sums = image::fetch_sums(&client, &release).await.map_err(|e| {
+            if e.is::<image::Unattested>() {
+                anyhow::anyhow!(
+                    "{e:#}. To found on an image no seismic-images workflow attested (a local \
+                     build), pass --allow-unattested"
+                )
+            } else {
+                e
+            }
+        })?;
         let record_bytes =
             image::fetch_checked(&client, &release, &sums, image::IMAGE_JSON_ASSET).await?;
         let record = ImageRecord::parse(&record_bytes, &release.url(image::IMAGE_JSON_ASSET))?;
-        if record.image != release.tag() {
-            bail!(
-                "{} says it is image {}, not {}",
-                release.url(image::IMAGE_JSON_ASSET),
-                record.image,
-                release.tag()
-            );
-        }
         Ok(Self {
             release,
             client,
@@ -319,15 +328,13 @@ impl OpenedRelease {
 /// the release's `asset`.
 async fn input_from(
     client: &reqwest::Client,
-    opened: Option<&OpenedRelease>,
+    opened: &OpenedRelease,
     given: Option<&str>,
     asset: &str,
-    flag: &str,
 ) -> anyhow::Result<(Vec<u8>, String)> {
-    match (given, opened) {
-        (Some(source), _) => Ok((read_input_source(client, source).await?, source.to_string())),
-        (None, Some(opened)) => opened.input(asset).await,
-        (None, None) => bail!("{flag} is required without --image"),
+    match given {
+        Some(source) => Ok((read_input_source(client, source).await?, source.to_string())),
+        None => opened.input(asset).await,
     }
 }
 
@@ -340,33 +347,18 @@ pub async fn init_network_dir(
     inputs: &InitInputs<'_>,
     force: bool,
 ) -> anyhow::Result<Vec<PathBuf>> {
-    let opened = match &inputs.image {
-        Some(release) => Some(OpenedRelease::open(release.clone()).await?),
-        None => None,
-    };
+    let opened = OpenedRelease::open(inputs.image.clone()).await?;
 
-    let measurements_asset = match &opened {
-        Some(opened) => opened.record.measurements_asset(DEFAULT_ATTESTATION_TYPE)?,
-        None => "",
-    };
-    let (measurements, measurements_source) = input_from(
-        client,
-        opened.as_ref(),
-        inputs.measurements,
-        measurements_asset,
-        "--measurements",
-    )
-    .await?;
+    let measurements_asset = opened.record.measurements_asset(DEFAULT_ATTESTATION_TYPE)?;
+    let (measurements, measurements_source) =
+        input_from(client, &opened, inputs.measurements, measurements_asset).await?;
     require_measurement_id(&measurements, &measurements_source)?;
-    if let Some(opened) = &opened {
-        require_measurement_of(&measurements, &opened.release.vhd(), &measurements_source)?;
-    }
+    require_measurement_of(&measurements, &opened.record.vhd(), &measurements_source)?;
     let (reth_genesis, reth_source) = input_from(
         client,
-        opened.as_ref(),
+        &opened,
         inputs.reth_genesis,
         image::RETH_GENESIS_ASSET,
-        "--reth-genesis",
     )
     .await?;
     serde_json::from_slice::<serde_json::Value>(&reth_genesis).map_err(|e| {
@@ -377,10 +369,9 @@ pub async fn init_network_dir(
     })?;
     let (summit_starter, summit_source) = input_from(
         client,
-        opened.as_ref(),
+        &opened,
         inputs.summit_genesis,
         image::SUMMIT_STARTER_ASSET,
-        "--summit-genesis",
     )
     .await?;
     let summit_genesis = fill_summit_namespace(&summit_starter, inputs.name, &summit_source)?;
@@ -390,17 +381,15 @@ pub async fn init_network_dir(
     let mut founders = serde_json::to_vec_pretty(&credentials).expect("strings serialize");
     founders.push(b'\n');
 
-    let mut contents = vec![
+    let contents = [
         (RETH_GENESIS_FILENAME, reth_genesis),
         (MEASUREMENTS_FILENAME, measurements),
         (SUMMIT_GENESIS_FILENAME, summit_genesis),
         (FOUNDERS_FILENAME, founders),
+        // The record of which image, verbatim: `assemble` reads the image's
+        // name from it, the provisioner the blob location.
+        (IMAGE_FILENAME, opened.record_bytes),
     ];
-    if let Some(opened) = opened {
-        // The record of which image, verbatim from the release: `assemble`
-        // reads the tag from it, the provisioner the blob location.
-        contents.push((IMAGE_FILENAME, opened.record_bytes));
-    }
     let existing = network_state(dir);
     if !existing.is_empty() {
         if !force {
@@ -458,41 +447,44 @@ pub struct InitArgs {
     #[arg(long, value_name = "NAME")]
     pub name: Option<String>,
 
-    /// The image to found on, by its seismic-images release tag
-    /// (seismic_<date>.<commit>). That one release supplies the inputs
-    /// below unless each is given: its image.json (copied in as
-    /// inputs/image.json, the record assemble and the provisioner read),
-    /// its measurements, and both genesis templates as the image's own
-    /// binaries have them, each verified against the release's SHA256SUMS
-    /// — itself verified as built by seismic-images' publishing workflow,
-    /// with `gh attestation verify`, so gh must be installed and logged in.
-    /// Without it all three inputs are required, and no image.json is
-    /// written — assemble then needs --reth-bin and --summit-bin.
-    #[arg(
-        long,
-        value_name = "TAG",
-        required_unless_present_all = ["reth_genesis", "measurements", "summit_genesis"]
-    )]
-    pub image: Option<String>,
+    /// The image to found on, by its seismic-images image.json (local path
+    /// or https:// URL): a release's,
+    /// https://github.com/SeismicSystems/seismic-images/releases/download/<tag>/image.json,
+    /// or a local build's build/image.json. The files beside it supply the
+    /// inputs below unless each is given — its measurements and both genesis
+    /// templates as the image's own binaries have them — and it is copied in
+    /// as inputs/image.json, the record assemble and the provisioner read.
+    /// Every file is verified against the SHA256SUMS beside it, itself
+    /// verified as built by seismic-images' publishing workflow with `gh
+    /// attestation verify`, so gh must be installed and logged in.
+    #[arg(long, value_name = "PATH_OR_URL")]
+    pub image_json: String,
+
+    /// Found on an image no seismic-images workflow attested, such as a local
+    /// build: skip the build provenance check of its SHA256SUMS. Every file
+    /// is still verified against SHA256SUMS, and the image's measurements
+    /// stamp against its image.json.
+    #[arg(long)]
+    pub allow_unattested: bool,
 
     /// reth genesis (local path or https:// URL), copied in as
     /// inputs/reth-genesis.json — an external fact (chain state + contract
     /// alloc) init cannot invent. Default: the image's reth-genesis.json.
-    #[arg(long, value_name = "PATH_OR_URL", required_unless_present = "image")]
+    #[arg(long, value_name = "PATH_OR_URL")]
     pub reth_genesis: Option<String>,
 
     /// The image's measurements (or a promoted policy; local path or https://
     /// URL), copied in as inputs/measurements.json — the PCRs of a real
-    /// published image, never generated, and with --image they must be
-    /// stamped for that image. Default: the image's measurements asset.
-    #[arg(long, value_name = "PATH_OR_URL", required_unless_present = "image")]
+    /// image, never generated, and stamped for the image --image-json names.
+    /// Default: the image's measurements asset.
+    #[arg(long, value_name = "PATH_OR_URL")]
     pub measurements: Option<String>,
 
     /// Authored summit genesis (local path or https:// URL), copied in
     /// verbatim except that an empty namespace is filled with <name>. Every
     /// value in it is a per-network choice to review. Default: the image's
     /// summit-genesis-starter.toml.
-    #[arg(long, value_name = "PATH_OR_URL", required_unless_present = "image")]
+    #[arg(long, value_name = "PATH_OR_URL")]
     pub summit_genesis: Option<String>,
 
     /// How many placeholder withdrawal credentials to scaffold into
@@ -536,12 +528,16 @@ pub async fn run(args: InitArgs) -> anyhow::Result<ExitCode> {
     };
     let dir = NetworkDir::new(&root);
     let client = fetch_client()?;
+    let mut image = ImageRelease::beside(&args.image_json)?;
+    if args.allow_unattested {
+        image = image.unattested();
+    }
     let written = init_network_dir(
         &client,
         &dir,
         &InitInputs {
             name: &name,
-            image: args.image.as_deref().map(ImageRelease::new),
+            image,
             measurements: args.measurements.as_deref(),
             reth_genesis: args.reth_genesis.as_deref(),
             summit_genesis: args.summit_genesis.as_deref(),
@@ -621,18 +617,28 @@ mod tests {
         r#"{"measurement_id": "img.vhd", "measurements": {"4": {"expected": "ab"}}}"#;
     const RETH_GENESIS: &str = r#"{"config": {"chainId": 5124}}"#;
 
+    /// A local build of image `TAG` (its `build/`, as seismic-images leaves
+    /// it), and loose files to override its inputs with.
     struct Loose {
         _dir: tempfile::TempDir,
+        image_json: String,
+        image: ImageRelease,
         reth_genesis: PathBuf,
+        /// Stamped for some other image than the build's.
         measurements: PathBuf,
         starter: PathBuf,
         out: NetworkDir,
     }
 
     fn loose() -> Loose {
+        use crate::image::tests::{TAG, local_release, release_files};
+
         let dir = tempfile::tempdir().unwrap();
         let out = NetworkDir::new(dir.path().join("networks").join("testnet-1"));
+        let (image_json, image) = local_release(&dir.path().join("build"), &release_files(TAG));
         Loose {
+            image_json,
+            image,
             reth_genesis: write_file(&dir, "dev.json", RETH_GENESIS.as_bytes()),
             measurements: write_file(&dir, "measurements.json", MEASUREMENTS.as_bytes()),
             starter: write_file(&dir, "summit-genesis-starter.toml", STARTER.as_bytes()),
@@ -651,10 +657,10 @@ mod tests {
             &loose.out,
             &InitInputs {
                 name: "testnet-1",
-                image: None,
-                measurements: Some(s(&loose.measurements)),
-                reth_genesis: Some(s(&loose.reth_genesis)),
-                summit_genesis: Some(s(&loose.starter)),
+                image: loose.image.clone(),
+                measurements: None,
+                reth_genesis: None,
+                summit_genesis: None,
                 founders,
             },
             force,
@@ -662,7 +668,7 @@ mod tests {
         .await
     }
 
-    /// `init --image`, against a release served locally.
+    /// `init --image-json`, against `release` and with `overrides`.
     async fn init_from(
         release: ImageRelease,
         out: &NetworkDir,
@@ -674,7 +680,7 @@ mod tests {
             out,
             &InitInputs {
                 name: "testnet-1",
-                image: Some(release),
+                image: release,
                 measurements,
                 reth_genesis,
                 summit_genesis,
@@ -742,22 +748,23 @@ mod tests {
         );
     }
 
-    /// A loose file overrides the release's copy of that one input; the
+    /// A loose file overrides the image's copy of that one input; the
     /// measurements override must still be the image's.
     #[tokio::test]
-    async fn loose_files_override_the_releases_inputs_but_must_measure_the_image() {
-        use crate::image::tests::{TAG, release_files, serve_release};
+    async fn loose_files_override_the_images_inputs_but_must_measure_the_image() {
+        use crate::image::tests::TAG;
 
         let loose = loose();
-        let (_server, release) = serve_release(TAG, release_files(TAG));
+        let release = loose.image.clone();
         let out = &loose.out;
+        std::fs::write(&loose.starter, b"namespace = \"\"\n").unwrap();
         init_from(release.clone(), out, (None, None, Some(s(&loose.starter))))
             .await
             .unwrap();
         assert!(out.input_image().is_file());
         assert_eq!(
-            std::fs::read(out.input_summit_genesis()).unwrap(),
-            "# starter params\nnamespace = \"testnet-1\"\nleader_timeout_ms = 2000\n".as_bytes()
+            std::fs::read_to_string(out.input_summit_genesis()).unwrap(),
+            "namespace = \"testnet-1\"\n"
         );
 
         // The loose measurements are stamped `img.vhd`, not this image's.
@@ -771,12 +778,12 @@ mod tests {
         assert!(!other.inputs().exists());
     }
 
-    /// A release asset that does not match SHA256SUMS, and a release whose
-    /// image.json names some other image, are refused before anything is
-    /// written.
+    /// A release asset that does not match SHA256SUMS, and measurements for
+    /// some other image than the record names, are refused before anything
+    /// is written.
     #[tokio::test]
     async fn a_release_that_does_not_verify_writes_nothing() {
-        use crate::image::tests::{TAG, release_files, serve_release};
+        use crate::image::tests::{TAG, release_files, resum, serve_release};
 
         let dir = tempfile::tempdir().unwrap();
         let out = NetworkDir::new(dir.path().join("testnet-1"));
@@ -797,19 +804,50 @@ mod tests {
         );
         assert!(!out.root().exists());
 
-        // Another image's assets, served under this tag: the record and the
-        // tag must name the same image, or the directory would record one
-        // image and carry another's inputs.
-        let (_server, release) = serve_release(TAG, release_files("seismic_other"));
+        // Another image's measurements beside this image's record, both
+        // hashed: the stamp keeps the directory from recording one image and
+        // carrying another's PCRs.
+        let mut files = release_files(TAG);
+        let other = release_files("seismic_other");
+        files.insert(
+            "measurements.azure-tdx.json".to_string(),
+            other["measurements.azure-tdx.json"].clone(),
+        );
+        resum(&mut files, TAG);
+        let (_server, release) = serve_release(TAG, files);
         let err = init_from(release, &out, (None, None, None))
             .await
             .unwrap_err()
             .to_string();
         assert!(
-            err.contains(&format!("says it is image seismic_other, not {TAG}")),
+            err.contains(&format!("measures seismic_other.vhd, not {TAG}.vhd")),
             "{err}"
         );
         assert!(!out.root().exists());
+    }
+
+    /// Provenance is checked wherever the files come from, so a local build
+    /// is refused unless the founder opts out by name — and the refusal
+    /// says how.
+    #[tokio::test]
+    async fn a_local_build_founds_only_with_allow_unattested() {
+        use crate::image::tests::fake_gh;
+
+        let loose = loose();
+        let gh_dir = tempfile::tempdir().unwrap();
+        let fail = "echo 'Error: no attestations found' >&2; exit 1";
+        let gh = fake_gh(gh_dir.path(), fail, fail);
+        let attested = loose.image.clone().verified_with(Some(&gh));
+        let err = init_from(attested, &loose.out, (None, None, None))
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("no attestations found"), "{err}");
+        assert!(err.contains("--allow-unattested"), "{err}");
+        assert!(!loose.out.root().exists());
+
+        init(&loose, 0, false).await.unwrap();
+        assert!(loose.out.input_image().is_file());
     }
 
     #[test]
@@ -832,8 +870,12 @@ mod tests {
         assert!(err.contains("measures no named image"), "{err}");
     }
 
+    /// A local build's `build/` is a release like any other: the same five
+    /// inputs, the record copied in byte for byte.
     #[tokio::test]
-    async fn scaffolds_the_four_inputs_and_fills_the_namespace() {
+    async fn a_local_build_scaffolds_the_five_inputs_and_fills_the_namespace() {
+        use crate::image::tests::{TAG, release_files};
+
         let loose = loose();
         let written = init(&loose, 0, false).await.unwrap();
         let inputs = loose.out.inputs();
@@ -847,10 +889,16 @@ mod tests {
             names,
             [
                 "founder-withdrawal-credentials.json",
+                "image.json",
                 "measurements.json",
                 "reth-genesis.json",
                 "summit-genesis.toml",
             ]
+        );
+        let files = release_files(TAG);
+        assert_eq!(
+            std::fs::read(loose.out.input_image()).unwrap(),
+            files[image::IMAGE_JSON_ASSET]
         );
         // No --founders: an empty list to fill in, not a guessed cohort size.
         assert_eq!(
@@ -863,7 +911,7 @@ mod tests {
         );
         assert_eq!(
             std::fs::read(loose.out.input_measurements()).unwrap(),
-            MEASUREMENTS.as_bytes()
+            files["measurements.azure-tdx.json"]
         );
         // The starter's namespace slot is empty, so init fills the network
         // name into it; every other authored line (comments included) is
@@ -997,7 +1045,11 @@ mod tests {
         );
 
         std::fs::write(&loose.reth_genesis, "{not json").unwrap();
-        let err = init(&loose, 0, false).await.unwrap_err().to_string();
+        let override_ = (Some(s(&loose.reth_genesis)), None, None);
+        let err = init_from(loose.image.clone(), &loose.out, override_)
+            .await
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("is not valid JSON"), "{err}");
         assert!(err.contains("dev.json"), "{err}");
     }
@@ -1032,21 +1084,32 @@ mod tests {
         assert!(network_name(Path::new("/")).is_err());
     }
 
+    /// `init` as a founder types it for a local build, parsed like the
+    /// binary parses it.
     fn init_args(loose: &Loose, name: Option<&str>, force: bool, config_path: PathBuf) -> InitArgs {
-        InitArgs {
-            dir: loose.out.root().to_path_buf(),
-            name: name.map(String::from),
-            image: None,
-            reth_genesis: Some(s(&loose.reth_genesis).to_string()),
-            measurements: Some(s(&loose.measurements).to_string()),
-            summit_genesis: Some(s(&loose.starter).to_string()),
-            founders: 0,
-            force,
-            context: ContextArgs {
-                context: None,
-                config: Some(config_path),
-            },
+        use clap::Parser as _;
+        #[derive(clap::Parser)]
+        struct Probe {
+            #[command(flatten)]
+            args: InitArgs,
         }
+        let config = config_path.display().to_string();
+        let mut argv = vec![
+            "init",
+            s(loose.out.root()),
+            "--image-json",
+            &loose.image_json,
+            "--allow-unattested",
+            "--config",
+            &config,
+        ];
+        if let Some(name) = name {
+            argv.extend(["--name", name]);
+        }
+        if force {
+            argv.push("--force");
+        }
+        Probe::try_parse_from(argv).expect("well-formed argv").args
     }
 
     fn read_config(path: &Path) -> seismic_tee_context::config::Config {

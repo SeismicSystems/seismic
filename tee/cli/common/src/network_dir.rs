@@ -48,12 +48,11 @@ pub const RETH_GENESIS_FILENAME: &str = "reth-genesis.json";
 pub const SUMMIT_GENESIS_FILENAME: &str = "summit-genesis.toml";
 pub const MEASUREMENTS_FILENAME: &str = "measurements.json";
 pub const FOUNDERS_FILENAME: &str = "founder-withdrawal-credentials.json";
-/// seismic-images' record of the image, copied in by `init --image` under
-/// the name the release gives it: which image (its tag), the commits it was
-/// built from, and per cloud target where its bytes are. `assemble` reads
-/// the tag from it to fetch the image's own binaries; the provisioner reads
-/// the blob location from it. Absent from a directory `init` scaffolded
-/// from loose files.
+/// seismic-images' record of the image, copied in by `init --image-json`
+/// under the name the release gives it: which image (its tag), the commits
+/// it was built from, and per cloud target where its bytes are. `assemble`
+/// reads the tag from it to fetch the image's own binaries; the provisioner
+/// reads the blob location from it.
 pub const IMAGE_FILENAME: &str = "image.json";
 
 pub const INPUTS_DIRNAME: &str = "inputs";

@@ -6,23 +6,25 @@
 //! built from, and per cloud target where its bytes are), the measurements,
 //! the two genesis templates as the image's own code has them, and the
 //! `seismic-reth` and `summit` binaries lifted out of the image's initrd —
-//! with one `SHA256SUMS` over all of it. So one tag is the whole identity:
-//! `init --image <tag>` takes its inputs from that release and copies
-//! `image.json` into `inputs/` as the record, and `assemble` reads the tag
-//! back from there to run the image's own binaries, verified against the
-//! same `SHA256SUMS`, instead of two binaries on PATH at a rev derived by
-//! hand across two repos.
+//! with one `SHA256SUMS` over all of it, `image.json` included. So the
+//! directory an `image.json` sits in is the whole identity: `init
+//! --image-json <PATH_OR_URL>` takes its inputs from beside the record and
+//! copies the record into `inputs/`, and `assemble` reads the image's name
+//! back from there to run the image's own binaries from its release,
+//! verified against the same `SHA256SUMS`, instead of two binaries on PATH at
+//! a rev derived by hand across two repos. A local build's `build/` has the
+//! same layout, so an image built by hand founds the same way.
 //!
-//! `SHA256SUMS` comes from the same release as what it lists, so whoever
-//! could swap an asset could swap it too. Before anything is checked against
-//! it, its build provenance is: a Sigstore attestation that seismic-images'
+//! `SHA256SUMS` comes from the same place as what it lists, so whoever could
+//! swap an asset could swap it too. Before anything is checked against it,
+//! its build provenance is: a Sigstore attestation that seismic-images'
 //! publishing workflow, on its publishing branch, produced exactly these
 //! bytes ([`RELEASE_SIGNER`]). Every other asset matches an attested
 //! `SHA256SUMS` or is refused, so each is attested bytes by the same check.
-//!
-//! Every fetch here is of a release asset, spelled from the tag; the
-//! founder's own inputs (a locally authored genesis, a dev image's
-//! measurements) go through `init`'s path-or-URL arguments instead.
+//! The check is on the bytes, not on where they came from: a release
+//! verifies from a mirror or a download, and a faithful local rebuild of one
+//! verifies too. A local build of anything else does not, and founds only
+//! with the check skipped by name (`init --allow-unattested`).
 
 use std::collections::BTreeMap;
 use std::io::Write as _;
@@ -60,48 +62,99 @@ pub const SHA256SUMS_ASSET: &str = "SHA256SUMS";
 /// is not there; this bounds a stalled transfer.
 pub const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(600);
 
-/// One release of seismic-images, addressed by its tag.
+/// One image's release files: the directory its `image.json` sits in, every
+/// other asset beside it under the name seismic-images gives it. A GitHub
+/// release's download directory is one; so is a local build's `build/`
+/// once seismic-images' `make founding-inputs` and `make image-json` have
+/// run in it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImageRelease {
-    tag: String,
-    base: String,
+    base: Base,
     /// The GitHub CLI that verifies `SHA256SUMS`'s build provenance; `None`
-    /// only for a test's local release, which no workflow built.
+    /// when the founder opted out (`init --allow-unattested`) and for a
+    /// test's local release, which no workflow built.
     gh: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Base {
+    /// `<url>/<asset>`, the URL with no trailing slash.
+    Url(String),
+    Dir(PathBuf),
+}
+
 impl ImageRelease {
+    /// seismic-images' GitHub release of image `tag`.
     pub fn new(tag: &str) -> Self {
-        Self::at(RELEASES_URL, tag)
+        Self::at(&format!("{RELEASES_URL}/{tag}"))
     }
 
-    /// A release served from somewhere other than GitHub — a test's local
-    /// server, a mirror.
-    pub fn at(base: &str, tag: &str) -> Self {
+    /// The release files under the URL `base` — a test's local server, a
+    /// mirror.
+    pub fn at(base: &str) -> Self {
         Self {
-            tag: tag.to_string(),
-            base: base.trim_end_matches('/').to_string(),
+            base: Base::Url(base.trim_end_matches('/').to_string()),
             gh: Some("gh".to_string()),
         }
     }
 
-    #[cfg(test)]
+    /// The release whose `image.json` is `source`, a local path or an
+    /// `https://` URL. It must be named `image.json`, the name `SHA256SUMS`
+    /// lists it under.
+    pub fn beside(source: &str) -> anyhow::Result<Self> {
+        if source.starts_with("http://") {
+            bail!("insecure URL rejected (use https://): {source}");
+        }
+        let named = |name: &str| {
+            if name == IMAGE_JSON_ASSET {
+                Ok(())
+            } else {
+                Err(anyhow::anyhow!(
+                    "{source} is not an {IMAGE_JSON_ASSET} — name the image by its record, as \
+                     seismic-images writes it, with the release's other files beside it"
+                ))
+            }
+        };
+        if source.starts_with("https://") {
+            let (base, name) = source.rsplit_once('/').expect("the scheme has a slash");
+            named(name)?;
+            return Ok(Self::at(base));
+        }
+        let path = Path::new(source);
+        named(&path.file_name().unwrap_or_default().to_string_lossy())?;
+        let dir = match path.parent() {
+            Some(dir) if !dir.as_os_str().is_empty() => dir,
+            _ => Path::new("."),
+        };
+        Ok(Self {
+            base: Base::Dir(dir.to_path_buf()),
+            gh: Some("gh".to_string()),
+        })
+    }
+
+    /// The same release, its provenance taken on trust: `SHA256SUMS` is
+    /// still what every asset is checked against, but nothing checks who
+    /// built it.
+    pub fn unattested(self) -> Self {
+        self.verified_with(None)
+    }
+
     pub(crate) fn verified_with(mut self, gh: Option<&str>) -> Self {
         self.gh = gh.map(str::to_string);
         self
     }
 
-    pub fn tag(&self) -> &str {
-        &self.tag
+    /// Whether `SHA256SUMS`'s build provenance is verified before use.
+    pub fn is_attested(&self) -> bool {
+        self.gh.is_some()
     }
 
-    /// The VHD name the release's measurements are stamped with.
-    pub fn vhd(&self) -> String {
-        format!("{}.vhd", self.tag)
-    }
-
+    /// Where `asset` is: a URL, or a local path.
     pub fn url(&self, asset: &str) -> String {
-        format!("{}/{}/{asset}", self.base, self.tag)
+        match &self.base {
+            Base::Url(base) => format!("{base}/{asset}"),
+            Base::Dir(dir) => dir.join(asset).display().to_string(),
+        }
     }
 }
 
@@ -161,7 +214,7 @@ impl Sha256Sums {
 }
 
 /// seismic-images' `image.json`: the image's record, as the release carries
-/// it and as `init --image` copies it into `inputs/`.
+/// it and as `init` copies it into `inputs/`.
 ///
 /// Only what this CLI reads is typed. Each target's other keys — the blob
 /// URL, the storage account — are the provisioner's to read from the same
@@ -194,9 +247,14 @@ impl ImageRecord {
             .with_context(|| format!("{source} is not seismic-images' image.json"))
     }
 
-    /// The release this record came from: the image's name is its tag.
+    /// The image's GitHub release: the image's name is its tag.
     pub fn release(&self) -> ImageRelease {
         ImageRelease::new(&self.image)
+    }
+
+    /// The VHD name the image's measurements are stamped with.
+    pub fn vhd(&self) -> String {
+        format!("{}.vhd", self.image)
     }
 
     /// The measurements asset for `target` (an attestation type, `azure-tdx`).
@@ -215,13 +273,13 @@ impl ImageRecord {
         }
     }
 
-    /// The record `init --image` left in a network directory.
+    /// The record `init` left in a network directory.
     pub fn read(dir: &NetworkDir) -> anyhow::Result<Self> {
         let path = dir.input_image();
         if !path.is_file() {
             bail!(
-                "{} not found — the directory was not scaffolded with `init --image <tag>`, so \
-                 the image's own binaries cannot be fetched; pass --reth-bin and --summit-bin",
+                "{} not found — `init --image-json` writes it, and without it the image's own \
+                 binaries cannot be fetched; pass --reth-bin and --summit-bin",
                 path.display()
             );
         }
@@ -243,8 +301,7 @@ pub fn download_client() -> anyhow::Result<reqwest::Client> {
         .build()?)
 }
 
-/// GET one asset. A 404 says what is missing — the whole release or one of
-/// its assets — since the two mean different things to the founder.
+/// GET one asset of a URL release.
 async fn get(
     client: &reqwest::Client,
     release: &ImageRelease,
@@ -257,17 +314,56 @@ async fn get(
         .await
         .map_err(|e| anyhow::anyhow!("failed to fetch {url}: {e}"))?;
     if response.status() == reqwest::StatusCode::NOT_FOUND {
-        bail!(
-            "seismic-images release {} has no {asset} ({url}) — CI publishes a release, with \
-             every founding input, for each seismic_* image it builds and for nothing else; an \
-             older release or a seismic-dev_* image has to be founded from files you hold",
-            release.tag()
-        );
+        bail!("no {asset} at {url}{MISSING_HINT}");
     }
     response
         .error_for_status()
         .map_err(|e| anyhow::anyhow!("failed to fetch {url}: {e}"))
 }
+
+/// What a missing asset means, since the fix is to name another image.
+const MISSING_HINT: &str = " — a seismic-images release carries every founding input beside its \
+                            image.json, and so does a build's build/ once `make founding-inputs` \
+                            and `make image-json` have run";
+
+/// One small asset's bytes, from wherever the release is.
+async fn read(
+    client: &reqwest::Client,
+    release: &ImageRelease,
+    asset: &str,
+) -> anyhow::Result<Vec<u8>> {
+    let dir = match &release.base {
+        Base::Url(_) => {
+            let url = release.url(asset);
+            return Ok(get(client, release, asset)
+                .await?
+                .bytes()
+                .await
+                .with_context(|| format!("reading {url}"))?
+                .to_vec());
+        }
+        Base::Dir(dir) => dir,
+    };
+    let path = dir.join(asset);
+    if !path.is_file() {
+        bail!("no {asset} at {}{MISSING_HINT}", path.display());
+    }
+    std::fs::read(&path).with_context(|| format!("reading {}", path.display()))
+}
+
+/// A `SHA256SUMS` refused for its build provenance. Typed so that each
+/// caller can attach its own way out: `init` has `--allow-unattested`,
+/// `assemble` has binaries of the founder's own.
+#[derive(Debug)]
+pub struct Unattested(String);
+
+impl std::fmt::Display for Unattested {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for Unattested {}
 
 /// The release's `SHA256SUMS`, the record every other fetch is checked
 /// against — so the one asset whose build provenance is verified here, before
@@ -276,11 +372,7 @@ pub async fn fetch_sums(
     client: &reqwest::Client,
     release: &ImageRelease,
 ) -> anyhow::Result<Sha256Sums> {
-    let bytes = get(client, release, SHA256SUMS_ASSET)
-        .await?
-        .bytes()
-        .await
-        .with_context(|| format!("reading {}", release.url(SHA256SUMS_ASSET)))?;
+    let bytes = read(client, release, SHA256SUMS_ASSET).await?;
     verify_provenance(release, &bytes).await?;
     Sha256Sums::parse(&bytes).with_context(|| release.url(SHA256SUMS_ASSET))
 }
@@ -288,9 +380,10 @@ pub async fn fetch_sums(
 /// `sums` carry a build provenance attestation signed as [`RELEASE_SIGNER`],
 /// as `gh attestation verify` checks one: the signature, the certificate's
 /// chain to Sigstore's root and its identity, and the transparency-log entry.
-/// Mandatory, with no checksum-only fallback: a founding on a release whose
-/// provenance could not be checked is a founding on whatever the release
-/// holds.
+/// No checksum-only fallback: a founding on a release whose provenance could
+/// not be checked is a founding on whatever the release holds, so skipping
+/// the check is the founder's explicit choice ([`ImageRelease::unattested`]),
+/// never a fallback.
 async fn verify_provenance(release: &ImageRelease, sums: &[u8]) -> anyhow::Result<()> {
     const GH_HINT: &str = "install the GitHub CLI (https://cli.github.com) and run `gh auth login`";
     let Some(gh) = &release.gh else {
@@ -318,11 +411,11 @@ async fn verify_provenance(release: &ImageRelease, sums: &[u8]) -> anyhow::Resul
         Ok(json) => format!("its attestation is signed by {}", signers(&json)),
         Err(_) => refusal.to_string(),
     };
-    bail!(
-        "refusing seismic-images release {}: its SHA256SUMS is not attested as built by \
-         {RELEASE_SIGNER} — {found}",
-        release.tag()
-    )
+    Err(Unattested(format!(
+        "refusing {}: it is not attested as built by {RELEASE_SIGNER} — {found}",
+        release.url(SHA256SUMS_ASSET)
+    ))
+    .into())
 }
 
 /// The signing identities in `gh attestation verify --format json` output.
@@ -354,12 +447,7 @@ pub async fn fetch_checked(
     asset: &str,
 ) -> anyhow::Result<Vec<u8>> {
     let url = release.url(asset);
-    let bytes = get(client, release, asset)
-        .await?
-        .bytes()
-        .await
-        .with_context(|| format!("reading {url}"))?
-        .to_vec();
+    let bytes = read(client, release, asset).await?;
     // Flat, not layered: the mismatch is the message a founder must read,
     // and anyhow renders only the outermost context in a one-line error.
     if let Err(mismatch) = sums.verify(asset, &bytes) {
@@ -369,7 +457,7 @@ pub async fn fetch_checked(
 }
 
 /// `$XDG_CACHE_HOME/seismic/images`, else `~/.cache/seismic/images`: where
-/// the image binaries are kept between runs, one directory per tag.
+/// the image binaries are kept between runs, one directory per image.
 pub fn default_cache_dir() -> anyhow::Result<PathBuf> {
     cache_dir(std::env::var_os("XDG_CACHE_HOME"), std::env::var_os("HOME"))
 }
@@ -418,20 +506,20 @@ pub fn host_runs_image_binaries() -> Result<(), String> {
     Ok(())
 }
 
-/// The image's `asset` (one of the two binaries), on disk under
-/// `cache/<tag>/`, verified against `sums` — a cached copy is re-hashed on
-/// every use, so a file tampered with or truncated on disk is refetched
-/// rather than run. Downloads stream to a `.part` beside the final name and
-/// are hashed as they arrive; the file only takes its name once the digest
-/// matches, so a `<tag>/seismic-reth` that exists is one that verified.
+/// The image's `asset` (one of the two binaries), on disk in `dir` (the
+/// image's own directory under the cache), verified against `sums` — a
+/// cached copy is re-hashed on every use, so a file tampered with or
+/// truncated on disk is refetched rather than run. Downloads stream to a
+/// `.part` beside the final name and are hashed as they arrive; the file
+/// only takes its name once the digest matches, so a `<dir>/seismic-reth`
+/// that exists is one that verified.
 pub async fn fetch_binary(
     client: &reqwest::Client,
     release: &ImageRelease,
     sums: &Sha256Sums,
     asset: &str,
-    cache: &Path,
+    dir: &Path,
 ) -> anyhow::Result<PathBuf> {
-    let dir = cache.join(release.tag());
     let path = dir.join(asset);
     if path.is_file() {
         let bytes = std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
@@ -444,25 +532,33 @@ pub async fn fetch_binary(
         }
     }
     if !sums.lists(asset) {
-        bail!("SHA256SUMS of release {} lists no {asset}", release.tag());
+        bail!("{} lists no {asset}", release.url(SHA256SUMS_ASSET));
     }
-    std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
+    std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
 
     let url = release.url(asset);
     eprintln!("fetching {url}");
-    let mut response = get(client, release, asset).await?;
     let part = dir.join(format!("{asset}.part"));
     let mut file =
         std::fs::File::create(&part).with_context(|| format!("creating {}", part.display()))?;
     let mut hasher = Sha256::new();
-    while let Some(chunk) = response
-        .chunk()
-        .await
-        .with_context(|| format!("reading {url}"))?
-    {
-        hasher.update(&chunk);
-        file.write_all(&chunk)
-            .with_context(|| format!("writing {}", part.display()))?;
+    let mut write = |chunk: &[u8]| {
+        hasher.update(chunk);
+        file.write_all(chunk)
+            .with_context(|| format!("writing {}", part.display()))
+    };
+    match &release.base {
+        Base::Url(_) => {
+            let mut response = get(client, release, asset).await?;
+            while let Some(chunk) = response
+                .chunk()
+                .await
+                .with_context(|| format!("reading {url}"))?
+            {
+                write(&chunk)?;
+            }
+        }
+        Base::Dir(_) => write(&read(client, release, asset).await?)?,
     }
     file.flush()
         .with_context(|| format!("writing {}", part.display()))?;
@@ -541,13 +637,20 @@ pub(crate) mod tests {
                 b"#!/bin/sh\necho 0x2222222222222222222222222222222222222222222222222222222222222222\n".to_vec(),
             ),
         ]);
+        resum(&mut files, tag);
+        files
+    }
+
+    /// (Re)write `files`' SHA256SUMS over every other file and image `tag`'s
+    /// UKI, as seismic-images does.
+    pub(crate) fn resum(files: &mut BTreeMap<String, Vec<u8>>, tag: &str) {
+        files.remove(SHA256SUMS_ASSET);
         let sums: String = files
             .iter()
             .map(|(name, bytes)| format!("{}  {name}\n", hex::encode(Sha256::digest(bytes))))
             .chain(std::iter::once(format!("{}  {tag}.efi\n", "ab".repeat(32))))
             .collect();
         files.insert(SHA256SUMS_ASSET.to_string(), sums.into_bytes());
-        files
     }
 
     /// Serve `files` as release `tag`, at the paths GitHub would.
@@ -560,14 +663,30 @@ pub(crate) mod tests {
             .map(|(name, bytes)| (format!("/{tag}/{name}"), bytes))
             .collect();
         let server = FileServer::serve(served);
-        let release = ImageRelease::at(&server.url, tag).verified_with(None);
+        let release = ImageRelease::at(&format!("{}/{tag}", server.url)).unattested();
         (server, release)
+    }
+
+    /// `files` written into `dir`, the way a local build leaves `build/`,
+    /// and the release beside its image.json. Returns the image.json's path
+    /// too, as `--image-json` would name it.
+    pub(crate) fn local_release(
+        dir: &Path,
+        files: &BTreeMap<String, Vec<u8>>,
+    ) -> (String, ImageRelease) {
+        std::fs::create_dir_all(dir).unwrap();
+        for (name, bytes) in files {
+            std::fs::write(dir.join(name), bytes).unwrap();
+        }
+        let image_json = dir.join(IMAGE_JSON_ASSET).display().to_string();
+        let release = ImageRelease::beside(&image_json).unwrap().unattested();
+        (image_json, release)
     }
 
     /// A stand-in `gh` in `dir`: appends its arguments to `dir/args`, keeps
     /// the file it was asked about as `dir/subject`, then runs `pinned` when
     /// asked with `--cert-identity` and `unpinned` otherwise.
-    fn fake_gh(dir: &Path, pinned: &str, unpinned: &str) -> String {
+    pub(crate) fn fake_gh(dir: &Path, pinned: &str, unpinned: &str) -> String {
         let gh = dir.join("gh");
         let d = dir.display();
         std::fs::write(
@@ -624,11 +743,10 @@ pub(crate) mod tests {
             "echo 'Error: verifying with issuer' >&2; exit 1",
             &format!("echo '{json}'"),
         );
-        let err = fetch_sums(&client, &with(&gh))
-            .await
-            .unwrap_err()
-            .to_string();
-        assert!(err.contains(&format!("release {TAG}")), "{err}");
+        let err = fetch_sums(&client, &with(&gh)).await.unwrap_err();
+        assert!(err.is::<Unattested>(), "{err}");
+        let err = err.to_string();
+        assert!(err.contains(&release.url(SHA256SUMS_ASSET)), "{err}");
         assert!(err.contains(RELEASE_SIGNER), "{err}");
         assert!(err.contains(&format!("signed by {other}")), "{err}");
 
@@ -651,18 +769,54 @@ pub(crate) mod tests {
         assert!(err.contains("https://cli.github.com"), "{err}");
     }
 
+    /// The check is on the bytes wherever they came from: a local build's
+    /// SHA256SUMS goes to gh as a release's does.
+    #[tokio::test]
+    async fn a_local_releases_sha256sums_is_held_to_provenance_too() {
+        let build = tempfile::tempdir().unwrap();
+        let files = release_files(TAG);
+        let (_, release) = local_release(build.path(), &files);
+        let dir = tempfile::tempdir().unwrap();
+        let fail = "echo 'Error: no attestations found' >&2; exit 1";
+        let gh = fake_gh(dir.path(), fail, fail);
+        let err = fetch_sums(
+            &download_client().unwrap(),
+            &release.verified_with(Some(&gh)),
+        )
+        .await
+        .unwrap_err();
+        assert!(err.is::<Unattested>(), "{err}");
+        assert_eq!(
+            std::fs::read(dir.path().join("subject")).unwrap(),
+            files[SHA256SUMS_ASSET]
+        );
+    }
+
     #[test]
-    fn urls_are_spelled_from_the_tag() {
+    fn a_release_is_the_directory_its_image_json_sits_in() {
         let release = ImageRelease::new(TAG);
         assert_eq!(
             release.url("summit"),
             format!("{RELEASES_URL}/{TAG}/summit")
         );
-        assert_eq!(release.vhd(), format!("{TAG}.vhd"));
-        assert_eq!(
-            ImageRelease::at("http://x/", TAG).url("a"),
-            format!("http://x/{TAG}/a")
-        );
+        let url = format!("{RELEASES_URL}/{TAG}/image.json");
+        assert_eq!(ImageRelease::beside(&url).unwrap(), release);
+        assert_eq!(ImageRelease::at("http://x/").url("a"), "http://x/a");
+
+        let local = ImageRelease::beside("build/image.json").unwrap();
+        assert_eq!(local.url("SHA256SUMS"), "build/SHA256SUMS");
+        assert!(local.is_attested());
+        assert!(!local.unattested().is_attested());
+        assert_eq!(ImageRelease::beside("image.json").unwrap().url("a"), "./a");
+
+        let err = ImageRelease::beside("http://example.test/image.json")
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("insecure URL rejected"), "{err}");
+        for other in ["build/measurements.azure-tdx.json", "https://example.test"] {
+            let err = ImageRelease::beside(other).unwrap_err().to_string();
+            assert!(err.contains("is not an image.json"), "{err}");
+        }
     }
 
     #[test]
@@ -691,6 +845,7 @@ pub(crate) mod tests {
         let files = release_files(TAG);
         let record = ImageRecord::parse(&files[IMAGE_JSON_ASSET], "image.json").unwrap();
         assert_eq!(record.release(), ImageRelease::new(TAG));
+        assert_eq!(record.vhd(), format!("{TAG}.vhd"));
         assert_eq!(
             record.measurements_asset("azure-tdx").unwrap(),
             "measurements.azure-tdx.json"
@@ -755,13 +910,13 @@ pub(crate) mod tests {
             err.contains("lists no summit-genesis-starter.toml"),
             "{err}"
         );
-        // A missing asset names the release and the asset.
+        // A missing asset names the asset and where it was looked for.
         let err = fetch_checked(&client, &release, &sums, "absent")
             .await
             .unwrap_err()
             .to_string();
         assert!(
-            err.contains(&format!("release {TAG} has no absent")),
+            err.contains(&format!("no absent at {}", release.url("absent"))),
             "{err}"
         );
         drop(server);
@@ -780,20 +935,60 @@ pub(crate) mod tests {
         assert!(err.contains(&release.url(RETH_GENESIS_ASSET)), "{err}");
     }
 
+    /// A release that is not there is named by where SHA256SUMS was looked
+    /// for, over https and on disk alike, with what should be there.
     #[tokio::test]
     async fn a_missing_release_is_named_as_such() {
-        let (_server, release) = serve_release("other", release_files("other"));
+        let (server, _) = serve_release("other", release_files("other"));
         let client = download_client().unwrap();
-        let err = fetch_sums(&client, &ImageRelease::at(&_server.url, TAG))
+        let absent = ImageRelease::at(&format!("{}/{TAG}", server.url)).unattested();
+        let err = fetch_sums(&client, &absent).await.unwrap_err().to_string();
+        assert!(
+            err.contains(&format!("no SHA256SUMS at {}", absent.url("SHA256SUMS"))),
+            "{err}"
+        );
+        assert!(err.contains("make image-json"), "{err}");
+
+        let empty = tempfile::tempdir().unwrap();
+        let image_json = empty.path().join("image.json");
+        let absent = ImageRelease::beside(image_json.to_str().unwrap())
+            .unwrap()
+            .unattested();
+        let err = fetch_sums(&client, &absent).await.unwrap_err().to_string();
+        assert!(
+            err.contains(&format!("no SHA256SUMS at {}", absent.url("SHA256SUMS"))),
+            "{err}"
+        );
+    }
+
+    /// A local build's assets are read and checked as a release's are,
+    /// binaries included.
+    #[tokio::test]
+    async fn a_local_releases_assets_are_held_to_its_sha256sums() {
+        let build = tempfile::tempdir().unwrap();
+        let (_, release) = local_release(build.path(), &release_files(TAG));
+        let client = download_client().unwrap();
+        let sums = fetch_sums(&client, &release).await.unwrap();
+        let record = fetch_checked(&client, &release, &sums, IMAGE_JSON_ASSET)
+            .await
+            .unwrap();
+        assert_eq!(ImageRecord::parse(&record, "r").unwrap().image, TAG);
+        let cache = tempfile::tempdir().unwrap();
+        let summit = fetch_binary(&client, &release, &sums, SUMMIT_BIN_ASSET, cache.path())
+            .await
+            .unwrap();
+        assert_eq!(
+            std::fs::read(summit).unwrap(),
+            std::fs::read(build.path().join(SUMMIT_BIN_ASSET)).unwrap()
+        );
+
+        std::fs::write(build.path().join(RETH_GENESIS_ASSET), b"{}").unwrap();
+        let err = fetch_checked(&client, &release, &sums, RETH_GENESIS_ASSET)
             .await
             .unwrap_err()
             .to_string();
-        assert!(
-            err.contains(&format!("release {TAG} has no SHA256SUMS")),
-            "{err}"
-        );
-        assert!(err.contains("seismic-dev_*"), "{err}");
-        let _ = release;
+        assert!(err.contains("reth-genesis.json does not match"), "{err}");
+        assert!(err.contains(&release.url(RETH_GENESIS_ASSET)), "{err}");
     }
 
     /// A binary is downloaded once, verified, made executable and kept; the
@@ -805,13 +1000,14 @@ pub(crate) mod tests {
         let (server, release) = serve_release(TAG, release_files(TAG));
         let client = download_client().unwrap();
         let cache = tempfile::tempdir().unwrap();
+        let cached = cache.path().join(TAG);
         let sums = fetch_sums(&client, &release).await.unwrap();
 
-        let path = fetch_binary(&client, &release, &sums, SUMMIT_BIN_ASSET, cache.path())
+        let path = fetch_binary(&client, &release, &sums, SUMMIT_BIN_ASSET, &cached)
             .await
             .unwrap();
-        assert_eq!(path, cache.path().join(TAG).join("summit"));
-        assert!(!cache.path().join(TAG).join("summit.part").exists());
+        assert_eq!(path, cached.join("summit"));
+        assert!(!cached.join("summit.part").exists());
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt as _;
@@ -828,7 +1024,7 @@ pub(crate) mod tests {
         assert_eq!(fetched_once, 1);
 
         // Cached: no second request.
-        fetch_binary(&client, &release, &sums, SUMMIT_BIN_ASSET, cache.path())
+        fetch_binary(&client, &release, &sums, SUMMIT_BIN_ASSET, &cached)
             .await
             .unwrap();
         assert_eq!(
@@ -842,7 +1038,7 @@ pub(crate) mod tests {
 
         // Altered on disk: fetched again.
         std::fs::write(&path, b"#!/bin/sh\necho tampered\n").unwrap();
-        fetch_binary(&client, &release, &sums, SUMMIT_BIN_ASSET, cache.path())
+        fetch_binary(&client, &release, &sums, SUMMIT_BIN_ASSET, &cached)
             .await
             .unwrap();
         assert_eq!(
@@ -861,12 +1057,12 @@ pub(crate) mod tests {
         let mut files = release_files(TAG);
         files.insert(RETH_BIN_ASSET.to_string(), b"#!/bin/sh\nexit 1\n".to_vec());
         let (_server, release) = serve_release(TAG, files);
-        let err = fetch_binary(&client, &release, &sums, RETH_BIN_ASSET, cache.path())
+        let err = fetch_binary(&client, &release, &sums, RETH_BIN_ASSET, &cached)
             .await
             .unwrap_err()
             .to_string();
         assert!(err.contains("seismic-reth does not match"), "{err}");
-        assert!(!cache.path().join(TAG).join("seismic-reth").exists());
-        assert!(!cache.path().join(TAG).join("seismic-reth.part").exists());
+        assert!(!cached.join("seismic-reth").exists());
+        assert!(!cached.join("seismic-reth.part").exists());
     }
 }

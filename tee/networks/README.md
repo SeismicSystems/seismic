@@ -21,7 +21,7 @@ genesis seats.
 tee/networks/<name>/
 ├── inputs/                       provenance (authored + harvested)
 │   ├── image.json                  the image's release record, verbatim from
-│   │                               seismic-images (`init --image`): which
+│   │                               seismic-images (`init --image-json`): which
 │   │                               image, built from what, bytes where
 │   ├── reth-genesis.json           authored: policy-free EL genesis
 │   ├── summit-genesis.toml         authored: consensus parameter choices

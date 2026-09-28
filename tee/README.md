@@ -142,7 +142,7 @@ genesis-hash`) stay shell-outs.
 `assemble` runs the image's own `seismic-reth` and `summit`, fetched from the
 seismic-images release `inputs/image.json` names and verified against its
 `SHA256SUMS` — whose build provenance `gh attestation verify` checks first,
-as `init --image` does, so `gh` must be installed and logged in — so the
+as `network init` does, so `gh` must be installed and logged in — so the
 digests the manifest pins come from the bytes the nodes boot. Those binaries are x86-64 Linux, so a Mac cannot run them — nor can an
 arm64 Linux box, nor a Linux VM on Apple silicon where the kernel executes
 x86-64 through Rosetta, since the image's `summit` crashes there. `assemble`
