@@ -35,13 +35,12 @@ use std::time::{Duration, Instant};
 
 use anyhow::bail;
 use jsonrpsee::rpc_params;
-use seismic_tee_common::{NodeDescriptor, rpc};
-use seismic_tee_node::status::{LuksProvisioningStatus, fetch_status, format_provisioning};
+use seismic_tee_common::founding::FoundingRecord;
+use seismic_tee_common::{NodeDescriptor, hex_0x, rpc};
 use serde_json::Value;
 
 use crate::dashboard::CohortDashboard;
-use crate::founding::FoundingRecord;
-use crate::gates::hex_0x;
+use crate::status::{LuksProvisioningStatus, fetch_status, format_provisioning};
 
 /// Cohort-readiness polling. `configure` watches the first-boot disk wipe; if
 /// the reth probe observes one still running, it displays that progress and

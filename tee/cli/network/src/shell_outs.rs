@@ -42,8 +42,8 @@ use std::time::Duration;
 use anyhow::{Context as _, bail};
 use clap::Args;
 use seismic_tee_common::NetworkDir;
+use seismic_tee_common::founding::Validator;
 
-use crate::founding::Validator;
 use crate::image::{self, ImageRecord};
 
 /// The execution client. Its `genesis-hash` subcommand parses a genesis file

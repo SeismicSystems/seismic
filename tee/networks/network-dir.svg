@@ -106,7 +106,7 @@
     <rect width="320" height="46" rx="8"/>
     <text x="160" y="24">harvest/&lt;node&gt;.json</text>
   </g>
-  <text class="caption" x="65" y="572">TEE-born keys + quotes + what verified them (network harvest)</text>
+  <text class="caption" x="65" y="572">TEE-born keys + quotes + what verified them (node harvest)</text>
 
   <!-- artifact set -->
   <g class="node derived" transform="translate(660,150)">

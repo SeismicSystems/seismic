@@ -49,20 +49,16 @@ use seismic_manifest::{
     ContractsManifest, EthManifest, MeasurementsManifest, NetworkManifestV1, SummitManifest, render,
 };
 use seismic_measurement_admission::promote_measurements;
+use seismic_tee_common::founding::{
+    FoundingRecords, Validator, ValidatorIps, load_founding_set, seated_validator_ips,
+};
 use seismic_tee_common::network_dir::INPUTS_DIRNAME;
-use seismic_tee_common::{Artifact, Manifest, NetworkDir, next_step};
-use seismic_tee_context::load_nodes;
+use seismic_tee_common::{Artifact, Manifest, NetworkDir, hex_0x, next_step};
+use seismic_tee_context::{DirArgs, load_nodes};
 use seismic_verify_quote::{SeismicMeasurementPolicy, archive, verify_archived_harvest};
 use sha2::{Digest as _, Sha256};
 
-use crate::args::DirArgs;
-use crate::configure;
-use crate::founding::{
-    FoundingRecords, Validator, ValidatorIps, load_founding_set, seated_validator_ips,
-};
-use crate::gates::{
-    ArtifactSet, compile, hex_0x, inject_registry_genesis_storage, run_validation_gates,
-};
+use crate::gates::{ArtifactSet, compile, inject_registry_genesis_storage, run_validation_gates};
 use crate::init::{absolute, network_name};
 use crate::shell_outs::{DerivationArgs, Derivations};
 
@@ -565,8 +561,23 @@ pub async fn run(args: AssembleArgs) -> anyhow::Result<ExitCode> {
         .next()
         .cloned()
         .unwrap_or_else(|| "<genesis-node>".to_string());
-    next_step::print("", &[configure::invocation(&genesis, &args.dir, &dir)]);
+    next_step::print("", &[configure_invocation(&genesis, &args.dir, &dir)]);
     Ok(ExitCode::SUCCESS)
+}
+
+/// `network configure`, spelled as the next step after `assemble` (written or
+/// `--check`ed), with `genesis` as the genesis node. Which node is genesis is the
+/// founder's call and any founding node is a valid one, so callers pass the
+/// first in name order. `configure` takes the manifest, not `DIR`, so an
+/// explicit `DIR` becomes `--manifest`; an explicit `--context` is repeated
+/// as [`DirArgs::as_args`] would.
+fn configure_invocation(genesis: &str, args: &DirArgs, dir: &NetworkDir) -> String {
+    let scope = match (&args.dir, &args.context.context) {
+        (Some(_), _) => format!(" --manifest {}", dir.manifest().display()),
+        (None, Some(context)) => format!(" --context {context}"),
+        (None, None) => String::new(),
+    };
+    format!("seismic-tee network configure --genesis-node {genesis}{scope}")
 }
 
 #[cfg(test)]
@@ -575,6 +586,7 @@ pub(crate) mod tests {
 
     use seismic_tee_common::network_dir::MANIFEST_FILENAME;
     use seismic_tee_common::test_support::write_file;
+    use seismic_tee_context::ContextArgs;
 
     use super::*;
     use crate::gates::tests::{FIXTURE_POLICY, FIXTURE_RETH_GENESIS, REGISTRY, other_policy};
@@ -996,14 +1008,14 @@ pub(crate) mod tests {
         let mut records = FoundingRecords::new();
         records.insert(
             "node-1".to_string(),
-            crate::founding::FoundingRecord {
+            seismic_tee_common::founding::FoundingRecord {
                 node_public_key: "ab".repeat(32),
                 consensus_public_key: "cd".repeat(48),
                 document: serde_json::json!({
                     "harvest_nonce": "11".repeat(32),
                     "node_public_key": "ab".repeat(32),
                     "consensus_public_key": "cd".repeat(48),
-                    "evidence": crate::founding::tests::no_attestation_evidence(),
+                    "evidence": seismic_tee_common::test_support::no_attestation_evidence(),
                 }),
             },
         );
@@ -1190,5 +1202,37 @@ pub(crate) mod tests {
         fn try_parse_from_probe(argv: &[&str]) -> Self {
             Self::try_parse_probe(argv).expect("well-formed argv")
         }
+    }
+
+    /// The next-step line `assemble` prints: an explicit `DIR` becomes the
+    /// manifest it holds, an explicit `--context` is repeated, a persisted
+    /// selection needs nothing.
+    #[test]
+    fn the_configure_invocation_carries_the_scope_it_was_given() {
+        let dir = NetworkDir::new("/nets/devnet-1");
+        let args = |dir: Option<&str>, context: Option<&str>| DirArgs {
+            dir: dir.map(PathBuf::from),
+            context: ContextArgs {
+                context: context.map(str::to_string),
+                config: None,
+            },
+        };
+        assert_eq!(
+            configure_invocation("alpha", &args(None, None), &dir),
+            "seismic-tee network configure --genesis-node alpha"
+        );
+        assert_eq!(
+            configure_invocation("alpha", &args(None, Some("devnet-1")), &dir),
+            "seismic-tee network configure --genesis-node alpha --context devnet-1"
+        );
+        assert_eq!(
+            configure_invocation(
+                "alpha",
+                &args(Some("/nets/devnet-1"), Some("devnet-1")),
+                &dir
+            ),
+            "seismic-tee network configure --genesis-node alpha --manifest \
+             /nets/devnet-1/network-manifest.json"
+        );
     }
 }

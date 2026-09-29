@@ -24,6 +24,7 @@ pub mod args;
 pub mod cmd;
 pub mod complete;
 pub mod config;
+pub mod dir;
 pub mod env;
 pub mod exec;
 pub mod path;
@@ -38,6 +39,7 @@ use seismic_tee_common::{
 
 pub use args::ContextArgs;
 use config::{Config, Network, Shape};
+pub use dir::DirArgs;
 
 /// A selection: a network, and optionally one of its nodes.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -261,8 +263,8 @@ pub fn echo(selection: &Selection, resolved: &dyn std::fmt::Display) {
 
 /// A cohort's node table: `flag` when given, else the selected network's.
 ///
-/// The shared resolution behind every founder command that needs a whole
-/// cohort rather than one node — `harvest`, `network configure` — each with
+/// The shared resolution behind every command that needs a whole cohort
+/// rather than one node — `harvest`, the cohort `configure` — each with
 /// its own escape-hatch flag (`--nodes FILE`, the `pulumi stack output nodes
 /// --json` shape); `flag_name` is spelled into the "no context selected"
 /// error, naming the one flag this particular caller actually has.

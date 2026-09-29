@@ -587,7 +587,7 @@ pub async fn run(args: InitArgs) -> anyhow::Result<ExitCode> {
         ),
         format!("provision the cohort: {RUNBOOK_PROVISION_URL}"),
         "harvest its founding keys from the node table the provisioner prints (pulumi stack \
-         output nodes --json > nodes.json):\nseismic-tee network harvest --nodes nodes.json"
+         output nodes --json > nodes.json):\nseismic-tee node harvest --nodes nodes.json"
             .to_string(),
     ]);
     // What the registration above bought, and what importing the cohort adds
@@ -936,7 +936,11 @@ mod tests {
                 format!("0x{}3", "0".repeat(39)),
             ]
         );
-        assert!(credentials.iter().all(|c| crate::founding::is_address(c)));
+        assert!(
+            credentials
+                .iter()
+                .all(|c| seismic_tee_common::founding::is_address(c))
+        );
     }
 
     #[test]

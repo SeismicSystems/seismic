@@ -17,16 +17,17 @@
 pub mod artifact;
 pub mod descriptor;
 pub mod error;
+pub mod founding;
 pub mod http;
 pub mod manifest;
 pub mod network_dir;
 pub mod next_step;
 pub mod rpc;
-#[cfg(feature = "test-support")]
+#[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
 
 pub use artifact::Artifact;
 pub use descriptor::{Descriptors, NodeDescriptor, load_descriptors, select_descriptor};
 pub use error::{Error, Result};
-pub use manifest::Manifest;
+pub use manifest::{Manifest, hex_0x};
 pub use network_dir::NetworkDir;

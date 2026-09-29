@@ -24,7 +24,7 @@ use std::collections::BTreeMap;
 use alloy_primitives::{Address, B256, U256, keccak256};
 use anyhow::{Context as _, bail};
 use seismic_measurement_admission::{CompileReport, compile_policy};
-use seismic_tee_common::{Artifact, Manifest, NetworkDir};
+use seismic_tee_common::{Artifact, Manifest, NetworkDir, hex_0x};
 use serde_json::Value;
 
 use crate::shell_outs::Derivations;
@@ -39,11 +39,6 @@ const SUMMIT_DEFAULT_NAMESPACE: &str = "_SUMMIT";
 pub fn compile(policy: &[u8]) -> anyhow::Result<CompileReport> {
     let compiled = compile_policy(policy).context("compiling the measurement policy")?;
     Ok(CompileReport::new(&compiled))
-}
-
-/// `0x`-prefixed lowercase hex, as the manifest and the genesis spell words.
-pub fn hex_0x(bytes: &[u8]) -> String {
-    format!("0x{}", hex::encode(bytes))
 }
 
 /// Write the compile report's `registry_genesis_storage` verbatim into the

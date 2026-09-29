@@ -19,6 +19,11 @@ use sha2::{Digest, Sha256};
 
 use crate::error::{Error, Result};
 
+/// `0x`-prefixed lowercase hex, as the manifest and the genesis spell words.
+pub fn hex_0x(bytes: &[u8]) -> String {
+    format!("0x{}", hex::encode(bytes))
+}
+
 /// A manifest and the bytes it was parsed from, with the id those bytes derive.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Manifest {

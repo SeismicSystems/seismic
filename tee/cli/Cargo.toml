@@ -11,25 +11,31 @@
 # Five library crates, split by who may depend on whom, and one binary that
 # mounts them. The split is a rule the compiler enforces:
 #
-#   common       node descriptor, network-directory layout, HTTP and error
-#                types. Depends on neither side.
+#   common       node descriptor, network-directory layout and the founding
+#                inputs it holds, HTTP and error types. Depends on neither
+#                side.
 #   context      the config file that remembers which network and node the
 #                commands act on: pointers only, no credentials. Depends on
 #                neither side, on common alone, so every group may read it.
-#   node         the `node` command group: stand up and appraise one node.
-#                Cloud-agnostic. Depends only on common and context.
-#   network      the `network` group and `verify-founding`: found a network,
-#                audit a founding. The only crate allowed to depend on both.
+#   node         the `node` command group: everything that reaches a running
+#                machine — harvest a founding cohort, configure and appraise
+#                one node or many. Cloud-agnostic. Depends only on common and
+#                context.
+#   network      the `network` group and `verify-founding`: the network
+#                directory's inputs and artifact set, and the audit of its
+#                founding. Never contacts a node. Depends only on common and
+#                context.
 #   admission    the `admission` group: review what a measurement policy
 #                compiles to. Depends on neither side.
-#   seismic-tee  the binary. Mounts the three command-bearing crates and owns
+#   seismic-tee  the binary. Mounts the command-bearing crates and owns
 #                nothing else.
 #
 # The whole workspace is headed for a public repo. The split is what keeps each
-# party's crate free of the others' dependencies — the operator half free of
-# founder-only ones, the founder half free of governance's — and it needs no
-# second binary to enforce it: the command groups follow the trust model's
-# parties, one crate each (see seismic-tee/src/main.rs).
+# group's crate free of the others' dependencies — the machine-reaching half
+# (jsonrpsee, tdx-init-config, the cohort dashboard) apart from the directory
+# half (the manifest schema, the registry gate, assemble's shell-outs), both
+# free of governance's — and it needs no second binary to enforce it: the
+# command groups are one crate each (see seismic-tee/src/main.rs).
 [workspace]
 resolver = "3"
 members = [

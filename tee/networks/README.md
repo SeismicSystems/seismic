@@ -30,7 +30,7 @@ tee/networks/<name>/
 │   ├── founder-withdrawal-credentials.json
 │   │                               authored: one address per founding
 │   │                               node, in node-name order
-│   └── harvest/                    written by `network harvest`
+│   └── harvest/                    written by `node harvest`
 │       └── <node>.json             the founding archive: pubkeys + quote,
 │                                   the DCAP collateral that verification
 │                                   used, the instant it judged at, and the

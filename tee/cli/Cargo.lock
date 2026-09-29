@@ -4389,6 +4389,7 @@ dependencies = [
 name = "seismic-tee-common"
 version = "0.2.0"
 dependencies = [
+ "anyhow",
  "hex",
  "jsonrpsee",
  "reqwest 0.12.28",
@@ -4426,21 +4427,17 @@ dependencies = [
  "clap",
  "clap_complete",
  "hex",
- "jsonrpsee",
- "rand 0.9.5",
  "reqwest 0.12.28",
  "rustls",
  "seismic-manifest",
  "seismic-measurement-admission",
  "seismic-tee-common",
  "seismic-tee-context",
- "seismic-tee-node",
  "seismic-verify-quote",
  "serde",
  "serde_json",
  "sha2",
  "tempfile",
- "terminal_size",
  "tokio",
  "toml",
 ]
@@ -4455,6 +4452,7 @@ dependencies = [
  "clap_complete",
  "hex",
  "jsonrpsee",
+ "rand 0.9.5",
  "reqwest 0.12.28",
  "rustls",
  "seismic-measurement-admission",
@@ -4466,6 +4464,7 @@ dependencies = [
  "sha2",
  "tdx-init-config",
  "tempfile",
+ "terminal_size",
  "tokio",
  "toml",
 ]

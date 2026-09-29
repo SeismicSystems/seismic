@@ -57,13 +57,12 @@ use std::process::ExitCode;
 
 use anyhow::{Context as _, bail};
 use clap::Args;
+use seismic_tee_common::founding::{FoundingRecords, is_bare_hex, load_harvest_records};
 use seismic_tee_common::network_dir::{HARVEST_DIRNAME, INPUTS_DIRNAME};
 use seismic_tee_common::{Manifest, NetworkDir};
-use seismic_tee_context::{Context, ContextArgs};
+use seismic_tee_context::{Context, ContextArgs, DirArgs};
 
-use crate::args::DirArgs;
 use crate::assemble::verify_harvest_records;
-use crate::founding::{FoundingRecords, is_bare_hex, load_harvest_records};
 use crate::init::absolute;
 
 #[derive(Debug, Args)]
@@ -325,16 +324,16 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     use clap::Parser;
+    use seismic_tee_common::founding::FoundingRecord;
     use seismic_tee_common::network_dir::{
         MANIFEST_FILENAME, POLICY_FILENAME, SUMMIT_GENESIS_FILENAME,
     };
-    use seismic_tee_common::test_support::manifest_pinning;
+    use seismic_tee_common::test_support::{
+        NODE_KEY_1, NODE_KEY_2, consensus_key, manifest_pinning, network_dir, record, write,
+        write_harvest,
+    };
 
     use super::*;
-    use crate::founding::FoundingRecord;
-    use crate::founding::tests::{
-        NODE_KEY_1, NODE_KEY_2, consensus_key, network_dir, record, write, write_harvest,
-    };
 
     /// A policy the verifier parses: a case that reaches the replay must fail
     /// on the archive, never on the policy.

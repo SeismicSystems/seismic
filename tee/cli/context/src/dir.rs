@@ -10,8 +10,8 @@
 
 use std::path::PathBuf;
 
+use crate::{Context, ContextArgs, echo};
 use clap::Args;
-use seismic_tee_context::{Context, ContextArgs, echo};
 
 #[derive(Debug, Clone, Args)]
 pub struct DirArgs {

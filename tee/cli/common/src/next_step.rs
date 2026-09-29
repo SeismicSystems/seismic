@@ -120,9 +120,9 @@ mod tests {
         assert_eq!(
             render_steps(&[
                 "review the inputs".to_string(),
-                "harvest them:\nseismic-tee network harvest".to_string(),
+                "harvest them:\nseismic-tee node harvest".to_string(),
             ]),
-            "\nNext:\n    1. review the inputs\n    2. harvest them:\n       seismic-tee network \
+            "\nNext:\n    1. review the inputs\n    2. harvest them:\n       seismic-tee node \
              harvest\n"
         );
     }

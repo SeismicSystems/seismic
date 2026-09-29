@@ -482,7 +482,7 @@ fn next_after_registration(config: &Config, name: &str) -> Vec<String> {
         if current.is_none() {
             next.push(format!("seismic-tee ctx use {name}"));
         }
-        next.push("seismic-tee network harvest".to_string());
+        next.push("seismic-tee node harvest".to_string());
         return next;
     }
     match (network.nodes.keys().next(), current) {
@@ -1206,15 +1206,12 @@ fqdn = "alpha.example"
                 &config(&format!("current = \"devnet-1\"\n{registered}")),
                 "devnet-1"
             ),
-            ["seismic-tee network harvest"]
+            ["seismic-tee node harvest"]
         );
         // Not selected: select it first.
         assert_eq!(
             next_after_registration(&config(&registered), "devnet-1"),
-            [
-                "seismic-tee ctx use devnet-1",
-                "seismic-tee network harvest"
-            ]
+            ["seismic-tee ctx use devnet-1", "seismic-tee node harvest"]
         );
         // Harvested: the founding is under way or done, so this is a network
         // to use like any other.

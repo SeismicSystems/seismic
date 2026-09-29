@@ -1,7 +1,7 @@
 //! `harvest`: collect and DCAP-verify each cohort box's summit keys.
 //!
 //! ```text
-//! seismic-tee network harvest tee/networks/devnet-3
+//! seismic-tee node harvest tee/networks/devnet-3
 //! ```
 //!
 //! A founding cohort boots identity-free: each box's `summit-key-holder`
@@ -51,16 +51,14 @@ use std::time::{Duration, Instant};
 use anyhow::{Context as _, bail};
 use clap::Args;
 use seismic_measurement_admission::promote_measurements;
+use seismic_tee_common::founding::{is_bare_hex, load_founder_credentials};
 use seismic_tee_common::network_dir::INPUTS_DIRNAME;
 use seismic_tee_common::{Descriptors, NetworkDir, NodeDescriptor, http, next_step};
-use seismic_tee_context::load_nodes;
+use seismic_tee_context::{DirArgs, load_nodes};
 use seismic_verify_quote::{HarvestRecord, SeismicMeasurementPolicy, verify_harvest};
 use serde_json::{Value, json};
 
-use crate::args::DirArgs;
-use crate::assemble::DEFAULT_ATTESTATION_TYPE;
-use crate::founding::{is_bare_hex, load_founder_credentials};
-use crate::init::absolute;
+use crate::verify::DEFAULT_ATTESTATION_TYPE;
 
 /// Holder-readiness polling. The holder starts at network-online — well
 /// before the config POST — so an unreachable box is normally just still
@@ -444,7 +442,9 @@ pub async fn run(args: HarvestArgs) -> anyhow::Result<ExitCode> {
     if !root.is_dir() {
         bail!("network directory not found: {}", root.display());
     }
-    let dir = NetworkDir::new(absolute(&root)?);
+    let root =
+        std::path::absolute(&root).with_context(|| format!("resolving {}", root.display()))?;
+    let dir = NetworkDir::new(root);
     let measurements = dir.input_measurements();
     if !measurements.is_file() {
         bail!(
@@ -517,12 +517,16 @@ pub async fn run(args: HarvestArgs) -> anyhow::Result<ExitCode> {
 
 #[cfg(test)]
 mod tests {
-    use seismic_tee_common::test_support::{FakeServer, refused_url};
+    use seismic_tee_common::test_support::{
+        FakeServer, azure_evidence, no_attestation_evidence, refused_url,
+    };
 
     use super::*;
-    use crate::founding::tests::{azure_evidence, no_attestation_evidence};
 
     const NODE_KEY: &str = "abababababababababababababababababababababababababababababababab";
+    /// A policy the verifier parses: the committed fixture devnet's.
+    const FIXTURE_POLICY: &[u8] =
+        include_bytes!("../../../networks/fixture-devnet/measurement-policy-bootstrap.json");
 
     fn consensus_key() -> String {
         "cd".repeat(48)
@@ -737,8 +741,7 @@ mod tests {
     /// before any collateral is fetched, and the failure burns by name.
     #[tokio::test]
     async fn a_failed_verification_burns_by_name() {
-        let policy =
-            SeismicMeasurementPolicy::from_json_bytes(crate::gates::tests::FIXTURE_POLICY).unwrap();
+        let policy = SeismicMeasurementPolicy::from_json_bytes(FIXTURE_POLICY).unwrap();
         let record = build_record(
             &target("node-1", "http://h:7879"),
             &Quote {

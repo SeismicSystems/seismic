@@ -16,6 +16,7 @@ test-support = ["dep:tempfile"]
 [dependencies]
 seismic-network-manifest.workspace = true
 
+anyhow.workspace = true
 hex.workspace = true
 jsonrpsee.workspace = true
 reqwest.workspace = true

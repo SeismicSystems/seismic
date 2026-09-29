@@ -77,45 +77,28 @@ use std::time::Duration;
 use anyhow::{Context as _, bail};
 use clap::Args;
 use clap_complete::ArgValueCandidates;
+use seismic_tee_common::founding::{FoundingRecords, SUMMIT_CONSENSUS_PORT, load_harvest_records};
 use seismic_tee_common::http::TDX_INIT_PORT;
 use seismic_tee_common::{
-    Artifact, Descriptors, Manifest, NetworkDir, NodeDescriptor, http, next_step, rpc,
+    Artifact, Descriptors, Manifest, NetworkDir, NodeDescriptor, hex_0x, http, next_step, rpc,
 };
 use seismic_tee_context::{Context, ContextArgs, complete, load_nodes};
-use seismic_tee_node::configure::{
-    ConfigInputs, DEFAULT_EMAIL, TDX_INIT_LISTENER_TIMEOUT, TDX_INIT_RETRY_INTERVAL, build_config,
-    post_config_within, render_config, resolve_reth_genesis, resolve_summit_genesis, write_record,
-};
-use seismic_tee_node::status::{POLL_INTERVAL, ProvisioningWatch, poll_provisioning};
-use seismic_tee_node::verify::{
-    PolicySourceArgs, VerifierArgs, challenge_node, check_policy_source_files, resolve_policy,
-    retry_flags,
-};
-use seismic_tee_node::{load_manifest, resolve_manifest};
 use tokio::sync::mpsc;
 use tokio::task::JoinSet;
 
-use crate::args::DirArgs;
 use crate::bootnodes::{self, Bootnode};
+use crate::configure::{
+    ConfigInputs, DEFAULT_EMAIL, TDX_INIT_LISTENER_TIMEOUT, TDX_INIT_RETRY_INTERVAL, build_config,
+    post_config_within, render_config, resolve_reth_genesis, resolve_summit_genesis, write_record,
+};
 use crate::dashboard::CohortDashboard;
-use crate::founding::{FoundingRecords, SUMMIT_CONSENSUS_PORT, load_harvest_records};
-use crate::gates::hex_0x;
 use crate::launch::{self, LaunchTarget};
-
-/// This command, spelled as the next step after `assemble` (written or
-/// `--check`ed), with `genesis` as the genesis node. Which node is genesis is the
-/// founder's call and any founding node is a valid one, so callers pass the
-/// first in name order. `configure` takes the manifest, not `DIR`, so an
-/// explicit `DIR` becomes `--manifest`; an explicit `--context` is repeated
-/// as [`DirArgs::as_args`] would.
-pub fn invocation(genesis: &str, args: &DirArgs, dir: &NetworkDir) -> String {
-    let scope = match (&args.dir, &args.context.context) {
-        (Some(_), _) => format!(" --manifest {}", dir.manifest().display()),
-        (None, Some(context)) => format!(" --context {context}"),
-        (None, None) => String::new(),
-    };
-    format!("seismic-tee network configure --genesis-node {genesis}{scope}")
-}
+use crate::status::{POLL_INTERVAL, ProvisioningWatch, poll_provisioning};
+use crate::verify::{
+    PolicySourceArgs, VerifierArgs, challenge_node, check_policy_source_files, resolve_policy,
+    retry_flags,
+};
+use crate::{load_manifest, resolve_manifest};
 
 /// A whole cohort's wipes tend to finish together, so every challenge hits the
 /// PCCS at once — and a DCAP collateral fetch is the one transient way a
@@ -1204,38 +1187,6 @@ mod tests {
             .collect()
     }
 
-    /// The next-step line `assemble` prints: an explicit `DIR` becomes the
-    /// manifest it holds, an explicit `--context` is repeated, a persisted
-    /// selection needs nothing.
-    #[test]
-    fn the_invocation_carries_the_scope_it_was_given() {
-        let dir = NetworkDir::new("/nets/devnet-1");
-        let args = |dir: Option<&str>, context: Option<&str>| DirArgs {
-            dir: dir.map(PathBuf::from),
-            context: ContextArgs {
-                context: context.map(str::to_string),
-                config: None,
-            },
-        };
-        assert_eq!(
-            invocation("alpha", &args(None, None), &dir),
-            "seismic-tee network configure --genesis-node alpha"
-        );
-        assert_eq!(
-            invocation("alpha", &args(None, Some("devnet-1")), &dir),
-            "seismic-tee network configure --genesis-node alpha --context devnet-1"
-        );
-        assert_eq!(
-            invocation(
-                "alpha",
-                &args(Some("/nets/devnet-1"), Some("devnet-1")),
-                &dir
-            ),
-            "seismic-tee network configure --genesis-node alpha --manifest \
-             /nets/devnet-1/network-manifest.json"
-        );
-    }
-
     #[test]
     fn the_cohort_has_exactly_one_genesis_first() {
         let nodes = build_cohort(
@@ -1562,7 +1513,7 @@ mod tests {
     /// a fake server cannot stand in — and the check says so, per node.
     #[tokio::test]
     async fn check_asserts_the_founding_cohort_and_writes_nothing() {
-        use crate::founding::tests::{
+        use seismic_tee_common::test_support::{
             NODE_KEY_1, descriptors_of, network_dir, record, write_harvest,
         };
 

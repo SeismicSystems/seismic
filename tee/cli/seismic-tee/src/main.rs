@@ -1,20 +1,22 @@
-//! `seismic-tee`: the Seismic TEE deploy CLI — one binary over the three
-//! library crates.
+//! `seismic-tee`: the Seismic TEE deploy CLI — one binary over the library
+//! crates.
 //!
-//! The command groups follow the parties of
+//! The two founding groups are split by the object a command acts on, and the
+//! rule is one line: `network` never contacts a node, and `node` always does.
+//! The rest follow the parties of
 //! [the trust model](https://github.com/SeismicSystems/seismic/blob/main/docs/tee/trust-model.md#the-trust-anchor-per-action),
 //! whose table names who takes each trust-sensitive action in a network's
 //! life:
 //!
 //! - `ctx` — anyone: name a network and select which one — and which of its
 //!   nodes — is current ([`seismic_tee_context::cmd`]).
-//! - `network` — the genesis deployer: found a network. The party's anchor is
-//!   its own verification at assemble, which is what these commands
-//!   implement ([`seismic_tee_network`]).
-//! - `node` — standing up and appraising a node. Named for its subject rather
-//!   than a party: the validator's actions in the table are the enclave's,
-//!   not a human's, and a non-staking full-node operator runs the same
-//!   commands ([`seismic_tee_node`]).
+//! - `network` — the network directory: scaffold its inputs, derive its
+//!   artifact set, remove it. The genesis deployer's anchor is its own
+//!   verification at assemble, which is here ([`seismic_tee_network`]).
+//! - `node` — the cohort, one node or many: harvest a founding cohort's keys,
+//!   configure a node, appraise it, watch it boot ([`seismic_tee_node`]). An
+//!   operator joining a network uses only this group; a founder alternates
+//!   between the two.
 //! - `admission` — governance: measurement admission from the human side,
 //!   the pipeline from an image's measurements to the policy record a
 //!   network accepts. Authoring and review exist today; changing a live
@@ -44,10 +46,10 @@
 //! nodes, read from nothing but the context file.
 //!
 //! This crate is the mount point and nothing else. The library crates' one-way
-//! dependency rule — `common` and `admission` on neither side, `node` only on
-//! `common`, only `network` on both — is what keeps each party's crate free
-//! of the others' dependencies, and a binary that links them all changes
-//! nothing about it.
+//! dependency rule — `node` and `network` on `common` and `context` and on
+//! neither each other, `admission` on neither side — is what keeps each
+//! group's crate free of the others' dependencies, and a binary that links
+//! them all changes nothing about it.
 
 use std::io::Write as _;
 use std::process::{Command as Process, ExitCode, Stdio};
@@ -98,10 +100,10 @@ const VERSION: &str = concat!(
     disable_version_flag = true,
     about = "Found, join, govern and audit a Seismic TEE network",
     long_about = "The Seismic TEE deploy CLI.\n\n\
-                  One command group per party of the trust model — network (the genesis \
-                  deployer: found a network), node (stand up and appraise a node), admission \
-                  (governance: the policies that decide which images a network accepts) — and \
-                  the auditor's verify-founding at the top level.\n\n\
+                  network acts on a network directory and never contacts a node; node \
+                  reaches the running machines, one or a whole cohort; admission is \
+                  governance's (the policies that decide which images a network accepts); \
+                  and the auditor's verify-founding sits at the top level.\n\n\
                   Never provisions: every command starts at the node descriptors the Pulumi \
                   program produces, or at a network directory.",
     // clap 4 dropped the `<name> <version>` line clap 2 and 3 opened help
@@ -187,20 +189,18 @@ enum Command {
         #[command(subcommand)]
         command: CtxCommand,
     },
-    /// Network founder: scaffold a network's inputs, harvest a cohort's
-    /// founding keys, assemble its identity, configure the cohort.
+    /// Network founder: scaffold a network's inputs, assemble its identity,
+    /// configure the cohort.
     #[command(
-        long_about = "Found a Seismic network: scaffold its inputs, harvest a cohort's founding \
-                      keys, assemble its identity, and configure the cohort.\n\n\
-                      Never provisions: like every group it starts at the node descriptors, \
-                      which the Pulumi program produces.\n\n\
-                      Joining an existing network is `seismic-tee node configure`, not a \
-                      command of this group.",
-        after_help = "Commands are listed in the order they should be run: init → harvest → \
-                      assemble → configure. Between init and harvest, provision the cohort with \
-                      the seismic_node Pulumi program (tee/pulumi/seismic_node); pulumi destroy \
-                      tears it down, and rm then deletes the network directory and its \
-                      context entry.\n\n\
+        long_about = "Found a Seismic network: scaffold its inputs, assemble its identity, and \
+                      configure the cohort.\n\n\
+                      Harvesting the cohort's founding keys is `seismic-tee node harvest`: it \
+                      reaches the machines, and every command that does is in the node \
+                      group. Joining an existing network is `seismic-tee node configure`.",
+        after_help = "A founding runs: network init → provision → node harvest → network \
+                      assemble → network configure. Provision the cohort with the seismic_node \
+                      Pulumi program (tee/pulumi/seismic_node); pulumi destroy tears it down, \
+                      and rm then deletes the network directory and its context entry.\n\n\
                       Checking an assembled set later — after a merge, or when it may have \
                       drifted from its inputs — is `assemble --check`: the same derivation, \
                       compared with what is on disk instead of written. Checking a launched \
@@ -212,15 +212,16 @@ enum Command {
     )]
     Network {
         #[command(subcommand)]
-        command: NetworkCommand,
+        command: NetworkGroup,
     },
-    /// Node operator: configure your node on first boot, verify its
-    /// attestation, watch its first-boot disk wipe.
+    /// Node operator: harvest a founding cohort's keys, configure your node
+    /// on first boot, verify its attestation, watch its first-boot disk wipe.
     #[command(
-        long_about = "Stand up and appraise a Seismic TEE node: configure it on first boot, \
-                      verify its attestation, watch its first-boot disk wipe.\n\n\
-                      Cloud-agnostic, and never provisions: each command consumes a descriptor \
-                      of an already-running node and reaches the node over HTTP."
+        long_about = "Reach the running machines of a Seismic TEE network: harvest a founding \
+                      cohort's keys, configure a node on first boot, verify its attestation, \
+                      watch its first-boot disk wipe.\n\n\
+                      Cloud-agnostic, and never provisions: each command consumes the \
+                      descriptors of already-running nodes and reaches them over HTTP."
     )]
     Node {
         #[command(subcommand)]
@@ -245,6 +246,19 @@ enum Command {
     /// Auditor: verify a founding — the genesis validator set's TEE
     /// provenance — from a committed network directory, offline.
     VerifyFounding(VerifyFoundingArgs),
+}
+
+/// The `network` group as mounted: the network crate's commands, plus the
+/// cohort `configure`, which reaches nodes and so lives in the node crate.
+/// It is mounted here until `node configure` takes it over.
+#[derive(Debug, Subcommand)]
+enum NetworkGroup {
+    #[command(flatten)]
+    Directory(NetworkCommand),
+    /// Configure a cohort in parallel: one genesis + N joiners, one command
+    /// (--check: re-assert the launch against the manifest's pins instead of
+    /// configuring).
+    Configure(seismic_tee_node::cohort::ConfigureArgs),
 }
 
 /// The registration script for `shell` (`--completions [SHELL]`), the same
@@ -363,7 +377,10 @@ fn main() -> ExitCode {
             (_, Some(version), _) => run_upgrade(version),
             (None, None, Some(command)) => match command {
                 Command::Ctx { command } => seismic_tee_context::cmd::run(command),
-                Command::Network { command } => seismic_tee_network::run(command).await,
+                Command::Network { command } => match command {
+                    NetworkGroup::Directory(command) => seismic_tee_network::run(command).await,
+                    NetworkGroup::Configure(args) => seismic_tee_node::cohort::run(args).await,
+                },
                 Command::Node { command } => seismic_tee_node::run(command).await,
                 Command::Admission { command } => seismic_tee_admission::run(command),
                 Command::VerifyFounding(args) => {
@@ -454,11 +471,8 @@ mod tests {
                 "unset"
             ]
         );
-        assert_eq!(
-            group("network"),
-            ["init", "harvest", "assemble", "configure", "rm"]
-        );
-        assert_eq!(group("node"), ["configure", "verify", "status"]);
+        assert_eq!(group("network"), ["init", "assemble", "rm", "configure"]);
+        assert_eq!(group("node"), ["harvest", "configure", "verify", "status"]);
         assert_eq!(group("admission"), ["promote", "compile"]);
         assert!(subcommand_names(cli.find_subcommand("verify-founding").unwrap()).is_empty());
     }
@@ -504,7 +518,7 @@ mod tests {
         }
         assert!(arg(&["network", "configure"], "genesis_node"));
         assert!(arg(&["network", "configure"], "join"));
-        assert!(arg(&["network", "harvest"], "context"));
+        assert!(arg(&["node", "harvest"], "context"));
         assert!(arg(&["network", "rm"], "name"));
         assert!(arg(&["verify-founding"], "context"));
         // A path is not a name: the file arguments complete as files.
@@ -517,6 +531,9 @@ mod tests {
     fn retired_spellings_do_not_parse() {
         for argv in [
             vec!["network", "verify-harvest", "n"],
+            // reaching the machines is the node group's
+            vec!["network", "harvest", "n"],
+            vec!["network", "harvest"],
             vec!["verify-harvest", "n"],
             vec!["network", "verify-founding", "n"],
             // re-deriving and comparing is `assemble --check`
@@ -673,12 +690,12 @@ mod tests {
                 "--founders",
                 "4",
             ],
-            vec!["network", "harvest", "tee/networks/devnet-3"],
+            vec!["node", "harvest", "tee/networks/devnet-3"],
             // resolved from the context
-            vec!["network", "harvest"],
-            vec!["network", "harvest", "--nodes", "nodes.json"],
+            vec!["node", "harvest"],
+            vec!["node", "harvest", "--nodes", "nodes.json"],
             vec![
-                "network",
+                "node",
                 "harvest",
                 "n",
                 "--attestation-type",

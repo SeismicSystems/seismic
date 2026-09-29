@@ -1,5 +1,6 @@
 //! HTTP/1.1 servers small enough to live in the tests: canned responses,
 //! a directory of files, recorded requests, and a way to get a refused port.
+//! Beside them, the founding inputs a network directory holds, as fixtures.
 //!
 //! Every network interaction the CLI has is a request to a node and a
 //! read of the reply, so a test needs no more than this to exercise the real
@@ -10,14 +11,16 @@
 use std::collections::BTreeMap;
 use std::io::{Read as _, Write as _};
 use std::net::{SocketAddr, TcpListener, TcpStream};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use serde_json::Value;
+use serde_json::{Value, json};
 use sha2::{Digest as _, Sha256};
+
+use crate::{Descriptors, NetworkDir, NodeDescriptor};
 
 /// The enclave schema crate's `fixtures/network-manifest-v1.json`, byte for
 /// byte: a valid v1 manifest (chain 5124, namespace `seismic-devnet-3`) for
@@ -331,5 +334,86 @@ pub fn refused_url() -> String {
 /// A JSON-RPC 2.0 success envelope around `result`. The `id` is a
 /// placeholder: [`FakeServer`] answers with the request's.
 pub fn rpc_result(result: Value) -> String {
-    serde_json::json!({"jsonrpc": "2.0", "id": 1, "result": result}).to_string()
+    json!({"jsonrpc": "2.0", "id": 1, "result": result}).to_string()
+}
+
+// The founding inputs a network directory holds (see [`crate::founding`]),
+// shared by every crate whose commands read them.
+
+pub const NODE_KEY_1: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+pub const NODE_KEY_2: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+pub fn consensus_key(byte: &str) -> String {
+    byte.repeat(48)
+}
+
+/// Evidence in the backend's own serialization, claiming Azure TDX: a
+/// stand-in quote (`[1, 2, 3]` as base64) under the platform metadata
+/// the holder serves. Parses as an `AttestationExchangeMessage`; never
+/// verifies.
+pub fn azure_evidence() -> serde_json::Value {
+    json!({
+        "attestation_evidence": {
+            "quote": "AQID",
+            "platform": {
+                "attestation_type": "azure-tdx",
+                "ram_bytes": 0,
+                "num_disks": 0,
+                "acpi": null,
+            },
+        },
+    })
+}
+
+/// Evidence declaring no attestation, in the backend's serialization.
+pub fn no_attestation_evidence() -> serde_json::Value {
+    json!({"attestation_evidence": null})
+}
+
+/// A harvest record as the harvest builds it from the holder's answer.
+pub fn record(node_key: &str, consensus_byte: &str) -> serde_json::Value {
+    json!({
+        "harvest_nonce": "11".repeat(32),
+        "node_public_key": node_key,
+        "consensus_public_key": consensus_key(consensus_byte),
+        "evidence": azure_evidence(),
+    })
+}
+
+pub fn write(dir: &NetworkDir, relative: &Path, contents: &str) {
+    let path = dir.root().join(relative);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, contents).unwrap();
+}
+
+pub fn write_harvest(dir: &NetworkDir, name: &str, record: &serde_json::Value) {
+    write(
+        dir,
+        &Path::new("inputs/harvest").join(format!("{name}.json")),
+        &record.to_string(),
+    );
+}
+
+pub fn network_dir() -> (tempfile::TempDir, NetworkDir) {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = NetworkDir::new(tmp.path());
+    (tmp, dir)
+}
+
+/// A cohort's node table, built in memory: a command resolves this from the
+/// context or a descriptor file before the founding inputs are read, so tests
+/// build it directly rather than through a file.
+pub fn descriptors_of(nodes: &[(&str, &str, &str)]) -> Descriptors {
+    nodes
+        .iter()
+        .map(|(name, ip, fqdn)| {
+            (
+                name.to_string(),
+                NodeDescriptor {
+                    public_ip: ip.to_string(),
+                    fqdn: fqdn.to_string(),
+                },
+            )
+        })
+        .collect()
 }

@@ -78,30 +78,34 @@ refuses a tag that does not match the workspace version or is not higher than
 every version already released; its header comment says what to do when a
 run fails.
 
-## How it's organized: one CLI, command groups by party
+## How it's organized: one CLI, command groups by object
 
-The command groups follow
-[the trust model's parties](../docs/tee/trust-model.md#the-trust-anchor-per-action):
-its table names who takes every trust-sensitive action in a network's life,
-and each party with CLI work today gets a group. `network` is the **genesis
-deployer**'s. `node` is standing up and appraising a node — named for its
-subject rather than for the **validator**, because the validator's actions in
-that table are the enclave's, not a human's, and a non-staking full-node
-operator runs the same commands. `admission` is **governance**'s: the pipeline
-from an image's measurements to the policy record a network accepts. The
-**auditor** takes no trust-sensitive action — they verify the others' after the
-fact — which is why `verify-founding` sits at the top level rather than in any
-group. `ctx`, the context file, is everyone's: which network and node the
-other commands act on, kubeconfig-style, holding pointers and never a
-credential.
+The two founding groups are split by what a command acts on, and the rule is
+one line: **`network` never contacts a node, and `node` always does**.
+`network` is the network directory: its authored inputs, the artifact set
+derived from them, and its removal. `node` is the cohort, one node or many:
+every command in it reaches a running machine. A founding therefore alternates
+between the two — `network init` → provision → `node harvest` → `network
+assemble` → configure — which makes plain that `assemble` touches nothing but
+local files. An operator joining a network uses only `node` and never sees
+`init` or `assemble`.
+
+The other groups follow
+[the trust model's parties](../docs/tee/trust-model.md#the-trust-anchor-per-action).
+`admission` is **governance**'s: the pipeline from an image's measurements to
+the policy record a network accepts. The **auditor** takes no trust-sensitive
+action — they verify the others' after the fact — which is why
+`verify-founding` sits at the top level rather than in any group. `ctx`, the
+context file, is everyone's: which network and node the other commands act
+on, kubeconfig-style, holding pointers and never a credential.
 
 | Command | Run by | Purpose |
 |---|---|---|
 | `network init` | founder, once per network | Scaffold a network directory's authored inputs. |
-| `network harvest` | founder, once per network | Collect and DCAP-verify the founding cohort's summit keys into `inputs/harvest/` — the provenance `assemble` pins the validator set from. |
 | `network assemble` | founder, once per network | Derive the artifact set from a network directory's inputs: pins the harvested founding set and mints `network_id`. `--check` re-derives and compares with what is on disk. |
 | `network configure` | founder | Configure a cohort in parallel (one genesis node + N joiners), then run the launch assertions against the manifest's pins. `--check` re-runs those assertions alone on a live cohort. |
 | `network rm` | founder, once the stack is destroyed | Delete a network directory and its context entry, by name — the counterpart of `init`. Refuses a directory git does not ignore, and one with nodes still registered unless `--force`. |
+| `node harvest` | founder, once per network | Collect and DCAP-verify the founding cohort's summit keys into `inputs/harvest/` — the provenance `assemble` pins the validator set from. |
 | `node configure` | any operator, on first boot | POST the node TOML to tdx-init, recording the exact body under `nodes/`; runs `verify` once the node is up. |
 | `node verify` | any operator, whenever they rely on a node | Deploy-verify one node's TDX attestation against the network manifest and the measurement policy it pins. Read-only and re-runnable. |
 | `node status` | any operator | Watch the node's first-boot disk wipe to completion. |
@@ -117,14 +121,14 @@ the reference; nothing here repeats it.
 [`cli/`](cli/) is its own Cargo workspace, scoped to that directory rather
 than the repo root, with its own toolchain pin and lockfile. Five library
 crates and the binary, split by who may depend on whom — a rule the compiler
-enforces, so each party's crate stays free of the others' dependencies:
+enforces, so each group's crate stays free of the others' dependencies:
 
 | Crate | Owns | Depends on |
 |---|---|---|
-| `common` | the node descriptor, the network-directory layout, HTTP and error types | nothing of ours |
+| `common` | the node descriptor, the network-directory layout and the founding inputs it holds, HTTP and error types | nothing of ours |
 | `context` | the `ctx` group and the context file | `common` |
 | `node` | the `node` group | `common`, `context` |
-| `network` | the `network` group and `verify-founding` | all of the above |
+| `network` | the `network` group and `verify-founding` | `common`, `context` |
 | `admission` | the `admission` group | nothing of ours |
 | `seismic-tee` | the binary; mounts the four command-bearing crates | all of the above |
 

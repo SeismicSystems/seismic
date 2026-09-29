@@ -19,8 +19,8 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use crate::{Descriptors, NetworkDir};
 use anyhow::{Context as _, bail};
-use seismic_tee_common::{Descriptors, NetworkDir};
 use serde::Serialize;
 
 /// Summit's consensus (BLS) port: each validator entry in the completed summit
@@ -137,7 +137,7 @@ pub fn load_harvest_records(dir: &NetworkDir) -> anyhow::Result<FoundingRecords>
     if paths.is_empty() {
         bail!(
             "no harvest records in {} — assemble pins the founding validator set from them; \
-             provision the cohort (the Pulumi program's `nodes` map) and run `seismic-tee network \
+             provision the cohort (the Pulumi program's `nodes` map) and run `seismic-tee node \
              harvest` first",
             harvest_dir.display()
         );
@@ -349,73 +349,13 @@ pub fn load_founding_set(dir: &NetworkDir, ips: &ValidatorIps<'_>) -> anyhow::Re
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
-    use seismic_tee_common::NodeDescriptor;
+mod tests {
     use serde_json::json;
 
     use super::*;
-
-    pub(crate) const NODE_KEY_1: &str =
-        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    pub(crate) const NODE_KEY_2: &str =
-        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-
-    pub(crate) fn consensus_key(byte: &str) -> String {
-        byte.repeat(48)
-    }
-
-    /// Evidence in the backend's own serialization, claiming Azure TDX: a
-    /// stand-in quote (`[1, 2, 3]` as base64) under the platform metadata
-    /// the holder serves. Parses as an `AttestationExchangeMessage`; never
-    /// verifies.
-    pub(crate) fn azure_evidence() -> serde_json::Value {
-        json!({
-            "attestation_evidence": {
-                "quote": "AQID",
-                "platform": {
-                    "attestation_type": "azure-tdx",
-                    "ram_bytes": 0,
-                    "num_disks": 0,
-                    "acpi": null,
-                },
-            },
-        })
-    }
-
-    /// Evidence declaring no attestation, in the backend's serialization.
-    pub(crate) fn no_attestation_evidence() -> serde_json::Value {
-        json!({"attestation_evidence": null})
-    }
-
-    /// A harvest record as the harvest builds it from the holder's answer.
-    pub(crate) fn record(node_key: &str, consensus_byte: &str) -> serde_json::Value {
-        json!({
-            "harvest_nonce": "11".repeat(32),
-            "node_public_key": node_key,
-            "consensus_public_key": consensus_key(consensus_byte),
-            "evidence": azure_evidence(),
-        })
-    }
-
-    pub(crate) fn write(dir: &NetworkDir, relative: &Path, contents: &str) {
-        let path = dir.root().join(relative);
-        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, contents).unwrap();
-    }
-
-    pub(crate) fn write_harvest(dir: &NetworkDir, name: &str, record: &serde_json::Value) {
-        write(
-            dir,
-            &Path::new("inputs/harvest").join(format!("{name}.json")),
-            &record.to_string(),
-        );
-    }
-
-    pub(crate) fn network_dir() -> (tempfile::TempDir, NetworkDir) {
-        let tmp = tempfile::tempdir().unwrap();
-        let dir = NetworkDir::new(tmp.path());
-        (tmp, dir)
-    }
+    use crate::test_support::{
+        NODE_KEY_1, NODE_KEY_2, descriptors_of, network_dir, record, write, write_harvest,
+    };
 
     #[test]
     fn hex_spellings_are_checked_not_normalized() {
@@ -479,7 +419,7 @@ pub(crate) mod tests {
         let (_tmp, dir) = network_dir();
         let err = load_harvest_records(&dir).unwrap_err().to_string();
         assert!(err.contains("no harvest records"), "{err}");
-        assert!(err.contains("seismic-tee network harvest"), "{err}");
+        assert!(err.contains("seismic-tee node harvest"), "{err}");
     }
 
     #[test]
@@ -511,24 +451,6 @@ pub(crate) mod tests {
         write_harvest(&dir, "node-2", &record(NODE_KEY_2, "cc"));
         let err = load_harvest_records(&dir).unwrap_err().to_string();
         assert!(err.contains("consensus_public_key"), "{err}");
-    }
-
-    /// A cohort's node table, built in memory: `load_founding_set`'s caller
-    /// resolves this from the context or `--nodes` before calling it, so the
-    /// tests here build it directly rather than through a file.
-    pub(crate) fn descriptors_of(nodes: &[(&str, &str, &str)]) -> Descriptors {
-        nodes
-            .iter()
-            .map(|(name, ip, fqdn)| {
-                (
-                    name.to_string(),
-                    NodeDescriptor {
-                        public_ip: ip.to_string(),
-                        fqdn: fqdn.to_string(),
-                    },
-                )
-            })
-            .collect()
     }
 
     #[test]

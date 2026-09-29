@@ -1,29 +1,42 @@
-//! `node`: stand up and appraise a node — the operator's command group.
+//! `node`: the cohort — one node or many — and everything that reaches a
+//! running machine.
 //!
-//! The group is named for its subject rather than for a party of the trust
-//! model. The validator's trust-sensitive actions there — release and fetch
+//! The group is named for the object its commands act on, and the rule that
+//! holds it together is one line: **every command here contacts a node**. The
+//! `network` group (the `seismic-tee-network` crate) is the other half of the
+//! rule: it acts on the network directory and never contacts a node. The
+//! commands are cloud-agnostic and start at the node descriptor: each
+//! consumes the descriptors of already-running nodes and talks to them over
+//! HTTP. **They never provision**: producing descriptors is the Pulumi
+//! program's job.
+//!
+//! The parties still map. An operator joining a network uses only this group
+//! and never sees `init` or `assemble`; a founder uses both, alternating
+//! between them. The validator's trust-sensitive actions — release and fetch
 //! `root_key`, stake, resync — are the enclave's, not a human's, and a
-//! non-staking full-node operator runs exactly these commands, so what the
-//! commands share is the node. They are cloud-agnostic and start at the node
-//! descriptor: each consumes a descriptor for an already-running node and
-//! talks to it over HTTP. **They never provision**: producing descriptors is
-//! the Pulumi program's job. Founding a network is the `network` group's
-//! ([`seismic_tee_network`]), and this crate must never depend on it: the
-//! crates are split on that line so the compiler enforces it, and this half
-//! plus [`seismic_tee_common`] stays free of founder-only dependencies
-//! whichever binary mounts it.
+//! non-staking full-node operator runs exactly these commands.
 //!
-//! Three commands, in the order an operator meets them: [`configure`]
-//! delivers a node's config on first boot and waits for it to come up,
-//! [`verify`] appraises a running node's attestation, and [`status`] watches
-//! the first-boot disk wipe on its own. The `network` group configures a
-//! cohort by doing to each node what these do to one, so the flows behind the
-//! commands — building the config, POSTing it, the status poller, the
-//! appraisal — are this crate's library surface as well as its command
-//! group's.
+//! Commands, in the order a founding meets them: [`harvest`] collects and
+//! DCAP-verifies a founding cohort's keys into the network directory;
+//! [`configure`] delivers a node's config on first boot and waits for it to
+//! come up, and [`cohort`] does it for a whole founding cohort at once, then
+//! asserts the launch against what the manifest pins; [`verify`] appraises a
+//! running node's attestation; and [`status`] watches the first-boot disk
+//! wipe on its own. The cohort flow does to each node what the single-node
+//! commands do to one, so building the config, POSTing it, the status poller
+//! and the appraisal are shared library surface.
+//!
+//! This crate and the network crate depend on neither each other, only on
+//! [`seismic_tee_common`] and [`seismic_tee_context`]: the network-directory
+//! layout and the founding inputs both halves read live there.
 
 pub mod args;
+pub mod bootnodes;
+pub mod cohort;
 pub mod configure;
+pub mod dashboard;
+pub mod harvest;
+pub mod launch;
 pub mod status;
 pub mod verify;
 
@@ -43,6 +56,9 @@ use seismic_tee_context::{Context, ContextArgs};
 /// lists them in.
 #[derive(Debug, Subcommand)]
 pub enum NodeCommand {
+    /// Harvest + DCAP-verify a founding cohort's summit keys into the network
+    /// directory's inputs/.
+    Harvest(harvest::HarvestArgs),
     /// Configure a node to join a network: assemble + POST config to tdx-init.
     Configure(configure::ConfigureArgs),
     /// Deploy-verify a node's TDX attestation against the intended image.
@@ -54,6 +70,7 @@ pub enum NodeCommand {
 /// Run one `node` command.
 pub async fn run(command: NodeCommand) -> anyhow::Result<ExitCode> {
     match command {
+        NodeCommand::Harvest(args) => harvest::run(args).await,
         NodeCommand::Configure(args) => configure::run(args).await,
         NodeCommand::Verify(args) => verify::run(args).await,
         NodeCommand::Status(args) => status::run(args).await,
@@ -105,14 +122,15 @@ mod tests {
         Probe::command().debug_assert();
     }
 
-    /// The three operator commands, listed in workflow order.
+    /// The commands, listed in workflow order: harvest is a founding's, the
+    /// rest an operator's.
     #[test]
     fn the_commands_are_listed_in_workflow_order() {
         let names: Vec<_> = Probe::command()
             .get_subcommands()
             .map(|c| c.get_name().to_string())
             .collect();
-        assert_eq!(names, ["configure", "verify", "status"]);
+        assert_eq!(names, ["harvest", "configure", "verify", "status"]);
     }
 
     #[test]
