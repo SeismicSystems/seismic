@@ -56,7 +56,7 @@ The committed `summit-genesis.toml` is a founding-era snapshot: its
 validator entries carry the IPs the cohort had at assemble time, which
 are network topology, not identity — summit's config digest (the
 manifest's pin) excludes them, and peers authenticate by the pinned
-ed25519 keys. `seismic-tee network configure` therefore splices each
+ed25519 keys. `seismic-tee node configure` therefore splices each
 box's current descriptor IP into the copy it delivers, touching no other
 field, and then asserts the launch against the pins (reth block 0,
 holder keys). The committed file itself never changes after assemble.

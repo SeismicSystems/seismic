@@ -23,8 +23,8 @@
 //!   reviewer at, and what the enclave's golden fixtures are regenerated
 //!   with. The review step before a record is pinned or proposed.
 //!
-//! The group is a crate of its own, depending on neither the operator nor the
-//! founder side, so that what governance needs — today the admission
+//! The group is a crate of its own, depending on neither the node nor the
+//! network crate, so that what governance needs — today the admission
 //! compiler, later a transaction client and a signer — never becomes a
 //! dependency of theirs.
 //!

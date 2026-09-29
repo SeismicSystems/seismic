@@ -19,12 +19,12 @@
 //! Commands, in the order a founding meets them: [`harvest`] collects and
 //! DCAP-verifies a founding cohort's keys into the network directory;
 //! [`configure`] delivers a node's config on first boot and waits for it to
-//! come up, and [`cohort`] does it for a whole founding cohort at once, then
-//! asserts the launch against what the manifest pins; [`verify`] appraises a
-//! running node's attestation; and [`status`] watches the first-boot disk
-//! wipe on its own. The cohort flow does to each node what the single-node
-//! commands do to one, so building the config, POSTing it, the status poller
-//! and the appraisal are shared library surface.
+//! come up — one node joining a live network, or a whole founding cohort at
+//! once ([`cohort`]), whose launch it then asserts against what the manifest
+//! pins; [`verify`] appraises a running node's attestation; and [`status`]
+//! watches the first-boot disk wipe on its own. The cohort flow does to each
+//! node what the single-node flows do to one, so building the config, POSTing
+//! it, the status poller and the appraisal are shared library surface.
 //!
 //! This crate and the network crate depend on neither each other, only on
 //! [`seismic_tee_common`] and [`seismic_tee_context`]: the network-directory
@@ -59,7 +59,9 @@ pub enum NodeCommand {
     /// Harvest + DCAP-verify a founding cohort's summit keys into the network
     /// directory's inputs/.
     Harvest(harvest::HarvestArgs),
-    /// Configure a node to join a network: assemble + POST config to tdx-init.
+    /// Configure nodes on first boot: join one to a live network
+    /// (--bootnode), or found a cohort (--genesis-node [--join …]); --check
+    /// re-asserts a founded cohort's launch.
     Configure(configure::ConfigureArgs),
     /// Deploy-verify a node's TDX attestation against the intended image.
     Verify(verify::VerifyArgs),

@@ -2,7 +2,8 @@
 //! single-node command names its node.
 //!
 //! Shared by `configure`, `verify` and `status`, so an operator who learns
-//! one command's way of pointing at a node has learned all three. The file is
+//! one command's way of pointing at a node has learned all three — and
+//! `harvest` spells its cohort's file the same way. The file is
 //! the descriptor map (see [`seismic_tee_common::descriptor`]); `--name`
 //! picks the entry when the map holds several. Omitting `--node` falls back
 //! to `seismic-tee`'s context (`seismic-tee ctx use <network>/<node>`), so a
@@ -20,8 +21,9 @@ use seismic_tee_context::{Context, ContextArgs, Selection, complete, echo};
 pub struct NodeArgs {
     /// Descriptor map JSON: `pulumi stack output nodes --json`, i.e.
     /// {<name>: {public_ip, fqdn}, …}. Provides the node's public_ip/fqdn.
-    /// With one entry it is the node; with several, --name says which. Omit
-    /// it to use the current context (`seismic-tee ctx use`).
+    /// With one entry it is the node; with several, --name says which (for
+    /// `configure --genesis-node` and `--check`, it is the whole cohort).
+    /// Omit it to use the current context (`seismic-tee ctx use`).
     #[arg(long, value_name = "FILE")]
     pub node: Option<PathBuf>,
 

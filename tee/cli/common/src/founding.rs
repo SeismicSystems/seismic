@@ -5,7 +5,7 @@
 //! (`inputs/founder-withdrawal-credentials.json`), the harvested founding
 //! records (`inputs/harvest/<node>.json`), and the cohort's node table —
 //! the context file's `[networks.<name>.nodes]`, imported by `ctx set-nodes`,
-//! or `--nodes FILE` for a script's complete record. `harvest` reads the
+//! or a descriptor file for a script's complete record. `harvest` reads the
 //! credentials and the table to size the cohort before it fetches anything;
 //! `assemble` pairs all three into the founding validator set it pins (under
 //! `--check`, the IPs come from the summit genesis on disk instead of the

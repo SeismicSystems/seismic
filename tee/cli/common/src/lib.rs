@@ -1,15 +1,14 @@
 //! Shared foundation of the deploy CLI's two command-bearing crates.
 //!
-//! Everything here is common to `seismic-tee-node` (the `node` group: act on
-//! your own node) and `seismic-tee-network` (the `network` group and the rest
-//! of the founder side): the node descriptor map that is the seam between
-//! them, the network-directory layout they both read, the manifest they both
-//! trust and the gates it puts the other artifacts through, and the HTTP,
-//! JSON-RPC and error types they both speak.
+//! Everything here is common to `seismic-tee-node` (the `node` group: reach
+//! the running machines) and `seismic-tee-network` (the `network` group: the
+//! network directory): the node descriptor map, the network-directory layout
+//! and the founding inputs it holds, which both read, the manifest they both
+//! trust, and the HTTP, JSON-RPC and error types they both speak.
 //!
-//! This crate depends on neither side, so nothing founder-only belongs in it:
-//! the node crate must stay buildable without a single founder-only
-//! dependency, whichever binary mounts it. `seismic-tee-context` is a peer
+//! This crate depends on neither side, so nothing only one side needs
+//! belongs in it: each crate must stay buildable without the other's
+//! dependencies, whichever binary mounts it. `seismic-tee-context` is a peer
 //! rather than a dependent here: it depends on this crate (for the
 //! descriptor type and the network-directory layout it resolves a selection
 //! to), but nothing in this crate depends on it.

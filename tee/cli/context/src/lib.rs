@@ -17,8 +17,8 @@
 //! credential or a policy default — everything in it is *where to look*,
 //! nothing is *what to do* once a command gets there.
 //!
-//! This crate depends on `seismic-tee-common` alone, so every command group —
-//! operator or founder side — may read it.
+//! This crate depends on `seismic-tee-common` alone, so every command group
+//! may read it.
 
 pub mod args;
 pub mod cmd;
@@ -264,10 +264,11 @@ pub fn echo(selection: &Selection, resolved: &dyn std::fmt::Display) {
 /// A cohort's node table: `flag` when given, else the selected network's.
 ///
 /// The shared resolution behind every command that needs a whole cohort
-/// rather than one node — `harvest`, the cohort `configure` — each with
-/// its own escape-hatch flag (`--nodes FILE`, the `pulumi stack output nodes
-/// --json` shape); `flag_name` is spelled into the "no context selected"
-/// error, naming the one flag this particular caller actually has.
+/// rather than one node — `harvest`, founding `configure`, `assemble` — each
+/// with its own escape-hatch flag (`--node FILE` in the node group, `--nodes
+/// FILE` on assemble; the `pulumi stack output nodes --json` shape either
+/// way); `flag_name` is spelled into the "no context selected" error, naming
+/// the one flag this particular caller actually has.
 pub fn load_nodes(
     flag: Option<&Path>,
     args: &ContextArgs,

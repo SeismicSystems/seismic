@@ -587,7 +587,7 @@ pub async fn run(args: InitArgs) -> anyhow::Result<ExitCode> {
         ),
         format!("provision the cohort: {RUNBOOK_PROVISION_URL}"),
         "harvest its founding keys from the node table the provisioner prints (pulumi stack \
-         output nodes --json > nodes.json):\nseismic-tee node harvest --nodes nodes.json"
+         output nodes --json > nodes.json):\nseismic-tee node harvest --node nodes.json"
             .to_string(),
     ]);
     // What the registration above bought, and what importing the cohort adds
@@ -596,7 +596,7 @@ pub async fn run(args: InitArgs) -> anyhow::Result<ExitCode> {
         &format!(
             "{name} is registered and selected in {},\nso harvest and every command after it find \
              the network directory without DIR.\nImport the node table too, and they find the \
-             cohort without --nodes:",
+             cohort without a descriptor file:",
             config_path.display()
         ),
         &[format!(

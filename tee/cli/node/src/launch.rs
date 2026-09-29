@@ -437,7 +437,7 @@ pub async fn assert_cohort_holder_keys(
          `up`) rather than running degraded."
     } else {
         "Holders that never answered may still be booting — re-assert once the cohort settles: \
-         `seismic-tee network configure --check`."
+         `seismic-tee node configure --check`."
     };
     bail!(
         "{} box(es) not serving their pinned founding keys after {}s; the launch assertion \

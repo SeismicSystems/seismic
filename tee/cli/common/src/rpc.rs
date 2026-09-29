@@ -1,8 +1,8 @@
 //! JSON-RPC 2.0 over HTTP, as the attestation service speaks it on `:7878`.
 //!
 //! The attestation service is the one endpoint a deployed node exposes for
-//! the whole of its life, and both command groups read it: `status` (and `configure`'s
-//! post-POST wait) poll `getLuksProvisioningStatus`. The deploy-verification
+//! the whole of its life: `status` (and `configure`'s post-POST wait) poll
+//! `getLuksProvisioningStatus`. The deploy-verification
 //! challenge (`getDeployVerificationEvidence`) is *not* made here: it belongs
 //! to the enclave's verify-quote library, which mints the nonce and checks the
 //! answer, and which brings its own client for exactly that call. What this

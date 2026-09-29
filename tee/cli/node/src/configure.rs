@@ -1,4 +1,5 @@
-//! `configure`: configure a provisioned node to JOIN a network.
+//! `configure`: deliver a provisioned node's config on first boot — one node
+//! joining a live network, or a whole founding cohort.
 //!
 //! Assemble a node's tdx-init config from flags + a descriptor + the network
 //! manifest, and POST it to the node's tdx-init HTTP receiver:
@@ -8,13 +9,15 @@
 //!     --bootnode enode://<pubkey>@<ip>:30303 --manifest m.json
 //! ```
 //!
-//! The `node` group only ever *joins* an existing network (`genesis_node =
-//! false`): the node fetches `root_key` via `getWrappedRootKey` from a peer
+//! With `--bootnode`, the node *joins* an existing network (`genesis_node =
+//! false`): it fetches `root_key` via `getWrappedRootKey` from a peer
 //! tdx-init derives from `--bootnode` (`http://<host>:7878` per bootnode).
-//! Founding a network — designating the one genesis node that mints `root_key`
-//! locally — is owned by `seismic-tee network configure`, not exposed here.
-//! [`build_config`] and [`post_config`] are the shared primitives both groups
-//! call; `genesis_node` is a library-only knob with no flag on this command.
+//! With `--genesis-node`, the same command founds a cohort instead —
+//! designating the one genesis node that mints `root_key` locally — and with
+//! `--check` it re-asserts a founded cohort's launch; both are
+//! [`crate::cohort`]'s. [`build_config`] and [`post_config`] are the
+//! primitives every shape shares. The rest of this page is the joining
+//! shape's.
 //!
 //! The node is deploy-verified once it reaches a ready state — the `verify`
 //! step, run inline here so a node is appraised in the same breath it is
@@ -55,14 +58,16 @@ use std::time::{Duration, Instant};
 use anyhow::{Context as _, bail};
 use base64::Engine as _;
 use clap::Args;
+use clap_complete::ArgValueCandidates;
 use seismic_tee_common::http::ATTESTATION_RPC_PORT;
 use seismic_tee_common::{Artifact, Manifest, NetworkDir, NodeDescriptor, http, next_step, rpc};
+use seismic_tee_context::complete;
 use sha2::{Digest as _, Sha256};
 use tdx_init_config::{DomainConfig, InitConfig, NetworkConfig, NodeConfig};
 
 use crate::args::NodeArgs;
-use crate::status;
 use crate::verify::{self, PolicySourceArgs, VerifierArgs};
+use crate::{cohort, launch, status};
 
 /// How long to wait for tdx-init's HTTP listener to come up. tdx-init starts
 /// after persistent-luks-setup, which can take ~20-40s on first boot (LUKS
@@ -146,8 +151,8 @@ pub struct ConfigInputs<'a> {
     pub fqdn: &'a str,
     /// → `[node.domain].email`, the Let's Encrypt registration.
     pub email: &'a str,
-    /// Only ever `true` from the founding command; the operator `configure`
-    /// always joins.
+    /// Only ever `true` when founding (`--genesis-node`); `--bootnode` always
+    /// joins.
     pub genesis_node: bool,
 }
 
@@ -469,10 +474,43 @@ pub fn print_summary(fqdn: &str, public_ip: &str, record: &Path) {
     println!("\n{rule}\n");
 }
 
+/// One command, three shapes, told apart by the flags that name the target:
+/// `--bootnode` joins one node to a live network (`--name`, `--node` or the
+/// context say which), `--genesis-node` founds a cohort (every other node in
+/// the table joins it, or the `--join` subset), and `--check` re-asserts a
+/// founded cohort's launch. There is no default among them: delivery is one
+/// POST per boot, and founding mints `root_key`, so the target is always
+/// named.
 #[derive(Debug, Args)]
 pub struct ConfigureArgs {
     #[command(flatten)]
     pub node: NodeArgs,
+
+    /// Found a cohort, with this node as its genesis — the node that mints
+    /// root_key locally and that the joiners fetch it from — as keyed in the
+    /// cohort's node table. Exactly one node per network is genesis;
+    /// assigning it here (not a per-node flag) makes a double-genesis split
+    /// impossible. Every node must have a founding harvest record.
+    #[arg(
+        long,
+        value_name = "NAME",
+        conflicts_with_all = ["name", "yes", "dump_config"],
+        add = ArgValueCandidates::new(complete::nodes)
+    )]
+    pub genesis_node: Option<String>,
+
+    /// With --genesis-node: a joining node of the founding cohort (fetches
+    /// root_key from genesis via getWrappedRootKey). Repeatable. Default:
+    /// every other node in the cohort's node table; name a subset to
+    /// configure only those.
+    #[arg(
+        long,
+        value_name = "NAME",
+        requires = "genesis_node",
+        conflicts_with = "bootnode",
+        add = ArgValueCandidates::new(complete::nodes)
+    )]
+    pub join: Option<Vec<String>>,
 
     /// Network manifest JSON (from `seismic-tee network assemble`). Merged
     /// into the POSTed config as [network].manifest_base64; shared across
@@ -481,7 +519,7 @@ pub struct ConfigureArgs {
     #[arg(long, value_name = "FILE")]
     pub manifest: Option<PathBuf>,
 
-    /// reth genesis JSON POSTed to the node as [network].reth_genesis_base64;
+    /// reth genesis JSON POSTed to each node as [network].reth_genesis_base64;
     /// tdx-init writes it to /run/seismic/conf/reth-genesis.json for reth's
     /// --chain. Must be the file the manifest's eth.genesis_hash was computed
     /// from. Default: reth-genesis.json beside --manifest (the artifact-set
@@ -489,22 +527,29 @@ pub struct ConfigureArgs {
     #[arg(long, value_name = "FILE")]
     pub reth_genesis: Option<PathBuf>,
 
-    /// summit genesis TOML POSTed to the node as
+    /// summit genesis TOML POSTed to each node as
     /// [network].summit_genesis_base64; tdx-init writes it to
     /// /run/seismic/conf/summit-genesis.toml for summit's --genesis-path.
     /// Must be the file the manifest's summit.genesis_config_digest was
-    /// computed from. Default: summit-genesis.toml beside --manifest (the
-    /// artifact-set layout `assemble` produces).
+    /// computed from; founding splices each validator's current IP into it.
+    /// Default: summit-genesis.toml beside --manifest (the artifact-set layout
+    /// `assemble` produces).
     #[arg(long, value_name = "FILE")]
     pub summit_genesis: Option<PathBuf>,
 
-    /// Bootnode enode URL (enode://<pubkey>@<host>:<port>) →
-    /// [network].bootnodes. reth dials it on startup, and tdx-init derives the
-    /// root_key fetch peer from it (http://<host>:7878). Repeatable; required
-    /// — a joining node has no root_key of its own. Fetch a running node's
-    /// enode from its seismic_nodeInfo RPC (the founding set a network writes
-    /// to nodes/bootnodes.json).
-    #[arg(long, value_name = "ENODE", required = true)]
+    /// Join one node to a live network through this bootnode enode URL
+    /// (enode://<pubkey>@<host>:<port>) → [network].bootnodes. reth dials it
+    /// on startup, and tdx-init derives the root_key fetch peer from it
+    /// (http://<host>:7878). Repeatable; required unless founding or
+    /// checking — a joining node has no root_key of its own. Fetch a running
+    /// node's enode from its seismic_nodeInfo RPC (the founding set a
+    /// network writes to nodes/bootnodes.json).
+    #[arg(
+        long,
+        value_name = "ENODE",
+        required_unless_present_any = ["genesis_node", "check"],
+        conflicts_with = "genesis_node"
+    )]
     pub bootnode: Vec<String>,
 
     /// Contact email for the node's Let's Encrypt registration (certbot); goes
@@ -512,22 +557,21 @@ pub struct ConfigureArgs {
     #[arg(long, default_value = DEFAULT_EMAIL)]
     pub email: String,
 
-    /// Configure the node without deploy-verifying it. By default the node is
-    /// appraised once it is up — the same check as `seismic-tee node verify`,
-    /// against the policy --manifest pins — and this command exits nonzero
-    /// unless it passes.
+    /// Configure without deploy-verifying. By default each node is appraised
+    /// once it is up — the same check as `seismic-tee node verify`, against
+    /// the policy --manifest pins — and a node that fails counts as failed.
     #[arg(long)]
     pub no_verify: bool,
 
-    /// Send the config without asking. Takes the node's name: you name the
-    /// box you meant, so a stale context fails loudly instead of configuring
-    /// the wrong one. Without it, configure shows what it is about to POST
-    /// and waits for a `y` on the terminal; with no terminal (a script, CI)
-    /// it refuses to send unless this is passed.
+    /// Joining: send the config without asking. Takes the node's name: you
+    /// name the box you meant, so a stale context fails loudly instead of
+    /// configuring the wrong one. Without it, configure shows what it is
+    /// about to POST and waits for a `y` on the terminal; with no terminal (a
+    /// script, CI) it refuses to send unless this is passed.
     #[arg(long, short = 'y', value_name = "NAME")]
     pub yes: Option<String>,
 
-    /// Where to write the rendered TOML, byte-exact as POSTed. Default:
+    /// Joining: where to write the rendered TOML, byte-exact as POSTed. Default:
     /// nodes/<name>.init-config.toml beside --manifest (the network
     /// directory's per-deploy tier). Written before the POST, so it records
     /// the attempt whatever comes of it, and is a body `curl` can replay.
@@ -539,9 +583,47 @@ pub struct ConfigureArgs {
 
     #[command(flatten)]
     pub verifier: VerifierArgs,
+
+    /// Run a founded cohort's launch assertions and nothing else: every
+    /// founding node's reth must serve the manifest's eth.genesis_hash as
+    /// block 0, and every founding box's holder its harvested keys.
+    /// Configures nothing, writes nothing; for after a launch whose holders
+    /// had not settled, a reboot, a re-image, or whenever the cohort may have
+    /// drifted from its pins. Takes only --manifest and --node (or the
+    /// context): roles, genesis files and the appraisal are delivery's, so
+    /// their flags are refused.
+    #[arg(
+        long,
+        conflicts_with_all = [
+            "genesis_node",
+            "join",
+            "bootnode",
+            "name",
+            "yes",
+            "dump_config",
+            "reth_genesis",
+            "summit_genesis",
+            "no_verify",
+            "policy",
+            "measurements",
+            "pccs_url",
+        ]
+    )]
+    pub check: bool,
 }
 
 pub async fn run(args: ConfigureArgs) -> anyhow::Result<ExitCode> {
+    if args.check {
+        return cohort::check(&args, launch::CHECK_TIMEOUT).await;
+    }
+    if let Some(genesis_node) = &args.genesis_node {
+        return cohort::found(&args, genesis_node).await;
+    }
+    join(args).await
+}
+
+/// Join one node to a live network: preview, confirm, POST, watch, appraise.
+async fn join(args: ConfigureArgs) -> anyhow::Result<ExitCode> {
     let (name, descriptor) = args.node.load()?;
     verify::check_policy_source_files(&args.policy_source, args.no_verify)?;
     let manifest_path = crate::resolve_manifest(args.manifest.as_deref(), &args.node.context)?;

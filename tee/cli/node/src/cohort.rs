@@ -1,7 +1,8 @@
-//! `configure`: found a network in one command.
+//! `configure --genesis-node` and `configure --check`: found a network in one
+//! command, and re-assert the launch of one founded.
 //!
 //! ```text
-//! seismic-tee network configure --genesis-node devnet-3-1 \
+//! seismic-tee node configure --genesis-node devnet-3-1 \
 //!     --manifest tee/networks/devnet-3/network-manifest.json
 //! ```
 //!
@@ -51,11 +52,12 @@
 //! the launch assertions (see [`crate::launch`]) verify each box against what
 //! the manifest pins.
 //!
-//! Founding is the founder's act, so this lives in the `network` group; joining
-//! an already-live network is `seismic-tee node configure`. Both go
-//! through the node crate's `build_config` / `post_config` primitives and its
-//! status poller, so each node's POSTed config and wipe-watch are identical —
-//! only `[node].genesis_node` and the bootnode set differ.
+//! Founding and joining an already-live network (`configure --bootnode`, in
+//! [`crate::configure`]) are one command because they are one act: POST a
+//! config to one or more boxes, then verify. Both go through the same
+//! `build_config` / `post_config` primitives and status poller, so each
+//! node's POSTed config and wipe-watch are identical — only
+//! `[node].genesis_node` and the bootnode set differ.
 //!
 //! `--check` runs the launch assertions and nothing else: no config is built
 //! or POSTed, nothing is written, and every founding node — every box with a
@@ -69,35 +71,30 @@
 //! answer is reported as such and the check is re-run once it is.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::ExitCode;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context as _, bail};
-use clap::Args;
-use clap_complete::ArgValueCandidates;
 use seismic_tee_common::founding::{FoundingRecords, SUMMIT_CONSENSUS_PORT, load_harvest_records};
 use seismic_tee_common::http::TDX_INIT_PORT;
 use seismic_tee_common::{
     Artifact, Descriptors, Manifest, NetworkDir, NodeDescriptor, hex_0x, http, next_step, rpc,
 };
-use seismic_tee_context::{Context, ContextArgs, complete, load_nodes};
+use seismic_tee_context::{Context, load_nodes};
 use tokio::sync::mpsc;
 use tokio::task::JoinSet;
 
 use crate::bootnodes::{self, Bootnode};
 use crate::configure::{
-    ConfigInputs, DEFAULT_EMAIL, TDX_INIT_LISTENER_TIMEOUT, TDX_INIT_RETRY_INTERVAL, build_config,
+    ConfigInputs, ConfigureArgs, TDX_INIT_LISTENER_TIMEOUT, TDX_INIT_RETRY_INTERVAL, build_config,
     post_config_within, render_config, resolve_reth_genesis, resolve_summit_genesis, write_record,
 };
 use crate::dashboard::CohortDashboard;
 use crate::launch::{self, LaunchTarget};
 use crate::status::{POLL_INTERVAL, ProvisioningWatch, poll_provisioning};
-use crate::verify::{
-    PolicySourceArgs, VerifierArgs, challenge_node, check_policy_source_files, resolve_policy,
-    retry_flags,
-};
+use crate::verify::{challenge_node, check_policy_source_files, resolve_policy, retry_flags};
 use crate::{load_manifest, resolve_manifest};
 
 /// A whole cohort's wipes tend to finish together, so every challenge hits the
@@ -794,106 +791,12 @@ fn report(
     );
 }
 
-#[derive(Debug, Args)]
-pub struct ConfigureArgs {
-    /// Name of the one genesis node — the node that mints root_key locally
-    /// and that the joiners fetch it from — as keyed in the cohort's node
-    /// table. Exactly one node per network is genesis; assigning it here (not
-    /// a per-node flag) makes a double-genesis split impossible. Required,
-    /// except under --check, which assigns no roles.
-    #[arg(
-        long,
-        value_name = "NAME",
-        required_unless_present = "check",
-        add = ArgValueCandidates::new(complete::nodes)
-    )]
-    pub genesis_node: Option<String>,
-
-    /// Name of a joining node (fetches root_key from genesis via
-    /// getWrappedRootKey). Repeatable. Default: every other node in the
-    /// cohort's node table; name a subset to configure only those.
-    #[arg(long, value_name = "NAME", add = ArgValueCandidates::new(complete::nodes))]
-    pub join: Option<Vec<String>>,
-
-    /// Network manifest JSON (from `assemble`); → [network]. The network
-    /// directory is the one it sits in: the harvest and the genesis files it
-    /// pins are read from there. Omit it to use the current context's
-    /// network.
-    #[arg(long, value_name = "FILE")]
-    pub manifest: Option<PathBuf>,
-
-    /// Cohort's node table: `pulumi stack output nodes --json`, i.e.
-    /// {<name>: {public_ip, fqdn}, …}. Omit it to use the current context's
-    /// network.
-    #[arg(long, value_name = "FILE")]
-    pub nodes: Option<PathBuf>,
-
-    /// reth genesis JSON POSTed to every node; → [network].reth_genesis_base64.
-    /// Default: reth-genesis.json beside --manifest (the artifact-set layout).
-    #[arg(long, value_name = "FILE")]
-    pub reth_genesis: Option<PathBuf>,
-
-    /// summit genesis TOML POSTed to every node, with each validator's current
-    /// IP spliced in; → [network].summit_genesis_base64. Default:
-    /// summit-genesis.toml beside --manifest (the artifact-set layout).
-    #[arg(long, value_name = "FILE")]
-    pub summit_genesis: Option<PathBuf>,
-
-    /// certbot contact email → [node.domain].email.
-    #[arg(long, default_value = DEFAULT_EMAIL)]
-    pub email: String,
-
-    /// Found the cohort without deploy-verifying it. By default each node is
-    /// appraised once it is up — the same check as `seismic-tee node verify`,
-    /// against the policy --manifest pins — and a node that fails counts as
-    /// failed.
-    #[arg(long)]
-    pub no_verify: bool,
-
-    #[command(flatten)]
-    pub policy_source: PolicySourceArgs,
-
-    #[command(flatten)]
-    pub verifier: VerifierArgs,
-
-    /// Run the launch assertions and nothing else: every founding node's
-    /// reth must serve the manifest's eth.genesis_hash as block 0, and every
-    /// founding box's holder its harvested keys. Configures nothing, writes
-    /// nothing; for after a launch whose holders had not settled, a reboot,
-    /// a re-image, or whenever the cohort may have drifted from its pins.
-    /// Takes only --manifest and --nodes (or the context): roles, genesis
-    /// files and the appraisal are delivery's, so their flags are refused.
-    #[arg(
-        long,
-        conflicts_with_all = [
-            "genesis_node",
-            "join",
-            "reth_genesis",
-            "summit_genesis",
-            "no_verify",
-            "policy",
-            "measurements",
-            "pccs_url",
-        ]
-    )]
-    pub check: bool,
-
-    #[command(flatten)]
-    pub context: ContextArgs,
-}
-
-pub async fn run(args: ConfigureArgs) -> anyhow::Result<ExitCode> {
-    if args.check {
-        return check(&args, launch::CHECK_TIMEOUT).await;
-    }
-    let genesis_node = args
-        .genesis_node
-        .as_deref()
-        .expect("clap: --genesis-node is required without --check");
+/// `configure --genesis-node`: found the cohort, `genesis_node` first.
+pub async fn found(args: &ConfigureArgs, genesis_node: &str) -> anyhow::Result<ExitCode> {
     check_policy_source_files(&args.policy_source, args.no_verify)?;
     // Validate the shared network artifacts once, so a bad one fails fast
     // here rather than as N identical per-node errors mid-dashboard.
-    let manifest_path = resolve_manifest(args.manifest.as_deref(), &args.context)?;
+    let manifest_path = resolve_manifest(args.manifest.as_deref(), &args.node.context)?;
     let manifest = load_manifest(&manifest_path)?;
     let reth_genesis = Artifact::read(&resolve_reth_genesis(
         args.reth_genesis.as_deref(),
@@ -931,9 +834,9 @@ pub async fn run(args: ConfigureArgs) -> anyhow::Result<ExitCode> {
 
     // The founding inputs live beside the manifest (the network-directory
     // layout): the harvest supplies each box's pinned keys; the cohort's node
-    // table (the context's, or --nodes) supplies its current IP.
+    // table (the context's, or --node) supplies its current IP.
     let dir = NetworkDir::of_manifest(&manifest_path);
-    let descriptors = load_nodes(args.nodes.as_deref(), &args.context, "--nodes")?;
+    let descriptors = load_nodes(args.node.node.as_deref(), &args.node.context, "--node")?;
     let (ip_by_node_pubkey, harvest_records) = load_founding_facts(&dir, &descriptors)?;
     let spliced = splice_validator_ips(committed.bytes(), &ip_by_node_pubkey)?;
     if spliced != committed.bytes() {
@@ -959,7 +862,7 @@ pub async fn run(args: ConfigureArgs) -> anyhow::Result<ExitCode> {
         bail!(
             "node(s) without a founding harvest record: {} — this command configures a founding \
              cohort, and every box's launch is asserted against the keys harvested from it. A \
-             joiner arriving after founding uses `seismic-tee node configure`.",
+             joiner arriving after founding uses `seismic-tee node configure --bootnode`.",
             unharvested.join(", ")
         );
     }
@@ -1022,7 +925,7 @@ pub async fn run(args: ConfigureArgs) -> anyhow::Result<ExitCode> {
 
     // Refresh the founding set from every node's live enode (fresh each run).
     persist_founding_bootnodes(&nodes, &results, &bootnodes_path).await;
-    report(&nodes, &results, &args, &manifest_path)?;
+    report(&nodes, &results, args, &manifest_path)?;
 
     // Every node accepted its config — now assert the launch against what the
     // manifest pins (see `launch` for why both are load-bearing).
@@ -1041,9 +944,9 @@ pub async fn run(args: ConfigureArgs) -> anyhow::Result<ExitCode> {
     // context-supplied network has a name to select a node under — an
     // explicit --manifest may be a directory nothing is registered for.
     if args.manifest.is_none() {
-        let context = Context::load(args.context.config.as_deref())?;
+        let context = Context::load(args.node.context.config.as_deref())?;
         let network = &context
-            .select(args.context.context.as_deref())?
+            .select(args.node.context.context.as_deref())?
             .selection
             .network;
         next_step::print(
@@ -1088,11 +991,11 @@ async fn assert_launch(
 /// a node the harvest does not know is not a founding box — it joined later
 /// and `node verify` appraises it — so it is named and skipped rather than
 /// held to a pin it never had.
-async fn check(args: &ConfigureArgs, timeout: Duration) -> anyhow::Result<ExitCode> {
-    let manifest_path = resolve_manifest(args.manifest.as_deref(), &args.context)?;
+pub async fn check(args: &ConfigureArgs, timeout: Duration) -> anyhow::Result<ExitCode> {
+    let manifest_path = resolve_manifest(args.manifest.as_deref(), &args.node.context)?;
     let manifest = load_manifest(&manifest_path)?;
     let dir = NetworkDir::of_manifest(&manifest_path);
-    let descriptors = load_nodes(args.nodes.as_deref(), &args.context, "--nodes")?;
+    let descriptors = load_nodes(args.node.node.as_deref(), &args.node.context, "--node")?;
     let (_, harvest_records) = load_founding_facts(&dir, &descriptors)?;
     let later: Vec<&str> = descriptors
         .keys()
@@ -1136,6 +1039,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+    use crate::configure::DEFAULT_EMAIL;
 
     const NODE_KEY_1: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const NODE_KEY_2: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -1467,8 +1371,42 @@ mod tests {
         ])
         .unwrap()
         .args;
-        let err = run(probe).await.unwrap_err().to_string();
+        let err = crate::configure::run(probe).await.unwrap_err().to_string();
         assert!(err.contains("--manifest file not found"), "{err}");
+    }
+
+    /// Founding names its whole cohort by role, so the joining shape's
+    /// single-node flags are refused beside --genesis-node rather than
+    /// silently ignored, and --join means nothing without it.
+    #[test]
+    fn founding_refuses_the_joining_flags() {
+        #[derive(Parser)]
+        struct Probe {
+            #[command(flatten)]
+            args: ConfigureArgs,
+        }
+        for excluded in [
+            &["--bootnode", "enode://ab@1.2.3.4:30303"][..],
+            &["--name", "a"],
+            &["--yes", "a"],
+            &["--dump-config", "c.toml"],
+        ] {
+            let argv: Vec<&str> = ["configure", "--genesis-node", "g"]
+                .into_iter()
+                .chain(excluded.iter().copied())
+                .collect();
+            assert!(Probe::try_parse_from(&argv).is_err(), "{excluded:?}");
+        }
+        assert!(
+            Probe::try_parse_from([
+                "configure",
+                "--join",
+                "b",
+                "--bootnode",
+                "enode://ab@1.2.3.4:30303"
+            ])
+            .is_err()
+        );
     }
 
     /// `--check` assigns no roles, so it needs no genesis node — and it
@@ -1490,6 +1428,10 @@ mod tests {
         for excluded in [
             &["--genesis-node", "a"][..],
             &["--join", "b"],
+            &["--bootnode", "enode://ab@1.2.3.4:30303"],
+            &["--name", "a"],
+            &["--yes", "a"],
+            &["--dump-config", "c.toml"],
             &["--reth-genesis", "r.json"],
             &["--summit-genesis", "s.toml"],
             &["--no-verify"],
@@ -1537,7 +1479,7 @@ mod tests {
             "--check",
             "--manifest",
             &dir.manifest().to_string_lossy(),
-            "--nodes",
+            "--node",
             &nodes.to_string_lossy(),
         ])
         .unwrap()

@@ -565,19 +565,19 @@ pub async fn run(args: AssembleArgs) -> anyhow::Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-/// `network configure`, spelled as the next step after `assemble` (written or
-/// `--check`ed), with `genesis` as the genesis node. Which node is genesis is the
-/// founder's call and any founding node is a valid one, so callers pass the
-/// first in name order. `configure` takes the manifest, not `DIR`, so an
-/// explicit `DIR` becomes `--manifest`; an explicit `--context` is repeated
-/// as [`DirArgs::as_args`] would.
+/// `node configure --genesis-node`, spelled as the next step after `assemble`
+/// (written or `--check`ed), with `genesis` as the genesis node. Which node is
+/// genesis is the founder's call and any founding node is a valid one, so
+/// callers pass the first in name order. `configure` takes the manifest, not
+/// `DIR`, so an explicit `DIR` becomes `--manifest`; an explicit `--context`
+/// is repeated as [`DirArgs::as_args`] would.
 fn configure_invocation(genesis: &str, args: &DirArgs, dir: &NetworkDir) -> String {
     let scope = match (&args.dir, &args.context.context) {
         (Some(_), _) => format!(" --manifest {}", dir.manifest().display()),
         (None, Some(context)) => format!(" --context {context}"),
         (None, None) => String::new(),
     };
-    format!("seismic-tee network configure --genesis-node {genesis}{scope}")
+    format!("seismic-tee node configure --genesis-node {genesis}{scope}")
 }
 
 #[cfg(test)]
@@ -1219,11 +1219,11 @@ pub(crate) mod tests {
         };
         assert_eq!(
             configure_invocation("alpha", &args(None, None), &dir),
-            "seismic-tee network configure --genesis-node alpha"
+            "seismic-tee node configure --genesis-node alpha"
         );
         assert_eq!(
             configure_invocation("alpha", &args(None, Some("devnet-1")), &dir),
-            "seismic-tee network configure --genesis-node alpha --context devnet-1"
+            "seismic-tee node configure --genesis-node alpha --context devnet-1"
         );
         assert_eq!(
             configure_invocation(
@@ -1231,7 +1231,7 @@ pub(crate) mod tests {
                 &args(Some("/nets/devnet-1"), Some("devnet-1")),
                 &dir
             ),
-            "seismic-tee network configure --genesis-node alpha --manifest \
+            "seismic-tee node configure --genesis-node alpha --manifest \
              /nets/devnet-1/network-manifest.json"
         );
     }

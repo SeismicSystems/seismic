@@ -178,9 +178,10 @@ struct Cli {
     command: Option<Command>,
 }
 
-/// The groups in the trust model's order of appearance in a network's life:
-/// founded, joined, governed — then audited. Each one-liner leads with the
-/// party it is for, so the listing doubles as a who-runs-what.
+/// The groups in the order a network's life meets them: its directory, its
+/// machines, its governance — then the audit. Each one-liner leads with what
+/// the group acts on (or, for the parties' groups, whom it is for), so the
+/// listing reads as a map of who touches what.
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Anyone: select the network and node the other commands act on, and
@@ -189,39 +190,44 @@ enum Command {
         #[command(subcommand)]
         command: CtxCommand,
     },
-    /// Network founder: scaffold a network's inputs, assemble its identity,
-    /// configure the cohort.
+    /// The network directory, never a node: scaffold a network's inputs,
+    /// assemble its identity, remove it.
     #[command(
-        long_about = "Found a Seismic network: scaffold its inputs, assemble its identity, and \
-                      configure the cohort.\n\n\
-                      Harvesting the cohort's founding keys is `seismic-tee node harvest`: it \
-                      reaches the machines, and every command that does is in the node \
-                      group. Joining an existing network is `seismic-tee node configure`.",
-        after_help = "A founding runs: network init → provision → node harvest → network \
-                      assemble → network configure. Provision the cohort with the seismic_node \
-                      Pulumi program (tee/pulumi/seismic_node); pulumi destroy tears it down, \
-                      and rm then deletes the network directory and its context entry.\n\n\
+        long_about = "A Seismic network's directory: scaffold its inputs, assemble its identity \
+                      — the artifact set and network_id — and remove it.\n\n\
+                      Never contacts a node: every command here reads and writes local files. \
+                      Harvesting a cohort's founding keys and configuring it reach the \
+                      machines, so they are the node group's.",
+        after_help = "A founding alternates between the two groups: network init → provision → \
+                      node harvest → network assemble → node configure --genesis-node. \
+                      Provision the cohort with the seismic_node Pulumi program \
+                      (tee/pulumi/seismic_node); pulumi destroy tears it down, and rm then \
+                      deletes the network directory and its context entry.\n\n\
                       Checking an assembled set later — after a merge, or when it may have \
                       drifted from its inputs — is `assemble --check`: the same derivation, \
-                      compared with what is on disk instead of written. Checking a launched \
-                      cohort — after a reboot or a re-image, or when its holders had not \
-                      settled at launch — is `configure --check`: the launch assertions \
-                      again, with nothing configured.\n\n\
+                      compared with what is on disk instead of written.\n\n\
                       Auditing a founding afterwards is `seismic-tee verify-founding`: not a \
                       founding step, and not a command of this group."
     )]
     Network {
         #[command(subcommand)]
-        command: NetworkGroup,
+        command: NetworkCommand,
     },
-    /// Node operator: harvest a founding cohort's keys, configure your node
-    /// on first boot, verify its attestation, watch its first-boot disk wipe.
+    /// Running nodes, one or a cohort: harvest a founding's keys, configure
+    /// on first boot, verify attestation, watch the first-boot disk wipe.
     #[command(
-        long_about = "Reach the running machines of a Seismic TEE network: harvest a founding \
-                      cohort's keys, configure a node on first boot, verify its attestation, \
-                      watch its first-boot disk wipe.\n\n\
-                      Cloud-agnostic, and never provisions: each command consumes the \
-                      descriptors of already-running nodes and reaches them over HTTP."
+        long_about = "The running machines of a Seismic TEE network, one node or a whole \
+                      cohort: harvest a founding cohort's keys, configure nodes on first boot, \
+                      verify a node's attestation, watch its first-boot disk wipe.\n\n\
+                      Every command here contacts a node. Cloud-agnostic, and never provisions: \
+                      each command consumes the descriptors of already-running nodes and \
+                      reaches them over HTTP. An operator joining a network needs only this \
+                      group.",
+        after_help = "configure takes one of three shapes: --bootnode joins one node to a live \
+                      network; --genesis-node founds a cohort, after network assemble; \
+                      --check re-asserts a founded cohort's launch — after a reboot or a \
+                      re-image, or when its holders had not settled at launch — with nothing \
+                      configured."
     )]
     Node {
         #[command(subcommand)]
@@ -246,19 +252,6 @@ enum Command {
     /// Auditor: verify a founding — the genesis validator set's TEE
     /// provenance — from a committed network directory, offline.
     VerifyFounding(VerifyFoundingArgs),
-}
-
-/// The `network` group as mounted: the network crate's commands, plus the
-/// cohort `configure`, which reaches nodes and so lives in the node crate.
-/// It is mounted here until `node configure` takes it over.
-#[derive(Debug, Subcommand)]
-enum NetworkGroup {
-    #[command(flatten)]
-    Directory(NetworkCommand),
-    /// Configure a cohort in parallel: one genesis + N joiners, one command
-    /// (--check: re-assert the launch against the manifest's pins instead of
-    /// configuring).
-    Configure(seismic_tee_node::cohort::ConfigureArgs),
 }
 
 /// The registration script for `shell` (`--completions [SHELL]`), the same
@@ -377,10 +370,7 @@ fn main() -> ExitCode {
             (_, Some(version), _) => run_upgrade(version),
             (None, None, Some(command)) => match command {
                 Command::Ctx { command } => seismic_tee_context::cmd::run(command),
-                Command::Network { command } => match command {
-                    NetworkGroup::Directory(command) => seismic_tee_network::run(command).await,
-                    NetworkGroup::Configure(args) => seismic_tee_node::cohort::run(args).await,
-                },
+                Command::Network { command } => seismic_tee_network::run(command).await,
                 Command::Node { command } => seismic_tee_node::run(command).await,
                 Command::Admission { command } => seismic_tee_admission::run(command),
                 Command::VerifyFounding(args) => {
@@ -471,7 +461,7 @@ mod tests {
                 "unset"
             ]
         );
-        assert_eq!(group("network"), ["init", "assemble", "rm", "configure"]);
+        assert_eq!(group("network"), ["init", "assemble", "rm"]);
         assert_eq!(group("node"), ["harvest", "configure", "verify", "status"]);
         assert_eq!(group("admission"), ["promote", "compile"]);
         assert!(subcommand_names(cli.find_subcommand("verify-founding").unwrap()).is_empty());
@@ -516,8 +506,8 @@ mod tests {
             assert!(arg(&["node", verb], "name"), "{verb}");
             assert!(arg(&["node", verb], "context"), "{verb}");
         }
-        assert!(arg(&["network", "configure"], "genesis_node"));
-        assert!(arg(&["network", "configure"], "join"));
+        assert!(arg(&["node", "configure"], "genesis_node"));
+        assert!(arg(&["node", "configure"], "join"));
         assert!(arg(&["node", "harvest"], "context"));
         assert!(arg(&["network", "rm"], "name"));
         assert!(arg(&["verify-founding"], "context"));
@@ -534,6 +524,19 @@ mod tests {
             // reaching the machines is the node group's
             vec!["network", "harvest", "n"],
             vec!["network", "harvest"],
+            vec!["network", "configure", "--genesis-node", "a"],
+            vec!["network", "configure", "--check"],
+            // the node group spells its descriptor file one way
+            vec!["node", "harvest", "--nodes", "nodes.json"],
+            vec![
+                "node",
+                "configure",
+                "--genesis-node",
+                "a",
+                "--nodes",
+                "n.json",
+            ],
+            vec!["node", "configure", "--check", "--nodes", "n.json"],
             vec!["verify-harvest", "n"],
             vec!["network", "verify-founding", "n"],
             // re-deriving and comparing is `assemble --check`
@@ -566,7 +569,7 @@ mod tests {
             vec!["configure", "--node", "n.json", "--manifest", "m.json"],
             // the genesis node is named as one: bare `--genesis` read as a
             // file beside --reth-genesis and --summit-genesis
-            vec!["network", "configure", "--genesis", "a"],
+            vec!["node", "configure", "--genesis", "a"],
             // completion is an option; `help` is `--help`
             vec!["completions", "bash"],
             vec!["--completions", "bash", "ctx", "list"],
@@ -690,20 +693,6 @@ mod tests {
                 "--founders",
                 "4",
             ],
-            vec!["node", "harvest", "tee/networks/devnet-3"],
-            // resolved from the context
-            vec!["node", "harvest"],
-            vec!["node", "harvest", "--nodes", "nodes.json"],
-            vec![
-                "node",
-                "harvest",
-                "n",
-                "--attestation-type",
-                "azure-tdx",
-                "--pccs-url",
-                "http://pccs",
-                "--force",
-            ],
             vec!["network", "assemble", "tee/networks/devnet-3"],
             // resolved from the context
             vec!["network", "assemble"],
@@ -736,8 +725,27 @@ mod tests {
                 "--summit-bin",
                 "s",
             ],
+            vec!["network", "rm", "tmp-devnet-1"],
+            vec!["network", "rm", "tmp-devnet-1", "--force"],
+            vec!["network", "remove", "tmp-devnet-1"],
+            // node
+            vec!["node", "harvest", "tee/networks/devnet-3"],
+            // resolved from the context
+            vec!["node", "harvest"],
+            vec!["node", "harvest", "--node", "nodes.json"],
             vec![
-                "network",
+                "node",
+                "harvest",
+                "n",
+                "--attestation-type",
+                "azure-tdx",
+                "--pccs-url",
+                "http://pccs",
+                "--force",
+            ],
+            // founding
+            vec![
+                "node",
                 "configure",
                 "--genesis-node",
                 "devnet-3-1",
@@ -745,7 +753,7 @@ mod tests {
                 "tee/networks/devnet-3/network-manifest.json",
             ],
             vec![
-                "network",
+                "node",
                 "configure",
                 "--genesis-node",
                 "a",
@@ -758,7 +766,7 @@ mod tests {
                 "x@y",
             ],
             vec![
-                "network",
+                "node",
                 "configure",
                 "--genesis-node",
                 "a",
@@ -769,20 +777,21 @@ mod tests {
                 "--pccs-url",
                 "http://pccs",
             ],
-            // resolved from the context
-            vec!["network", "configure", "--genesis-node", "a"],
+            // founding, resolved from the context
+            vec!["node", "configure", "--genesis-node", "a"],
             vec![
-                "network",
+                "node",
                 "configure",
                 "--genesis-node",
                 "a",
                 "--context",
                 "devnet-1",
             ],
-            vec!["network", "rm", "tmp-devnet-1"],
-            vec!["network", "rm", "tmp-devnet-1", "--force"],
-            vec!["network", "remove", "tmp-devnet-1"],
-            // node
+            // re-asserting a founded cohort's launch
+            vec!["node", "configure", "--check"],
+            vec!["node", "configure", "--check", "--node", "nodes.json"],
+            vec!["node", "configure", "--check", "--manifest", "m.json"],
+            // joining
             vec![
                 "node",
                 "configure",

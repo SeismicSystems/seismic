@@ -420,7 +420,7 @@ pub struct HarvestArgs {
     /// {<name>: {public_ip, fqdn}, …} — every node in it is harvested. Omit
     /// it to use the current context's network.
     #[arg(long, value_name = "FILE")]
-    pub nodes: Option<PathBuf>,
+    pub node: Option<PathBuf>,
 
     /// Platform the policy promoted from inputs/measurements.json pins.
     #[arg(long, value_name = "TYPE", default_value = DEFAULT_ATTESTATION_TYPE)]
@@ -462,7 +462,7 @@ pub async fn run(args: HarvestArgs) -> anyhow::Result<ExitCode> {
     // The cohort is the node table, whole: its keys are the harvest's node
     // names (the inputs/harvest/ filenames, and the order the authored
     // withdrawal credentials pair against), unique by construction.
-    let descriptors = load_nodes(args.nodes.as_deref(), &args.dir.context, "--nodes")?;
+    let descriptors = load_nodes(args.node.as_deref(), &args.dir.context, "--node")?;
     let targets = targets(&descriptors);
     let names: Vec<String> = targets.iter().map(|t| t.name.clone()).collect();
     check_founders(&dir, &names)?;

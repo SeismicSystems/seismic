@@ -6,8 +6,8 @@
 //! the records `configure` writes as it runs, regenerated per deploy and
 //! gitignored. The cohort's node table itself is not one of these files: it
 //! lives in the context file's `[networks.<name>.nodes]`
-//! ([`crate::descriptor`]), imported by `ctx set-nodes` or passed as
-//! `--nodes FILE`.
+//! ([`crate::descriptor`]), imported by `ctx set-nodes` or passed as a
+//! descriptor file (`--node FILE`, or `--nodes FILE` to `assemble`).
 //!
 //! ```text
 //! inputs/image.json                            the image's release record (seismic-images'
