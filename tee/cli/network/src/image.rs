@@ -257,6 +257,16 @@ impl ImageRecord {
         format!("{}.vhd", self.image)
     }
 
+    /// The artifact `attestation_type`'s measurements are stamped with: the
+    /// VHD for `azure-tdx`, the tarball for `gcp-tdx`.
+    pub fn artifact(&self, attestation_type: &str) -> anyhow::Result<String> {
+        match attestation_type {
+            "azure-tdx" => Ok(self.vhd()),
+            "gcp-tdx" => Ok(format!("{}.tar.gz", self.image)),
+            other => bail!("attestation type {other:?} is not azure-tdx or gcp-tdx"),
+        }
+    }
+
     /// The measurements asset for `target` (an attestation type, `azure-tdx`).
     pub fn measurements_asset(&self, target: &str) -> anyhow::Result<&str> {
         match self.targets.get(target) {
