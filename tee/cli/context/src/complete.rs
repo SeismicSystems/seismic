@@ -11,12 +11,14 @@
 //! Two limits follow from how completion is invoked. A candidate function
 //! runs before clap has parsed the rest of the command line, so it cannot
 //! see a `--config` or `--context` typed on the same line: the file is the
-//! default one, and the network `nodes` scopes to is the shell's
-//! `SEISMIC_CONTEXT`, else the file's `current`. And a candidate function
-//! must never fail loudly — the shell shows an error as garbage in the
-//! prompt — so an unreadable file completes to nothing.
+//! shell's `SEISMIC_CONFIG`, else the default one, and the network `nodes`
+//! scopes to is the shell's `SEISMIC_CONTEXT`, else the file's `current`.
+//! And a candidate function must never fail loudly — the shell shows an
+//! error as garbage in the prompt — so an unreadable file completes to
+//! nothing.
 
 use std::collections::BTreeSet;
+use std::path::PathBuf;
 
 use clap_complete::CompletionCandidate;
 
@@ -54,9 +56,11 @@ pub fn nodes() -> Vec<CompletionCandidate> {
         .unwrap_or_default()
 }
 
-/// The default context file, or nothing: a completion never reports.
+/// The shell's `SEISMIC_CONFIG` file, else the default one, or nothing: a
+/// completion never reports.
 fn load() -> Option<Config> {
-    Context::load(None)
+    let file = std::env::var_os("SEISMIC_CONFIG").map(PathBuf::from);
+    Context::load(file.as_deref())
         .ok()
         .map(|context| context.config().clone())
 }

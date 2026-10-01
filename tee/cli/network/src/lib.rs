@@ -55,6 +55,7 @@ pub mod rm;
 pub mod shell_outs;
 pub mod verify_founding;
 
+use std::path::Path;
 use std::process::ExitCode;
 
 use clap::Subcommand;
@@ -76,12 +77,13 @@ pub enum NetworkCommand {
     Rm(rm::RmArgs),
 }
 
-/// Run one `network` command.
-pub async fn run(command: NetworkCommand) -> anyhow::Result<ExitCode> {
+/// Run one `network` command against the context file at `config` (the
+/// global `--config`), else the default one.
+pub async fn run(command: NetworkCommand, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     match command {
-        NetworkCommand::Init(args) => init::run(args).await,
-        NetworkCommand::Assemble(args) => assemble::run(args).await,
-        NetworkCommand::Rm(args) => rm::run(args).await,
+        NetworkCommand::Init(args) => init::run(args, config).await,
+        NetworkCommand::Assemble(args) => assemble::run(args, config).await,
+        NetworkCommand::Rm(args) => rm::run(args, config).await,
     }
 }
 

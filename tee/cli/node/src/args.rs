@@ -49,11 +49,11 @@ impl NodeArgs {
     /// counts an env-sourced value as present, so a shell that exported
     /// `SEISMIC_CONTEXT` could never pass `--node`. Precedence is decided
     /// here instead.)
-    pub fn load(&self) -> anyhow::Result<(String, NodeDescriptor)> {
+    pub fn load(&self, config: Option<&Path>) -> anyhow::Result<(String, NodeDescriptor)> {
         if let Some(path) = self.node.as_deref() {
             return Self::select(path, self.name.as_deref());
         }
-        let context = Context::load(self.context.config.as_deref())?;
+        let context = Context::load(config)?;
         let selected = context.select(self.context.context.as_deref())?;
         // --name composes with a network-only context: the network half
         // supplies the table, the flag supplies the key.
@@ -104,19 +104,31 @@ impl NodeArgs {
 #[cfg(test)]
 mod tests {
     use clap::Parser;
+    use seismic_tee_context::ConfigArgs;
 
     use super::*;
 
+    /// The flags as a command mounts them, beside the global `--config`.
     #[derive(Parser)]
     struct Probe {
         #[command(flatten)]
         node: NodeArgs,
+        #[command(flatten)]
+        config: ConfigArgs,
     }
 
-    fn args(argv: &[&str]) -> NodeArgs {
-        Probe::try_parse_from(std::iter::once(&"probe").chain(argv))
-            .expect("well-formed argv")
-            .node
+    impl Probe {
+        fn load(&self) -> anyhow::Result<(String, NodeDescriptor)> {
+            self.node.load(self.config.config.as_deref())
+        }
+
+        fn as_flags(&self) -> String {
+            self.node.as_flags()
+        }
+    }
+
+    fn args(argv: &[&str]) -> Probe {
+        Probe::try_parse_from(std::iter::once(&"probe").chain(argv)).expect("well-formed argv")
     }
 
     /// Guards a config-fallback test against an ambient `SEISMIC_CONTEXT`:

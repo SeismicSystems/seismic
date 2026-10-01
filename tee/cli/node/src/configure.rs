@@ -612,21 +612,22 @@ pub struct ConfigureArgs {
     pub check: bool,
 }
 
-pub async fn run(args: ConfigureArgs) -> anyhow::Result<ExitCode> {
+pub async fn run(args: ConfigureArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     if args.check {
-        return cohort::check(&args, launch::CHECK_TIMEOUT).await;
+        return cohort::check(&args, config, launch::CHECK_TIMEOUT).await;
     }
     if let Some(genesis_node) = &args.genesis_node {
-        return cohort::found(&args, genesis_node).await;
+        return cohort::found(&args, config, genesis_node).await;
     }
-    join(args).await
+    join(args, config).await
 }
 
 /// Join one node to a live network: preview, confirm, POST, watch, appraise.
-async fn join(args: ConfigureArgs) -> anyhow::Result<ExitCode> {
-    let (name, descriptor) = args.node.load()?;
+async fn join(args: ConfigureArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
+    let (name, descriptor) = args.node.load(config)?;
     verify::check_policy_source_files(&args.policy_source, args.no_verify)?;
-    let manifest_path = crate::resolve_manifest(args.manifest.as_deref(), &args.node.context)?;
+    let manifest_path =
+        crate::resolve_manifest(args.manifest.as_deref(), &args.node.context, config)?;
     let manifest = crate::load_manifest(&manifest_path)?;
     let NodeDescriptor { fqdn, public_ip } = &descriptor;
 

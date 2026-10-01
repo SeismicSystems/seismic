@@ -25,7 +25,7 @@
 //! word may be a node, is a convenience for a selection, not for a removal.
 
 use std::io::{BufRead, IsTerminal as _};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::ExitCode;
 
 use anyhow::bail;
@@ -48,17 +48,12 @@ pub struct RmArgs {
     /// type it.
     #[arg(long, short = 'y')]
     pub yes: bool,
-
-    /// Context file to write. Default: $XDG_CONFIG_HOME/seismic/config.toml,
-    /// else ~/.config/seismic/config.toml.
-    #[arg(long, value_name = "FILE")]
-    pub config: Option<PathBuf>,
 }
 
-pub fn run(args: RmArgs) -> anyhow::Result<ExitCode> {
+pub fn run(args: RmArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     let stdin = std::io::stdin();
     let interactive = stdin.is_terminal();
-    let undo = remove(&args, interactive, &mut stdin.lock())?;
+    let undo = remove(&args, config, interactive, &mut stdin.lock())?;
     next_step::print_undo("", &undo);
     Ok(ExitCode::SUCCESS)
 }
@@ -68,11 +63,12 @@ pub fn run(args: RmArgs) -> anyhow::Result<ExitCode> {
 /// when `interactive` and not `--yes`.
 fn remove(
     args: &RmArgs,
+    config: Option<&Path>,
     interactive: bool,
     input: &mut impl BufRead,
 ) -> anyhow::Result<Vec<String>> {
     let target: Selection = args.target.parse()?;
-    let context = Context::load(args.config.as_deref())?;
+    let context = Context::load(config)?;
     let selected = context.select(Some(&args.target))?;
     let network = selected.network;
     let name = target.network.as_str();
@@ -200,6 +196,8 @@ fn shell_word(word: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use crate::config::Config;
 
     use super::*;
@@ -244,10 +242,14 @@ mod tests {
             let args = RmArgs {
                 target: target.to_string(),
                 yes,
-                config: Some(self.config_path()),
             };
             let answer = format!("{}\n", typed.unwrap_or_default());
-            remove(&args, typed.is_some(), &mut answer.as_bytes())
+            remove(
+                &args,
+                Some(&self.config_path()),
+                typed.is_some(),
+                &mut answer.as_bytes(),
+            )
         }
     }
 

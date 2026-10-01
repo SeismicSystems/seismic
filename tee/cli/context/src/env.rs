@@ -8,6 +8,7 @@
 //! invocation. Everything but the export (or `unset`) lines goes to stderr,
 //! so an `eval` of stdout never runs anything but a shell assignment.
 
+use std::path::Path;
 use std::process::ExitCode;
 
 use clap::Args;
@@ -27,14 +28,14 @@ pub struct EnvArgs {
 }
 
 /// Run `env`.
-pub fn run(args: EnvArgs) -> anyhow::Result<ExitCode> {
+pub fn run(args: EnvArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     if args.unset {
         println!("unset ETH_RPC_URL");
         println!("unset SEISMIC_CONTEXT");
         return Ok(ExitCode::SUCCESS);
     }
 
-    let context = Context::load(args.context.config.as_deref())?;
+    let context = Context::load(config)?;
     let selected = context.select(args.context.context.as_deref())?;
     let (node, descriptor) = selected.node(args.name.as_deref())?;
     // Pinned to the node it resolved to, so a network-only context plus

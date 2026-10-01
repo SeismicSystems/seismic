@@ -39,7 +39,7 @@
 //! no node table is needed, so a committed directory checks as it audits.
 
 use std::io::ErrorKind;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use alloy_primitives::Address;
@@ -463,8 +463,8 @@ pub struct AssembleArgs {
     pub derivations: DerivationArgs,
 }
 
-pub async fn run(args: AssembleArgs) -> anyhow::Result<ExitCode> {
-    let root = absolute(&args.dir.load()?)?;
+pub async fn run(args: AssembleArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
+    let root = absolute(&args.dir.load(config)?)?;
     let name = network_name(&root)?;
     let dir = NetworkDir::new(&root);
 
@@ -506,7 +506,7 @@ pub async fn run(args: AssembleArgs) -> anyhow::Result<ExitCode> {
             seated_validator_ips(&on_disk).with_context(|| path.display().to_string())?,
         )
     } else {
-        descriptors = load_nodes(args.nodes.as_deref(), &args.dir.context, "--nodes")?;
+        descriptors = load_nodes(args.nodes.as_deref(), &args.dir.context, config, "--nodes")?;
         ValidatorIps::Cohort(&descriptors)
     };
     let founding = load_founding_set(&dir, &ips)?;
@@ -1214,7 +1214,6 @@ pub(crate) mod tests {
             dir: dir.map(PathBuf::from),
             context: ContextArgs {
                 context: context.map(str::to_string),
-                config: None,
             },
         };
         assert_eq!(

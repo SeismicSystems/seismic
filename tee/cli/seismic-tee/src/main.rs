@@ -55,10 +55,12 @@ use std::io::Write as _;
 use std::process::{Command as Process, ExitCode, Stdio};
 
 use anyhow::{Context as _, bail};
+use clap::error::ErrorKind;
 use clap::{CommandFactory as _, Parser, Subcommand};
 use clap_complete::Shell;
 use clap_complete::env::{CompleteEnv, Shells};
 use seismic_tee_admission::AdmissionCommand;
+use seismic_tee_context::ConfigArgs;
 use seismic_tee_context::cmd::CtxCommand;
 use seismic_tee_network::NetworkCommand;
 use seismic_tee_network::verify_founding::VerifyFoundingArgs;
@@ -119,8 +121,10 @@ const VERSION: &str = concat!(
 {all-args}{after-help}",
     // The listing is the parties; `--help` is the one way to ask for it.
     disable_help_subcommand = true,
-    // `--completions` stands alone, and nothing at all prints this help.
-    args_conflicts_with_subcommands = true,
+    // Nothing at all prints this help. (`--completions` and `--upgrade` stand
+    // alone too, but that is `stand_alone`'s, not clap's
+    // `args_conflicts_with_subcommands`: that would refuse the global
+    // `--config` before a command.)
     arg_required_else_help = true
 )]
 struct Cli {
@@ -173,6 +177,9 @@ struct Cli {
     /// Print the version and the commit this binary was built from
     #[arg(short = 'v', short_alias = 'V', long, action = clap::ArgAction::Version)]
     version: (),
+
+    #[command(flatten)]
+    config: ConfigArgs,
 
     #[command(subcommand)]
     command: Option<Command>,
@@ -350,6 +357,23 @@ fn fetch_installer() -> anyhow::Result<Vec<u8>> {
     Ok(out.stdout)
 }
 
+/// Refuse a command beside `--completions` or `--upgrade`: both act on the
+/// binary itself, so a command after either would be silently dropped.
+fn stand_alone(cli: &Cli) -> Result<(), clap::Error> {
+    let flag = match (&cli.completions, &cli.upgrade) {
+        (Some(_), _) => "--completions",
+        (_, Some(_)) => "--upgrade",
+        (None, None) => return Ok(()),
+    };
+    match cli.command {
+        Some(_) => Err(Cli::command().error(
+            ErrorKind::ArgumentConflict,
+            format!("{flag} takes no command; run it on its own"),
+        )),
+        None => Ok(()),
+    }
+}
+
 fn main() -> ExitCode {
     // A completion callback never reaches the parser: it answers and exits
     // here, before anything below can open a file or a socket.
@@ -357,6 +381,9 @@ fn main() -> ExitCode {
         .var(COMPLETE_VAR)
         .complete();
     let cli = Cli::parse();
+    if let Err(error) = stand_alone(&cli) {
+        error.exit();
+    }
     let runtime = match tokio::runtime::Runtime::new() {
         Ok(runtime) => runtime,
         Err(error) => {
@@ -364,17 +391,18 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    let config = cli.config.config.as_deref();
     let result = runtime.block_on(async {
         match (cli.completions, cli.upgrade, cli.command) {
             (Some(shell), _, _) => run_completions(shell),
             (_, Some(version), _) => run_upgrade(version),
             (None, None, Some(command)) => match command {
-                Command::Ctx { command } => seismic_tee_context::cmd::run(command),
-                Command::Network { command } => seismic_tee_network::run(command).await,
-                Command::Node { command } => seismic_tee_node::run(command).await,
+                Command::Ctx { command } => seismic_tee_context::cmd::run(command, config),
+                Command::Network { command } => seismic_tee_network::run(command, config).await,
+                Command::Node { command } => seismic_tee_node::run(command, config).await,
                 Command::Admission { command } => seismic_tee_admission::run(command),
                 Command::VerifyFounding(args) => {
-                    seismic_tee_network::verify_founding::run(args).await
+                    seismic_tee_network::verify_founding::run(args, config).await
                 }
             },
             // `arg_required_else_help`: clap has already printed the help.
@@ -585,7 +613,7 @@ mod tests {
             let full: Vec<&str> = std::iter::once(BIN_NAME)
                 .chain(argv.iter().copied())
                 .collect();
-            let parsed = Cli::try_parse_from(&full);
+            let parsed = Cli::try_parse_from(&full).and_then(|cli| stand_alone(&cli));
             // `-` is a path like any other now, so it parses; it just names
             // a file called `-`. Everything else is a usage error.
             if argv == ["admission", "compile", "-"] {
@@ -610,6 +638,52 @@ mod tests {
             let parsed = Cli::try_parse_from([BIN_NAME, "--upgrade", version]).unwrap();
             assert_eq!(parsed.upgrade, Some(Some(version.to_string())), "{version}");
         }
+    }
+
+    /// `--config` is one option of the whole invocation: accepted before the
+    /// group or after the command, and listed by every command's help under
+    /// its own heading rather than among that command's options.
+    #[test]
+    fn the_context_file_is_one_global_option() {
+        for argv in [
+            vec![BIN_NAME, "--config", "c.toml", "ctx", "list"],
+            vec![BIN_NAME, "ctx", "--config", "c.toml", "view"],
+            vec![
+                BIN_NAME,
+                "ctx",
+                "set-network",
+                "--dir",
+                "d",
+                "--config",
+                "c.toml",
+            ],
+            vec![BIN_NAME, "node", "status", "--config", "c.toml"],
+            vec![BIN_NAME, "verify-founding", "--config", "c.toml"],
+            // harmless beside the binary's own flags, which take no command
+            vec![BIN_NAME, "--config", "c.toml", "--upgrade"],
+        ] {
+            let cli = Cli::try_parse_from(&argv).unwrap_or_else(|e| panic!("{argv:?}: {e}"));
+            stand_alone(&cli).unwrap();
+            assert_eq!(
+                cli.config.config.as_deref(),
+                Some(std::path::Path::new("c.toml")),
+                "{argv:?}"
+            );
+        }
+
+        // Built first: clap copies a global option into each subcommand then.
+        let mut command = Cli::command();
+        command.build();
+        let help = command
+            .find_subcommand_mut("ctx")
+            .and_then(|ctx| ctx.find_subcommand_mut("set-network"))
+            .expect("ctx set-network")
+            .render_long_help()
+            .to_string();
+        let (own, global) = help.split_once("Global options:").expect(&help);
+        assert!(!own.contains("--config"), "{help}");
+        assert!(global.contains("--config <FILE>"), "{help}");
+        assert!(global.contains("SEISMIC_CONFIG"), "{help}");
     }
 
     /// The argv the README, the runbook and the founding workflow spell,

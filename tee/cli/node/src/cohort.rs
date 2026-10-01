@@ -792,11 +792,15 @@ fn report(
 }
 
 /// `configure --genesis-node`: found the cohort, `genesis_node` first.
-pub async fn found(args: &ConfigureArgs, genesis_node: &str) -> anyhow::Result<ExitCode> {
+pub async fn found(
+    args: &ConfigureArgs,
+    config: Option<&Path>,
+    genesis_node: &str,
+) -> anyhow::Result<ExitCode> {
     check_policy_source_files(&args.policy_source, args.no_verify)?;
     // Validate the shared network artifacts once, so a bad one fails fast
     // here rather than as N identical per-node errors mid-dashboard.
-    let manifest_path = resolve_manifest(args.manifest.as_deref(), &args.node.context)?;
+    let manifest_path = resolve_manifest(args.manifest.as_deref(), &args.node.context, config)?;
     let manifest = load_manifest(&manifest_path)?;
     let reth_genesis = Artifact::read(&resolve_reth_genesis(
         args.reth_genesis.as_deref(),
@@ -836,7 +840,12 @@ pub async fn found(args: &ConfigureArgs, genesis_node: &str) -> anyhow::Result<E
     // layout): the harvest supplies each box's pinned keys; the cohort's node
     // table (the context's, or --node) supplies its current IP.
     let dir = NetworkDir::of_manifest(&manifest_path);
-    let descriptors = load_nodes(args.node.node.as_deref(), &args.node.context, "--node")?;
+    let descriptors = load_nodes(
+        args.node.node.as_deref(),
+        &args.node.context,
+        config,
+        "--node",
+    )?;
     let (ip_by_node_pubkey, harvest_records) = load_founding_facts(&dir, &descriptors)?;
     let spliced = splice_validator_ips(committed.bytes(), &ip_by_node_pubkey)?;
     if spliced != committed.bytes() {
@@ -944,7 +953,7 @@ pub async fn found(args: &ConfigureArgs, genesis_node: &str) -> anyhow::Result<E
     // context-supplied network has a name to select a node under — an
     // explicit --manifest may be a directory nothing is registered for.
     if args.manifest.is_none() {
-        let context = Context::load(args.node.context.config.as_deref())?;
+        let context = Context::load(config)?;
         let network = &context
             .select(args.node.context.context.as_deref())?
             .selection
@@ -991,11 +1000,20 @@ async fn assert_launch(
 /// a node the harvest does not know is not a founding box — it joined later
 /// and `node verify` appraises it — so it is named and skipped rather than
 /// held to a pin it never had.
-pub async fn check(args: &ConfigureArgs, timeout: Duration) -> anyhow::Result<ExitCode> {
-    let manifest_path = resolve_manifest(args.manifest.as_deref(), &args.node.context)?;
+pub async fn check(
+    args: &ConfigureArgs,
+    config: Option<&Path>,
+    timeout: Duration,
+) -> anyhow::Result<ExitCode> {
+    let manifest_path = resolve_manifest(args.manifest.as_deref(), &args.node.context, config)?;
     let manifest = load_manifest(&manifest_path)?;
     let dir = NetworkDir::of_manifest(&manifest_path);
-    let descriptors = load_nodes(args.node.node.as_deref(), &args.node.context, "--node")?;
+    let descriptors = load_nodes(
+        args.node.node.as_deref(),
+        &args.node.context,
+        config,
+        "--node",
+    )?;
     let (_, harvest_records) = load_founding_facts(&dir, &descriptors)?;
     let later: Vec<&str> = descriptors
         .keys()
@@ -1371,7 +1389,10 @@ mod tests {
         ])
         .unwrap()
         .args;
-        let err = crate::configure::run(probe).await.unwrap_err().to_string();
+        let err = crate::configure::run(probe, None)
+            .await
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("--manifest file not found"), "{err}");
     }
 
@@ -1484,7 +1505,10 @@ mod tests {
         ])
         .unwrap()
         .args;
-        let err = check(&args, Duration::ZERO).await.unwrap_err().to_string();
+        let err = check(&args, None, Duration::ZERO)
+            .await
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("Cohort disagrees"), "{err}");
         assert!(
             err.contains("✗ node-1: unreachable via https://127.0.0.1:1/rpc"),

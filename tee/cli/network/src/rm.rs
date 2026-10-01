@@ -37,7 +37,7 @@
 
 use std::io::{BufRead, IsTerminal as _};
 use std::net::ToSocketAddrs as _;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::ExitCode;
 
 use anyhow::{Context as _, bail};
@@ -57,17 +57,12 @@ pub struct RmArgs {
     /// for a script, where nobody is there to type it.
     #[arg(long, short = 'y')]
     pub yes: bool,
-
-    /// Context file to write. Default: $XDG_CONFIG_HOME/seismic/config.toml,
-    /// else ~/.config/seismic/config.toml.
-    #[arg(long, value_name = "FILE")]
-    pub config: Option<PathBuf>,
 }
 
-pub async fn run(args: RmArgs) -> anyhow::Result<ExitCode> {
+pub async fn run(args: RmArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     let stdin = std::io::stdin();
     let interactive = stdin.is_terminal();
-    let (lead, next) = remove(&args, interactive, &mut stdin.lock(), resolving)?;
+    let (lead, next) = remove(&args, config, interactive, &mut stdin.lock(), resolving)?;
     next_step::print(lead, &next);
     Ok(ExitCode::SUCCESS)
 }
@@ -78,11 +73,12 @@ pub async fn run(args: RmArgs) -> anyhow::Result<ExitCode> {
 /// [`resolving`] outside tests.
 fn remove(
     args: &RmArgs,
+    config_path: Option<&Path>,
     interactive: bool,
     input: &mut impl BufRead,
     resolving: impl FnOnce(&Descriptors) -> Vec<String>,
 ) -> anyhow::Result<(&'static str, Vec<String>)> {
-    let context = Context::load(args.config.as_deref())?;
+    let context = Context::load(config_path)?;
     let config = context.config();
     let name = &args.name;
     let Some(network) = config.networks.get(name) else {
@@ -272,6 +268,8 @@ fn foreign_entries(dir: &NetworkDir) -> anyhow::Result<Vec<String>> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use seismic_tee_context::config::Config;
 
     use super::*;
@@ -324,12 +322,15 @@ mod tests {
             let args = RmArgs {
                 name: name.to_string(),
                 yes: false,
-                config: Some(self.config_path()),
             };
             let answer = format!("{}\n", typed.unwrap_or_default());
-            remove(&args, typed.is_some(), &mut answer.as_bytes(), |_| {
-                Vec::new()
-            })
+            remove(
+                &args,
+                Some(&self.config_path()),
+                typed.is_some(),
+                &mut answer.as_bytes(),
+                |_| Vec::new(),
+            )
         }
     }
 
@@ -490,9 +491,15 @@ mod tests {
         let args = RmArgs {
             name: "tmp-devnet-1".to_string(),
             yes: true,
-            config: Some(sandbox.config_path()),
         };
-        remove(&args, false, &mut std::io::empty(), |_| Vec::new()).unwrap();
+        remove(
+            &args,
+            Some(&sandbox.config_path()),
+            false,
+            &mut std::io::empty(),
+            |_| Vec::new(),
+        )
+        .unwrap();
         assert!(!root.exists());
     }
 }

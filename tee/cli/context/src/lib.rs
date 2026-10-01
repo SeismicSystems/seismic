@@ -40,7 +40,7 @@ use seismic_tee_common::{
     Descriptors, NetworkDir, NodeDescriptor, load_descriptors, select_descriptor,
 };
 
-pub use args::ContextArgs;
+pub use args::{ConfigArgs, ContextArgs};
 use config::{Config, Network};
 pub use dir::DirArgs;
 
@@ -262,6 +262,7 @@ pub fn echo(selection: &Selection, resolved: &dyn std::fmt::Display) {
 pub fn load_nodes(
     flag: Option<&Path>,
     args: &ContextArgs,
+    config: Option<&Path>,
     flag_name: &str,
 ) -> anyhow::Result<Descriptors> {
     if let Some(path) = flag {
@@ -270,7 +271,7 @@ pub fn load_nodes(
         }
         return Ok(load_descriptors(path)?);
     }
-    let context = Context::load(args.config.as_deref())?;
+    let context = Context::load(config)?;
     if args.context.is_none() && context.config().current.is_none() {
         bail!(
             "no context selected — pass {flag_name}, or run `seismic-tee ctx use \
@@ -491,11 +492,8 @@ beta = { public_ip = "203.0.113.8", fqdn = "beta.example.com" }
         let config_path = dir.path().join("config.toml");
         std::fs::write(&config_path, TWO_NODE_CONFIG).unwrap();
 
-        let args = ContextArgs {
-            context: None,
-            config: Some(config_path),
-        };
-        let nodes = load_nodes(Some(&nodes_path), &args, "--nodes").unwrap();
+        let args = ContextArgs { context: None };
+        let nodes = load_nodes(Some(&nodes_path), &args, Some(&config_path), "--nodes").unwrap();
         assert_eq!(nodes.keys().collect::<Vec<_>>(), ["solo"]);
     }
 
@@ -505,11 +503,8 @@ beta = { public_ip = "203.0.113.8", fqdn = "beta.example.com" }
         let config_path = dir.path().join("config.toml");
         std::fs::write(&config_path, TWO_NODE_CONFIG).unwrap();
 
-        let args = ContextArgs {
-            context: None,
-            config: Some(config_path),
-        };
-        let nodes = load_nodes(None, &args, "--nodes").unwrap();
+        let args = ContextArgs { context: None };
+        let nodes = load_nodes(None, &args, Some(&config_path), "--nodes").unwrap();
         assert_eq!(nodes.keys().collect::<Vec<_>>(), ["alpha", "beta"]);
     }
 
@@ -523,11 +518,10 @@ beta = { public_ip = "203.0.113.8", fqdn = "beta.example.com" }
         )
         .unwrap();
 
-        let args = ContextArgs {
-            context: None,
-            config: Some(config_path),
-        };
-        let err = load_nodes(None, &args, "--nodes").unwrap_err().to_string();
+        let args = ContextArgs { context: None };
+        let err = load_nodes(None, &args, Some(&config_path), "--nodes")
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("ctx set-nodes devnet-1"), "{err}");
     }
 
@@ -537,11 +531,10 @@ beta = { public_ip = "203.0.113.8", fqdn = "beta.example.com" }
         // A config path that names no file: an empty config, no `current`.
         let config_path = dir.path().join("config.toml");
 
-        let args = ContextArgs {
-            context: None,
-            config: Some(config_path),
-        };
-        let err = load_nodes(None, &args, "--nodes").unwrap_err().to_string();
+        let args = ContextArgs { context: None };
+        let err = load_nodes(None, &args, Some(&config_path), "--nodes")
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("--nodes"), "{err}");
         assert!(err.contains("ctx use"), "{err}");
     }

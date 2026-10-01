@@ -69,13 +69,14 @@ pub enum NodeCommand {
     Status(status::StatusArgs),
 }
 
-/// Run one `node` command.
-pub async fn run(command: NodeCommand) -> anyhow::Result<ExitCode> {
+/// Run one `node` command against the context file at `config` (the global
+/// `--config`), else the default one.
+pub async fn run(command: NodeCommand, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     match command {
-        NodeCommand::Harvest(args) => harvest::run(args).await,
-        NodeCommand::Configure(args) => configure::run(args).await,
-        NodeCommand::Verify(args) => verify::run(args).await,
-        NodeCommand::Status(args) => status::run(args).await,
+        NodeCommand::Harvest(args) => harvest::run(args, config).await,
+        NodeCommand::Configure(args) => configure::run(args, config).await,
+        NodeCommand::Verify(args) => verify::run(args, config).await,
+        NodeCommand::Status(args) => status::run(args, config).await,
     }
 }
 
@@ -96,11 +97,15 @@ pub fn load_manifest(path: &Path) -> anyhow::Result<Manifest> {
 /// the `manifest` path for one registered loose. Shared by `configure` and
 /// `verify`, so both agree on where the manifest comes from when neither
 /// names one.
-pub fn resolve_manifest(flag: Option<&Path>, context: &ContextArgs) -> anyhow::Result<PathBuf> {
+pub fn resolve_manifest(
+    flag: Option<&Path>,
+    context: &ContextArgs,
+    config: Option<&Path>,
+) -> anyhow::Result<PathBuf> {
     if let Some(path) = flag {
         return Ok(path.to_path_buf());
     }
-    let loaded = Context::load(context.config.as_deref())?;
+    let loaded = Context::load(config)?;
     let selected = loaded.select(context.context.as_deref())?;
     selected.manifest()
 }
@@ -159,7 +164,7 @@ mod tests {
     fn resolve_manifest_falls_back_to_the_context() {
         let flag = Path::new("/explicit/network-manifest.json");
         assert_eq!(
-            resolve_manifest(Some(flag), &ContextArgs::default()).unwrap(),
+            resolve_manifest(Some(flag), &ContextArgs::default(), None).unwrap(),
             flag
         );
 
@@ -175,12 +180,8 @@ dir = "/nets/devnet-1"
 "#,
         )
         .unwrap();
-        let context = ContextArgs {
-            context: None,
-            config: Some(config_path),
-        };
         assert_eq!(
-            resolve_manifest(None, &context).unwrap(),
+            resolve_manifest(None, &ContextArgs::default(), Some(&config_path)).unwrap(),
             PathBuf::from("/nets/devnet-1/network-manifest.json")
         );
     }

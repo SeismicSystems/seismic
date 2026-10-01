@@ -53,7 +53,7 @@ use seismic_tee_common::network_dir::{
 };
 use seismic_tee_common::{NetworkDir, next_step};
 use seismic_tee_context::config::Network;
-use seismic_tee_context::{Context, ContextArgs, Selection, write};
+use seismic_tee_context::{Context, Selection, write};
 
 use crate::assemble::DEFAULT_ATTESTATION_TYPE;
 use crate::image::{self, ImageRecord, ImageRelease};
@@ -500,9 +500,6 @@ pub struct InitArgs {
     /// Re-authoring the inputs and re-assembling is a new network identity.
     #[arg(long)]
     pub force: bool,
-
-    #[command(flatten)]
-    pub context: ContextArgs,
 }
 
 /// The directory as an absolute path, so every path a command prints is
@@ -520,7 +517,7 @@ pub fn network_name(dir: &Path) -> anyhow::Result<String> {
         .with_context(|| format!("{} has no basename to name the network by", dir.display()))
 }
 
-pub async fn run(args: InitArgs) -> anyhow::Result<ExitCode> {
+pub async fn run(args: InitArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     let root = absolute(&args.dir)?;
     let name = match &args.name {
         Some(name) => name.clone(),
@@ -555,7 +552,7 @@ pub async fn run(args: InitArgs) -> anyhow::Result<ExitCode> {
     // its nodes are imported. A failed write is an error, not a warning —
     // "wrote" and "registered" already printed above it would be false, and a
     // half-done registration is worse than a loud one.
-    let context = Context::load(args.context.config.as_deref())?;
+    let context = Context::load(config)?;
     let config_path = context.path().to_path_buf();
     write::set_network(&config_path, &name, &Network::of_dir(&root))?;
     write::set_current(
@@ -1090,22 +1087,19 @@ mod tests {
 
     /// `init` as a founder types it for a local build, parsed like the
     /// binary parses it.
-    fn init_args(loose: &Loose, name: Option<&str>, force: bool, config_path: PathBuf) -> InitArgs {
+    fn init_args(loose: &Loose, name: Option<&str>, force: bool) -> InitArgs {
         use clap::Parser as _;
         #[derive(clap::Parser)]
         struct Probe {
             #[command(flatten)]
             args: InitArgs,
         }
-        let config = config_path.display().to_string();
         let mut argv = vec![
             "init",
             s(loose.out.root()),
             "--image-json",
             &loose.image_json,
             "--allow-unattested",
-            "--config",
-            &config,
         ];
         if let Some(name) = name {
             argv.extend(["--name", name]);
@@ -1127,7 +1121,7 @@ mod tests {
         let config_path = config_dir.path().join("config.toml");
         let expected_dir = absolute(loose.out.root()).unwrap();
 
-        run(init_args(&loose, None, false, config_path.clone()))
+        run(init_args(&loose, None, false), Some(&config_path))
             .await
             .unwrap();
         let config = read_config(&config_path);
@@ -1139,7 +1133,7 @@ mod tests {
 
         // A second run needs --force for the scaffold step, and rewrites the
         // same registration.
-        run(init_args(&loose, None, true, config_path.clone()))
+        run(init_args(&loose, None, true), Some(&config_path))
             .await
             .unwrap();
         let config = read_config(&config_path);
@@ -1153,12 +1147,10 @@ mod tests {
         let config_dir = tempfile::tempdir().unwrap();
         let config_path = config_dir.path().join("config.toml");
 
-        run(init_args(
-            &loose,
-            Some("custom-name"),
-            false,
-            config_path.clone(),
-        ))
+        run(
+            init_args(&loose, Some("custom-name"), false),
+            Some(&config_path),
+        )
         .await
         .unwrap();
         let config = read_config(&config_path);
@@ -1182,7 +1174,7 @@ mod tests {
         std::fs::set_permissions(&readonly, std::fs::Permissions::from_mode(0o500)).unwrap();
         let config_path = readonly.join("config.toml");
 
-        let result = run(init_args(&loose, None, false, config_path)).await;
+        let result = run(init_args(&loose, None, false), Some(&config_path)).await;
 
         // Restore write permission so the tempdir can clean itself up,
         // regardless of the assertion outcome.

@@ -24,6 +24,7 @@
 //! later).
 
 use std::io::{IsTerminal as _, Write as _};
+use std::path::Path;
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
@@ -447,8 +448,8 @@ pub struct StatusArgs {
     pub interval: u64,
 }
 
-pub async fn run(args: StatusArgs) -> anyhow::Result<ExitCode> {
-    let (_, descriptor) = args.node.load()?;
+pub async fn run(args: StatusArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
+    let (_, descriptor) = args.node.load(config)?;
     let client = rpc::Client::new(&descriptor.attestation_rpc_url())?;
 
     if args.once {

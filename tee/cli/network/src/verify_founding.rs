@@ -274,16 +274,19 @@ pub fn audit_founding(dir: &NetworkDir, record: Option<&str>) -> anyhow::Result<
 /// an auditor need not have run `ctx set-network` at all; a malformed
 /// `--config` file still fails loudly, since that is a broken flag rather
 /// than an absent one.
-fn pinned_network_id(context_args: &ContextArgs) -> anyhow::Result<Option<String>> {
-    let context = Context::load(context_args.config.as_deref())?;
+fn pinned_network_id(
+    context_args: &ContextArgs,
+    config: Option<&Path>,
+) -> anyhow::Result<Option<String>> {
+    let context = Context::load(config)?;
     Ok(context
         .select(context_args.context.as_deref())
         .ok()
         .and_then(|selected| selected.network_id().map(str::to_string)))
 }
 
-pub async fn run(args: VerifyFoundingArgs) -> anyhow::Result<ExitCode> {
-    let root = args.dir.load()?;
+pub async fn run(args: VerifyFoundingArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
+    let root = args.dir.load(config)?;
     if !root.is_dir() {
         bail!("network directory not found: {}", root.display());
     }
@@ -292,7 +295,7 @@ pub async fn run(args: VerifyFoundingArgs) -> anyhow::Result<ExitCode> {
     // Compared before any record is replayed: an artifact set whose
     // network_id disagrees with the context's pin is refused outright,
     // rather than after minutes of quote re-verification.
-    if let Some(pinned) = pinned_network_id(&args.dir.context)? {
+    if let Some(pinned) = pinned_network_id(&args.dir.context, config)? {
         let manifest_path = dir.manifest();
         let manifest = Manifest::load(&manifest_path)
             .with_context(|| format!("{}: invalid manifest", manifest_path.display()))?;
@@ -627,16 +630,18 @@ mod tests {
     async fn a_missing_directory_is_named() {
         let err = format!(
             "{:?}",
-            run(parse(&["/absent/network-dir"])).await.unwrap_err()
+            run(parse(&["/absent/network-dir"]), None)
+                .await
+                .unwrap_err()
         );
         assert!(err.contains("network directory not found"), "{err}");
         assert!(err.contains("/absent/network-dir"), "{err}");
     }
 
-    /// A context pointed at by `--config`, pinning `devnet-3` to
-    /// `network_id`. Every case below passes `--config` explicitly, so none
-    /// of them ever reads a developer's real `~/.config/seismic/config.toml`.
-    fn context_pinning(dir: &Path, network_id: &str) -> ContextArgs {
+    /// A context file pinning `devnet-3` to `network_id`, for `--config`.
+    /// Every case below passes `--config` explicitly, so none of them ever
+    /// reads a developer's real `~/.config/seismic/config.toml`.
+    fn context_pinning(dir: &Path, network_id: &str) -> PathBuf {
         let config_path = dir.join("config.toml");
         std::fs::write(
             &config_path,
@@ -646,17 +651,14 @@ mod tests {
             ),
         )
         .unwrap();
-        ContextArgs {
-            context: None,
-            config: Some(config_path),
-        }
+        config_path
     }
 
-    fn args_with_context(root: PathBuf, context: ContextArgs) -> VerifyFoundingArgs {
+    fn args_for(root: PathBuf) -> VerifyFoundingArgs {
         VerifyFoundingArgs {
             dir: DirArgs {
                 dir: Some(root),
-                context,
+                context: ContextArgs::default(),
             },
             record: None,
         }
@@ -674,10 +676,10 @@ mod tests {
             .network_id()
             .to_string();
         let hex = derived.strip_prefix("0x").unwrap();
-        let context = context_pinning(tmp.path(), hex);
+        let config = context_pinning(tmp.path(), hex);
         let err = format!(
             "{:?}",
-            run(args_with_context(dir.root().to_path_buf(), context))
+            run(args_for(dir.root().to_path_buf()), Some(&config))
                 .await
                 .unwrap_err()
         );
@@ -691,10 +693,10 @@ mod tests {
     #[tokio::test]
     async fn a_mismatched_pin_fails_before_any_record_is_replayed() {
         let (tmp, dir) = committed_dir();
-        let context = context_pinning(tmp.path(), &"11".repeat(32));
+        let config = context_pinning(tmp.path(), &"11".repeat(32));
         let err = format!(
             "{:?}",
-            run(args_with_context(dir.root().to_path_buf(), context))
+            run(args_for(dir.root().to_path_buf()), Some(&config))
                 .await
                 .unwrap_err()
         );
@@ -708,19 +710,15 @@ mod tests {
     #[tokio::test]
     async fn no_pin_behaves_exactly_as_today() {
         let (tmp, dir) = committed_dir();
-        let args = VerifyFoundingArgs {
-            dir: DirArgs {
-                dir: Some(dir.root().to_path_buf()),
-                // Names no file: Context::load treats an absent file as an
-                // empty config, with no `current` to select.
-                context: ContextArgs {
-                    context: None,
-                    config: Some(tmp.path().join("absent-config.toml")),
-                },
-            },
-            record: None,
-        };
-        let err = format!("{:?}", run(args).await.unwrap_err());
+        // Names no file: Context::load treats an absent file as an empty
+        // config, with no `current` to select.
+        let config = tmp.path().join("absent-config.toml");
+        let err = format!(
+            "{:?}",
+            run(args_for(dir.root().to_path_buf()), Some(&config))
+                .await
+                .unwrap_err()
+        );
         assert!(err.contains("is not a founding archive"), "{err}");
     }
 }

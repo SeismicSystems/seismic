@@ -590,3 +590,41 @@ fn completions_prints_the_engines_registration_script() {
     let stderr = String::from_utf8(unknown.stderr).unwrap();
     assert!(stderr.contains("$SHELL"), "{stderr}");
 }
+
+/// Another context file is chosen the kubectl way: `--config` at any depth,
+/// else `SEISMIC_CONFIG`, else the XDG default — and tab completion reads the
+/// same file the command would.
+#[test]
+fn the_context_file_is_the_flag_else_seismic_config_else_the_default() {
+    let sandbox = Sandbox::new(TWO_NODE_CONFIG);
+    let other = sandbox.dir.path().join("other.toml");
+    fs::write(&other, "[networks.elsewhere]\ndir = \"/y\"\n").unwrap();
+    let other = other.to_str().unwrap();
+    let listed = |args: &[&str], env: &[(&str, &str)]| {
+        let mut command = sandbox.command();
+        command.args(args).envs(env.iter().copied());
+        let output = command.output().unwrap();
+        assert!(output.status.success(), "{output:?}");
+        String::from_utf8(output.stdout).unwrap()
+    };
+
+    assert!(listed(&["ctx", "list"], &[]).contains("devnet-1"));
+    for (args, env) in [
+        (&["--config", other, "ctx", "list"][..], &[][..]),
+        (&["ctx", "list", "--config", other][..], &[][..]),
+        (&["ctx", "list"][..], &[("SEISMIC_CONFIG", other)][..]),
+        (
+            &["ctx", "list", "--config", other][..],
+            &[("SEISMIC_CONFIG", "/absent.toml")][..],
+        ),
+    ] {
+        let stdout = listed(args, env);
+        assert!(stdout.contains("elsewhere"), "{args:?} {env:?}: {stdout}");
+        assert!(!stdout.contains("devnet-1"), "{args:?} {env:?}: {stdout}");
+    }
+
+    assert_eq!(
+        names(&sandbox, &["ctx", "use", ""], &[("SEISMIC_CONFIG", other)]),
+        ["elsewhere"]
+    );
+}

@@ -8,6 +8,7 @@
 //! the child's exit code is the process's own, which is what `env(1)` and
 //! `aws-vault exec` do.
 
+use std::path::Path;
 use std::process::ExitCode;
 
 use clap::Args;
@@ -29,8 +30,8 @@ pub struct ExecArgs {
 }
 
 /// Run `exec`.
-pub fn run(args: ExecArgs) -> anyhow::Result<ExitCode> {
-    let context = Context::load(args.context.config.as_deref())?;
+pub fn run(args: ExecArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
+    let context = Context::load(config)?;
     let selected = context.select(args.context.context.as_deref())?;
     let (node, descriptor) = selected.node(args.name.as_deref())?;
     // Pinned to the node it resolved to, so a network-only context plus

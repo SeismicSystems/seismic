@@ -1,9 +1,10 @@
-//! `--context`/`--config`: the flattened pair every context-resolving command
-//! carries.
+//! `--context` and `--config`: how every command picks the context it acts on.
 //!
-//! Flattened into every command that resolves a target, so an operator who
-//! learns one command's way of overriding the selection has learned all of
-//! them.
+//! [`ContextArgs`] is flattened into every command that resolves a target, so
+//! an operator who learns one command's way of overriding the selection has
+//! learned all of them. [`ConfigArgs`] is flattened once, into the root
+//! command: which context file to use is a question about the invocation,
+//! not about any one command, so the binary passes the path down to each.
 
 use std::path::PathBuf;
 
@@ -23,9 +24,18 @@ pub struct ContextArgs {
         add = ArgValueCandidates::new(complete::selections)
     )]
     pub context: Option<String>,
+}
 
-    /// Context file to read. Default: $XDG_CONFIG_HOME/seismic/config.toml,
-    /// else ~/.config/seismic/config.toml.
-    #[arg(long, value_name = "FILE")]
+#[derive(Debug, Clone, Default, Args)]
+pub struct ConfigArgs {
+    /// Context file to read and write. Default:
+    /// $XDG_CONFIG_HOME/seismic/config.toml, else ~/.config/seismic/config.toml.
+    #[arg(
+        long,
+        global = true,
+        value_name = "FILE",
+        env = "SEISMIC_CONFIG",
+        help_heading = "Global options"
+    )]
     pub config: Option<PathBuf>,
 }

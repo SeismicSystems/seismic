@@ -8,7 +8,7 @@
 //! stale context plus `--force` names the directory it is about to
 //! overwrite.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::{Context, ContextArgs, echo};
 use clap::Args;
@@ -23,12 +23,13 @@ pub struct DirArgs {
 }
 
 impl DirArgs {
-    /// Resolve to the one network directory this invocation acts on.
-    pub fn load(&self) -> anyhow::Result<PathBuf> {
+    /// Resolve to the one network directory this invocation acts on, reading
+    /// the context file at `config` when `DIR` is not given.
+    pub fn load(&self, config: Option<&Path>) -> anyhow::Result<PathBuf> {
         if let Some(dir) = &self.dir {
             return Ok(dir.clone());
         }
-        let context = Context::load(self.context.config.as_deref())?;
+        let context = Context::load(config)?;
         if self.context.context.is_none() && context.config().current.is_none() {
             anyhow::bail!("no context selected — pass DIR, or run `seismic-tee ctx use <network>`");
         }
@@ -73,13 +74,10 @@ current = "devnet-1"
 dir = "/nets/devnet-1"
 "#;
 
-    fn args(dir: Option<&str>, config_path: PathBuf) -> DirArgs {
+    fn args(dir: Option<&str>) -> DirArgs {
         DirArgs {
             dir: dir.map(PathBuf::from),
-            context: ContextArgs {
-                context: None,
-                config: Some(config_path),
-            },
+            context: ContextArgs { context: None },
         }
     }
 
@@ -89,7 +87,7 @@ dir = "/nets/devnet-1"
         let config_path = tmp.path().join("config.toml");
         std::fs::write(&config_path, DIR_NETWORK_CONFIG).unwrap();
 
-        let dir = args(Some("/elsewhere"), config_path).load().unwrap();
+        let dir = args(Some("/elsewhere")).load(Some(&config_path)).unwrap();
         assert_eq!(dir, PathBuf::from("/elsewhere"));
     }
 
@@ -99,7 +97,7 @@ dir = "/nets/devnet-1"
         let config_path = tmp.path().join("config.toml");
         std::fs::write(&config_path, DIR_NETWORK_CONFIG).unwrap();
 
-        let dir = args(None, config_path).load().unwrap();
+        let dir = args(None).load(Some(&config_path)).unwrap();
         assert_eq!(dir, PathBuf::from("/nets/devnet-1"));
     }
 
@@ -109,7 +107,7 @@ dir = "/nets/devnet-1"
         let config_path = tmp.path().join("config.toml");
         std::fs::write(&config_path, NODES_ONLY_CONFIG).unwrap();
 
-        let err = args(None, config_path).load().unwrap_err().to_string();
+        let err = args(None).load(Some(&config_path)).unwrap_err().to_string();
         assert!(err.contains("is nodes only"), "{err}");
         assert!(err.contains("pass DIR"), "{err}");
     }
@@ -120,22 +118,21 @@ dir = "/nets/devnet-1"
         // A config path that names no file: an empty config, no `current`.
         let config_path = tmp.path().join("config.toml");
 
-        let err = args(None, config_path).load().unwrap_err().to_string();
+        let err = args(None).load(Some(&config_path)).unwrap_err().to_string();
         assert!(err.contains("DIR"), "{err}");
         assert!(err.contains("ctx use"), "{err}");
     }
 
     #[test]
     fn an_explicit_dir_is_repeated_and_a_persisted_selection_is_not() {
-        let explicit = args(Some("/nets/devnet-1"), PathBuf::from("/nowhere.toml"));
+        let explicit = args(Some("/nets/devnet-1"));
         assert_eq!(explicit.as_args(), " /nets/devnet-1");
-        let from_selection = args(None, PathBuf::from("/nowhere.toml"));
+        let from_selection = args(None);
         assert_eq!(from_selection.as_args(), "");
         let from_flag = DirArgs {
             dir: None,
             context: ContextArgs {
                 context: Some("devnet-1".to_string()),
-                config: None,
             },
         };
         assert_eq!(from_flag.as_args(), " --context devnet-1");

@@ -44,7 +44,7 @@
 //! harvest; re-found instead (`pulumi destroy` + fresh `up`).
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
@@ -437,8 +437,8 @@ pub struct HarvestArgs {
     pub force: bool,
 }
 
-pub async fn run(args: HarvestArgs) -> anyhow::Result<ExitCode> {
-    let root = args.dir.load()?;
+pub async fn run(args: HarvestArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
+    let root = args.dir.load(config)?;
     if !root.is_dir() {
         bail!("network directory not found: {}", root.display());
     }
@@ -462,7 +462,7 @@ pub async fn run(args: HarvestArgs) -> anyhow::Result<ExitCode> {
     // The cohort is the node table, whole: its keys are the harvest's node
     // names (the inputs/harvest/ filenames, and the order the authored
     // withdrawal credentials pair against), unique by construction.
-    let descriptors = load_nodes(args.node.as_deref(), &args.dir.context, "--node")?;
+    let descriptors = load_nodes(args.node.as_deref(), &args.dir.context, config, "--node")?;
     let targets = targets(&descriptors);
     let names: Vec<String> = targets.iter().map(|t| t.name.clone()).collect();
     check_founders(&dir, &names)?;

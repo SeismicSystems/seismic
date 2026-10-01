@@ -41,7 +41,7 @@ pub enum CtxCommand {
     /// with --names, one network's bare node names for a shell loop.
     List(ListArgs),
     /// Print the context file as it is on disk, and its path on stderr.
-    View(ConfigArgs),
+    View,
     /// Print export lines for the selected node: eval "$(seismic-tee ctx env)".
     Env(EnvArgs),
     /// Run a command with the selected node's ETH_RPC_URL set.
@@ -60,21 +60,22 @@ pub enum CtxCommand {
     #[command(visible_alias = "remove")]
     Rm(rm::RmArgs),
     /// Clear the current selection.
-    Unset(ConfigArgs),
+    Unset,
 }
 
-/// Run one `ctx` command.
-pub fn run(command: CtxCommand) -> anyhow::Result<ExitCode> {
+/// Run one `ctx` command against the context file at `config` (the global
+/// `--config`), else the default one.
+pub fn run(command: CtxCommand, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     match command {
-        CtxCommand::Use(args) => run_use(args),
-        CtxCommand::List(args) => run_list(args),
-        CtxCommand::View(args) => run_view(args),
-        CtxCommand::Env(args) => env::run(args),
-        CtxCommand::Exec(args) => exec::run(args),
-        CtxCommand::SetNetwork(args) => run_set_network(args),
-        CtxCommand::SetNodes(args) => run_set_nodes(args),
-        CtxCommand::Rm(args) => rm::run(args),
-        CtxCommand::Unset(args) => run_unset(args),
+        CtxCommand::Use(args) => run_use(args, config),
+        CtxCommand::List(args) => run_list(args, config),
+        CtxCommand::View => run_view(config),
+        CtxCommand::Env(args) => env::run(args, config),
+        CtxCommand::Exec(args) => exec::run(args, config),
+        CtxCommand::SetNetwork(args) => run_set_network(args, config),
+        CtxCommand::SetNodes(args) => run_set_nodes(args, config),
+        CtxCommand::Rm(args) => rm::run(args, config),
+        CtxCommand::Unset => run_unset(config),
     }
 }
 
@@ -85,20 +86,6 @@ pub struct UseArgs {
     /// a node when exactly one network is registered; else a network.
     #[arg(value_name = "CONTEXT", add = ArgValueCandidates::new(complete::selections))]
     pub selection: Option<String>,
-
-    /// Context file to write. Default: $XDG_CONFIG_HOME/seismic/config.toml,
-    /// else ~/.config/seismic/config.toml.
-    #[arg(long, value_name = "FILE")]
-    pub config: Option<PathBuf>,
-}
-
-/// `--config` alone: what `view` and `unset` need.
-#[derive(Debug, Clone, Default, Args)]
-pub struct ConfigArgs {
-    /// Context file to read. Default: $XDG_CONFIG_HOME/seismic/config.toml,
-    /// else ~/.config/seismic/config.toml.
-    #[arg(long, value_name = "FILE")]
-    pub config: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Default, Args)]
@@ -156,11 +143,6 @@ pub struct SetNetworkArgs {
     /// `ctx set-nodes` stores them from stdin.
     #[arg(long, value_name = "FILE")]
     pub nodes: Option<PathBuf>,
-
-    /// Context file to write. Default: $XDG_CONFIG_HOME/seismic/config.toml,
-    /// else ~/.config/seismic/config.toml.
-    #[arg(long, value_name = "FILE")]
-    pub config: Option<PathBuf>,
 }
 
 #[derive(Debug, Args)]
@@ -169,14 +151,9 @@ pub struct SetNodesArgs {
     /// when unregistered.
     #[arg(value_name = "NETWORK", add = ArgValueCandidates::new(complete::networks))]
     pub name: String,
-
-    /// Context file to write. Default: $XDG_CONFIG_HOME/seismic/config.toml,
-    /// else ~/.config/seismic/config.toml.
-    #[arg(long, value_name = "FILE")]
-    pub config: Option<PathBuf>,
 }
 
-fn run_use(args: UseArgs) -> anyhow::Result<ExitCode> {
+fn run_use(args: UseArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     let raw = args.selection.ok_or_else(|| {
         anyhow::anyhow!(
             "ctx use needs a target: <network>, <network>/<node>, or `-` for the previous \
@@ -184,7 +161,7 @@ fn run_use(args: UseArgs) -> anyhow::Result<ExitCode> {
         )
     })?;
 
-    let context = Context::load(args.config.as_deref())?;
+    let context = Context::load(config)?;
     let target = resolve_target(&raw, &context)?;
     let selected = context.select(Some(&target.to_string()))?;
 
@@ -255,9 +232,9 @@ fn print_resolution(selected: &Selected<'_>) {
 /// The file's bytes, unparsed — a file the loader refuses is the one an
 /// operator most wants to look at — with the path on stderr, so
 /// `seismic-tee ctx view > backup.toml` is the file and nothing else.
-fn run_view(args: ConfigArgs) -> anyhow::Result<ExitCode> {
-    let path = match args.config {
-        Some(path) => path,
+fn run_view(config: Option<&Path>) -> anyhow::Result<ExitCode> {
+    let path = match config {
+        Some(path) => path.to_path_buf(),
         None => path::default_path()?,
     };
     if !path.is_file() {
@@ -274,8 +251,8 @@ fn run_view(args: ConfigArgs) -> anyhow::Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-fn run_list(args: ListArgs) -> anyhow::Result<ExitCode> {
-    let context = Context::load(args.context.config.as_deref())?;
+fn run_list(args: ListArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
+    let context = Context::load(config)?;
     let scope = list_scope(&context, &args)?;
     let lines = match &scope {
         Some(selected) if args.names => name_lines(selected)?,
@@ -399,8 +376,8 @@ fn pointer(network: &Network) -> String {
     }
 }
 
-fn run_unset(args: ConfigArgs) -> anyhow::Result<ExitCode> {
-    let context = Context::load(args.config.as_deref())?;
+fn run_unset(config: Option<&Path>) -> anyhow::Result<ExitCode> {
+    let context = Context::load(config)?;
     write::clear_current(context.path())?;
     println!(
         "Cleared the current context in {}.",
@@ -409,8 +386,8 @@ fn run_unset(args: ConfigArgs) -> anyhow::Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-fn run_set_network(args: SetNetworkArgs) -> anyhow::Result<ExitCode> {
-    let context = Context::load(args.config.as_deref())?;
+fn run_set_network(args: SetNetworkArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
+    let context = Context::load(config)?;
     let published = args
         .dir
         .as_deref()
@@ -502,7 +479,7 @@ fn run_set_network(args: SetNetworkArgs) -> anyhow::Result<ExitCode> {
         ),
         None => println!("Registered network {name} in {}.", context.path().display()),
     }
-    let context = Context::load(args.config.as_deref())?;
+    let context = Context::load(config)?;
     next_step::print("", &next_after_registration(context.config(), &name));
     Ok(ExitCode::SUCCESS)
 }
@@ -528,7 +505,7 @@ fn local_name(dir: &Path) -> anyhow::Result<String> {
     Ok(name)
 }
 
-fn run_set_nodes(args: SetNodesArgs) -> anyhow::Result<ExitCode> {
+fn run_set_nodes(args: SetNodesArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     let stdin = std::io::stdin();
     if stdin.is_terminal() {
         bail!(
@@ -537,9 +514,9 @@ fn run_set_nodes(args: SetNodesArgs) -> anyhow::Result<ExitCode> {
             args.name
         );
     }
-    let message = import_nodes(&args, &mut stdin.lock())?;
+    let message = import_nodes(&args, config, &mut stdin.lock())?;
     println!("{message}");
-    let context = Context::load(args.config.as_deref())?;
+    let context = Context::load(config)?;
     next_step::print("", &next_after_registration(context.config(), &args.name));
     Ok(ExitCode::SUCCESS)
 }
@@ -587,14 +564,18 @@ fn next_after_registration(config: &Config, name: &str) -> Vec<String> {
 /// `[networks.<name>.nodes]` — creating the network entry when it is not yet
 /// registered. `input` stands in for stdin so a test can hand this a reader
 /// of its own bytes.
-fn import_nodes(args: &SetNodesArgs, input: &mut impl Read) -> anyhow::Result<String> {
+fn import_nodes(
+    args: &SetNodesArgs,
+    config: Option<&Path>,
+    input: &mut impl Read,
+) -> anyhow::Result<String> {
     let mut bytes = Vec::new();
     input
         .read_to_end(&mut bytes)
         .context("reading the descriptor map on stdin")?;
     let nodes = parse_descriptors(&"<stdin>", &bytes)?;
 
-    let context = Context::load(args.config.as_deref())?;
+    let context = Context::load(config)?;
     write::set_nodes(context.path(), &args.name, &nodes)?;
 
     let names = nodes.keys().cloned().collect::<Vec<_>>().join(", ");
@@ -613,18 +594,25 @@ mod tests {
     use clap::{CommandFactory, Parser};
 
     use super::*;
+    use crate::ConfigArgs;
 
-    /// The group as the binary mounts it.
+    /// The group as the binary mounts it, the global `--config` included.
     #[derive(Parser)]
     struct Probe {
+        #[command(flatten)]
+        config: ConfigArgs,
         #[command(subcommand)]
         command: CtxCommand,
     }
 
-    fn parse(argv: &[&str]) -> CtxCommand {
-        Probe::try_parse_from(std::iter::once(&"probe").chain(argv))
-            .expect("well-formed argv")
-            .command
+    fn parse(argv: &[&str]) -> Probe {
+        Probe::try_parse_from(std::iter::once(&"probe").chain(argv)).expect("well-formed argv")
+    }
+
+    /// Parse `argv` and run it, as the binary would.
+    fn invoke(argv: &[&str]) -> anyhow::Result<ExitCode> {
+        let probe = parse(argv);
+        run(probe.command, probe.config.config.as_deref())
     }
 
     #[test]
@@ -689,23 +677,19 @@ mod tests {
     fn set_network_without_dir_says_what_names_it() {
         let dir = tempfile::tempdir().unwrap();
         let config = dir.path().join("config.toml");
-        let err = run(parse(&[
-            "set-network",
-            "--config",
-            config.to_str().unwrap(),
-        ]))
-        .unwrap_err()
-        .to_string();
+        let err = invoke(&["set-network", "--config", config.to_str().unwrap()])
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("needs --dir"), "{err}");
         assert!(err.contains("ctx set-nodes"), "{err}");
 
-        let err = run(parse(&[
+        let err = invoke(&[
             "set-network",
             "--name",
             "devnet-1",
             "--config",
             config.to_str().unwrap(),
-        ]))
+        ])
         .unwrap_err()
         .to_string();
         assert!(err.contains("is empty"), "{err}");
@@ -716,13 +700,13 @@ mod tests {
     fn set_network_names_the_network_after_its_dir() {
         let dir = tempfile::tempdir().unwrap();
         let config = dir.path().join("config.toml");
-        run(parse(&[
+        invoke(&[
             "set-network",
             "--dir",
             "/networks/devnet-1/",
             "--config",
             config.to_str().unwrap(),
-        ]))
+        ])
         .unwrap();
 
         let context = Context::load(Some(&config)).unwrap();
@@ -745,13 +729,13 @@ mod tests {
             seismic_tee_common::test_support::manifest_pinning(b"{}"),
         )
         .unwrap();
-        run(parse(&[
+        invoke(&[
             "set-network",
             "--dir",
             net.to_str().unwrap(),
             "--config",
             config.to_str().unwrap(),
-        ]))
+        ])
         .unwrap();
 
         let context = Context::load(Some(&config)).unwrap();
@@ -773,7 +757,7 @@ mod tests {
             ),
             ("--name", "../escape", "cannot name a network"),
         ] {
-            let err = run(parse(&[
+            let err = invoke(&[
                 "set-network",
                 "--dir",
                 "/networks/devnet-1",
@@ -781,7 +765,7 @@ mod tests {
                 value,
                 "--config",
                 config.to_str().unwrap(),
-            ]))
+            ])
             .unwrap_err()
             .to_string();
             assert!(err.contains(expected), "{flag}: {err}");
@@ -793,7 +777,7 @@ mod tests {
     fn set_network_name_overrides_and_a_0x_pin_is_stored_bare() {
         let dir = tempfile::tempdir().unwrap();
         let config = dir.path().join("config.toml");
-        run(parse(&[
+        invoke(&[
             "set-network",
             "--dir",
             "/networks/devnet-1",
@@ -803,7 +787,7 @@ mod tests {
             &format!("0x{}", "AB".repeat(32)),
             "--config",
             config.to_str().unwrap(),
-        ]))
+        ])
         .unwrap();
 
         let context = Context::load(Some(&config)).unwrap();
@@ -816,13 +800,13 @@ mod tests {
     fn set_network_refuses_a_url_it_cannot_fetch_before_writing() {
         let dir = tempfile::tempdir().unwrap();
         let config = dir.path().join("config.toml");
-        let err = run(parse(&[
+        let err = invoke(&[
             "set-network",
             "--dir",
             "https://github.com/SeismicSystems/seismic-images/releases/tag/seismic_2026-10-01.6a90ed",
             "--config",
             config.to_str().unwrap(),
-        ]))
+        ])
         .unwrap_err()
         .to_string();
         assert!(err.contains("not a GitHub directory URL"), "{err}");
@@ -835,7 +819,7 @@ mod tests {
         let config = dir.path().join("config.toml");
         let nodes = dir.path().join("nodes.json");
         std::fs::write(&nodes, TWO_NODE_MAP).unwrap();
-        run(parse(&[
+        invoke(&[
             "set-network",
             "--dir",
             "/m/partner-net",
@@ -843,7 +827,7 @@ mod tests {
             nodes.to_str().unwrap(),
             "--config",
             config.to_str().unwrap(),
-        ]))
+        ])
         .unwrap();
 
         let context = Context::load(Some(&config)).unwrap();
@@ -859,13 +843,13 @@ mod tests {
     fn set_network_stores_a_relative_dir_as_absolute() {
         let dir = tempfile::tempdir().unwrap();
         let config = dir.path().join("config.toml");
-        run(parse(&[
+        invoke(&[
             "set-network",
             "--dir",
             "./sub/../networks/devnet-1",
             "--config",
             config.to_str().unwrap(),
-        ]))
+        ])
         .unwrap();
 
         let context = Context::load(Some(&config)).unwrap();
@@ -901,12 +885,12 @@ mod tests {
         let config_path = dir.path().join("config.toml");
         write_config(&config_path, "");
 
-        run(parse(&[
+        invoke(&[
             "use",
             "devnet-1/alpha",
             "--config",
             config_path.to_str().unwrap(),
-        ]))
+        ])
         .unwrap();
 
         let context = Context::load(Some(&config_path)).unwrap();
@@ -919,12 +903,12 @@ mod tests {
         let config_path = dir.path().join("config.toml");
         write_config(&config_path, "");
 
-        let err = run(parse(&[
+        let err = invoke(&[
             "use",
             "devnet-1/gamma",
             "--config",
             config_path.to_str().unwrap(),
-        ]))
+        ])
         .unwrap_err()
         .to_string();
         assert!(err.contains("no node `gamma`"), "{err}");
@@ -948,13 +932,7 @@ mod tests {
         )
         .unwrap();
 
-        run(parse(&[
-            "use",
-            "devnet-2",
-            "--config",
-            config_path.to_str().unwrap(),
-        ]))
-        .unwrap();
+        invoke(&["use", "devnet-2", "--config", config_path.to_str().unwrap()]).unwrap();
 
         let context = Context::load(Some(&config_path)).unwrap();
         assert_eq!(context.config().current.as_deref(), Some("devnet-2"));
@@ -969,13 +947,7 @@ mod tests {
             "current = \"devnet-1/alpha\"\nprevious = \"devnet-1/beta\"\n\n",
         );
 
-        run(parse(&[
-            "use",
-            "-",
-            "--config",
-            config_path.to_str().unwrap(),
-        ]))
-        .unwrap();
+        invoke(&["use", "-", "--config", config_path.to_str().unwrap()]).unwrap();
 
         let context = Context::load(Some(&config_path)).unwrap();
         assert_eq!(context.config().current.as_deref(), Some("devnet-1/beta"));
@@ -988,14 +960,9 @@ mod tests {
         let config_path = dir.path().join("config.toml");
         write_config(&config_path, "current = \"devnet-1/alpha\"\n\n");
 
-        let err = run(parse(&[
-            "use",
-            "-",
-            "--config",
-            config_path.to_str().unwrap(),
-        ]))
-        .unwrap_err()
-        .to_string();
+        let err = invoke(&["use", "-", "--config", config_path.to_str().unwrap()])
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("ctx use"), "{err}");
     }
 
@@ -1005,13 +972,7 @@ mod tests {
         let config_path = dir.path().join("config.toml");
         write_config(&config_path, "");
 
-        run(parse(&[
-            "use",
-            "alpha",
-            "--config",
-            config_path.to_str().unwrap(),
-        ]))
-        .unwrap();
+        invoke(&["use", "alpha", "--config", config_path.to_str().unwrap()]).unwrap();
 
         let context = Context::load(Some(&config_path)).unwrap();
         assert_eq!(context.config().current.as_deref(), Some("devnet-1/alpha"));
@@ -1023,13 +984,7 @@ mod tests {
         let config_path = dir.path().join("config.toml");
         write_config(&config_path, "");
 
-        run(parse(&[
-            "use",
-            "devnet-1",
-            "--config",
-            config_path.to_str().unwrap(),
-        ]))
-        .unwrap();
+        invoke(&["use", "devnet-1", "--config", config_path.to_str().unwrap()]).unwrap();
 
         let context = Context::load(Some(&config_path)).unwrap();
         assert_eq!(context.config().current.as_deref(), Some("devnet-1"));
@@ -1045,13 +1000,7 @@ mod tests {
         )
         .unwrap();
 
-        run(parse(&[
-            "use",
-            "devnet-1",
-            "--config",
-            config_path.to_str().unwrap(),
-        ]))
-        .unwrap();
+        invoke(&["use", "devnet-1", "--config", config_path.to_str().unwrap()]).unwrap();
 
         let context = Context::load(Some(&config_path)).unwrap();
         assert_eq!(context.config().current.as_deref(), Some("devnet-1"));
@@ -1061,7 +1010,7 @@ mod tests {
     fn use_with_no_argument_is_an_error() {
         let dir = tempfile::tempdir().unwrap();
         let config = dir.path().join("config.toml");
-        let err = run(parse(&["use", "--config", config.to_str().unwrap()]))
+        let err = invoke(&["use", "--config", config.to_str().unwrap()])
             .unwrap_err()
             .to_string();
         assert!(err.contains("ctx use needs a target"), "{err}");
@@ -1075,7 +1024,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config.toml");
 
-        let err = run(parse(&["view", "--config", config_path.to_str().unwrap()]))
+        let err = invoke(&["view", "--config", config_path.to_str().unwrap()])
             .unwrap_err()
             .to_string();
         assert!(err.contains("no context file at"), "{err}");
@@ -1083,7 +1032,7 @@ mod tests {
 
         std::fs::write(&config_path, "current = 3\nthis is not toml\n").unwrap();
         assert!(Context::load(Some(&config_path)).is_err());
-        run(parse(&["view", "--config", config_path.to_str().unwrap()])).unwrap();
+        invoke(&["view", "--config", config_path.to_str().unwrap()]).unwrap();
     }
 
     #[test]
@@ -1149,7 +1098,7 @@ mod tests {
 
     /// `list`'s arguments as the binary would parse them.
     fn list_args(argv: &[&str]) -> ListArgs {
-        match parse(&[&["list"], argv].concat()) {
+        match parse(&[&["list"], argv].concat()).command {
             CtxCommand::List(args) => args,
             other => panic!("not a list: {other:?}"),
         }
@@ -1273,7 +1222,7 @@ mod tests {
             "current = \"devnet-1/alpha\"\nprevious = \"devnet-1/beta\"\n\n",
         );
 
-        run(parse(&["unset", "--config", config_path.to_str().unwrap()])).unwrap();
+        invoke(&["unset", "--config", config_path.to_str().unwrap()]).unwrap();
 
         let context = Context::load(Some(&config_path)).unwrap();
         assert_eq!(context.config().current, None);
@@ -1287,10 +1236,9 @@ mod tests {
         let config_path = dir.path().join("config.toml");
         let args = SetNodesArgs {
             name: "devnet-1".to_string(),
-            config: Some(config_path.clone()),
         };
 
-        let message = import_nodes(&args, &mut &TWO_NODE_MAP[..]).unwrap();
+        let message = import_nodes(&args, Some(&config_path), &mut &TWO_NODE_MAP[..]).unwrap();
         assert!(message.contains("Imported 2 nodes"), "{message}");
         assert!(message.contains("alpha"), "{message}");
         assert!(message.contains("beta"), "{message}");
@@ -1307,10 +1255,9 @@ mod tests {
         std::fs::write(&config_path, original).unwrap();
         let args = SetNodesArgs {
             name: "devnet-1".to_string(),
-            config: Some(config_path.clone()),
         };
 
-        let err = import_nodes(&args, &mut &b"not json"[..])
+        let err = import_nodes(&args, Some(&config_path), &mut &b"not json"[..])
             .unwrap_err()
             .to_string();
         assert!(err.contains("<stdin>"), "{err}");
@@ -1324,16 +1271,15 @@ mod tests {
         let config_path = dir.path().join("config.toml");
         let args = SetNodesArgs {
             name: "devnet-1".to_string(),
-            config: Some(config_path.clone()),
         };
-        import_nodes(&args, &mut &TWO_NODE_MAP[..]).unwrap();
+        import_nodes(&args, Some(&config_path), &mut &TWO_NODE_MAP[..]).unwrap();
 
         let context = Context::load(Some(&config_path)).unwrap();
         let network = &context.config().networks["devnet-1"];
         assert_eq!(network.dir, None);
         assert_eq!(network.nodes.len(), 2);
 
-        run(parse(&[
+        invoke(&[
             "set-network",
             "--name",
             "devnet-1",
@@ -1341,7 +1287,7 @@ mod tests {
             "/networks/devnet-1",
             "--config",
             config_path.to_str().unwrap(),
-        ]))
+        ])
         .unwrap();
 
         let context = Context::load(Some(&config_path)).unwrap();
@@ -1359,13 +1305,12 @@ mod tests {
         let config_path = dir.path().join("config.toml");
         let args = SetNodesArgs {
             name: "devnet-1".to_string(),
-            config: Some(config_path.clone()),
         };
-        import_nodes(&args, &mut &TWO_NODE_MAP[..]).unwrap();
+        import_nodes(&args, Some(&config_path), &mut &TWO_NODE_MAP[..]).unwrap();
 
         const ONE_NODE_MAP: &[u8] =
             br#"{"alpha": {"public_ip": "203.0.113.7", "fqdn": "alpha.example.com"}}"#;
-        import_nodes(&args, &mut &ONE_NODE_MAP[..]).unwrap();
+        import_nodes(&args, Some(&config_path), &mut &ONE_NODE_MAP[..]).unwrap();
 
         let context = Context::load(Some(&config_path)).unwrap();
         assert_eq!(
