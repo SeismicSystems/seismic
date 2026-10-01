@@ -18,6 +18,8 @@ seismic-measurement-admission.workspace = true
 seismic-verify-quote.workspace = true
 
 alloy-primitives.workspace = true
+anstream.workspace = true
+anstyle.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 clap_complete.workspace = true

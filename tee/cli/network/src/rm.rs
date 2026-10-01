@@ -13,32 +13,37 @@
 //! leaves the entry pointing at what is left, so running `rm` again finishes
 //! the job.
 //!
-//! Three refusals, each for something the CLI cannot tell is safe to lose:
+//! Deleting a directory waits for the network's name to be typed back, as
+//! `pulumi stack rm` does; `--yes` skips that, and with no terminal it is
+//! required. A directory in a git work tree is treated like any other: what
+//! is committed git restores, and the typed name guards what is not.
 //!
-//! - **A directory git does not ignore.** Inside a work tree that is a
-//!   committed network (a monorepo `tee/networks/<name>`) or one on its way
-//!   to being committed, and git — not this CLI — decides whether it goes. A
-//!   throwaway the work tree ignores (`tee/networks/tmp-*`) is not refused.
-//! - **An entry with nodes registered**, unless `--force`: a `ctx set-nodes`
-//!   table means a stack may still be live, and its Pulumi program refuses to
-//!   preview without the network directory, so deleting the directory first
-//!   strands the stack. `pulumi destroy` comes first.
-//! - **A directory holding anything the layout does not own.** `rm` deletes a
-//!   network directory, so an entry pointing at some other directory — a
-//!   mistyped `ctx set-network --dir` — deletes nothing.
+//! Registered nodes are a warning, not a refusal. The stack that provisioned
+//! them should be destroyed first, since its Pulumi program cannot preview
+//! without the network directory, but `pulumi destroy` never touches the
+//! context file, so a table is still registered after every teardown and
+//! cannot tell a live stack from a destroyed one. Whether the nodes' FQDNs
+//! still resolve is the closer hint — `destroy` deletes the records — and
+//! is said alongside, as a hint only: a resolver may answer from cache.
+//!
+//! A directory holding anything the layout does not own is refused: `rm`
+//! deletes a network directory, so an entry pointing at some other directory
+//! — a mistyped `ctx set-network --dir` — deletes nothing.
 //!
 //! A directory already gone is not an error: the entry is removed and that is
 //! said, so the stale entry a hand `rm -rf` left behind is collected too. So
 //! is an entry with no directory at all (a loose manifest, a bare node
 //! table): those files were never the CLI's, and only the entry goes.
 
+use std::io::{BufRead, IsTerminal as _, Write as _};
+use std::net::ToSocketAddrs as _;
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode, Stdio};
+use std::process::ExitCode;
 
 use anyhow::{Context as _, bail};
 use clap::Args;
 use clap_complete::ArgValueCandidates;
-use seismic_tee_common::{NetworkDir, next_step};
+use seismic_tee_common::{Descriptors, NetworkDir, next_step};
 use seismic_tee_context::{Context, Selection, complete, path, write};
 
 #[derive(Debug, Args)]
@@ -48,10 +53,10 @@ pub struct RmArgs {
     #[arg(value_name = "NAME", add = ArgValueCandidates::new(complete::networks))]
     pub name: String,
 
-    /// Remove it although nodes are registered for it — once the stack that
-    /// provisioned them is destroyed, which the context file cannot tell.
-    #[arg(long)]
-    pub force: bool,
+    /// Delete the directory without asking for the name to be typed back —
+    /// for a script, where nobody is there to type it.
+    #[arg(long, short = 'y')]
+    pub yes: bool,
 
     /// Context file to write. Default: $XDG_CONFIG_HOME/seismic/config.toml,
     /// else ~/.config/seismic/config.toml.
@@ -60,14 +65,23 @@ pub struct RmArgs {
 }
 
 pub async fn run(args: RmArgs) -> anyhow::Result<ExitCode> {
-    let (lead, next) = remove(&args)?;
+    let stdin = std::io::stdin();
+    let interactive = stdin.is_terminal();
+    let (lead, next) = remove(&args, interactive, &mut stdin.lock(), resolving)?;
     next_step::print(lead, &next);
     Ok(ExitCode::SUCCESS)
 }
 
-/// [`run`]'s body: the refusals, the deletion and the context write, then
-/// the next step to print.
-fn remove(args: &RmArgs) -> anyhow::Result<(&'static str, Vec<String>)> {
+/// [`run`]'s body: the refusals, the confirmation, the deletion and the
+/// context write, then the next step to print. `input` is read for the
+/// confirmation only when `interactive` and not `--yes`; `resolving` is
+/// [`resolving`] outside tests.
+fn remove(
+    args: &RmArgs,
+    interactive: bool,
+    input: &mut impl BufRead,
+    resolving: impl FnOnce(&Descriptors) -> Vec<String>,
+) -> anyhow::Result<(&'static str, Vec<String>)> {
     let context = Context::load(args.config.as_deref())?;
     let config = context.config();
     let name = &args.name;
@@ -83,18 +97,18 @@ fn remove(args: &RmArgs) -> anyhow::Result<(&'static str, Vec<String>)> {
             }
         );
     };
-    if !network.nodes.is_empty() && !args.force {
-        bail!(
-            "network `{name}` has {} node(s) registered ({}) — the stack that provisioned them \
-             may still be live, and its Pulumi program refuses to preview without the network \
-             directory. Tear the stack down first (`pulumi destroy`, then `pulumi stack rm`), \
-             then pass --force",
-            network.nodes.len(),
-            network.nodes.keys().cloned().collect::<Vec<_>>().join(", "),
-        );
-    }
     match &network.dir {
-        Some(dir) => remove_dir(&path::expand_tilde(dir)?, name)?,
+        Some(dir) => remove_dir(&path::expand_tilde(dir)?, name, |root| {
+            confirm(
+                root,
+                name,
+                &network.nodes,
+                args,
+                interactive,
+                input,
+                resolving,
+            )
+        })?,
         None => eprintln!("network `{name}` has no directory; only its entry goes"),
     }
 
@@ -125,8 +139,13 @@ fn remove(args: &RmArgs) -> anyhow::Result<(&'static str, Vec<String>)> {
 }
 
 /// Delete the network directory `root`, registered as `name`, unless one of
-/// the refusals in the module docs applies. Says what it did on stderr.
-fn remove_dir(root: &Path, name: &str) -> anyhow::Result<()> {
+/// the refusals in the module docs applies or `confirm` declines. Says what
+/// it did on stderr.
+fn remove_dir(
+    root: &Path,
+    name: &str,
+    confirm: impl FnOnce(&Path) -> anyhow::Result<()>,
+) -> anyhow::Result<()> {
     let metadata = match std::fs::symlink_metadata(root) {
         Ok(metadata) => metadata,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -143,16 +162,6 @@ fn remove_dir(root: &Path, name: &str) -> anyhow::Result<()> {
             root.display()
         );
     }
-    if let Some(work_tree) = unignored_work_tree(root)? {
-        bail!(
-            "{} is in the git work tree {} and git does not ignore it: the network is committed, \
-             or is on its way to being. Git, not this CLI, decides whether it goes — remove it \
-             there (`git rm -r`, or `rm -r` if it was never committed), and `seismic-tee network \
-             rm {name}` then removes the entry alone",
-            root.display(),
-            work_tree.display()
-        );
-    }
     let foreign = foreign_entries(&NetworkDir::new(root))?;
     if !foreign.is_empty() {
         bail!(
@@ -163,42 +172,110 @@ fn remove_dir(root: &Path, name: &str) -> anyhow::Result<()> {
             foreign.join(", ")
         );
     }
+    confirm(root)?;
     std::fs::remove_dir_all(root).with_context(|| format!("removing {}", root.display()))?;
     eprintln!("removed {}", root.display());
     Ok(())
 }
 
-/// The git work tree `root` is in, when it is in one and git does not
-/// ignore it. Asking git rather than reading `.gitignore` files is what
-/// makes the answer git's; the walk for a `.git` first is what keeps a
-/// directory outside every repo from needing git installed at all.
-fn unignored_work_tree(root: &Path) -> anyhow::Result<Option<PathBuf>> {
-    let root =
-        std::fs::canonicalize(root).with_context(|| format!("resolving {}", root.display()))?;
-    let Some(work_tree) = root.ancestors().find(|dir| dir.join(".git").exists()) else {
-        return Ok(None);
-    };
-    let status = Command::new("git")
-        .arg("-C")
-        .arg(&root)
-        .args(["check-ignore", "--quiet", "--"])
-        .arg(&root)
-        .stdin(Stdio::null())
-        .status();
-    match status.as_ref().map(std::process::ExitStatus::code) {
-        Ok(Some(0)) => Ok(None),
-        Ok(Some(1)) => Ok(Some(work_tree.to_path_buf())),
-        _ => bail!(
-            "{} is in the git work tree {}, and asking git whether it ignores the directory \
-             failed ({}) — refusing rather than guessing",
-            root.display(),
-            work_tree.display(),
-            match status {
-                Ok(status) => status.to_string(),
-                Err(e) => e.to_string(),
-            }
-        ),
+/// Wait for `name` to be typed back before `root` goes, unless `--yes`,
+/// warning first about `nodes`. A wrong answer is an error, so nothing after
+/// it runs; no terminal without `--yes` is one too — a script that means it
+/// says so with the flag, rather than a redirected stdin deciding.
+fn confirm(
+    root: &Path,
+    name: &str,
+    nodes: &Descriptors,
+    args: &RmArgs,
+    interactive: bool,
+    input: &mut impl BufRead,
+    resolving: impl FnOnce(&Descriptors) -> Vec<String>,
+) -> anyhow::Result<()> {
+    if !args.yes && !interactive {
+        bail!(
+            "stdin is not a terminal, so nobody is here to type `{name}` back; pass --yes to \
+             delete it unattended"
+        );
     }
+    if !args.yes {
+        danger(&format!("This will permanently delete {}.", root.display()));
+    }
+    if !nodes.is_empty() {
+        nodes_warning(nodes, &resolving(nodes))
+            .lines()
+            .for_each(danger);
+    }
+    if args.yes {
+        return Ok(());
+    }
+    anstream::eprint!("Type `{NAME}{name}{NAME:#}` to confirm: ");
+    std::io::stderr().flush().context("flushing the prompt")?;
+    let mut answer = String::new();
+    input
+        .read_line(&mut answer)
+        .context("reading the confirmation")?;
+    if answer.trim() != name {
+        bail!("`{}` is not `{name}`; nothing was deleted", answer.trim());
+    }
+    Ok(())
+}
+
+/// Red, as `pulumi stack rm` warns. Rendered only when stderr is a terminal
+/// that wants colour (see `anstream` in the workspace manifest).
+const DANGER: anstyle::Style = anstyle::AnsiColor::Red.on_default();
+
+/// The name to type back: blue, as `pulumi stack rm` shows it.
+const NAME: anstyle::Style = anstyle::AnsiColor::Blue.on_default();
+
+/// A line on stderr in [`DANGER`] style.
+fn danger(line: &str) {
+    anstream::eprintln!("{DANGER}{line}{DANGER:#}");
+}
+
+/// What to say about a network with `nodes` registered, given the FQDNs
+/// among theirs that still `resolve`.
+fn nodes_warning(nodes: &Descriptors, resolve: &[String]) -> String {
+    let mut warning = format!(
+        "warning: nodes are registered for it ({}). Destroy their stack first (`pulumi \
+         destroy`, then `pulumi stack rm`) — its program cannot preview without this directory.",
+        nodes.keys().cloned().collect::<Vec<_>>().join(", ")
+    );
+    if !resolve.is_empty() {
+        warning.push_str(&format!(
+            "\nwarning: {} still {} — the stack may still be live, or a resolver is answering \
+             from cache.",
+            resolve.join(", "),
+            if resolve.len() == 1 {
+                "resolves"
+            } else {
+                "resolve"
+            }
+        ));
+    }
+    warning
+}
+
+/// The FQDNs among `nodes`' that resolve, in node-name order, looked up in
+/// parallel.
+fn resolving(nodes: &Descriptors) -> Vec<String> {
+    std::thread::scope(|scope| {
+        let lookups: Vec<_> = nodes
+            .values()
+            .map(|node| {
+                let fqdn = node.fqdn.as_str();
+                scope.spawn(move || {
+                    (fqdn, 443)
+                        .to_socket_addrs()
+                        .is_ok_and(|mut addrs| addrs.next().is_some())
+                        .then(|| fqdn.to_string())
+                })
+            })
+            .collect();
+        lookups
+            .into_iter()
+            .filter_map(|lookup| lookup.join().ok().flatten())
+            .collect()
+    })
 }
 
 /// The names directly under `dir` that its layout does not own, sorted.
@@ -257,11 +334,25 @@ mod tests {
             toml::from_str(&std::fs::read_to_string(self.config_path()).unwrap()).unwrap()
         }
 
-        fn rm(&self, name: &str, force: bool) -> anyhow::Result<(&'static str, Vec<String>)> {
-            remove(&RmArgs {
+        fn rm(&self, name: &str) -> anyhow::Result<(&'static str, Vec<String>)> {
+            self.rm_typing(name, Some(name))
+        }
+
+        /// `rm` at a terminal where `typed` is the answer, or with no
+        /// terminal when `None`.
+        fn rm_typing(
+            &self,
+            name: &str,
+            typed: Option<&str>,
+        ) -> anyhow::Result<(&'static str, Vec<String>)> {
+            let args = RmArgs {
                 name: name.to_string(),
-                force,
+                yes: false,
                 config: Some(self.config_path()),
+            };
+            let answer = format!("{}\n", typed.unwrap_or_default());
+            remove(&args, typed.is_some(), &mut answer.as_bytes(), |_| {
+                Vec::new()
             })
         }
     }
@@ -281,7 +372,7 @@ mod tests {
             entry("tmp-devnet-1", &root)
         ));
 
-        let (_, next) = sandbox.rm("tmp-devnet-1", false).unwrap();
+        let (_, next) = sandbox.rm("tmp-devnet-1").unwrap();
 
         assert!(!root.exists());
         let config = sandbox.config();
@@ -299,12 +390,12 @@ mod tests {
             entry("tmp-devnet-1", &root)
         ));
 
-        let (_, next) = sandbox.rm("tmp-devnet-1", false).unwrap();
+        let (_, next) = sandbox.rm("tmp-devnet-1").unwrap();
         assert!(next.is_empty());
     }
 
     #[test]
-    fn registered_nodes_refuse_without_force_and_touch_nothing() {
+    fn registered_nodes_do_not_refuse() {
         let sandbox = Sandbox::new();
         let root = sandbox.network_dir("tmp-devnet-1");
         sandbox.write_config(&format!(
@@ -312,16 +403,26 @@ mod tests {
             entry("tmp-devnet-1", &root)
         ));
 
-        let err = sandbox.rm("tmp-devnet-1", false).unwrap_err().to_string();
-        assert!(err.contains("1 node(s) registered (alpha)"), "{err}");
-        assert!(err.contains("pulumi destroy"), "{err}");
-        assert!(err.contains("--force"), "{err}");
-        assert!(root.exists());
-        assert!(sandbox.config().networks.contains_key("tmp-devnet-1"));
-
-        sandbox.rm("tmp-devnet-1", true).unwrap();
+        sandbox.rm("tmp-devnet-1").unwrap();
         assert!(!root.exists());
         assert!(sandbox.config().networks.is_empty());
+    }
+
+    #[test]
+    fn the_nodes_warning_names_what_still_resolves() {
+        let nodes: Descriptors = toml::from_str(NODES).unwrap();
+
+        let warning = nodes_warning(&nodes, &[]);
+        assert!(warning.contains("registered for it (alpha)"), "{warning}");
+        assert!(warning.contains("pulumi destroy"), "{warning}");
+        assert!(!warning.contains("resolve"), "{warning}");
+
+        let warning = nodes_warning(&nodes, &["a.example.com".to_string()]);
+        assert!(
+            warning.contains("a.example.com still resolves"),
+            "{warning}"
+        );
+        assert!(warning.contains("from cache"), "{warning}");
     }
 
     #[test]
@@ -330,7 +431,7 @@ mod tests {
         let root = sandbox.dir.path().join("gone");
         sandbox.write_config(&entry("gone", &root));
 
-        sandbox.rm("gone", false).unwrap();
+        sandbox.rm("gone").unwrap();
         assert!(sandbox.config().networks.is_empty());
     }
 
@@ -344,7 +445,7 @@ mod tests {
             manifest.to_str().unwrap()
         ));
 
-        sandbox.rm("partner-net", false).unwrap();
+        sandbox.rm("partner-net").unwrap();
         assert!(manifest.exists());
         assert!(sandbox.config().networks.is_empty());
     }
@@ -356,7 +457,7 @@ mod tests {
         std::fs::write(root.join("notes.txt"), "mine").unwrap();
         sandbox.write_config(&entry("tmp-devnet-1", &root));
 
-        let err = sandbox.rm("tmp-devnet-1", false).unwrap_err().to_string();
+        let err = sandbox.rm("tmp-devnet-1").unwrap_err().to_string();
         assert!(err.contains("it holds notes.txt"), "{err}");
         assert!(root.join("inputs").exists());
         assert!(sandbox.config().networks.contains_key("tmp-devnet-1"));
@@ -369,7 +470,7 @@ mod tests {
         std::fs::write(&file, "").unwrap();
         sandbox.write_config(&entry("odd", &file));
 
-        let err = sandbox.rm("odd", false).unwrap_err().to_string();
+        let err = sandbox.rm("odd").unwrap_err().to_string();
         assert!(err.contains("is not a directory"), "{err}");
         assert!(file.exists());
     }
@@ -379,50 +480,45 @@ mod tests {
         let sandbox = Sandbox::new();
         sandbox.write_config("[networks.devnet-1]\nmanifest = \"/m.json\"\n");
 
-        let err = sandbox.rm("devnet-2", false).unwrap_err().to_string();
+        let err = sandbox.rm("devnet-2").unwrap_err().to_string();
         assert!(err.contains("no network `devnet-2`"), "{err}");
         assert!(err.contains("it holds devnet-1"), "{err}");
     }
 
-    fn git(dir: &Path, args: &[&str]) {
-        let status = Command::new("git")
-            .arg("-C")
-            .arg(dir)
-            .args(args)
-            .stdout(Stdio::null())
-            .status()
-            .unwrap();
-        assert!(status.success(), "git {args:?}");
+    #[test]
+    fn a_wrong_name_typed_back_deletes_nothing() {
+        let sandbox = Sandbox::new();
+        let root = sandbox.network_dir("tmp-devnet-1");
+        sandbox.write_config(&entry("tmp-devnet-1", &root));
+
+        let err = sandbox
+            .rm_typing("tmp-devnet-1", Some("tmp-devnet-2"))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("nothing was deleted"), "{err}");
+        assert!(root.exists());
+        assert!(sandbox.config().networks.contains_key("tmp-devnet-1"));
     }
 
-    /// The monorepo's shape: `tee/networks/` ignores `tmp-*/`, and any other
-    /// directory there is a network to commit.
     #[test]
-    fn git_decides_a_directory_inside_a_work_tree() {
+    fn no_terminal_needs_yes() {
         let sandbox = Sandbox::new();
-        let repo = sandbox.dir.path().join("repo");
-        std::fs::create_dir_all(repo.join("networks")).unwrap();
-        git(&repo, &["init", "--quiet"]);
-        std::fs::write(repo.join("networks/.gitignore"), "tmp-*/\n").unwrap();
-        let committed = sandbox.network_dir("repo/networks/devnet");
-        let throwaway = sandbox.network_dir("repo/networks/tmp-devnet-1");
-        sandbox.write_config(&format!(
-            "{}\n{}",
-            entry("devnet", &committed),
-            entry("tmp-devnet-1", &throwaway)
-        ));
+        let root = sandbox.network_dir("tmp-devnet-1");
+        sandbox.write_config(&entry("tmp-devnet-1", &root));
 
-        let err = sandbox.rm("devnet", false).unwrap_err().to_string();
-        assert!(err.contains("git does not ignore it"), "{err}");
-        assert!(err.contains("git rm -r"), "{err}");
-        assert!(committed.exists());
-        assert!(sandbox.config().networks.contains_key("devnet"));
+        let err = sandbox
+            .rm_typing("tmp-devnet-1", None)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("pass --yes"), "{err}");
+        assert!(root.exists());
 
-        sandbox.rm("tmp-devnet-1", false).unwrap();
-        assert!(!throwaway.exists());
-        assert_eq!(
-            sandbox.config().networks.keys().collect::<Vec<_>>(),
-            ["devnet"]
-        );
+        let args = RmArgs {
+            name: "tmp-devnet-1".to_string(),
+            yes: true,
+            config: Some(sandbox.config_path()),
+        };
+        remove(&args, false, &mut std::io::empty(), |_| Vec::new()).unwrap();
+        assert!(!root.exists());
     }
 }

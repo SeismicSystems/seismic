@@ -103,7 +103,7 @@ on, kubeconfig-style, holding pointers and never a credential.
 |---|---|---|
 | `network init` | founder, once per network | Scaffold a network directory's authored inputs. |
 | `network assemble` | founder, once per network | Derive the artifact set from a network directory's inputs: pins the harvested founding set and mints `network_id`. `--check` re-derives and compares with what is on disk. |
-| `network rm` | founder, once the stack is destroyed | Delete a network directory and its context entry, by name — the counterpart of `init`. Refuses a directory git does not ignore, and one with nodes still registered unless `--force`. |
+| `network rm` | founder, once the stack is destroyed | Delete a network directory and its context entry, by name — the counterpart of `init`. Asks for the name to be typed back (`--yes` skips it), warning when nodes are still registered. |
 | `node harvest` | founder, once per network | Collect and DCAP-verify the founding cohort's summit keys into `inputs/harvest/` — the provenance `assemble` pins the validator set from. |
 | `node configure` | any operator, on first boot; the founder, once per network | POST each node's TOML to tdx-init, recording the exact body under `nodes/`, and `verify` each node once it is up. `--bootnode` joins one node to a live network; `--genesis-node` founds a cohort (one genesis node + N joiners, in parallel) and then runs the launch assertions against the manifest's pins; `--check` re-runs those assertions alone on a live cohort. |
 | `node verify` | any operator, whenever they rely on a node | Deploy-verify one node's TDX attestation against the network manifest and the measurement policy it pins. Read-only and re-runnable. |

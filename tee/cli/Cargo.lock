@@ -4423,6 +4423,8 @@ name = "seismic-tee-network"
 version = "0.2.1"
 dependencies = [
  "alloy-primitives",
+ "anstream",
+ "anstyle",
  "anyhow",
  "clap",
  "clap_complete",
