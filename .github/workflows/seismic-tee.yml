@@ -8,10 +8,11 @@
 # so a pin bump that judges those quotes differently goes red here. `drift`
 # runs the guards that shell out to `seismic-reth genesis-hash` and `summit
 # genesis digest` over every committed network directory, with the binaries
-# of the seismic-images release `IMAGE` pins below, so only a commit here can
-# turn it red. Whether the newest seismic-reth and
-# summit would still derive the same chains is a question upstream merges
-# answer, not commits here; seismic-tee-drift-nightly.yml asks it on a cron.
+# of the seismic-images release those directories were founded on (their
+# inputs/image.json), so only a commit here can turn it red. Whether the
+# newest seismic-reth and summit would still derive the same chains is a
+# question upstream merges answer, not commits here;
+# seismic-tee-drift-nightly.yml asks it on a cron.
 name: seismic-tee
 
 on:
@@ -88,17 +89,22 @@ jobs:
     # runner's userland is part of what this job pins.
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    env:
-      # The seismic-images release whose seismic-reth and summit the gates
-      # run. A stopgap: a network directory names the release it was founded
-      # on (the stem of `measurement_id` in its inputs/measurements.json), but
-      # fixture-devnet was founded on a seismic-dev build with no release to
-      # fetch, and this release's binaries derive the same chain from it.
-      # When SEI-701 replaces the fixture with a released image's archive,
-      # this job reads the image from the directory and the pin goes.
-      IMAGE: seismic_2026-09-28.00fbf5
     steps:
       - uses: actions/checkout@v6
+
+      # The seismic-images release whose seismic-reth and summit the gates
+      # run: the one the committed network directories were founded on, as
+      # each records in inputs/image.json. One binary pair runs every
+      # directory's gates, so directories founded on different images are
+      # refused here rather than half-checked.
+      - name: Read the committed networks' image
+        run: |
+          images=$(jq -r .image tee/networks/*/inputs/image.json | sort -u)
+          [ "$(printf '%s\n' "$images" | grep -c .)" = 1 ] || {
+            echo "the committed network directories name more than one image (or none): $images" >&2
+            exit 1
+          }
+          echo "IMAGE=$images" >> "$GITHUB_ENV"
 
       # The drift guards (tee/cli/network/tests/drift.rs) link the enclave
       # crates at the rev the workspace pins, so the rev under test is the

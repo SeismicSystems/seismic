@@ -1,7 +1,7 @@
 {
   "measurements": {
     "11": {
-      "expected": "5ccb4c43e3e81991459f3583387a11f299639813aa0943e178254a8c7a15f290"
+      "expected": "1964ec075eb42a34da0bf20a84b0f3b9846d6a5fca5e204cc8b394ac51a3de6a"
     },
     "12": {
       "expected": "0000000000000000000000000000000000000000000000000000000000000000"
@@ -13,13 +13,13 @@
       "expected": "0000000000000000000000000000000000000000000000000000000000000000"
     },
     "4": {
-      "expected": "39bf5d48b8f2d53c7f97a89f860a37efe1cf48db0a31cb8b2d83199b6df8bcb0"
+      "expected": "a82c08f4eeb149b3e9c8f0952785cd43860e4f980d9f0758563b9f6c3b359532"
     },
     "8": {
       "expected": "0000000000000000000000000000000000000000000000000000000000000000"
     },
     "9": {
-      "expected": "e460a109dbb1a2e2628bc6212c5bd9a40914257cbe646bcd53e538addb7f01c2"
+      "expected": "dcf886627fe61366ca87ba5f969c1c3ffa4adcaaa3b8901b7e0fd6de5ae51b46"
     }
   },
   "EventLog": {
@@ -37,24 +37,24 @@
       },
       {
         "PCRIndex": 4,
-        "Digest": "23540aed52dbffdf524090bcd1d561f4703d2213541ca922b9b49ea5bb6b4d03",
+        "Digest": "1b7ca10c44839384bfc9ef938aa1e082660c94fb407ca15917190bc646aa4d39",
         "Description": "Boot Stage 1: Unified Kernel Image (UKI)"
       },
       {
         "PCRIndex": 4,
-        "Digest": "cf99317753808e81cdaa778bffcd0d32803bb4b6e5664e90a3c2703c67175df8",
+        "Digest": "8931590fbe48c93ce713306a4f1b4e753fb0b6c18ebe65a1e4fd943c4d14d430",
         "Description": "Boot Stage 2: Linux"
       },
       {
         "PCRIndex": 9,
-        "Digest": "aa50cea319f3df1f3802d2ae1cf4b60dacee7619e1fd2ed05c50b7331c829134",
-        "Data": "YwBvAG4AcwBvAGwAZQA9AHQAdAB5ADAAIABjAG8AbgBzAG8AbABlAD0AdAB0AHkAUwAwACwAMQAxADUAMgAwADAAbgA4ACAAbQBpAHQAaQBnAGEAdABpAG8AbgBzAD0AYQB1AHQAbwAsAG4AbwBzAG0AdAAgAHMAcABlAGMAXwBzAHQAbwByAGUAXwBiAHkAcABhAHMAcwBfAGQAaQBzAGEAYgBsAGUAPQBvAG4AIABuAG8AcwBwAGUAYwB0AHIAZQBfAHYAMgAgAHMAeQBzAHQAZQBtAGQALgB1AG4AaQB0AD0AbQBpAG4AaQBtAGEAbAAuAHQAYQByAGcAZQB0AAAA",
-        "Description": "EV_EVENT_TAG: Linux LOAD_FILE2 protocol: cmdline \"console=tty0 console=ttyS0,115200n8 mitigations=auto,nosmt spec_store_bypass_disable=on nospectre_v2 systemd.unit=minimal.target\\x00\""
+        "Digest": "e789e8c884dee23de5c326d09c7747880d73da0c606376e70f5c668420dfbdbd",
+        "Data": "YwBvAG4AcwBvAGwAZQA9AHQAdAB5ADAAIABjAG8AbgBzAG8AbABlAD0AdAB0AHkAUwAwACwAMQAxADUAMgAwADAAbgA4ACAAbQBpAHQAaQBnAGEAdABpAG8AbgBzAD0AYQB1AHQAbwAsAG4AbwBzAG0AdAAgAHMAcABlAGMAXwBzAHQAbwByAGUAXwBiAHkAcABhAHMAcwBfAGQAaQBzAGEAYgBsAGUAPQBvAG4AIABuAG8AcwBwAGUAYwB0AHIAZQBfAHYAMgAgAHQAcgBhAG4AcwBwAGEAcgBlAG4AdABfAGgAdQBnAGUAcABhAGcAZQA9AG0AYQBkAHYAaQBzAGUAIABzAHkAcwB0AGUAbQBkAC4AdQBuAGkAdAA9AG0AaQBuAGkAbQBhAGwALgB0AGEAcgBnAGUAdAAAAA==",
+        "Description": "EV_EVENT_TAG: Linux LOAD_FILE2 protocol: cmdline \"console=tty0 console=ttyS0,115200n8 mitigations=auto,nosmt spec_store_bypass_disable=on nospectre_v2 transparent_hugepage=madvise systemd.unit=minimal.target\\x00\""
       },
       {
         "PCRIndex": 9,
-        "Digest": "917447884fe8df225b4024e2e9025dde9d7f8d3645c1a929dc7c935943122b4e",
-        "Description": "EV_EVENT_TAG: Linux LOAD_FILE2 protocol: initrd (digest 917447884fe8df225b4024e2e9025dde9d7f8d3645c1a929dc7c935943122b4e)"
+        "Digest": "b3d809a0e158d7ee96d695dd50cde9b98e9ae2a50bed123d960950ca7e028e1f",
+        "Description": "EV_EVENT_TAG: Linux LOAD_FILE2 protocol: initrd (digest b3d809a0e158d7ee96d695dd50cde9b98e9ae2a50bed123d960950ca7e028e1f)"
       },
       {
         "PCRIndex": 11,
@@ -64,65 +64,54 @@
       },
       {
         "PCRIndex": 11,
-        "Digest": "19a1a18d5ffbb0871f58ea35ca563b64a71a7eb959050a6fa801125b545c6678",
-        "Description": "EV_IPL: UKI section 1 data: 19a1a18d5ffbb0871f58ea35ca563b64a71a7eb959050a6fa801125b545c6678"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "3fb9e4e3cc810d4326b5c13cef18aee1f9df8c5f4f7f5b96665724fa3b846e08",
-        "Data": "Lm9zcmVsAA==",
-        "Description": "EV_IPL: UKI section 2 name: .osrel"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "1238f99551300692ec2c817c88f2ab9a80e5867bbba0be3572288087f2985a53",
-        "Description": "EV_IPL: UKI section 2 data: 1238f99551300692ec2c817c88f2ab9a80e5867bbba0be3572288087f2985a53"
+        "Digest": "163ab2d0b82d48730595f817f13f340fec92277e294ef97355af4bfbe3e8eb0c",
+        "Description": "EV_IPL: UKI section 1 data: 163ab2d0b82d48730595f817f13f340fec92277e294ef97355af4bfbe3e8eb0c"
       },
       {
         "PCRIndex": 11,
         "Digest": "461203a89f23e36c3a4dc817f905b00484d2cf7e7d9376f13df91c41d84abe46",
         "Data": "LmNtZGxpbmUA",
-        "Description": "EV_IPL: UKI section 3 name: .cmdline"
+        "Description": "EV_IPL: UKI section 2 name: .cmdline"
       },
       {
         "PCRIndex": 11,
-        "Digest": "30a47dd0aca13e8f5685caf29052eb2906a027c2f86298101b3b3a5730a5cdde",
-        "Description": "EV_IPL: UKI section 3 data: 30a47dd0aca13e8f5685caf29052eb2906a027c2f86298101b3b3a5730a5cdde"
+        "Digest": "434524eb9683085d3def33be7f1cd78fea6b95a16d26899f862821c0fce3952d",
+        "Description": "EV_IPL: UKI section 2 data: 434524eb9683085d3def33be7f1cd78fea6b95a16d26899f862821c0fce3952d"
       },
       {
         "PCRIndex": 11,
         "Digest": "15ee37e75f1e8d42080e91fdbbd2560780918c81fe3687ae6d15c472bbdaac75",
         "Data": "LmluaXRyZAA=",
-        "Description": "EV_IPL: UKI section 4 name: .initrd"
+        "Description": "EV_IPL: UKI section 3 name: .initrd"
       },
       {
         "PCRIndex": 11,
-        "Digest": "917447884fe8df225b4024e2e9025dde9d7f8d3645c1a929dc7c935943122b4e",
-        "Description": "EV_IPL: UKI section 4 data: 917447884fe8df225b4024e2e9025dde9d7f8d3645c1a929dc7c935943122b4e"
+        "Digest": "b3d809a0e158d7ee96d695dd50cde9b98e9ae2a50bed123d960950ca7e028e1f",
+        "Description": "EV_IPL: UKI section 3 data: b3d809a0e158d7ee96d695dd50cde9b98e9ae2a50bed123d960950ca7e028e1f"
       },
       {
         "PCRIndex": 11,
         "Digest": "da7a6d941caa9d28b8a3665c4865c143db8f99400ac88d883370ae3021636c30",
         "Data": "LnVuYW1lAA==",
-        "Description": "EV_IPL: UKI section 5 name: .uname"
+        "Description": "EV_IPL: UKI section 4 name: .uname"
       },
       {
         "PCRIndex": 11,
-        "Digest": "d26becf1cf6dfe987f35584b51c6105c0924a85b3141789cbd3443aaac6ee691",
-        "Description": "EV_IPL: UKI section 5 data: d26becf1cf6dfe987f35584b51c6105c0924a85b3141789cbd3443aaac6ee691"
+        "Digest": "924269613322794f02d72ed37fb43d0e6e2a314fa5d01bc2c2a2bfb31f856506",
+        "Description": "EV_IPL: UKI section 4 data: 924269613322794f02d72ed37fb43d0e6e2a314fa5d01bc2c2a2bfb31f856506"
       },
       {
         "PCRIndex": 11,
         "Digest": "ff552fd255be18a3d61c0da88976fc71559d13aad12d1dfe1708cf950cc4b74c",
         "Data": "LnNiYXQA",
-        "Description": "EV_IPL: UKI section 6 name: .sbat"
+        "Description": "EV_IPL: UKI section 5 name: .sbat"
       },
       {
         "PCRIndex": 11,
-        "Digest": "7b7f7ea40ef3c8dda5e1fd1b0438e6a995f9093b6bad59251ca314df7195c2c4",
-        "Description": "EV_IPL: UKI section 6 data: 7b7f7ea40ef3c8dda5e1fd1b0438e6a995f9093b6bad59251ca314df7195c2c4"
+        "Digest": "184873eaefa801d5ff85df463ec98c117c00dd56a8426c00413991751d2fe602",
+        "Description": "EV_IPL: UKI section 5 data: 184873eaefa801d5ff85df463ec98c117c00dd56a8426c00413991751d2fe602"
       }
     ]
   },
-  "measurement_id": "seismic-dev_2026-08-27.5c012e.vhd"
+  "measurement_id": "seismic_2026-10-01.6a90ed.vhd"
 }

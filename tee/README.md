@@ -178,9 +178,10 @@ enclave verifier, so a pin bump that judges those quotes differently fails
 the PR that bumps it; [`networks/README.md`](networks/README.md) says what a
 network directory holds and how the fixture is refreshed. The drift guards
 shell out to `seismic-reth` and `summit` and run in their own CI job: on PRs
-with the binaries of the image release
-[`seismic-tee.yml`](../.github/workflows/seismic-tee.yml) pins, and nightly
-with the newest builds of both
+([`seismic-tee.yml`](../.github/workflows/seismic-tee.yml)) with the
+binaries of the image release the committed directories were founded on,
+read from their `inputs/image.json`, and nightly with the newest builds of
+both
 ([`seismic-tee-drift-nightly.yml`](../.github/workflows/seismic-tee-drift-nightly.yml)).
 
 The rules a new command follows: every group stays cloud-agnostic and none

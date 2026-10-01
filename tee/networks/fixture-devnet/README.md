@@ -13,18 +13,19 @@ change in the pinned enclave crates before the next real founding does.
 
 | | |
 |---|---|
-| Founded | 2026-09-15, by hand, from [the devnet runbook](https://github.com/SeismicSystems/deploy/blob/95127211106cee2d6855018a703fe6b44db4314f/tee/docs/runbook-devnet.md) |
-| Image | `seismic-dev_2026-08-27.5c012e` (a `seismic-dev_*` build: no seismic-images release, so no release tag to pin) |
-| `measurement_id` | `seismic-dev_2026-08-27.5c012e.vhd` (`inputs/measurements.json`) |
-| Records | 4, `inputs/harvest/tmp-devnet-1-{1..4}.json`, record `version` 1 |
+| Founded | 2026-10-01, by hand, from [the devnet runbook](https://github.com/SeismicSystems/deploy/blob/8d0048de2a951044a48a3ff0215dc7b87fe012ab/tee/runbook-devnet.md), configured and smoke-tested before teardown |
+| Image | [`seismic_2026-10-01.6a90ed`](https://github.com/SeismicSystems/seismic-images/releases/tag/seismic_2026-10-01.6a90ed) (`inputs/image.json`): summit `5eb9f47`, enclave `8b5833a`, seismic-reth `39d04d1` |
+| `measurement_id` | `seismic_2026-10-01.6a90ed.vhd` (`inputs/measurements.json`) |
+| Records | 4, `inputs/harvest/tee-devnet-{1..4}.json` (harvested as `samlaf-fixture-devnet-tee-devnet-{1..4}`; the operator prefix is dropped, the stem being only a label), record `version` 1 |
 | Verifier at founding | dcap-qvl 0.5.2 (`trust_anchors.dcap_qvl_version`) |
-| `network_id` | `0x6dc6adff3fe0aa9278dfbb3a1236af1ff855e32f6ceb754b8be8390879e06595` |
+| `network_id` | `0xfa2dd4423242449103f1057b82480c47bc7574e0d16a639e17009091c22e64ee` |
 
-The manifest's `name` and `namespace` are `tmp-devnet-1`, the directory
-the cohort was founded under: both are part of the manifest bytes, so
-they stay as assembled ([../README.md](../README.md) on renaming a
-throwaway). The cohort's descriptor (`nodes/`) is not here — a dead
-cohort's IPs, gitignored like every network's.
+The cohort was founded under this directory's own name, so the
+manifest's `name` and `namespace` are `fixture-devnet`. Both are part of
+the manifest bytes: a refresh founded under another name keeps that name
+as assembled ([../README.md](../README.md) on renaming a throwaway).
+The cohort's descriptor (`nodes/`) is not here — a dead cohort's IPs,
+gitignored like every network's.
 
 Replay it by hand:
 
@@ -49,9 +50,11 @@ cohort pinned:
    1–4 and 8 — `init`, `up`, `ctx set-nodes`, `harvest`, `assemble`,
    `destroy`; no `configure`.
 2. Replace this directory's contents with it, dropping `nodes/`.
-3. Update the table above — the release tag the cohort pinned (the
-   stack's `image`), the `measurement_id`, the manifest's name and the
-   `network_id` — and the unit tests that embed this directory's files:
+3. Update the table above — the release tag the cohort booted
+   (`inputs/image.json`'s `image`, which is also the release whose
+   binaries the `drift` job in `.github/workflows/seismic-tee.yml` runs),
+   the `measurement_id`, the manifest's name and the `network_id` — and
+   the unit tests that embed this directory's files:
    `tee/cli/common/src/manifest.rs` asserts the manifest's name and pins
    its SHA-256 on purpose (that pin is what catches the enclave crate
    changing how `network_id` is derived), so both move with the fixture.

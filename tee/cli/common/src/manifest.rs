@@ -157,10 +157,8 @@ impl Deref for Manifest {
 mod tests {
     use super::*;
 
-    /// Verbatim `tee/networks/fixture-devnet/network-manifest.json`. The
-    /// fixture is a real founding, assembled under the throwaway name its
-    /// cohort was founded as; the name is part of the hashed bytes, so it
-    /// stays (see the fixture's README).
+    /// Verbatim `tee/networks/fixture-devnet/network-manifest.json`, a real
+    /// founding's manifest (see the fixture's README).
     const FIXTURE_DEVNET: &[u8] =
         include_bytes!("../../../networks/fixture-devnet/network-manifest.json");
 
@@ -168,9 +166,9 @@ mod tests {
     fn parses_the_committed_fixture_network() {
         let manifest = Manifest::from_json_bytes(FIXTURE_DEVNET).unwrap();
 
-        assert_eq!(manifest.name, "tmp-devnet-1");
+        assert_eq!(manifest.name, "fixture-devnet");
         assert_eq!(manifest.eth.chain_id, 5124);
-        assert_eq!(manifest.summit.namespace, "tmp-devnet-1");
+        assert_eq!(manifest.summit.namespace, "fixture-devnet");
     }
 
     /// The digest is pinned rather than recomputed the way the constructor
@@ -186,7 +184,7 @@ mod tests {
         assert_eq!(manifest.bytes(), FIXTURE_DEVNET);
         assert_eq!(
             manifest.network_id().to_string(),
-            "0x6dc6adff3fe0aa9278dfbb3a1236af1ff855e32f6ceb754b8be8390879e06595"
+            "0xfa2dd4423242449103f1057b82480c47bc7574e0d16a639e17009091c22e64ee"
         );
     }
 
@@ -238,7 +236,7 @@ mod tests {
         let manifest = Manifest::from_json_bytes(FIXTURE_DEVNET).unwrap();
 
         manifest
-            .check_summit_genesis(b"namespace = \"tmp-devnet-1\"\nvalidators = []\n")
+            .check_summit_genesis(b"namespace = \"fixture-devnet\"\nvalidators = []\n")
             .unwrap();
 
         let err = manifest
@@ -246,7 +244,7 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.contains("\"other-net\""), "{err}");
-        assert!(err.contains("summit.namespace \"tmp-devnet-1\""), "{err}");
+        assert!(err.contains("summit.namespace \"fixture-devnet\""), "{err}");
 
         let err = manifest
             .check_summit_genesis(b"validators = []\n")

@@ -1,0 +1,17 @@
+{
+  "image": "seismic_2026-10-01.6a90ed",
+  "commit": "6a90ed382227dab01829c2842cd304063f526d5a",
+  "sources": {
+    "seismic_reth": "39d04d158da383324b12c2e3397b0b28f3c3ee36",
+    "summit": "5eb9f47f18644c2150a99ff119bf5f1a9fd0b258",
+    "enclave": "8b5833a43afe57157b182667aeed7994c317d09d"
+  },
+  "targets": {
+    "azure-tdx": {
+      "vhd_blob_url": "https://seismicimages.blob.core.windows.net/dev/seismic_2026-10-01.6a90ed.vhd",
+      "storage_account_id": "/subscriptions/214887ea-51a7-4ca7-9cec-29b3cf3d311c/resourceGroups/seismic-images/providers/Microsoft.Storage/storageAccounts/seismicimages",
+      "measurements": "measurements.azure-tdx.json",
+      "efi_sha256": "5b378c6be5ad337dcca5bad157ce97eef4c4cc980ae465f2f2dd4387336cf3c9"
+    }
+  }
+}
