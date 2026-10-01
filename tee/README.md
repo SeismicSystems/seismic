@@ -169,7 +169,7 @@ by default.
 make -C tee/cli help        # the targets
 make -C tee/cli locked      # Cargo.lock agrees with Cargo.toml (CI runs this first)
 make -C tee/cli check       # fmt-check + clippy + test: what CI requires
-make -C tee/cli drift       # cross-repo drift guards; needs seismic-reth on PATH
+make -C tee/cli drift       # cross-repo drift guards; needs seismic-reth + summit on PATH
 ```
 
 `check` is hermetic. Its suite replays the committed founding archive in
@@ -177,8 +177,11 @@ make -C tee/cli drift       # cross-repo drift guards; needs seismic-reth on PAT
 enclave verifier, so a pin bump that judges those quotes differently fails
 the PR that bumps it; [`networks/README.md`](networks/README.md) says what a
 network directory holds and how the fixture is refreshed. The drift guards
-reach outside the repo and run in their own, non-required CI job
-([`seismic-tee.yml`](../.github/workflows/seismic-tee.yml)).
+shell out to `seismic-reth` and `summit` and run in their own CI job: on PRs
+with the binaries of the image release
+[`seismic-tee.yml`](../.github/workflows/seismic-tee.yml) pins, and nightly
+with the newest builds of both
+([`seismic-tee-drift-nightly.yml`](../.github/workflows/seismic-tee-drift-nightly.yml)).
 
 The rules a new command follows: every group stays cloud-agnostic and none
 wraps a provisioner, the dependency direction above holds, and the command

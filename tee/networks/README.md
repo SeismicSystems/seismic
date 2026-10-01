@@ -107,8 +107,7 @@ every committed directory that carries an archive
 record schema, or the policy or manifest schema in the pinned enclave
 crates goes red on the PR that bumps the pin, against quotes a real TDX
 cohort produced, rather than at the next founding. `make -C tee/cli
-drift` adds the gates that need `seismic-reth` and the sibling repos'
-current state.
+drift` adds the gates that need `seismic-reth` and `summit`.
 
 **Not a network anyone runs.** The cohort was torn down the day it was
 founded, and nothing can be brought up from its identity: the keys the

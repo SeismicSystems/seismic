@@ -6,9 +6,12 @@
 # fmt, clippy, and the test suite, which replays the committed founding
 # archive (tee/networks/fixture-devnet) through the pinned enclave verifier,
 # so a pin bump that judges those quotes differently goes red here. `drift`
-# runs the guards that reach outside the repo — the network's published
-# inputs, `seismic-reth genesis-hash`, `summit genesis digest` — and is not
-# required, since the world it checks against moves without a commit here.
+# runs the guards that shell out to `seismic-reth genesis-hash` and `summit
+# genesis digest` over every committed network directory, with the binaries
+# of the seismic-images release `IMAGE` pins below, so only a commit here can
+# turn it red. Whether the newest seismic-reth and
+# summit would still derive the same chains is a question upstream merges
+# answer, not commits here; seismic-tee-drift-nightly.yml asks it on a cron.
 name: seismic-tee
 
 on:
@@ -17,14 +20,10 @@ on:
     paths:
       - "tee/**"
       - ".github/workflows/seismic-tee.yml"
-      - ".github/actions/setup-sreth/**"
-      - ".github/actions/setup-summit/**"
   pull_request:
     paths:
       - "tee/**"
       - ".github/workflows/seismic-tee.yml"
-      - ".github/actions/setup-sreth/**"
-      - ".github/actions/setup-summit/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -84,8 +83,20 @@ jobs:
       - run: shellcheck --shell=sh tee/cli/install.sh
 
   drift:
-    runs-on: ubuntu-latest
+    # 24.04 rather than -latest: the image's binaries are lifted from its
+    # initrd and linked against the host's glibc and OpenSSL here, so the
+    # runner's userland is part of what this job pins.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
+    env:
+      # The seismic-images release whose seismic-reth and summit the gates
+      # run. A stopgap: a network directory names the release it was founded
+      # on (the stem of `measurement_id` in its inputs/measurements.json), but
+      # fixture-devnet was founded on a seismic-dev build with no release to
+      # fetch, and this release's binaries derive the same chain from it.
+      # When SEI-701 replaces the fixture with a released image's archive,
+      # this job reads the image from the directory and the pin goes.
+      IMAGE: seismic_2026-09-28.00fbf5
     steps:
       - uses: actions/checkout@v6
 
@@ -101,18 +112,37 @@ jobs:
           workspaces: tee/cli
       - uses: taiki-e/install-action@nextest
 
-      # The gates recompute each manifest's eth.genesis_hash with
-      # `seismic-reth genesis-hash` and its summit.genesis_config_digest with
-      # `summit genesis digest`. Both are the newest published build, not the
-      # rev any particular network was founded with: a committed archive that
-      # stops passing its own gates under today's binaries is the drift this
-      # job exists to name.
-      - uses: ./.github/actions/setup-sreth
-        with:
-          version: nightly
-      - uses: ./.github/actions/setup-summit
-        with:
-          version: main
+      # The image's own binaries, checked the way `seismic-tee network
+      # assemble` checks them (fetch_sums in tee/cli/network/src/image.rs):
+      # SHA256SUMS must carry a build provenance attestation from
+      # seismic-images' release workflow (RELEASE_SIGNER there), and both
+      # binaries must match it. GH_TOKEN is only for `gh`'s API calls; the
+      # release itself is public.
+      - name: Install ${{ env.IMAGE }}'s seismic-reth and summit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bin="$RUNNER_TEMP/$IMAGE"
+          mkdir -p "$bin"
+          cd "$bin"
+          for asset in SHA256SUMS seismic-reth summit; do
+            curl -fsSL -o "$asset" \
+              "https://github.com/SeismicSystems/seismic-images/releases/download/$IMAGE/$asset"
+          done
+          gh attestation verify SHA256SUMS --repo SeismicSystems/seismic-images \
+            --cert-identity https://github.com/SeismicSystems/seismic-images/.github/workflows/seismic.yml@refs/heads/seismic
+          # Two lines or nothing: `sha256sum -c` passes a file its list omits.
+          grep -E '^[0-9a-f]{64}  (seismic-reth|summit)$' SHA256SUMS > binaries.sha256
+          [ "$(wc -l < binaries.sha256)" = 2 ] || {
+            echo "$IMAGE's SHA256SUMS does not list both seismic-reth and summit" >&2
+            exit 1
+          }
+          sha256sum -c binaries.sha256
+          chmod +x seismic-reth summit
+          ./seismic-reth --version
+          # TODO: `--version` once summit reports one (SEI-560).
+          ./summit --help > /dev/null
+          echo "$bin" >> "$GITHUB_PATH"
 
       - run: make -C tee/cli locked
       - run: make -C tee/cli drift

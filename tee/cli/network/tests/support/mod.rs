@@ -2,7 +2,7 @@
 //! this repo commits to keeping valid.
 //!
 //! Two suites walk the same list. `drift.rs` runs the gates that reach outside
-//! the workspace over it (its own non-required CI job); `replay.rs` replays
+//! the workspace over it (its own CI job); `replay.rs` replays
 //! each committed founding archive offline (the hermetic suite, under the
 //! required job). Enumerating in one place is what keeps a directory from
 //! being checked by one and forgotten by the other.

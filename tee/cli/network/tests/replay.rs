@@ -22,7 +22,7 @@
 //! fixture refresh (`tee/networks/README.md`), not a reason to loosen it.
 //!
 //! The cross-repo half of the same walk — the gates that need `seismic-reth`
-//! and the sibling repos' current state — is `drift.rs`.
+//! and `summit` — is `drift.rs`.
 
 mod support;
 

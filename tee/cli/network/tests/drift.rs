@@ -1,19 +1,24 @@
 //! Cross-repo drift guards (run via `make -C tee/cli drift`).
 //!
-//! These check this repo against the current state of its sibling repos, by
-//! running binaries built from a sibling branch. Every test needing something
-//! outside this workspace belongs here, so `make test` stays hermetic with
-//! nothing to skip and every test runs in exactly one CI job. CI runs this
-//! module as its own non-required job, where a failure names the exact
-//! cross-repo check.
+//! These check the committed network directories against sibling repos'
+//! binaries: whichever `seismic-reth` and `summit` are on PATH. Every test
+//! needing something outside this workspace belongs here, so `make test`
+//! stays hermetic with nothing to skip. CI runs this module in two tiers, as
+//! its own job, where a failure names the exact cross-repo check:
+//!
+//! - on every PR and push touching `tee/` (`seismic-tee.yml`'s `drift`), with
+//!   the binaries of the seismic-images release the workflow pins, so only a
+//!   commit here can turn it red;
+//! - nightly (`seismic-tee-drift-nightly.yml`), with the newest seismic-reth
+//!   nightly and summit main build, which warns that an upstream merge would
+//!   derive a different chain before an image bump ships it.
 //!
 //! `#[ignore]` marks the whole file: the default `cargo nextest run` skips it,
 //! and the drift target runs it with `--run-ignored only`. The suite never
 //! skips *within* itself — a missing prerequisite is a failure, because a
 //! guard that quietly passes when its tooling is missing is how a committed
 //! artifact goes stale unnoticed. It needs `seismic-reth` and `summit` on
-//! PATH, for the `genesis-hash` and `genesis digest` subcommands (CI installs
-//! a prebuilt release of each, with the setup-sreth and setup-summit actions).
+//! PATH, for the `genesis-hash` and `genesis digest` subcommands.
 //!
 //! The enclave crates under test — the admission compiler, the manifest
 //! renderer and schema — are linked at the rev the workspace pins, so moving

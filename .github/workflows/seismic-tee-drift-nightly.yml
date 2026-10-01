@@ -1,0 +1,48 @@
+# The early-warning half of seismic-tee.yml's `drift`: the same guards over
+# every committed network directory, run with the newest seismic-reth nightly
+# and summit main build instead of the pinned image's. A red run here means an
+# upstream merge would derive a different chain from a directory we commit —
+# a genesis-hash or config-digest change the next image bump will bring — and
+# no commit in this repo caused it, so it never runs on a PR. It stays red
+# until the image moves past the change and the directory is refreshed
+# (tee/networks/fixture-devnet/README.md).
+#
+# Failures go out as GitHub's default Actions email, to whoever created this
+# workflow or, after that, whoever last edited its cron.
+name: seismic-tee nightly drift
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+
+      # Same toolchain setup as seismic-tee.yml's `check`, for the same
+      # reason: rust-cache keys on the default toolchain.
+      - name: Install toolchains
+        working-directory: tee/cli
+        run: rustup default "$(rustup show active-toolchain | head -1 | cut -d' ' -f1)"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tee/cli
+      - uses: taiki-e/install-action@nextest
+
+      - uses: ./.github/actions/setup-sreth
+        with:
+          version: nightly
+      - uses: ./.github/actions/setup-summit
+        with:
+          version: main
+
+      - run: make -C tee/cli locked
+      - run: make -C tee/cli drift
