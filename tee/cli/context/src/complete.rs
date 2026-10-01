@@ -31,6 +31,12 @@ pub fn selections() -> Vec<CompletionCandidate> {
         .unwrap_or_default()
 }
 
+/// Every entry `ctx rm` can remove: each network and each
+/// `<network>/<node>` — the selections, less `-`.
+pub fn entries() -> Vec<CompletionCandidate> {
+    load().map(|config| entries_of(&config)).unwrap_or_default()
+}
+
 /// The registered network names: `ctx set-nodes <NETWORK>`, `ctx set-network
 /// <NAME>`.
 pub fn networks() -> Vec<CompletionCandidate> {
@@ -56,6 +62,17 @@ fn load() -> Option<Config> {
 }
 
 fn selections_of(config: &Config) -> Vec<CompletionCandidate> {
+    let mut candidates = entries_of(config);
+    if let Some(previous) = &config.previous {
+        candidates.push(
+            CompletionCandidate::new("-")
+                .help(Some(format!("the previous selection: {previous}").into())),
+        );
+    }
+    candidates
+}
+
+fn entries_of(config: &Config) -> Vec<CompletionCandidate> {
     let current = config.current.as_deref();
     let mark = |value: &str| {
         let candidate = CompletionCandidate::new(value);
@@ -71,12 +88,6 @@ fn selections_of(config: &Config) -> Vec<CompletionCandidate> {
         for node in network.nodes.keys() {
             candidates.push(mark(&format!("{name}/{node}")));
         }
-    }
-    if let Some(previous) = &config.previous {
-        candidates.push(
-            CompletionCandidate::new("-")
-                .help(Some(format!("the previous selection: {previous}").into())),
-        );
     }
     candidates
 }
@@ -176,6 +187,14 @@ my-node = { public_ip = "198.51.100.4", fqdn = "my-node.example.com" }
         let mut config = config();
         config.previous = None;
         assert!(!values(&selections_of(&config)).contains(&"-".to_string()));
+    }
+
+    #[test]
+    fn entries_are_the_selections_less_dash() {
+        let config = config();
+        let mut selections = values(&selections_of(&config));
+        assert_eq!(selections.pop().as_deref(), Some("-"));
+        assert_eq!(values(&entries_of(&config)), selections);
     }
 
     #[test]

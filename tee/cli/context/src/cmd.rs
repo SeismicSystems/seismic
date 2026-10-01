@@ -1,7 +1,7 @@
 //! `ctx`: name networks, and select which one — and which of its nodes — the
 //! other commands act on.
 //!
-//! Eight verbs. [`CtxCommand::Use`] selects a context and refuses one that
+//! Nine verbs. [`CtxCommand::Use`] selects a context and refuses one that
 //! points at nothing; [`CtxCommand::List`] reads the file back, marking the
 //! selection, and [`CtxCommand::View`] prints it as it is on disk;
 //! [`CtxCommand::Env`] and [`CtxCommand::Exec`] hand the selection
@@ -9,8 +9,9 @@
 //! [`crate::exec`]); [`CtxCommand::SetNetwork`] registers or updates a network's
 //! pointers; [`CtxCommand::SetNodes`] imports a network's cohort from stdin,
 //! the way `aws eks update-kubeconfig` merges a cluster the cloud reported;
-//! [`CtxCommand::Unset`] clears the selection. Nothing outside this module
-//! writes the file.
+//! [`CtxCommand::Rm`] forgets a network or one of its nodes, keeping every
+//! file ([`crate::rm`]); [`CtxCommand::Unset`] clears the selection. Nothing
+//! outside this crate writes the file.
 
 use std::io::{IsTerminal as _, Read};
 use std::path::PathBuf;
@@ -26,7 +27,7 @@ use crate::complete;
 use crate::config::{Config, Network, Shape};
 use crate::env::{self, EnvArgs};
 use crate::exec::{self, ExecArgs};
-use crate::{Context, ContextArgs, Selected, Selection, note, path, write};
+use crate::{Context, ContextArgs, Selected, Selection, note, path, rm, write};
 
 /// The `ctx` command group: name networks, and select which one — and which
 /// of its nodes — the commands act on.
@@ -53,6 +54,11 @@ pub enum CtxCommand {
     /// pulumi stack output nodes --json | seismic-tee ctx set-nodes <NETWORK>.
     /// Creates the network when it is not registered yet.
     SetNodes(SetNodesArgs),
+    /// Forget a network, or one node of its table, keeping every file it
+    /// points at: <network> or <network>/<node>. `network rm` deletes the
+    /// directory too.
+    #[command(visible_alias = "remove")]
+    Rm(rm::RmArgs),
     /// Clear the current selection.
     Unset(ConfigArgs),
 }
@@ -67,6 +73,7 @@ pub fn run(command: CtxCommand) -> anyhow::Result<ExitCode> {
         CtxCommand::Exec(args) => exec::run(args),
         CtxCommand::SetNetwork(args) => run_set_network(args),
         CtxCommand::SetNodes(args) => run_set_nodes(args),
+        CtxCommand::Rm(args) => rm::run(args),
         CtxCommand::Unset(args) => run_unset(args),
     }
 }
@@ -559,6 +566,7 @@ mod tests {
                 "exec",
                 "set-network",
                 "set-nodes",
+                "rm",
                 "unset"
             ]
         );

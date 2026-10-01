@@ -24,10 +24,12 @@ pub mod args;
 pub mod cmd;
 pub mod complete;
 pub mod config;
+pub mod confirm;
 pub mod dir;
 pub mod env;
 pub mod exec;
 pub mod path;
+pub mod rm;
 pub mod write;
 
 use std::path::{Path, PathBuf};

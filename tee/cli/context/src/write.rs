@@ -89,6 +89,41 @@ pub fn remove_network(path: &Path, name: &str) -> anyhow::Result<()> {
     })
 }
 
+/// Remove `node` from `[networks.<network>.nodes]` — the table goes too once
+/// it is empty — and move `current` and `previous` that select the node back
+/// to its network, which is still in the file.
+pub fn remove_node(path: &Path, network: &str, node: &str) -> anyhow::Result<()> {
+    edit(path, |doc| {
+        if let Some(table) = doc
+            .get_mut("networks")
+            .and_then(|networks| networks.get_mut(network))
+            .and_then(Item::as_table_like_mut)
+        {
+            let emptied = table
+                .get_mut("nodes")
+                .and_then(Item::as_table_like_mut)
+                .is_some_and(|nodes| {
+                    nodes.remove(node);
+                    nodes.is_empty()
+                });
+            if emptied {
+                table.remove("nodes");
+            }
+        }
+        let selected = Selection {
+            network: network.to_string(),
+            node: Some(node.to_string()),
+        }
+        .to_string();
+        for key in ["current", "previous"] {
+            if doc.get(key).and_then(Item::as_str) == Some(selected.as_str()) {
+                doc[key] = value(network);
+            }
+        }
+        Ok(())
+    })
+}
+
 /// The `[networks]` table, created implicit (no bare `[networks]` header) the
 /// first time anything is written under it.
 fn networks_table(doc: &mut DocumentMut) -> anyhow::Result<&mut Table> {
@@ -504,6 +539,54 @@ mod tests {
         assert!(!text.contains("[networks]"), "{text}");
         let config: Config = toml::from_str(&text).unwrap();
         assert!(config.networks.is_empty());
+    }
+
+    #[test]
+    fn remove_node_drops_one_node_and_moves_its_selections_to_the_network() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "current = \"testnet/alpha\"\nprevious = \"testnet/alpha\"\n\n\
+             [networks.testnet]\ndir = \"/x\"\n\n[networks.testnet.nodes]\n\
+             # mine\nalpha = { public_ip = \"203.0.113.7\", fqdn = \"a.example.com\" }\n\
+             # theirs\nbeta = { public_ip = \"203.0.113.8\", fqdn = \"b.example.com\" }\n",
+        )
+        .unwrap();
+
+        remove_node(&path, "testnet", "alpha").unwrap();
+
+        let text = read(&path);
+        assert!(text.contains("# theirs"), "{text}");
+        let config: Config = toml::from_str(&text).unwrap();
+        assert_eq!(config.current.as_deref(), Some("testnet"));
+        assert_eq!(config.previous.as_deref(), Some("testnet"));
+        let network = &config.networks["testnet"];
+        assert_eq!(network.dir.as_deref(), Some(Path::new("/x")));
+        assert_eq!(network.nodes.keys().collect::<Vec<_>>(), ["beta"]);
+    }
+
+    /// Nodes written as sub-tables by hand go the same way, and the last one
+    /// takes its empty `nodes` table with it.
+    #[test]
+    fn removing_the_last_node_leaves_no_empty_nodes_table() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "current = \"partner-net/beta\"\n\n[networks.testnet]\ndir = \"/x\"\n\n\
+             [networks.testnet.nodes.alpha]\npublic_ip = \"203.0.113.7\"\nfqdn = \
+             \"a.example.com\"\n\n[networks.partner-net]\nmanifest = \"/m.json\"\n",
+        )
+        .unwrap();
+
+        remove_node(&path, "testnet", "alpha").unwrap();
+
+        let text = read(&path);
+        assert!(!text.contains("nodes"), "{text}");
+        let config: Config = toml::from_str(&text).unwrap();
+        assert_eq!(config.current.as_deref(), Some("partner-net/beta"));
+        assert!(config.networks["testnet"].nodes.is_empty());
     }
 
     #[test]

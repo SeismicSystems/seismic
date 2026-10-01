@@ -69,6 +69,12 @@ pub fn render_ctx(lead: &str, commands: &[String]) -> String {
     block("ctx:", lead, commands)
 }
 
+/// `Undo:` over commands: what puts back what the command just removed, for
+/// a removal that asks no confirmation because it is this easily reversed.
+pub fn render_undo(lead: &str, commands: &[String]) -> String {
+    block("Undo:", lead, commands)
+}
+
 /// Print [`render`] on stderr. Nothing is printed when `commands` is empty:
 /// a command with no definite next step ends on its own report.
 pub fn print(lead: &str, commands: &[String]) {
@@ -83,6 +89,11 @@ pub fn print_steps(steps: &[String]) {
 /// Print [`render_ctx`] on stderr.
 pub fn print_ctx(lead: &str, commands: &[String]) {
     eprint!("{}", render_ctx(lead, commands));
+}
+
+/// Print [`render_undo`] on stderr.
+pub fn print_undo(lead: &str, commands: &[String]) {
+    eprint!("{}", render_undo(lead, commands));
 }
 
 #[cfg(test)]
@@ -113,6 +124,7 @@ mod tests {
         assert_eq!(render("lead", &[]), "");
         assert_eq!(render_steps(&[]), "");
         assert_eq!(render_ctx("lead", &[]), "");
+        assert_eq!(render_undo("lead", &[]), "");
     }
 
     #[test]

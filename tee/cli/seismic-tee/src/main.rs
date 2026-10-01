@@ -458,6 +458,7 @@ mod tests {
                 "exec",
                 "set-network",
                 "set-nodes",
+                "rm",
                 "unset"
             ]
         );
@@ -625,6 +626,18 @@ mod tests {
             vec!["ctx", "view"],
             vec!["ctx", "unset"],
             vec!["ctx", "set-nodes", "devnet-1"],
+            vec!["ctx", "rm", "testnet/my-node"],
+            vec!["ctx", "rm", "fixture-devnet", "--yes"],
+            vec!["ctx", "rm", "devnet-1"],
+            vec![
+                "ctx",
+                "set-network",
+                "devnet-1",
+                "--dir",
+                "/networks/devnet-1",
+                "--network-id",
+                "abababababababababababababababababababababababababababababababab",
+            ],
             vec!["ctx", "use", "devnet-1/alpha"],
             vec!["ctx", "use", "devnet-1"],
             vec!["ctx", "env"],

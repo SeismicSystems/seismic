@@ -70,7 +70,8 @@ pub enum NetworkCommand {
     /// re-derive and compare with what is on disk instead of writing).
     Assemble(assemble::AssembleArgs),
     /// Delete a network directory and its context entry, by name — once its
-    /// stack is destroyed (the counterpart of init).
+    /// stack is destroyed (the counterpart of init). `ctx rm` forgets the
+    /// entry and keeps the directory.
     #[command(visible_alias = "remove")]
     Rm(rm::RmArgs),
 }

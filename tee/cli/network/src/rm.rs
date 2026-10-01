@@ -8,10 +8,10 @@
 //! `init` registers every directory it creates, so every network on a
 //! machine is already named in the context file, and `rm` takes that name
 //! rather than a path. It is in this group, not `ctx`, because this group
-//! owns directories — `init` makes them — and `ctx` never deletes data. The
-//! directory goes first and the entry second: a deletion that fails partway
-//! leaves the entry pointing at what is left, so running `rm` again finishes
-//! the job.
+//! owns directories — `init` makes them — and `ctx` never deletes data:
+//! `ctx rm` is the removal that keeps the directory. The directory goes first
+//! and the entry second: a deletion that fails partway leaves the entry
+//! pointing at what is left, so running `rm` again finishes the job.
 //!
 //! Deleting a directory waits for the network's name to be typed back, as
 //! `pulumi stack rm` does; `--yes` skips that, and with no terminal it is
@@ -35,7 +35,7 @@
 //! is an entry with no directory at all (a loose manifest, a bare node
 //! table): those files were never the CLI's, and only the entry goes.
 
-use std::io::{BufRead, IsTerminal as _, Write as _};
+use std::io::{BufRead, IsTerminal as _};
 use std::net::ToSocketAddrs as _;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -44,7 +44,7 @@ use anyhow::{Context as _, bail};
 use clap::Args;
 use clap_complete::ArgValueCandidates;
 use seismic_tee_common::{Descriptors, NetworkDir, next_step};
-use seismic_tee_context::{Context, Selection, complete, path, write};
+use seismic_tee_context::{Context, Selection, complete, confirm, path, write};
 
 #[derive(Debug, Args)]
 pub struct RmArgs {
@@ -157,8 +157,7 @@ fn remove_dir(
     if !metadata.is_dir() {
         bail!(
             "{} is not a directory — `network rm` deletes only a network directory, not a file \
-             or a symlink; remove it by hand, and `seismic-tee network rm {name}` then removes \
-             the entry alone",
+             or a symlink; `seismic-tee ctx rm {name}` forgets the entry and leaves it be",
             root.display()
         );
     }
@@ -166,8 +165,7 @@ fn remove_dir(
     if !foreign.is_empty() {
         bail!(
             "refusing to delete {}: it holds {}, which no network directory does — move them \
-             out first, or remove the directory by hand and `seismic-tee network rm {name}` \
-             then removes the entry alone",
+             out first, or `seismic-tee ctx rm {name}` forgets the entry and keeps the directory",
             root.display(),
             foreign.join(", ")
         );
@@ -191,45 +189,23 @@ fn confirm(
     input: &mut impl BufRead,
     resolving: impl FnOnce(&Descriptors) -> Vec<String>,
 ) -> anyhow::Result<()> {
-    if !args.yes && !interactive {
-        bail!(
-            "stdin is not a terminal, so nobody is here to type `{name}` back; pass --yes to \
-             delete it unattended"
-        );
-    }
+    confirm::require_answerable(name, "delete", args.yes, interactive)?;
     if !args.yes {
-        danger(&format!("This will permanently delete {}.", root.display()));
+        confirm::danger(&format!(
+            "This will permanently delete {}. (`seismic-tee ctx rm {name}` forgets the entry \
+             and keeps the directory.)",
+            root.display()
+        ));
     }
     if !nodes.is_empty() {
         nodes_warning(nodes, &resolving(nodes))
             .lines()
-            .for_each(danger);
+            .for_each(confirm::danger);
     }
     if args.yes {
         return Ok(());
     }
-    anstream::eprint!("Type `{NAME}{name}{NAME:#}` to confirm: ");
-    std::io::stderr().flush().context("flushing the prompt")?;
-    let mut answer = String::new();
-    input
-        .read_line(&mut answer)
-        .context("reading the confirmation")?;
-    if answer.trim() != name {
-        bail!("`{}` is not `{name}`; nothing was deleted", answer.trim());
-    }
-    Ok(())
-}
-
-/// Red, as `pulumi stack rm` warns. Rendered only when stderr is a terminal
-/// that wants colour (see `anstream` in the workspace manifest).
-const DANGER: anstyle::Style = anstyle::AnsiColor::Red.on_default();
-
-/// The name to type back: blue, as `pulumi stack rm` shows it.
-const NAME: anstyle::Style = anstyle::AnsiColor::Blue.on_default();
-
-/// A line on stderr in [`DANGER`] style.
-fn danger(line: &str) {
-    anstream::eprintln!("{DANGER}{line}{DANGER:#}");
+    confirm::type_back(name, "nothing was deleted", input)
 }
 
 /// What to say about a network with `nodes` registered, given the FQDNs

@@ -4413,6 +4413,7 @@ dependencies = [
  "clap_complete",
  "seismic-tee-common",
  "serde",
+ "serde_json",
  "tempfile",
  "toml",
  "toml_edit",
