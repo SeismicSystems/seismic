@@ -726,7 +726,7 @@ mod tests {
                 "s",
             ],
             vec!["network", "rm", "tmp-devnet-1"],
-            vec!["network", "rm", "tmp-devnet-1", "--force"],
+            vec!["network", "rm", "tmp-devnet-1", "--yes"],
             vec!["network", "remove", "tmp-devnet-1"],
             // node
             vec!["node", "harvest", "tee/networks/devnet-3"],
