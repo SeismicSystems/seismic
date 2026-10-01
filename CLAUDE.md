@@ -12,6 +12,7 @@ seismic/
 ├── contracts/       # Solidity contracts
 ├── clients/ts/      # TypeScript client (Viem + React)
 ├── clients/py/      # Python client (Web3.py)
+├── tee/             # seismic-tee CLI — read tee/cli/CLAUDE.md before changing its interface
 └── workspace/       # cross-repo workspace files: CLAUDE.workspace.md, seismic.code-workspace, cargo-local-patches.toml
 ```
 
