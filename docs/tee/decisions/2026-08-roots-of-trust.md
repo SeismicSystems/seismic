@@ -4,6 +4,8 @@
 > roots-of-trust design pass. It describes the candidates as they stood when the
 > decision was made and is not updated as the design moves; the current-state
 > docs it links are the authority on what runs today.
+>
+> **Superseded in part** by [the root-key commitment record](2026-09-root-key-commitment.md#what-this-supersedes) (September 2026).
 
 Decision record for the roots-of-trust design pass: the candidate trust anchors that were cataloged, and the reasoning that picked the shipped combination. **Outcome: the network manifest as the joiner's bootstrap root, the** `tx_io_pk@0` **commitment as proof of key provenance, and genesis-pinned on-chain policy for responder admission.** That combination is the adopted design, documented publicly — the mechanisms in [network-manifest.md](../network-manifest.md) and [chain-backed-admission.md](../chain-backed-admission.md), the assumptions and accepted risks in [trust-model.md](../trust-model.md). This record keeps the candidates that lost and why, for when an open decision (disaster recovery, service identity, two-phase admission) is revisited.
 
@@ -65,7 +67,7 @@ Deploy artifacts (`network-manifest.json`, `measurement-policy.json`) written by
 
 ## Public `root_key` commitment ✅ adopted
 
-No service identity. The requester decrypts the delivered `root_key` and checks it against a public commitment. `tx_io_pk@0` **is already the commitment**: a binding, deterministic public function of `root_key`, already published for TxSeismic clients — pin it at epoch 0 (in the attested addendum) and the joiner re-derives and compares. No separate commitment construction needed. As of this record the addendum and the joiner's check are specified in [network-manifest.md](../network-manifest.md#the-attested-addendum), not yet built. Caveat: `tx_io_pk` commits to `root_key` but not to `network_id`, so `network_id` stays bound in the transcript separately (it is).
+No service identity. The requester decrypts the delivered `root_key` and checks it against a public commitment. `tx_io_pk@0` **is already the commitment**: a binding, deterministic public function of `root_key`, already published for TxSeismic clients — pin it at epoch 0 (in the attested addendum) and the joiner re-derives and compares. No separate commitment construction needed. As of this record the addendum and the joiner's check are specified in [network-manifest.md](https://github.com/SeismicSystems/seismic/blob/a5ccda2/docs/tee/network-manifest.md#the-attested-addendum), not yet built. Caveat: `tx_io_pk` commits to `root_key` but not to `network_id`, so `network_id` stays bound in the transcript separately (it is).
 
 * Pros: no additional shared identity key; directly proves the received secret is canonical; safe for a high-entropy `root_key`.
 * Cons: the requester still needs a public root for the commitment (the addendum); malicious responders can cause failed decrypt/check attempts; fresh responder attestation stays in the hot path unless combined with a service identity.

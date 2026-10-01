@@ -1,6 +1,6 @@
 # The TEE Trust Model <!-- omit in toc -->
 
-**Status**: current as of 2026-08. Describes the shipped design plus the
+**Status**: current as of 2026-09. Describes the shipped design plus the
 pieces that are specified but not built, each marked. The open decisions at
 the end are the live list; an entry leaves it by becoming a mechanism in a
 sibling doc.
@@ -18,6 +18,8 @@ caveat per mechanism.
 - [Assumptions](#assumptions)
   - [The host platform, and what it is trusted for](#the-host-platform-and-what-it-is-trusted-for)
   - [What a valid quote proves — and what it does not](#what-a-valid-quote-proves--and-what-it-does-not)
+- [Identities, and how they evolve](#identities-and-how-they-evolve)
+  - [Client trust models](#client-trust-models)
 - [The trust anchor, per action](#the-trust-anchor-per-action)
 - [Residuals](#residuals)
   - [Accepted risks](#accepted-risks)
@@ -31,6 +33,10 @@ caveat per mechanism.
   reviewed code is not yet a member of *this* network holding *its* secret.
   The gap is closed by named mechanisms — `network_id` in every transcript,
   the registry, the key commitment — never by the quote alone.
+- **The service identity evolves through consensus.** `network_id` fixes the
+  lineage; the validator set, the accepted images and the service key are chain
+  state, so what a verifier should accept depends on the head it has verified
+  ([identities](#identities-and-how-they-evolve)).
 - **Each action has one anchor, matched to the actor's position.** The
   responder reads live chain state because it can; the joiner holds a frozen
   manifest because it must. [The table](#the-trust-anchor-per-action) names
@@ -123,9 +129,102 @@ closed by a mechanism the quote plugs into, never by the quote alone:
 | The quote cannot prove | What closes the gap |
 | --- | --- |
 | canonical network, not a clone | every transcript binds `network_id`, recomputed by the verifier from its own manifest ([bindings](network-manifest.md#consumers-of-network_id)) |
-| holds the canonical `root_key` | the `tx_io_pk@0` commitment in [the attested addendum](network-manifest.md#the-attested-addendum) — specified, not built |
+| holds the canonical `root_key` | the `tx_io_pk@0` pin that `network_id` commits to ([the root-key pin](network-manifest.md#the-root-key-pin)) — decided, not built |
 | economically admitted | the summit genesis at founding, the deposit path afterwards ([founding](network-founding.md)) |
 | view of chain state is current | [the freshness gate](chain-backed-admission.md#the-readiness-and-freshness-gate) around the responder's policy read |
+
+## Identities, and how they evolve
+
+A measurement is a machine identity: it names the code a box booted. In a
+stateless TEE service it is also the service's identity, because the verifier
+chooses the image, or learns the current one from a channel it already trusts.
+Here the chain decides which images to accept: the accepted set is registry
+state, changed by authority transactions that validators finalize, and the
+validator set is chain state too. The measurement a verifier should accept is a
+function of time, and the verifier learns it only by following consensus.
+
+So the network has one identity and a succession of values. `network_id` names
+the lineage and never changes: it commits to the founding artifacts. The head —
+the finalized header at height h, named by its digest — is the network's value
+at h, and every head descends from the founding through finalized blocks.
+Holding `network_id` tells a verifier which lineage it wants; knowing where that
+lineage stands now takes a finalized head.
+
+| Identity | Names | Fixed or evolves | Checked by |
+| --- | --- | --- | --- |
+| `network_id` | the network's lineage | fixed | SHA-256 of the manifest |
+| head | the network's value at h | every block | the finality certificate, against V at h |
+| measurement → admission ID | the code a box runs | per image build | a quote, against P at h |
+| PCK / vTPM AK | the platform that signed a quote | per machine | Intel and Azure collateral |
+| Ed25519 + BLS pubkeys | a validator | per validator | V at h |
+| `tx_io_pk@(root_version, epoch)` | where clients encrypt | per rotation or epoch bump | the pin, then later key records |
+
+The control plane at h is three values of the head: the validator set V_h, the
+accepted measurement set P_h, and the service key K_h. A box is a member at h
+while its measurement is in P_h and it holds the `root_key` K_h commits to; a
+validator's keys are also in V_h.
+
+![Identities over time: network_id commits to each lane's initial value; the
+validator set, the accepted images and the service key each change by finalized
+blocks; machines are members while their image is accepted; and each client
+model enters the timeline at a different point](diagrams/identities-over-time.svg)
+
+**Each lane starts in the genesis of the state machine that evolves it.** V_0 is
+the summit genesis validator set, moved on by summit's finalized epoch
+transitions. P_0 is the registry's storage in the reth genesis, moved on by
+authority transactions; the manifest also pins a copy, the bootstrap policy,
+only because a joiner cannot read encrypted reth state before it holds
+`root_key`. K_0 is `tx_io_pk@0`, pinned in the manifest's `root_key` section
+([the root-key pin](network-manifest.md#the-root-key-pin)). By this rule its
+home is the genesis of whatever evolves the key series, which is open
+([SEI-645](https://linear.app/seismic-systems/issue/SEI-645)); the proposal is
+a leaf of summit's Merkleized `ConsensusState`, seeded from the summit genesis
+([SEI-656](https://linear.app/seismic-systems/issue/SEI-656)). Every summit
+header carries that state's root as `parent_beacon_block_root`, and summit
+serves SSZ branches against it, so a record there is provable from one
+finalized header and one branch. The manifest's pin then stays as a frozen
+copy, like the bootstrap policy: it is what the custodian reads, and what a
+client that only hash-checks the manifest needs.
+
+**No quote binds chain state today.** The bindings are:
+
+| Quote | `report_data` binds |
+| --- | --- |
+| harvest | nonce, summit pubkeys |
+| root-key request | `network_id`, nonce, requester ephemeral key |
+| root-key response | `network_id`, nonce, responder ephemeral key, wrapped key |
+| deploy verification | `network_id`, nonce |
+| tx-io evidence | `network_id`, `tx_io_pk`, epoch |
+
+A quote therefore cannot say which head its signer had seen. A host that
+eclipses an honest node can hold it on an old head, and the node will attest
+what it knows. Proposed
+([SEI-653](https://linear.app/seismic-systems/issue/SEI-653)): tx-io evidence
+over `(network_id, head digest, head height, head timestamp, root_version,
+epoch, tx_io_pk)`. A host cannot mint a fresh finalized header without two
+thirds of the validators, so a client that checks the bound timestamp against
+its own clock learns the signer's view is recent: the TEE vouches for the
+finality check, the validators for the time. It does not tell the client which
+images to accept. A deprecated image is the one that cannot be trusted to
+report its own standing, so P_h still has to reach the client from outside the
+TEE.
+
+### Client trust models
+
+A client chooses where it takes trust from a side channel, and verifies the rest
+itself:
+
+| Model | From a side channel | The client verifies | Trusts | Freshness from |
+| --- | --- | --- | --- | --- |
+| Genesis + light client | `network_id` | the manifest hash, the summit genesis, every epoch's finality certificate since genesis, the key records | two thirds of each epoch's validators | its own clock, against finalized header timestamps |
+| Checkpoint + light client | `network_id` and a recent finalized header | the certificates since the checkpoint, the key records | the validators, and the checkpoint's source | its own clock |
+| Attested head (proposed) | `network_id` and the accepted measurement set | one quote binding a finalized head and `tx_io_pk`, and the head's timestamp | the platform and the image, the measurement set's source, the validators for the time | the head the quote binds |
+| Pinned key | `tx_io_pk@(root_version, epoch)` | nothing | the side channel | the side channel |
+| Today | nothing | nothing | the RPC it asks, on first use | none |
+
+At epoch 0 the first model is the pin check alone: hash the manifest and compare
+`tx_io_pk@0`. Mixes exist: a client can follow the registry with a light client
+to learn P_h, then verify one attested head.
 
 ## The trust anchor, per action
 
@@ -140,12 +239,12 @@ in a single validator's lifecycle:
 | --- | --- | --- | --- | --- |
 | Genesis deployer | assemble the founding artifacts | which founding artifacts are canonical, before any chain exists | its own verification at assemble: recomputed genesis hashes, DCAP-verified harvest quotes, registry storage recompiled from the policy document — all committed into `network_id` | shipped |
 | Validator | release `root_key` — the responder | may this requester join the trust domain | the requester's verified quote, then `MeasurementRegistry.isAccepted` at fresh finalized state of the manifest-pinned chain | shipped |
-|  | fetch `root_key` at every boot — the joiner | is this the canonical network, not a clone | the POSTed manifest: `network_id` bound in both halves of the handshake, and the delivered key checked against the pinned `tx_io_pk@0` commitment | the binding is shipped; the commitment check is specified, not built — today the joiner appraises no responder measurements |
+|  | fetch `root_key` at every boot — the joiner | is this the network's key | the POSTed manifest: its custodian re-derives `tx_io_pk@0` from the delivered key and compares it with the pin `network_id` commits to; once that check exists the responder's quote carries no weight | the `network_id` binding in both halves of the handshake is shipped; the pin and the check are decided, not built — today the joiner appraises nothing |
 |  | stake for a seat | does a validator seat imply TEE custody of its keys | at founding, the harvest quote binds both pubkeys to the measured guest; post-genesis, the deposit path registers keys with no hardware binding | open |
 |  | receive a snapshot at a resync | is this state the canonical network's | `K_snap` is derivable only from `root_key`, so a snapshot that decrypts came from inside the trust domain | designed; the purpose is ungranted and no process serves it |
-| Client | submit a TxSeismic | is this `tx_io_pk` this network's recipient key | a quote over `tx_io_binding(network_id, tx_io_pk, epoch)` | evidence endpoint shipped; the SDKs verify no quote yet |
+| Client | submit a TxSeismic | is this `tx_io_pk` this network's recipient key | epoch 0: the pin — hash the manifest against a pinned `network_id` and compare `tx_io_pk@0`, with no quote verification; later epochs: a record signed by the validator set, checked by a light client | epoch 0 decided, not built; later epochs open — today the SDKs trust whichever RPC they ask |
 | Governance | change the accepted measurement set | is the change authorized | the manifest-pinned authority contract | a dev authority today; the mainnet authority is open |
-|  | rotate `root_key` to fresh entropy | is the rotation authorized, and does the successor chain to the key it replaces | undecided — the candidates are the manifest-pinned authority contract and a consensus event, and a post-recovery rotation is the security council's, authorized by the recovery ceremony itself; in every case the published wrap-chain links each version to its predecessor, so holders verify continuity | open, and prerequisite to any nonzero purpose-key epoch |
+|  | rotate `root_key` to fresh entropy | is the rotation authorized, and does the successor chain to the key it replaces | undecided — the candidates are the manifest-pinned authority contract and a consensus event, and a post-recovery rotation is the security council's, authorized by the recovery ceremony itself; a published chain of wraps links each version to its predecessor, which is continuity, not authenticity: two holders can each wrap a different successor, and both chains verify. Authenticity needs an anchor `network_id` commits to; the direction is a record signed by the validator set, with the epoch-0 pin as its base case | open, and prerequisite to any nonzero purpose-key epoch |
 | Security Council | recover the network after a full-fleet loss | how does the network outlive losing every TEE at once | nothing — at least one node must stay live | open, pre-mainnet |
 
 The validator's four actions repeat and interleave — `root_key` is RAM-only,
@@ -163,7 +262,7 @@ A joiner holds nothing yet: reading Seismic state at all is what `root_key`
 buys. So the design gives the responder the live anchor and the joiner the
 frozen one, and the joiner's protection is shaped accordingly — it holds no
 secrets yet, so a dishonest responder can at worst deliver a wrong key, and
-the commitment check catches exactly that.
+the check against the pin catches exactly that.
 
 ## Residuals
 
@@ -249,9 +348,9 @@ open design work.
   recovery-share quorum, hardware-sealed recovery, an external key custodian
   — each trade the RAM-only property for a new trusted party, which is why
   the decision is a trust-model change and not an implementation task.
-  Whatever wins, recovery rotates the key commitment so a recovered network
-  is a client-visible event, never a silent fork
-  ([the addendum's recovery rule](network-manifest.md#the-attested-addendum)).
+  Whatever wins, a recovered network has a new `root_key`, so recovery is a
+  key change at a bumped epoch and needs the anchor root-key rotation needs:
+  client-visible, never a silent fork.
 - **Validator key custody** — must close before staking opens to outside
   operators. It has two halves. The first is the post-genesis binding of
   validator keys to a TEE. Founding validators have the binding:
@@ -296,10 +395,11 @@ open design work.
   lanes — the registry-mutation question again, who may change a
   network-defining commitment, at which latency — while a post-recovery
   rotation belongs to the security council, authorized by the recovery
-  ceremony itself. Whatever wins, a rotation republishes the key
-  commitment at a bumped epoch under the same `network_id`, so it is
-  client-visible, never silent — the same rule recovery follows
-  ([the addendum's recovery rule](network-manifest.md#the-attested-addendum)).
+  ceremony itself. Whatever wins, the new key needs an anchor `network_id`
+  commits to, since a pin that merely names `network_id` can be forged by a
+  second mint. The direction is a record signed by the validator set, with
+  the epoch-0 pin as its base case; a tx-io epoch bump needs a new pin for
+  clients but none for joiners, who re-derive every epoch from `root_key`.
 
 ## Design rationale
 
@@ -307,19 +407,34 @@ Alternatives weighed and set aside, with the reasons that decided them. Each
 names the section whose rule it settles. The full options pass — every
 candidate anchor, the contests they competed in, and the candidates weighed
 for the open decisions — is captured in
-[the roots-of-trust decision record](decisions/2026-08-roots-of-trust.md).
+[the roots-of-trust decision record](decisions/2026-08-roots-of-trust.md), and
+the key commitment's in
+[the root-key commitment record](decisions/2026-09-root-key-commitment.md).
+
+**The pin inside the manifest rather than in an addendum** ([the trust anchor,
+per action](#the-trust-anchor-per-action)). A verifier trusts only what
+`network_id` commits to, or what an authority it commits to signs, because a
+thing that merely names `network_id` is not unique. The addendum, a
+`tx_io_pk@0` pin attested after the genesis node's first boot, only named it:
+a host that boots a second box on an accepted image and POSTs it the real
+manifest gets a second genuine attestation of a different key. So `root_key`
+is minted before the manifest, on every founding box, and assemble pins one
+candidate. Clients gain a check with no quote verification, and the joiner's
+check moves into the custodian, reading the pin from tmpfs.
 
 **A key commitment rather than a network identity key** ([the trust anchor,
-per action](#the-trust-anchor-per-action)). The joiner's planned appraisal of
-the responder is a commitment check: re-derive `tx_io_pk@0` from the
-delivered `root_key` and compare against the addendum's pin. The alternative
+per action](#the-trust-anchor-per-action)). The joiner's appraisal of the
+responder is a commitment check: re-derive `tx_io_pk@0` from the
+delivered `root_key` and compare against the manifest's pin. The alternative
 is the shape of [CCF](https://microsoft.github.io/CCF/),
 whose clients authenticate the service by its identity key — here, a
 dedicated network identity keypair, private half in the custodian, signing
 handshake transcripts so joiners and clients verify a signature instead of
-evidence. Set aside because it is a second network-wide
-impersonation-grade secret, with its own generation, custody, rotation, and
-recovery story, while the commitment already exists: `tx_io_pk` is a binding,
+evidence. Set aside because its public half needs the same pin, and it is a
+second network-wide impersonation-grade secret held by every custodian, so an
+operator that exits keeps the power to sign; it brings its own generation,
+custody, rotation, and recovery story, while the commitment already exists:
+`tx_io_pk` is a binding,
 deterministic function of `root_key`, published for TxSeismic clients anyway.
 Reusing `tx_io` *as* the signing identity would be worse than either option:
 one secp256k1 key doing both ECDH decryption and signing breaks the

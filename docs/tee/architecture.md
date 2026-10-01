@@ -43,8 +43,8 @@ process holds it, and says what anchors it.
   peer may have `root_key` hands over a verified transcript binding, and the
   custodian acts on it.
 - **`root_key` is never written to disk.** Every boot obtains it fresh: minted
-  once on the network's first node, fetched from a peer everywhere else,
-  forever.
+  once, at founding, by the box whose candidate the manifest pins, and fetched
+  from a peer everywhere else, forever.
 - **Attestation binds keys, not channels.** Every confidentiality property comes
   from an application-layer key whose provenance a TDX quote endorses. TLS on
   the public port is hygiene for browsers and wallets.
@@ -171,8 +171,8 @@ renders every consumer from what remains:
 - **`http://<host>:7878` per peer** for the root-key fetch.
 
 All of them name the same machines by construction, so skew between the lists is
-unrepresentable, and a non-genesis node POSTed with no usable peer fails the
-POST rather than booting with no way to obtain `root_key`
+unrepresentable, and a node that must fetch `root_key` but is POSTed with no
+usable peer fails the POST rather than booting with no way to obtain it
 ([`peers.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/tdx-init/src/peers.rs)).
 
 Browsers reach the attestation service through nginx's `/attestation` route
@@ -224,8 +224,15 @@ re-checking would mean hosting the DCAP, X.509, and collateral-fetching stack
 next to `root_key`
 ([`root_key_wrap.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/crates/custodian/src/root_key_wrap.rs)).
 Who produced the authorization, and against which policy, is invisible to it.
-That is what lets the joiner-side appraisal change without reopening the custody
-boundary.
+
+**The custodian checks one fact itself: that a key it installs is the
+network's.** Decided, not yet built. After unwrapping a fetched `root_key` it
+re-derives `tx_io_pk@0` and compares it with the pin in the manifest bytes
+tdx-init wrote to tmpfs, refusing a mismatch
+([the root-key pin](network-manifest.md#the-root-key-pin)). That is a
+comparison against a file the image's own gate wrote, not evidence parsing, so
+the boundary above holds, and a compromised attestation service cannot install
+a key of its own choosing.
 
 **Two layers gate the socket.** The image decides who may connect: the socket
 directory is `2750 custodian:custodian-ipc`, so only members of the
@@ -372,12 +379,14 @@ block that carries a TxSeismic needs `tx_io_sk`, which needs `root_key`. Seismic
 history is not readable from outside the trust domain, which is what makes the
 root-key handshake — not a sync protocol — the thing that grants membership.
 
-**Client-side quote verification is open.** The evidence endpoint and its
-binding are shipped, but the SDKs read `tx_io_pk` from a node's
-`seismic_getTeePublicKey` RPC and appraise no quote, so a client trusts the node
-it asked. Closing that means the verifier — quote chain, platform collateral, and
-the registry's accepted set, all of which anyone can read — shipping inside the
-client libraries.
+**The client's check is the manifest's pin.** Today the SDKs read `tx_io_pk`
+from a node's `seismic_getTeePublicKey` RPC and appraise nothing, so a client
+trusts the node it asked. The decided check needs no quote verification in the
+client libraries: a client pins `network_id`, hashes the manifest, and compares
+the `tx_io_pk@0` it pins ([the root-key pin](network-manifest.md#the-root-key-pin)).
+Checking a node's evidence instead would not be enough on its own, since a
+joiner fooled into installing the wrong key produces genuine evidence for it.
+Later epochs need a pin the manifest cannot hold, which is open.
 
 ### The root-key handshake
 
@@ -435,20 +444,19 @@ What the construction buys:
   [design rationale](#design-rationale).
 
 The responder's side of the appraisal is live policy read from the chain. The
-requester's side is not yet: it confirms a genuine Azure TDX guest for this
-exact transcript, and applies no measurement policy, because a node without
-`root_key` cannot read the chain to find one. The planned anchor is the
-network's own key commitment rather than a measurement list —
-[the two positions](chain-backed-admission.md#the-network-manifest-as-the-joiners-root-of-trust).
+requester's side today confirms a genuine Azure TDX guest for this exact
+transcript and applies no policy, because a node without `root_key` cannot
+read the chain to find one. The decided check is the requester's custodian
+comparing the delivered key against the pin, above, rather than a measurement
+list — [the two positions](chain-backed-admission.md#the-network-manifest-as-the-joiners-root-of-trust).
 
 The asymmetry is not an accident, and it is the seam where a different bootstrap
 model would plug in. The responder's check is load-bearing in every model:
 verifying the joiner's quote **is** the decision to release the secret. The
-requester's is not — it only needs to be sure it is talking to the canonical
-network, which a signature or a commitment can establish as well as a fresh
-quote can. Adopting one would make this exchange one-directional rather than
-mutual, with the responder still attesting the joiner, and it would not touch the
-custodian's API: an authorization goes in either way.
+requester's is not — it only needs to be sure the key it received is the
+network's, which the pin establishes after the fact. Once that check exists the
+responder's quote carries no weight, and the exchange could become
+one-directional, with the responder still attesting the joiner.
 
 ## `/persistent`: the LUKS volume
 
@@ -494,18 +502,22 @@ in either outcome. Inside is the current default.
 ## Boot: power-on to serving
 
 Every unit past `tdx-init` waits on the config POST, directly or through a
-dependency. The chain below is identical on a genesis node and a joiner except
-at one step, and identical on a first boot and a restart except that the disk is
-already formatted.
+dependency, except the two that hold fresh randomness before it: the key holder
+and the custodian's candidate `root_key`. The chain below is identical on the
+genesis node and a joiner except at one step, and identical on a first boot and
+a restart except that the disk is already formatted. It shows the decided
+design: today the custodian starts after `tdx-init`, and a `genesis_node` flag
+in the POST, rather than the pin, decides whether it mints.
 
 ```mermaid
 flowchart TD
     B(["power-on — the measured image boots<br/>MRTD and the RTMRs are fixed here"])
-    KH["summit-key-holder<br/>summit keys in RAM · {pubkeys, quote} on :7879"]
+    KH["summit-key-holder<br/>summit keys in RAM · {pubkeys, tx_io_pk@0, quote} on :7879"]
+    CC["custodian mints a candidate root_key<br/>from the OS CSPRNG"]
     T["tdx-init — blocks on :8080<br/>then writes 7 files to /run/seismic/conf (tmpfs)"]
-    C{"genesis node?"}
-    G["custodian mints root_key<br/>from the OS CSPRNG"]
-    F["attestation-service runs the handshake<br/>against each peer until one installs<br/>root_key in the custodian"]
+    C{"candidate's tx_io_pk@0<br/>== the pin?"}
+    G["custodian keeps its candidate"]
+    F["custodian discards it; attestation-service<br/>runs the handshake against each peer<br/>until the custodian installs a root_key<br/>that matches the pin"]
     K["custodian derives the two LUKS keys<br/>and drops them on tmpfs"]
     L["setup-persistent-luks — format, or<br/>verify the header MAC and open<br/>/persistent mounted"]
     N["nginx-ssl-setup — certbot, then nginx serves :443"]
@@ -515,7 +527,9 @@ flowchart TD
     OK(["serving"])
 
     B --> KH
+    B --> CC -.->|"relays tx_io_pk@0"| KH
     B --> T --> C
+    CC --> C
     C -- yes --> G --> K
     C -- no --> F --> K
     K --> L --> N --> R --> S --> OK
@@ -524,7 +538,7 @@ flowchart TD
 
     classDef secret fill:#a7f3d0,stroke:#047857,color:#111;
     classDef pinned fill:#dbeafe,stroke:#1e3a5f,color:#111;
-    class G,F,K secret;
+    class CC,G,F,K secret;
     class T,L pinned;
 ```
 
@@ -541,31 +555,36 @@ handoff has happened. The disk script polls for that file, uses the first 32
 bytes as the unlock key and the second 32 as the header MAC key, and shreds it.
 
 Multi-node founding adds one requirement to this chain — every founding
-validator's summit keys must exist before `network_id` is minted, which is why
-the key holder starts in parallel with `tdx-init` rather than after it.
+validator's summit keys, and the `root_key` the manifest pins, must exist
+before `network_id` is minted, which is why the key holder and the candidate
+exist in parallel with `tdx-init` rather than after it.
 [Network founding](network-founding.md) owns that story.
 
-**The genesis flag is minting authority, not consensus standing.** Exactly one
-node in a new network is configured to mint `root_key`; in an N-node founding
-all N are genesis validators, and N−1 of them are root-key joiners. Two minting
-nodes would produce incompatible LUKS volumes and divergent tx-io keys — a
-silent network fork — so the founding tooling configures a whole cohort in one
-step, where exactly one minting node is representable.
+**The pin, not a flag, decides who mints.** Every box mints a candidate at
+every boot, and only the candidate the manifest pins survives configure, so
+the genesis node is simply the box whose candidate assemble chose. In an N-node
+founding all N are genesis validators, and N−1 of them are root-key joiners.
+Two minting nodes would produce incompatible LUKS volumes and divergent tx-io
+keys, a silent network fork, and under the pin they cannot exist: a second
+candidate cannot match a pin `network_id` commits to. Today, until the pin is
+built, a `genesis_node` flag in the config POST marks the minting box, and
+only the founding tooling keeps it to one.
 
-Three roles get called "the leader" and are worth keeping apart. The **minting
-node** is the one that generates `root_key` and then serves it to the rest;
+Three roles get called "the leader" and are worth keeping apart. The **genesis
+node** is the one whose candidate became `root_key` and which then serves it
+to the rest;
 until the chain passes block 0 it is the only node that may admit anyone
 ([the founding policy](chain-backed-admission.md#the-readiness-and-freshness-gate)). The
 **orchestrator** is the operator machine that provisions boxes, harvests
 pubkeys, and POSTs configuration; it holds no secrets at all, because the
 founding keys are TEE-born and it only ever sees public halves and quotes. The
-**genesis validator set** is every founding node equally — the minting node has
+**genesis validator set** is every founding node equally — the genesis node has
 no special consensus standing, and validators that arrive later join through the
 deposit path instead.
 
 **`root_key` provenance is a peer exchange, not a consensus decision.** One
-node mints, and everyone else asks a peer that already holds it; the validator
-set has no part in choosing the key
+node's candidate is pinned, and everyone else asks a peer that already holds
+it; the validator set has no part in choosing the key
 ([design rationale](#design-rationale)).
 
 **Whether admission should be two-phase is open:** verify a node once, issue
@@ -574,15 +593,14 @@ because a RAM-only `root_key` forces a fresh verification on every reboot, and
 it trades measurement freshness for credential expiry and revocation
 machinery. Today every fetch is one verify-and-release exchange.
 
-**Clear the flag after the genesis node's first successful boot.** It is
-correct exactly once, for the very first boot of a brand-new network. Genesis
-mode requires a blank data disk: on a restart with the flag still set, the
-custodian mints a *fresh* `root_key`, whose derived keys can never open the
-volume — so the LUKS setup refuses to start the moment it sees a provisioned
-volume in genesis mode, naming the stale flag as the cause, and restart-loops
-until the operator updates the config and re-POSTs. Loud failure, not a silent
-fork. A precedence-aware bootstrap would make the flag harmless; see the
-[design rationale](#design-rationale).
+**A rebooted genesis node is a joiner.** Its pinned candidate died with its
+RAM, and the fresh candidate it mints on the way back up matches nothing, so
+its custodian discards it and fetches like any other node. There is no flag to
+clear. Today's flag is correct exactly once, for the very first boot of a
+brand-new network: on a restart with it still set, the custodian mints a
+*fresh* `root_key` whose derived keys can never open the volume, so the LUKS
+setup refuses a provisioned volume in genesis mode, naming the stale flag, and
+restart-loops until the operator re-POSTs without it.
 
 **State transfer between nodes is designed, not built.** Two nodes that both
 hold `root_key` can replicate state by shipping a snapshot encrypted under
@@ -676,12 +694,16 @@ Rust, TypeScript, and Python. Adopting a second curve and a second construction
 for the bootstrap would double the audit surface to buy a cleaner standard, for
 a protocol whose peers all ship in the same release.
 
-**Loud failure on a stale genesis flag rather than a precedence-aware bootstrap**
-([boot](#boot-power-on-to-serving)). Fetch-first, mint-only-on-failure would
-make the flag harmless on a restart. But it needs an answer to "how long do we
-wait for peers before minting?", and every answer is a way to fork the network
-by timeout. A boot-time refusal that wedges one node until the operator fixes
-its config is the better trade.
+**The pin rather than a genesis flag** ([boot](#boot-power-on-to-serving)).
+A flag in the per-boot config goes stale after the first boot, and nothing on
+a node stops a second box from being POSTed the real manifest with the flag
+set, which mints a second key under the same `network_id`. Fetch-first,
+mint-only-on-failure would make a stale flag harmless, but it needs an answer
+to "how long do we wait for peers before minting?", and every answer is a way
+to fork the network by timeout. The pin moves the question from boot time to
+assemble: which key is the network's is fixed before any node is configured,
+and a node only ever compares. The options pass is
+[the root-key commitment record](decisions/2026-09-root-key-commitment.md).
 
 **Peer fetch rather than consensus arbitration of `root_key`**
 ([boot](#boot-power-on-to-serving)). Letting the validator set pick the
@@ -701,8 +723,8 @@ controls its clock, is an [accepted risk](trust-model.md#accepted-risks) whose
 candidate fixes are freshness evidence, not a vote. A deliberate second mint
 under the real manifest is a founding-integrity problem. Its answer, decided
 but not yet built, is for `network_id` itself to commit to the key: founding
-pins `tx_io_pk@0` next to the validator set, and only the custodian whose key
-matches the pin keeps it. Whether a later rotation is authorized by a
+pins `tx_io_pk@0`, and only the custodian whose candidate matches the pin
+keeps it. Whether a later rotation is authorized by a
 consensus event is a separate question, open in
 [the trust model](trust-model.md#open-decisions).
 

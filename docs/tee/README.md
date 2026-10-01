@@ -35,7 +35,12 @@ the summit chain block by block, and the three parties that rely on it — a
 client, an operator admitting an image, and a node joining at
 boot](diagrams/trust-chain.svg)
 
-**Identity.** `network-manifest.json` is nine fields naming the network, and
+The trust chain shows what commits to what; how those values move over time,
+and where a client can enter, is [identities, and how they
+evolve](trust-model.md#identities-and-how-they-evolve).
+
+**Identity.** `network-manifest.json` is nine fields naming the network (twelve
+once the root-key pin lands), and
 `network_id` is the SHA-256 of its exact bytes. It pins the reth genesis, the
 complete summit genesis, and the bootstrap measurement policy, so a joiner that
 checks one hash has checked every founding artifact. The manifest is written
@@ -49,12 +54,13 @@ rare and supervised; joining and verifying happen forever.
 
 **The boot chain is config-gated.** Nothing on a node starts until the operator
 POSTs its configuration. That one POST carries the manifest and both genesis
-files; `tdx-init` writes them out, the custodian mints `root_key` (genesis node)
-or installs it (everyone else), LUKS opens, and the node's own services start.
+files; `tdx-init` writes them out, the custodian keeps the candidate `root_key`
+it minted at boot if the manifest pins it or fetches the key and checks it
+against the pin, LUKS opens, and the node's own services start.
 
-**Membership is holding `root_key`.** It is network-shared, minted once, and
-handed over only through an attested handshake whose transcript binds
-`network_id`. Consensus membership — a seat in the validator set — is a separate
+**Membership is holding `root_key`.** It is network-shared, minted once before
+the manifest so that `network_id` commits to it, and handed over only through
+an attested handshake whose transcript binds `network_id`. Consensus membership — a seat in the validator set — is a separate
 gate, held by the summit genesis and the deposit path.
 
 **Live policy is on chain.** The responder turns the joiner's verified
@@ -84,8 +90,8 @@ repo, plus the image that measures them:
   cryptography, the LUKS volume, and the boot chain from power-on to serving.
   Read it when you touch a service, a key, a port, or the boot order.
 - [network-manifest.md](network-manifest.md) — **what identifies a network.**
-  The nine fields, `network_id = SHA-256(file bytes)`, the byte-exactness rule,
-  what the hash commits to, the transcript bindings, and the attested addendum.
+  The fields, `network_id = SHA-256(file bytes)`, the byte-exactness rule,
+  what the hash commits to, the transcript bindings, and the root-key pin.
   Read it when you touch the manifest, a binding, or anything that hashes it.
 - [network-founding.md](network-founding.md) — **how a network is born.** Where
   validator keys come from, why the boot chain is sequenced the way it is, the

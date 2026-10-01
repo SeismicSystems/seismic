@@ -3,8 +3,8 @@
 **Status**: the manifest is shipped and in use (enclave
 [#190](https://github.com/SeismicSystems/enclave/pull/190),
 [#194](https://github.com/SeismicSystems/enclave/pull/194)), proven in the
-four-node founding. The attested addendum is specified design, not yet built;
-its section says so again where it starts.
+four-node founding. The `tx_io_pk@0` pin is decided, not yet built; its
+section says so again where it starts.
 
 What identifies a Seismic network. `network-manifest.json` is the deploy-time
 artifact a network is named by: `network_id = SHA-256(exact file bytes)`, bound
@@ -41,11 +41,7 @@ flowchart TD
 This doc is the field-by-field reference. The implementation is the
 [`seismic-network-manifest`](https://github.com/SeismicSystems/enclave/tree/seismic/crates/network-manifest)
 crate — strict parser, `NetworkId` derivation, and the golden fixture every
-stack pins — and the two must agree at all times. A network ships one more
-artifact, the attested addendum, but it is not a second half of the identity:
-it carries the network's TEE-born key state, it names `network_id` rather than
-contributing to it, and it rotates on disaster recovery while `network_id`
-never does.
+stack pins — and the two must agree at all times.
 
 - [Summary](#summary)
 - [What the manifest is not](#what-the-manifest-is-not)
@@ -55,7 +51,7 @@ never does.
 - [Consumers of `network_id`](#consumers-of-network_id)
 - [Lifecycle](#lifecycle)
 - [What the manifest cannot hold](#what-the-manifest-cannot-hold)
-- [The attested addendum](#the-attested-addendum)
+- [The root-key pin](#the-root-key-pin)
 - [Design rationale](#design-rationale)
 
 
@@ -72,10 +68,11 @@ never does.
   bootstrap measurement policy are all reachable from the manifest's fields.
   Each field commits to an exact scope, stated in
   [Validation gates](#validation-gates).
-- **Deploy-time facts only.** Everything in the manifest can be computed before
-  any node boots, because `network_id` must exist before the first node mints
-  its first quote. Facts born inside the genesis TEE live in a second,
-  separately attested artifact.
+- **Pre-configure facts only.** Everything in the manifest exists before any
+  node is configured, because `network_id` must exist before the first node
+  binds it into a quote. That includes facts born inside founding TEEs: the
+  validator keys, and the `tx_io_pk@0` of a `root_key` minted before the
+  manifest.
 - **Immutable for the network's lifetime.** The manifest is written once, by one
   emitter, and travels as opaque bytes to every consumer. Nothing ever
   re-renders it.
@@ -138,6 +135,9 @@ documentation is this table.
 | `measurements.bootstrap_policy_hash` | 32-byte hex | SHA-256 of the bootstrap policy document's bytes — the founding accepted measurement set, promoted from seismic-images' `make measure` output. The document format is the [attestation crate's](https://github.com/SeismicSystems/attested-tls/blob/main/crates/attestation/README.md) list of per-image measurement records, one file covering every attestation type.                                                                                                                        |
 | `measurements.contracts.registry`    | address     | The measurement registry, duplicated from the genesis alloc for verifiers that do not hold the genesis file. Grouping it under `measurements` is deliberate: this contract's storage and the bootstrap document are two representations of one measurement set.                                                                                                                                                                                                                                |
 | `measurements.contracts.authority`   | address     | The authority allowed to mutate the registry.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `root_key.root_version`              | int         | The root version the pin is for; only `0` is accepted. Decided, not yet built ([the root-key pin](#the-root-key-pin)).                                                                                                                                                                                                                                                                                                                                                                       |
+| `root_key.epoch`                     | int         | The tx-io epoch the pin is for; only `0` is accepted. Decided, not yet built.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `root_key.tx_io_pk`                  | 33-byte hex | `tx_io_pk@0` of the founding box's candidate `root_key`, a compressed secp256k1 point. The custodian keeps its candidate, and installs a fetched key, only if it derives this; a client encrypts to it. Decided, not yet built.                                                                                                                                                                                                                                                                 |
 
 Both contract fields are named by role, not by contract class, so a contract
 rename never touches the hashed schema. Today the roles are filled by
@@ -146,7 +146,8 @@ and
 [`MeasurementAuthorityDev.sol`](../../contracts/src/predeploys/MeasurementAuthorityDev.sol),
 predeployed at the addresses above.
 
-**Strictness.** A v1 parser rejects unknown keys; new fields mean
+**Strictness.** A v1 parser rejects unknown keys. Until a permanent network
+pins a v1 manifest, v1 changes in place; after that, new fields mean
 `manifest_version = 2` and a new type. The version is probed before the strict
 parse, so a future-version file reports "unsupported manifest_version 2" rather
 than a confusing unknown-field error. Strict parsing is about two verifiers
@@ -313,9 +314,9 @@ relying on it — publishing its address, or handing it to later nodes as a
 bootnode. The check guards only those operator decisions; network membership
 is granted by the attested root-key handshake and its admission policy, never
 by this check. For a client, `network_id` is the pin answering "which network am I
-encrypting this TxSeismic for". Carrying `(network_id, addendum)` in the chain
-config, so a client can also validate a node's `tx_io` responses, is future work
-that waits on [the addendum](#the-attested-addendum).
+encrypting this TxSeismic for", and through [the root-key
+pin](#the-root-key-pin) it also answers "is this the key to encrypt to": the
+client hashes the manifest it is given and reads `tx_io_pk@0` from it.
 
 ## Lifecycle
 
@@ -330,123 +331,96 @@ that waits on [the addendum](#the-attested-addendum).
   responder's measurements against the manifest-pinned founding set will reject
   responders running images admitted later, and will keep accepting a founding
   image after governance has deprecated it, since deprecations are equally
-  invisible off chain. [The addendum's](#the-attested-addendum) commitment check
-  supersedes the joiner-side measurement check entirely — joiners verify the
-  responder's transcript binding plus the delivered key against the pin, and
-  drop the policy comparison. The deprecation half is the security reason to
-  sequence that switch soon rather than eventually.
+  invisible off chain. So the joiner makes no measurement check: it checks the
+  delivered key against [the root-key pin](#the-root-key-pin) instead.
 - **A new network gets a fresh manifest.** The freshly harvested founding keys
-  alone guarantee a distinct `network_id`, since no two foundings can produce
-  identical manifest bytes; in practice the name, namespace, and genesis differ
-  too.
+  and the pinned `tx_io_pk@0` alone guarantee a distinct `network_id`, since no
+  two foundings can produce identical manifest bytes; in practice the name,
+  namespace, and genesis differ too.
 
 ## What the manifest cannot hold
 
-The manifest holds deploy-time facts only, which is why a second artifact exists
-to hold the rest. The cut is not TEE-born versus authored — it is whether a fact
-can exist *before* `network_id` must.
+The cut is whether a fact can exist before `network_id` must. Anything that
+does goes in, however it was born. Anything born later is reached through an
+authority the manifest pins, because `network_id` is a hash and cannot vouch
+for what did not exist when it was computed.
 
 ```mermaid
 flowchart LR
-    PRE["every deploy-time fact:<br/>policy document, reth genesis,<br/>summit genesis — harvested<br/>validator keys included"]
+    PRE["every pre-configure fact:<br/>the policy document,<br/>the reth genesis,<br/>the summit genesis with the<br/>harvested validator keys,<br/>tx_io_pk@0 of a candidate<br/>root_key minted at boot"]
     M["network-manifest.json"]
     NID(["network_id"])
-    B["genesis node's first boot:<br/>root_key minted,<br/>tx_io_pk derived,<br/>quote binds network_id"]
-    AD["network-attestation.json<br/>the attested addendum:<br/>tx_io_pk@0 + evidence"]
-    PRE -->|"all of it exists before<br/>any node boots"| M
+    AUTH["authorities it pins:<br/>the registry's authority,<br/>the founding validator set"]
+    LATER["later facts:<br/>the live measurement policy,<br/>key epochs above 0"]
+    PRE -->|"all of it exists before<br/>any node is configured"| M
     M -->|"SHA-256(file bytes)"| NID
-    NID --> B --> AD
+    M --> AUTH -->|"sign"| LATER
     classDef pinned fill:#dbeafe,stroke:#1e3a5f,color:#111;
     classDef root fill:#a7f3d0,stroke:#047857,color:#111;
     classDef later fill:#f8fafc,stroke:#94a3b8,stroke-dasharray:4,color:#475569;
-    class PRE,M pinned;
+    class PRE,M,AUTH pinned;
     class NID root;
-    class B,AD later;
+    class LATER later;
 ```
 
-Everything left of the boot step above can exist pre-manifest, so that whole
-prefix is the manifest. Summit's validator keys make the cut despite being
-TEE-born: they are per-VM randomness with no boot-chain prerequisites, so
-founding births them before the manifest, and the manifest pins the complete
-summit genesis, validator set included
-([network founding](network-founding.md)).
+Summit's validator keys and the founding `root_key` make the cut despite being
+TEE-born: both are per-VM randomness with no boot-chain prerequisites, so
+founding births them before the manifest
+([network founding](network-founding.md)). What cannot go in is anything that
+binds `network_id` itself, such as a quote over a transcript, and anything that
+changes after founding.
 
-What cannot exist pre-manifest is anything derived from `root_key`. `root_key`
-is network-shared, minted once, and distributed only through attested exchanges
-whose transcripts bind `network_id` — its birth *requires* the manifest. Such
-facts can only be attested afterwards, never pre-committed.
+A fact that merely names `network_id` is not committed by it. An artifact
+attested after the fact, carrying `network_id` in its quote, can be produced
+again by any box booted on an accepted image and handed the real manifest, so
+it proves nothing unique. Later facts are therefore signed by an authority the
+manifest pins, never attested alongside it.
 
-## The attested addendum
+## The root-key pin
 
-**Status**: specified here, not yet built.
+**Status**: decided, not yet built. Today no pin exists, the joiner admits any
+genuine Azure TDX guest as its responder, and clients trust whichever RPC they
+ask for `tx_io_pk`.
 
-`network-attestation.json` carries the network's TEE-born key state, attested
-and bound to a `network_id` that already exists. It
-is produced once, by the deploy tool, immediately after the genesis node's first
-successful boot — a persisted snapshot of that node's `tx_io` attestation
-evidence, whose quote binds `network_id`:
+`tx_io_pk@0` is the commitment to `root_key`: a binding, deterministic, public
+function of it, already served to TxSeismic clients, so no separate commitment
+construction is needed. It is also the key a client encrypts to, which a hash
+of `root_key` would not be.
 
-```json
-{
-  "addendum_version": 1,
-  "network_id": "0x…",
-  "created_at": "2026-06-11T00:00:00Z",
-  "tx_io": { "pk": "0x02… 33-byte compressed secp256k1 …", "epoch": 0 },
-  "evidence": { "… attestation exchange message …": "…" },
-  "verified_at": 1780000000,
-  "dcap_collateral": { "… TCB Info, QE Identity, CRLs, issuer chains …": "…" },
-  "trust_anchors": { "… digests of the verifying build's compiled-in roots …": "…" }
-}
-```
+`root_key` is minted before the manifest so that `network_id` can commit to it.
+Every founding box's custodian mints a candidate at identity-free boot, harvest
+quotes each candidate's `tx_io_pk@0` alongside the summit pubkeys, and assemble
+pins the first box by name in the manifest's `root_key` section, so
+`network_id` covers it. The section has the shape of the key record later
+epochs will use, `{ root_version: 0, epoch: 0, tx_io_pk }`, and a v1 parser
+accepts only 0 for both numbers. It is a frozen copy: the key series itself is
+to start in the summit genesis, next to the validator set
+([SEI-656](https://linear.app/seismic-systems/issue/SEI-656)), and assemble
+will keep the two in agreement
+([SEI-657](https://linear.app/seismic-systems/issue/SEI-657)), the
+relationship the bootstrap policy has with the registry's reth-genesis storage.
+The manifest copy is the one the custodian reads, and the one a client that
+only hash-checks the manifest needs.
 
-- **`tx_io.pk` at a pinned epoch is the `root_key` commitment.** It is a
-  binding, deterministic function of `root_key` that is already published for
-  TxSeismic clients, so no separate commitment construction is needed.
-- **The addendum is self-authenticating against the manifest.** `evidence` is
-  the genesis node's quote over `tx_io_binding(network_id, tx_io_pk, epoch)`, so
-  a verifier checks the quote chain, checks the measurements against the
-  manifest-pinned bootstrap policy, and checks the binding against the
-  manifest's own `network_id`. A forged addendum fails one of the three.
-- **It is not an input to `network_id`.** It ships alongside the manifest in the
-  network's artifact set, under a distinct filename so no verifier can be
-  confused about which bytes are hashed.
+- **The custodian keeps or discards its candidate.** At configure, a custodian
+  keeps its candidate only if it matches the pin, and otherwise discards it and
+  fetches `root_key` from a peer. There is no genesis flag
+  ([architecture](architecture.md#boot-power-on-to-serving)).
+- **A joiner's custodian checks what it installs.** After unwrapping a fetched
+  key, the custodian re-derives `tx_io_pk@0`, compares it with the pin in the
+  manifest bytes tdx-init wrote to tmpfs, and refuses a mismatch. The joiner
+  holds no secrets yet, so a dishonest responder can at worst deliver a wrong
+  key, and this check catches exactly that. The responder's quote then carries
+  no weight for the joiner.
+- **A client compares a hash.** It pins `network_id`, hashes the manifest it is
+  given, and compares `tx_io_pk@0`. No quote verification is needed.
 
-**Validity semantics: a birth certificate, not a live credential.** A quote
-carries no expiry, but its verification chain does — Intel TCB Info, QE
-Identity, and CRLs carry `nextUpdate` on a roughly 30-day cadence, and the
-platform AK chain is ordinary X.509 with `notAfter`. So the addendum is verified
-with validity-at-creation semantics: chains and TCB status are evaluated as of
-`created_at`, never as of now. To make that possible offline the addendum must
-be self-contained, which is what the bundle fields are for: `dcap_collateral` is
-the DCAP collateral the verification consumed, `verified_at` the instant every
-freshness check was evaluated at, and `trust_anchors` digests of the roots
-compiled into the verifying build — the same re-verification bundle the founding
-archive keeps per harvested node (`seismic-verify-quote`'s archive document), so
-the addendum is produced in bundle form rather than migrated to it later. The
-alternative is evaluating genesis-era evidence against today's collateral, which
-is exactly the drift to avoid; the archived-replay entry point that takes the
-bundle already exists, so this is supported usage rather than a fork.
-
-Two things keep archived evidence from ever carrying trust on its own: the
-joiner's load-bearing check is the commitment comparison rather than a quote
-re-verification, and every live node re-attests the same pin under fresh
-collateral each epoch. The residual risk is accepted: a later TCB recovery can
-retroactively reveal that genesis-era firmware was vulnerable. "Valid at
-genesis" means valid by what was knowable at genesis.
-
-**How a joiner uses it.** After the root-key handshake decrypts `root_key`, the
-joiner re-derives `tx_io_pk@0` and compares it against the addendum's pin. That
-comparison is what makes the joiner's *measurement* check of the responder
-non-load-bearing: the joiner holds no secrets yet, so a dishonest responder can
-at worst deliver a wrong key, and the commitment check catches exactly that. The
-handshake this sits inside is in
-[chain-backed admission](chain-backed-admission.md).
-
-**Recovery rotates the addendum, never `network_id`.** A recovered network
-publishes a new addendum — a new `root_key`, so a new `tx_io_pk`, pinned at a
-bumped epoch and attested by the recovery TEE — under the same `network_id`.
-Clients and joiners must pick up the new pin, which makes recovery a
-client-visible, auditable event.
+The pin covers epoch 0 only. A joiner re-derives every later epoch from
+`root_key`, but a client needs a pin per epoch, and a fresh-entropy rotation or
+a recovery needs one for both. Those need an anchor that can move after
+founding, a record signed by the validator set being the direction, and until
+one exists no nonzero epoch ships
+([trust model](trust-model.md#open-decisions)).
 
 ## Design rationale
 
@@ -510,20 +484,18 @@ schedule a node booted; extending a runtime measurement register with the
 genesis bytes would add one, as auditability rather than as a correctness
 mechanism.
 
-**Two files rather than one document with a hashed subsection** ([the attested
-addendum](#the-attested-addendum)) — the `tx_io` pin inside the file but outside
-the hash. One file is operationally nice, but mixed hashed/unhashed sections
-invite verifiers hashing the wrong scope, and the file would have to be mutated
-post-genesis to insert the pin, which violates byte-exactness. Two files with
-distinct names are unambiguous.
-
-**Two files rather than a two-phase `network_id`** ([what the manifest cannot
-hold](#what-the-manifest-cannot-hold)) — a draft id for the genesis boot, a
-final one after. That gives two ids for one network: every transcript verifier
-would need to know which phase it is in, and a hardware measurement of the
-config would differ across the phases. Putting `tx_io_pk` in the manifest core
-is the same problem stated forwards — impossible without a pre-boot key
-ceremony, since `root_key` is born in the genesis TEE.
+**The pin inside the manifest rather than in an attested addendum** ([the
+root-key pin](#the-root-key-pin)). The earlier design minted `root_key` on the
+genesis node's first boot and published `tx_io_pk@0` afterwards, in
+`network-attestation.json`: a quote over `tx_io_binding(network_id, tx_io_pk,
+0)` from an image in the bootstrap policy. It kept the manifest computable
+before any node boots, and it is forgeable. The addendum names `network_id`,
+but `network_id` does not name it, so a host that boots a second box on an
+accepted image and POSTs it the real manifest gets a second genuine addendum
+for a different key. Minting before the manifest makes the pin unique, and
+drops the addendum's collateral bundle and validity-at-creation semantics with
+it. The options pass is
+[the root-key commitment record](decisions/2026-09-root-key-commitment.md).
 
 **SHA-256 rather than keccak256 for `network_id`** ([consumers of
 `network_id`](#consumers-of-network_id)). The consumers are a SHA-256 world —
@@ -544,11 +516,11 @@ above bootstrap, is the shape of
 TUF's hard parts: rollback and freeze protection need freshness evidence,
 which is chain state again.
 
-**Precedent: CCF** ([the attested addendum](#the-attested-addendum)). The
-manifest/addendum split follows CCF's: startup configuration is the trust
-anchor, and the service certificate (`service_cert.pem`) is created when the
-service opens and distributed out of band from then on — a credential the anchor
-names, not a second anchor. The addendum's validity-at-creation semantics follow
-CCF too — join quotes are verified once at admission and recorded, and nobody
-re-verifies old quotes against live collateral — and so does recovery, where the
-ledger continues, the service certificate rotates, and clients re-fetch.
+**Where CCF differs** ([the root-key pin](#the-root-key-pin)). In
+Microsoft's CCF the service identity is a key pair created when the service
+starts, and joining nodes take its certificate from operator config as their
+only anchor. That works because a CCF joiner brings nothing with it. A Seismic
+joiner brings TEE-born validator keys and then serves clients, so the key it
+receives has to be checkable against the one hash everyone pins, and a hash
+cannot sign a key created after it. Who plays which role in each design is in
+[the root-key commitment record](decisions/2026-09-root-key-commitment.md#who-plays-which-role).

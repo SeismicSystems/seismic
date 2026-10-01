@@ -12,7 +12,7 @@ guest, but only the responder has a live policy to apply:
 | | Evidence verification (cryptographic) | Admission appraisal (policy) |
 | --- | --- | --- |
 | **Responder** admits the joiner | quote chain + platform collateral + `report_data` bound to the responder's own `network_id` | `MeasurementRegistry.isAccepted(id)`, read at fresh finalized state of the manifest-pinned chain — [`RegistryAdmission`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/attestation-service/src/admission.rs) |
-| **Joiner** admits the responder | the same check, opposite direction | none yet — [`DangerouslyAdmitAnyAzureGuest`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/attestation-service/src/admission.rs) passes any Azure TDX guest unconditionally. A joiner cannot read the chain before it holds `root_key`, so its appraisal is planned as provenance against the network's `tx_io_pk` commitment rather than a measurement policy, and is not yet code |
+| **Joiner** admits the responder | the same check, opposite direction | none yet — [`DangerouslyAdmitAnyAzureGuest`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/attestation-service/src/admission.rs) passes any Azure TDX guest unconditionally. A joiner cannot read the chain before it holds `root_key`, so its appraisal is decided as provenance rather than policy: its custodian checks the delivered key against the `tx_io_pk@0` pin `network_id` commits to. Not yet code |
 
 Nothing here is normative. The byte-exact rules are the
 [measurement-admission SPEC](https://github.com/SeismicSystems/enclave/blob/seismic/crates/measurement-admission/SPEC.md),
@@ -52,8 +52,8 @@ Five properties follow from that shape:
   revision, never a contract change.
 - **The joiner anchors on the manifest instead.** Before it holds `root_key` a
   joiner cannot read the chain, so its side of the handshake rests on
-  [the manifest](network-manifest.md) and the bootstrap policy document that
-  hash pins — [the two positions](#the-network-manifest-as-the-joiners-root-of-trust).
+  [the manifest](network-manifest.md) and the `tx_io_pk@0` pin it commits to —
+  [the two positions](#the-network-manifest-as-the-joiners-root-of-trust).
 
 ## Where admission sits in the join
 
@@ -258,11 +258,15 @@ The two sides of the handshake reach for different anchors, because they are
 in different positions. The responder holds `root_key` and runs a synced
 node, so it can read live state. The joiner holds nothing yet: it cannot
 read the chain, because reading Seismic state at all is what `root_key`
-buys. What it does hold is the manifest the operator POSTed to it.
+buys. What it does hold is the manifest the operator POSTed to it, and the
+manifest commits to `tx_io_pk@0`, so the joiner checks the key it receives
+rather than the responder that sent it
+([the root-key pin](network-manifest.md#the-root-key-pin)).
 
-Two of the fields it pins do the work here: the bootstrap policy hash, which is
-the joiner's copy of the founding accepted set, and the genesis hash, which is
-how a responder knows the chain it reads the live policy on. `network_id`
+Two more of the fields it pins describe the founding policy: the bootstrap
+policy hash, the founding accepted set as a document anyone can read, and the
+genesis hash, which is how a responder knows the chain it reads the live
+policy on. `network_id`
 covers both representations of that founding set — the document a joiner can
 read, and the registry genesis storage a responder reads — byte-exactly, so
 anyone holding the two can recompute that they agree

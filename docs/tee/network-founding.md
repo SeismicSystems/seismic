@@ -137,8 +137,10 @@ Properties bought:
   finds its inputs on disk before it starts.
 - **Uniform node lifecycle.** "Founding node" stops being a node-side concept:
   every box boots identity-free, holds RAM keys, persists them at LUKS-open.
-  Founders differ only in being harvested before assemble. (The `genesis_node`
-  role — which box mints `root_key` — remains, and is orthogonal.)
+  Founders differ only in being harvested before assemble. (Deciding which
+  box mints `root_key` follows the same move, decided but not yet built: every
+  box mints a candidate, harvest quotes its `tx_io_pk@0`, and assemble pins
+  one — [the root-key pin](network-manifest.md#the-root-key-pin).)
 
 ## Why founding-time quote verification is load-bearing
 
@@ -317,7 +319,11 @@ process treats it that way. Guards:
 - **Burned-key rule**: a harvested key is trustworthy only if the same box
   later accepts the real configure cleanly. Any anomaly — already configured,
   POST rejected, unexpected reboot — burns the whole harvest: re-found, never
-  retry-around.
+  retry-around. Once `root_key` is minted before the manifest the rule carries
+  more: the box whose candidate is pinned already holds the future `root_key`,
+  so a first POST with a manifest that pins that candidate and admits the
+  attacker's image can extract it. Deploy must refuse to continue when that
+  box's configure fails.
 - The rootfs is measured at boot but not (yet) integrity-protected at
   runtime, so a harvest quote attests boot-time state only. Window length is
   a security parameter: keep founding short and supervised — noting its
