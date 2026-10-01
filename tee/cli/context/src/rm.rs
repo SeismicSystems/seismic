@@ -114,11 +114,7 @@ fn remove(
     };
 
     let (node, _) = selected.node(Some(node))?;
-    if network.nodes.len() == 1
-        && network.dir.is_none()
-        && network.manifest.is_none()
-        && network.source.is_none()
-    {
+    if network.nodes.len() == 1 && network.dir.is_none() {
         bail!(
             "`{node}` is the only node of network `{name}`, which holds nothing else — `seismic-tee \
              ctx rm {name}` forgets the network"
@@ -166,23 +162,14 @@ fn confirm_keeping(
 /// The `ctx set-network` that restores `network`'s pointers, or nothing for
 /// an entry that is a node table alone.
 fn set_network_command(name: &str, network: &Network) -> Option<String> {
-    let path = |p: &PathBuf| p.to_string_lossy().into_owned();
-    let pointers = [
-        ("--dir", network.dir.as_ref().map(path)),
-        ("--manifest", network.manifest.as_ref().map(path)),
-        ("--source", network.source.clone()),
-    ];
-    if pointers.iter().all(|(_, value)| value.is_none()) {
-        return None;
-    }
-    let mut command = format!("seismic-tee ctx set-network {}", shell_word(name));
-    let flags = pointers
-        .into_iter()
-        .chain([("--network-id", network.network_id.clone())]);
-    for (flag, value) in flags {
-        if let Some(value) = value {
-            command.push_str(&format!(" {flag} {}", shell_word(&value)));
-        }
+    let dir = network.dir.as_ref()?;
+    let mut command = format!(
+        "seismic-tee ctx set-network --name {} --dir {}",
+        shell_word(name),
+        shell_word(&dir.to_string_lossy())
+    );
+    if let Some(id) = &network.network_id {
+        command.push_str(&format!(" --network-id {id}"));
     }
     Some(command)
 }
@@ -356,7 +343,7 @@ mod tests {
             undo,
             [
                 format!(
-                    "seismic-tee ctx set-network testnet --dir {}",
+                    "seismic-tee ctx set-network --name testnet --dir {}",
                     root.display()
                 ),
                 TABLE.to_string(),
@@ -366,28 +353,26 @@ mod tests {
     }
 
     #[test]
-    fn a_network_with_no_directory_is_forgotten_without_asking_and_its_files_stay() {
+    fn a_pinned_networks_undo_quotes_its_dir_and_restores_its_pin() {
         let sandbox = Sandbox::new();
-        let manifest = sandbox.dir.path().join("my manifest.json");
-        std::fs::write(&manifest, "{}").unwrap();
+        let root = sandbox.dir.path().join("my net");
         let id = "ab".repeat(32);
         sandbox.write_config(&format!(
-            "current = \"other\"\n\n[networks.partner-net]\nmanifest = {:?}\nnetwork_id = \
-             \"{id}\"\n\n[networks.other]\nmanifest = \"/m.json\"\n",
-            manifest.to_str().unwrap()
+            "current = \"other\"\n\n[networks.partner-net]\ndir = {:?}\nnetwork_id = \
+             \"{id}\"\n\n[networks.other]\ndir = \"/m\"\n",
+            root.to_str().unwrap()
         ));
 
         let undo = sandbox.rm("partner-net").unwrap();
 
-        assert!(manifest.exists());
         let config = sandbox.config();
         assert_eq!(config.current.as_deref(), Some("other"));
         assert_eq!(config.networks.keys().collect::<Vec<_>>(), ["other"]);
         assert_eq!(
             undo,
             [format!(
-                "seismic-tee ctx set-network partner-net --manifest '{}' --network-id {id}",
-                manifest.display()
+                "seismic-tee ctx set-network --name partner-net --dir '{}' --network-id {id}",
+                root.display()
             )]
         );
     }

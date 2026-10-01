@@ -1,10 +1,12 @@
-//! Where the context file lives, and how a `~` inside it is expanded.
+//! Where the context file lives, where fetched networks go, and how a `~`
+//! inside the file is expanded.
 //!
 //! One place spells the layout, the way [`seismic_tee_common::NetworkDir`]
 //! spells a network directory's: relocating the file is a change to this file
 //! and nothing else.
 //!
-//! The env reads are split out of [`default_path`] and [`expand_tilde`] so
+//! The env reads are split out of [`default_path`], [`networks_root`] and
+//! [`expand_tilde`] so
 //! the resolution logic is unit-testable without touching process env, which
 //! is process-global and racy under a threaded test runner.
 
@@ -15,6 +17,15 @@ use anyhow::{Context as _, bail};
 
 pub const CONFIG_DIRNAME: &str = "seismic";
 pub const CONFIG_FILENAME: &str = "config.toml";
+pub const NETWORKS_DIRNAME: &str = "networks";
+
+/// `$XDG_DATA_HOME/seismic/networks`, else `~/.local/share/seismic/networks`:
+/// where `ctx set-network --dir <URL>` fetches a network directory to, as
+/// `<name>/`. The CLI's data, so XDG's data home rather than beside the
+/// context file.
+pub fn networks_root() -> anyhow::Result<PathBuf> {
+    resolve_networks(std::env::var_os("XDG_DATA_HOME"), std::env::var_os("HOME"))
+}
 
 /// `$XDG_CONFIG_HOME/seismic/config.toml`, else `~/.config/seismic/config.toml`.
 pub fn default_path() -> anyhow::Result<PathBuf> {
@@ -26,17 +37,33 @@ pub fn default_path() -> anyhow::Result<PathBuf> {
 
 /// [`default_path`]'s rule, with the environment passed in so it is testable.
 fn resolve(xdg: Option<OsString>, home: Option<OsString>) -> anyhow::Result<PathBuf> {
-    let base = match xdg.filter(|v| !v.is_empty()) {
-        Some(xdg) => PathBuf::from(xdg),
-        None => match home.filter(|v| !v.is_empty()) {
-            Some(home) => PathBuf::from(home).join(".config"),
-            None => bail!(
-                "neither XDG_CONFIG_HOME nor HOME is set, so there is no config directory to \
-                 read; pass --config <FILE>"
-            ),
-        },
+    let Some(base) = xdg_base(xdg, home, ".config") else {
+        bail!(
+            "neither XDG_CONFIG_HOME nor HOME is set, so there is no config directory to read; \
+             pass --config <FILE>"
+        );
     };
     Ok(base.join(CONFIG_DIRNAME).join(CONFIG_FILENAME))
+}
+
+/// [`networks_root`]'s rule, with the environment passed in so it is
+/// testable.
+fn resolve_networks(xdg: Option<OsString>, home: Option<OsString>) -> anyhow::Result<PathBuf> {
+    let Some(base) = xdg_base(xdg, home, ".local/share") else {
+        bail!("neither XDG_DATA_HOME nor HOME is set, so there is nowhere to fetch a network to");
+    };
+    Ok(base.join(CONFIG_DIRNAME).join(NETWORKS_DIRNAME))
+}
+
+/// An XDG base directory: the variable's value when set and non-empty, else
+/// `$HOME/<fallback>`, else nothing.
+fn xdg_base(xdg: Option<OsString>, home: Option<OsString>, fallback: &str) -> Option<PathBuf> {
+    match xdg.filter(|v| !v.is_empty()) {
+        Some(xdg) => Some(PathBuf::from(xdg)),
+        None => home
+            .filter(|v| !v.is_empty())
+            .map(|home| PathBuf::from(home).join(fallback)),
+    }
 }
 
 /// `path` made absolute against the current directory, with `.` and `..`
@@ -128,6 +155,20 @@ mod tests {
 
         let err = resolve(Some(os("")), Some(os(""))).unwrap_err().to_string();
         assert!(err.contains("--config"), "{err}");
+    }
+
+    #[test]
+    fn networks_go_to_the_xdg_data_home_else_local_share() {
+        assert_eq!(
+            resolve_networks(Some(os("/custom/data")), Some(os("/home/sl"))).unwrap(),
+            Path::new("/custom/data/seismic/networks")
+        );
+        assert_eq!(
+            resolve_networks(Some(os("")), Some(os("/home/sl"))).unwrap(),
+            Path::new("/home/sl/.local/share/seismic/networks")
+        );
+        let err = resolve_networks(None, None).unwrap_err().to_string();
+        assert!(err.contains("XDG_DATA_HOME"), "{err}");
     }
 
     #[test]

@@ -135,9 +135,6 @@ dir = "/x"
 alpha = { public_ip = "203.0.113.7", fqdn = "alpha.example.com" }
 beta = { public_ip = "203.0.113.8", fqdn = "beta.example.com" }
 
-[networks.partner-net]
-manifest = "/y/network-manifest.json"
-
 [networks.partner-net.nodes]
 my-node = { public_ip = "198.51.100.4", fqdn = "my-node.example.com" }
 "#;

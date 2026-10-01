@@ -14,19 +14,20 @@
 //! outside this crate writes the file.
 
 use std::io::{IsTerminal as _, Read};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use anyhow::{Context as _, bail};
 use clap::{Args, Subcommand};
 use clap_complete::ArgValueCandidates;
 use seismic_tee_common::descriptor::parse_descriptors;
-use seismic_tee_common::{NetworkDir, load_descriptors, next_step};
+use seismic_tee_common::{Manifest, NetworkDir, load_descriptors, next_step};
 
 use crate::complete;
-use crate::config::{Config, Network, Shape};
+use crate::config::{Config, Network, check_network_name, is_network_id};
 use crate::env::{self, EnvArgs};
 use crate::exec::{self, ExecArgs};
+use crate::fetch::Published;
 use crate::{Context, ContextArgs, Selected, Selection, note, path, rm, write};
 
 /// The `ctx` command group: name networks, and select which one — and which
@@ -45,10 +46,9 @@ pub enum CtxCommand {
     Env(EnvArgs),
     /// Run a command with the selected node's ETH_RPC_URL set.
     Exec(ExecArgs),
-    /// Register a network by name, or update it: where its artifact set is
-    /// (--dir, or --manifest, or --source with --network-id), and optionally
-    /// its nodes from a file. Nodes can also be set separately, in either
-    /// order.
+    /// Register a network, or update it: its directory (a local path, or a
+    /// GitHub URL to fetch), and optionally its nodes
+    /// from a file. Nodes can also be set separately, in either order.
     SetNetwork(SetNetworkArgs),
     /// Store a network's nodes from stdin, as the provisioner prints them:
     /// pulumi stack output nodes --json | seismic-tee ctx set-nodes <NETWORK>.
@@ -125,24 +125,30 @@ pub struct ListArgs {
 }
 
 #[derive(Debug, Args)]
+#[command(
+    arg_required_else_help = true,
+    after_help = "Examples:\n  \
+    seismic-tee ctx set-network --dir https://github.com/SeismicSystems/seismic/tree/main/tee/networks/fixture-devnet\n  \
+    seismic-tee ctx set-network --dir tee/networks/devnet-1 --nodes nodes.json"
+)]
 pub struct SetNetworkArgs {
-    /// The name to register the network under.
-    #[arg(value_name = "NAME", add = ArgValueCandidates::new(complete::networks))]
-    pub name: String,
-
-    /// A network directory (from `network init`): the committed artifact
-    /// set — manifest, genesis, policy, harvest records.
-    #[arg(long, value_name = "DIR")]
-    pub dir: Option<PathBuf>,
-    /// The network manifest, for a network handed over as loose files.
-    #[arg(long, value_name = "FILE")]
-    pub manifest: Option<PathBuf>,
-    /// A published artifact set's source. Fetching is not implemented yet;
-    /// pairs with --network-id.
-    #[arg(long, value_name = "URL")]
-    pub source: Option<String>,
-    /// SHA-256 of the network's manifest, pinned so a fetched or cached
-    /// artifact set is refused unless it matches.
+    /// The network directory (from `network init`): manifest, genesis,
+    /// policy, harvest records. A local path is registered where it is; an
+    /// https://github.com/<owner>/<repo>/tree/<ref>/<path> URL is fetched to
+    /// $XDG_DATA_HOME/seismic/networks/<NAME>/ (default
+    /// ~/.local/share/seismic/networks/<NAME>/) and pinned to its manifest's
+    /// network_id.
+    #[arg(long, value_name = "PATH|URL")]
+    pub dir: Option<String>,
+    /// What this context file calls the network: a local name, like a git
+    /// remote's, free to differ from the manifest's `name` (which is part of
+    /// the network_id and never changes). Default: the manifest's `name`, else
+    /// --dir's last segment.
+    #[arg(long, value_name = "NAME", add = ArgValueCandidates::new(complete::networks))]
+    pub name: Option<String>,
+    /// SHA-256 of the network's manifest, as `verify-founding` and `assemble`
+    /// print it: a directory that does not hash to it is refused. A fetched
+    /// directory is pinned to what it hashes to when this is not given.
     #[arg(long, value_name = "ID")]
     pub network_id: Option<String>,
     /// The nodes too, from a descriptor-map file (the `pulumi stack output
@@ -383,18 +389,13 @@ fn list_lines(context: &Context, scope: Option<&str>) -> Vec<String> {
     lines
 }
 
-/// Where a network's artifact set is, as the file spells it: the field and
-/// its value, so what the line says is what `ctx set-network` would take.
+/// Where a network's artifact set is, as the file spells it — and, for a
+/// fetched one, where it came from.
 fn pointer(network: &Network) -> String {
-    match network.shape() {
-        Shape::Dir(dir) => format!("dir {}", dir.display()),
-        Shape::Loose {
-            manifest: Some(manifest),
-        } => format!("manifest {}", manifest.display()),
-        Shape::Loose { manifest: None } => "nodes only".to_string(),
-        Shape::Published { source, .. } => {
-            format!("source {source} (fetching is not implemented)")
-        }
+    match (&network.dir, &network.source) {
+        (Some(dir), Some(source)) => format!("dir {} (from {source})", dir.display()),
+        (Some(dir), None) => format!("dir {}", dir.display()),
+        (None, _) => "nodes only".to_string(),
     }
 }
 
@@ -410,40 +411,121 @@ fn run_unset(args: ConfigArgs) -> anyhow::Result<ExitCode> {
 
 fn run_set_network(args: SetNetworkArgs) -> anyhow::Result<ExitCode> {
     let context = Context::load(args.config.as_deref())?;
-    // Stored absolute: the file is read from whatever directory the next
-    // command runs in, so a path relative to this one would point nowhere.
-    let network = Network {
-        dir: args.dir.as_deref().map(path::absolute).transpose()?,
-        manifest: args.manifest.as_deref().map(path::absolute).transpose()?,
-        source: args.source,
-        network_id: args.network_id,
-        ..Default::default()
-    };
-    network.validate(&args.name, context.path())?;
-    // The file is read before it is written, so a bad map leaves the
-    // registration undone too.
+    let published = args
+        .dir
+        .as_deref()
+        .map(Published::parse)
+        .transpose()?
+        .flatten();
+    let pin = args.network_id.as_deref().map(|id| {
+        let bare = id.strip_prefix("0x").unwrap_or(id);
+        bare.to_ascii_lowercase()
+    });
+    // Checked before anything is fetched, so a typo costs no download.
+    if let Some(pin) = &pin
+        && !is_network_id(pin)
+    {
+        bail!("--network-id must be 32 bytes of hex, got {pin}");
+    }
+    if let Some(name) = &args.name {
+        check_network_name(name)?;
+    }
+    // The file is read before anything is fetched or written, so a bad map
+    // leaves the registration undone too.
     let nodes = args.nodes.as_deref().map(load_descriptors).transpose()?;
-    write::set_network(context.path(), &args.name, &network)?;
+
+    let (name, network) = match (&published, &args.dir) {
+        (Some(published), _) => {
+            let networks = path::networks_root()?;
+            let fetched = published.fetch(&networks, args.name.as_deref(), pin.as_deref())?;
+            println!(
+                "Fetched {} at commit {} into {}.",
+                published.url(),
+                &fetched.commit[..12],
+                fetched.dir.display()
+            );
+            if pin.is_none() {
+                println!(
+                    "Pinned network_id 0x{} — check it against the one the network's founders \
+                     publish.",
+                    fetched.network_id
+                );
+            }
+            let network = Network {
+                dir: Some(fetched.dir),
+                source: Some(published.url().to_string()),
+                network_id: Some(fetched.network_id),
+                ..Default::default()
+            };
+            (fetched.name, network)
+        }
+        (None, Some(dir)) => {
+            // Stored absolute: the file is read from whatever directory the
+            // next command runs in, so a relative path would point nowhere.
+            let dir = path::absolute(Path::new(dir))?;
+            let name = match args.name {
+                Some(name) => name,
+                None => local_name(&dir)?,
+            };
+            let network = Network {
+                dir: Some(dir),
+                network_id: pin,
+                ..Default::default()
+            };
+            (name, network)
+        }
+        (None, None) => {
+            let Some(name) = args.name else {
+                bail!(
+                    "set-network needs --dir <PATH|URL>, which also names the network — a \
+                     network of nodes alone is `seismic-tee ctx set-nodes <NAME>`"
+                );
+            };
+            let network = Network {
+                network_id: pin,
+                ..Default::default()
+            };
+            (name, network)
+        }
+    };
+    network.validate(&name, context.path())?;
+    write::set_network(context.path(), &name, &network)?;
     if let Some(nodes) = &nodes {
-        write::set_nodes(context.path(), &args.name, nodes)?;
+        write::set_nodes(context.path(), &name, nodes)?;
     }
     match nodes {
         Some(nodes) => println!(
-            "Registered network {} with {} nodes in {}: {}.",
-            args.name,
+            "Registered network {name} with {} nodes in {}: {}.",
             nodes.len(),
             context.path().display(),
             nodes.keys().cloned().collect::<Vec<_>>().join(", "),
         ),
-        None => println!(
-            "Registered network {} in {}.",
-            args.name,
-            context.path().display()
-        ),
+        None => println!("Registered network {name} in {}.", context.path().display()),
     }
     let context = Context::load(args.config.as_deref())?;
-    next_step::print("", &next_after_registration(context.config(), &args.name));
+    next_step::print("", &next_after_registration(context.config(), &name));
     Ok(ExitCode::SUCCESS)
+}
+
+/// The name a local `dir` registers under: its manifest's `name` when it
+/// has one, else its last segment — a directory `network init` scaffolded
+/// has no manifest until `assemble`, and is named after its basename anyway.
+fn local_name(dir: &Path) -> anyhow::Result<String> {
+    let manifest_path = NetworkDir::new(dir).manifest();
+    let name = if manifest_path.is_file() {
+        Manifest::load(&manifest_path)
+            .with_context(|| format!("{}: invalid manifest", manifest_path.display()))?
+            .name
+            .clone()
+    } else {
+        dir.file_name()
+            .with_context(|| format!("--dir {} has no last segment to name it", dir.display()))?
+            .to_string_lossy()
+            .into_owned()
+    };
+    check_network_name(&name)
+        .with_context(|| format!("naming the network after {}", dir.display()))?;
+    Ok(name)
 }
 
 fn run_set_nodes(args: SetNodesArgs) -> anyhow::Result<ExitCode> {
@@ -586,55 +668,165 @@ mod tests {
     }
 
     #[test]
-    fn set_network_requires_one_of_the_three_shapes() {
+    fn set_network_takes_no_positional() {
+        assert!(Probe::try_parse_from(["probe", "set-network", "devnet-1"]).is_err());
+    }
+
+    /// Bare, it prints its help — examples included — rather than an error.
+    #[test]
+    fn set_network_with_no_arguments_prints_its_help() {
+        let err = Probe::try_parse_from(["probe", "set-network"])
+            .map(|_| ())
+            .unwrap_err();
+        assert_eq!(
+            err.kind(),
+            clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+        );
+        assert!(err.to_string().contains("Examples:"), "{err}");
+    }
+
+    #[test]
+    fn set_network_without_dir_says_what_names_it() {
         let dir = tempfile::tempdir().unwrap();
         let config = dir.path().join("config.toml");
-        let command = parse(&[
+        let err = run(parse(&[
             "set-network",
+            "--config",
+            config.to_str().unwrap(),
+        ]))
+        .unwrap_err()
+        .to_string();
+        assert!(err.contains("needs --dir"), "{err}");
+        assert!(err.contains("ctx set-nodes"), "{err}");
+
+        let err = run(parse(&[
+            "set-network",
+            "--name",
             "devnet-1",
             "--config",
             config.to_str().unwrap(),
-        ]);
-        let err = run(command).unwrap_err().to_string();
+        ]))
+        .unwrap_err()
+        .to_string();
         assert!(err.contains("is empty"), "{err}");
         assert!(err.contains("ctx set-nodes devnet-1"), "{err}");
     }
 
     #[test]
-    fn set_network_source_without_network_id_is_rejected() {
+    fn set_network_names_the_network_after_its_dir() {
         let dir = tempfile::tempdir().unwrap();
         let config = dir.path().join("config.toml");
-        let command = parse(&[
+        run(parse(&[
             "set-network",
-            "devnet-1",
-            "--source",
-            "https://example.com/bundle",
-            "--config",
-            config.to_str().unwrap(),
-        ]);
-        let err = run(command).unwrap_err().to_string();
-        assert!(err.contains("has a source but no network_id"), "{err}");
-    }
-
-    #[test]
-    fn set_network_writes_a_dir_network() {
-        let dir = tempfile::tempdir().unwrap();
-        let config = dir.path().join("config.toml");
-        let command = parse(&[
-            "set-network",
-            "devnet-1",
             "--dir",
-            "/networks/devnet-1",
+            "/networks/devnet-1/",
             "--config",
             config.to_str().unwrap(),
-        ]);
-        run(command).unwrap();
+        ]))
+        .unwrap();
 
         let context = Context::load(Some(&config)).unwrap();
         assert_eq!(
             context.config().networks["devnet-1"].dir,
             Some(PathBuf::from("/networks/devnet-1"))
         );
+    }
+
+    /// The manifest's `name` is the network's own; the directory's is
+    /// wherever it was checked out.
+    #[test]
+    fn set_network_names_a_local_dir_after_its_manifest() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("config.toml");
+        let net = dir.path().join("checkout-name");
+        std::fs::create_dir_all(&net).unwrap();
+        std::fs::write(
+            net.join("network-manifest.json"),
+            seismic_tee_common::test_support::manifest_pinning(b"{}"),
+        )
+        .unwrap();
+        run(parse(&[
+            "set-network",
+            "--dir",
+            net.to_str().unwrap(),
+            "--config",
+            config.to_str().unwrap(),
+        ]))
+        .unwrap();
+
+        let context = Context::load(Some(&config)).unwrap();
+        assert_eq!(
+            context.config().networks["seismic-devnet-3"].dir.as_deref(),
+            Some(net.as_path())
+        );
+    }
+
+    #[test]
+    fn set_network_refuses_a_bad_pin_or_name_before_writing() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("config.toml");
+        for (flag, value, expected) in [
+            (
+                "--network-id",
+                "0xnope",
+                "--network-id must be 32 bytes of hex",
+            ),
+            ("--name", "../escape", "cannot name a network"),
+        ] {
+            let err = run(parse(&[
+                "set-network",
+                "--dir",
+                "/networks/devnet-1",
+                flag,
+                value,
+                "--config",
+                config.to_str().unwrap(),
+            ]))
+            .unwrap_err()
+            .to_string();
+            assert!(err.contains(expected), "{flag}: {err}");
+        }
+        assert!(!config.exists());
+    }
+
+    #[test]
+    fn set_network_name_overrides_and_a_0x_pin_is_stored_bare() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("config.toml");
+        run(parse(&[
+            "set-network",
+            "--dir",
+            "/networks/devnet-1",
+            "--name",
+            "dn1",
+            "--network-id",
+            &format!("0x{}", "AB".repeat(32)),
+            "--config",
+            config.to_str().unwrap(),
+        ]))
+        .unwrap();
+
+        let context = Context::load(Some(&config)).unwrap();
+        let network = &context.config().networks["dn1"];
+        assert_eq!(network.dir, Some(PathBuf::from("/networks/devnet-1")));
+        assert_eq!(network.network_id, Some("ab".repeat(32)));
+    }
+
+    #[test]
+    fn set_network_refuses_a_url_it_cannot_fetch_before_writing() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("config.toml");
+        let err = run(parse(&[
+            "set-network",
+            "--dir",
+            "https://github.com/SeismicSystems/seismic-images/releases/tag/seismic_2026-10-01.6a90ed",
+            "--config",
+            config.to_str().unwrap(),
+        ]))
+        .unwrap_err()
+        .to_string();
+        assert!(err.contains("not a GitHub directory URL"), "{err}");
+        assert!(!config.exists());
     }
 
     #[test]
@@ -645,9 +837,8 @@ mod tests {
         std::fs::write(&nodes, TWO_NODE_MAP).unwrap();
         run(parse(&[
             "set-network",
-            "partner-net",
-            "--manifest",
-            "/m/network-manifest.json",
+            "--dir",
+            "/m/partner-net",
             "--nodes",
             nodes.to_str().unwrap(),
             "--config",
@@ -657,10 +848,7 @@ mod tests {
 
         let context = Context::load(Some(&config)).unwrap();
         let network = &context.config().networks["partner-net"];
-        assert_eq!(
-            network.manifest.as_deref(),
-            Some(Path::new("/m/network-manifest.json"))
-        );
+        assert_eq!(network.dir.as_deref(), Some(Path::new("/m/partner-net")));
         assert_eq!(network.nodes.len(), 2);
         assert!(network.nodes.contains_key("alpha"));
     }
@@ -673,7 +861,6 @@ mod tests {
         let config = dir.path().join("config.toml");
         run(parse(&[
             "set-network",
-            "devnet-1",
             "--dir",
             "./sub/../networks/devnet-1",
             "--config",
@@ -990,7 +1177,8 @@ mod tests {
         write_config(
             config_path,
             &format!(
-                "{current}[networks.partner-net]\nmanifest = \"/y/network-manifest.json\"\n\n\
+                "{current}[networks.partner-net]\ndir = \"/y/partner-net\"\nsource = \
+                 \"https://github.com/o/r/tree/main/partner-net\"\n\n\
                  [networks.partner-net.nodes]\nmy-node = {{ public_ip = \"198.51.100.4\", \
                  fqdn = \"my-node.example.com\" }}\n\n"
             ),
@@ -1070,7 +1258,7 @@ mod tests {
         assert_eq!(
             list_lines(&context, Some(&scope.selection.network)),
             [
-                "  partner-net  manifest /y/network-manifest.json",
+                "  partner-net  dir /y/partner-net (from https://github.com/o/r/tree/main/partner-net)",
                 "    my-node  my-node.example.com",
             ]
         );
@@ -1147,6 +1335,7 @@ mod tests {
 
         run(parse(&[
             "set-network",
+            "--name",
             "devnet-1",
             "--dir",
             "/networks/devnet-1",
@@ -1232,7 +1421,7 @@ fqdn = "alpha.example"
 
     #[test]
     fn a_network_to_use_is_next_selected_with_a_node_when_it_has_one() {
-        let with_nodes = format!("[networks.devnet-1]\nmanifest = \"/m.json\"\n{NODES}");
+        let with_nodes = format!("[networks.devnet-1]\n{NODES}");
         assert_eq!(
             next_after_registration(&config(&with_nodes), "devnet-1"),
             ["seismic-tee ctx use devnet-1/alpha"]
@@ -1253,7 +1442,7 @@ fqdn = "alpha.example"
             )
             .is_empty()
         );
-        let without_nodes = "[networks.partner]\nmanifest = \"/m.json\"\n";
+        let without_nodes = "[networks.partner]\ndir = \"/m\"\n";
         assert_eq!(
             next_after_registration(&config(without_nodes), "partner"),
             ["seismic-tee ctx use partner"]

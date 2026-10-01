@@ -632,6 +632,7 @@ mod tests {
             vec![
                 "ctx",
                 "set-network",
+                "--name",
                 "devnet-1",
                 "--dir",
                 "/networks/devnet-1",
@@ -653,12 +654,12 @@ mod tests {
                 "rpc",
                 "seismic_getTeePublicKey",
             ],
+            vec!["ctx", "set-network", "--name", "my-node", "--dir", "."],
             vec![
                 "ctx",
                 "set-network",
-                "my-node",
-                "--manifest",
-                "./network-manifest.json",
+                "--dir",
+                "https://github.com/SeismicSystems/seismic/tree/main/tee/networks/fixture-devnet",
             ],
             // network
             vec![

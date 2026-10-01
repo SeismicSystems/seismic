@@ -7,8 +7,8 @@
 //! network's own node table, so `<network>/<node>` is already the context's
 //! whole name.
 //!
-//! A network entry holds pointers to its artifact set — a directory, a
-//! manifest, a `network_id` pin — and its cohort's node table, inline under
+//! A network entry holds its artifact set's directory and `network_id` pin,
+//! and its cohort's node table, inline under
 //! `[networks.<name>.nodes]`. That is the kubeconfig shape: a kubeconfig
 //! stores each cluster's endpoint inline rather than pointing at a file
 //! elsewhere, a provisioner writes the entry (`aws eks update-kubeconfig`,
@@ -28,6 +28,7 @@ pub mod confirm;
 pub mod dir;
 pub mod env;
 pub mod exec;
+pub mod fetch;
 pub mod path;
 pub mod rm;
 pub mod write;
@@ -40,7 +41,7 @@ use seismic_tee_common::{
 };
 
 pub use args::ContextArgs;
-use config::{Config, Network, Shape};
+use config::{Config, Network};
 pub use dir::DirArgs;
 
 /// A selection: a network, and optionally one of its nodes.
@@ -201,32 +202,14 @@ impl Selected<'_> {
         Ok(select_descriptor(nodes, name, &holder)?)
     }
 
-    /// `<dir>/network-manifest.json`, or the `manifest` path.
+    /// `<dir>/network-manifest.json`.
     pub fn manifest(&self) -> anyhow::Result<PathBuf> {
-        match self.network.shape() {
-            Shape::Dir(dir) => Ok(NetworkDir::new(path::expand_tilde(dir)?).manifest()),
-            Shape::Loose {
-                manifest: Some(manifest),
-            } => path::expand_tilde(manifest),
-            Shape::Loose { manifest: None } => bail!(
-                "network `{}` has no manifest — set `manifest` or `dir` in {}, or pass --manifest",
-                self.selection.network,
-                self.config_path.display(),
-            ),
-            Shape::Published { .. } => Err(self.published_error()),
-        }
+        Ok(NetworkDir::new(self.dir_or("pass --manifest")?).manifest())
     }
 
     /// The network directory, for the founder commands' positional DIR.
     pub fn dir(&self) -> anyhow::Result<PathBuf> {
-        match self.network.shape() {
-            Shape::Dir(dir) => path::expand_tilde(dir),
-            Shape::Loose { .. } => bail!(
-                "network `{}` has no dir — it is registered as loose files; pass DIR",
-                self.selection.network
-            ),
-            Shape::Published { .. } => Err(self.published_error()),
-        }
+        self.dir_or("pass DIR")
     }
 
     /// The pinned network_id, when the entry carries one.
@@ -234,13 +217,18 @@ impl Selected<'_> {
         self.network.network_id.as_deref()
     }
 
-    fn published_error(&self) -> anyhow::Error {
-        anyhow::anyhow!(
-            "network `{}` is a published artifact set, and fetching is not implemented; \
-             download it and set `dir` in {}",
-            self.selection.network,
-            self.config_path.display(),
-        )
+    /// The directory, or an error naming how to register one and
+    /// `instead`, the command's own flag that would stand in for it.
+    fn dir_or(&self, instead: &str) -> anyhow::Result<PathBuf> {
+        let Some(dir) = &self.network.dir else {
+            bail!(
+                "network `{name}` in {} is nodes only, with no directory — `seismic-tee ctx \
+                 set-network --name {name} --dir <PATH|URL>` registers one, or {instead}",
+                self.config_path.display(),
+                name = self.selection.network,
+            );
+        };
+        path::expand_tilde(dir)
     }
 }
 
@@ -453,38 +441,8 @@ mod tests {
     }
 
     #[test]
-    fn manifest_and_dir_each_refuse_a_published_network() {
-        // `nodes` is orthogonal to shape — a published network importing its
-        // cohort ahead of a fetch is legal — so only `manifest` and `dir`
-        // are shape-gated here.
-        let network = Network {
-            source: Some("https://example.com/bundle".to_string()),
-            network_id: Some("a".repeat(64)),
-            ..Default::default()
-        };
-        let config_path = PathBuf::from("/config.toml");
-        let selected = Selected {
-            selection: Selection {
-                network: "some-fork".to_string(),
-                node: None,
-            },
-            network: &network,
-            config_path: &config_path,
-        };
-
-        for err in [
-            selected.manifest().unwrap_err().to_string(),
-            selected.dir().unwrap_err().to_string(),
-        ] {
-            assert!(err.contains("is a published artifact set"), "{err}");
-            assert!(err.contains("fetching is not implemented"), "{err}");
-        }
-    }
-
-    #[test]
-    fn manifest_names_the_flag_for_a_loose_network_with_neither_dir_nor_manifest() {
-        let network = two_node_network();
-        let mut network = network;
+    fn manifest_and_dir_name_their_flag_for_a_nodes_only_network() {
+        let mut network = two_node_network();
         network.dir = None;
         let config_path = PathBuf::from("/config.toml");
         let selected = Selected {
@@ -496,9 +454,17 @@ mod tests {
             config_path: &config_path,
         };
 
-        let err = selected.manifest().unwrap_err().to_string();
-        assert!(err.contains("has no manifest"), "{err}");
-        assert!(err.contains("--manifest"), "{err}");
+        for (err, instead) in [
+            (selected.manifest().unwrap_err().to_string(), "--manifest"),
+            (selected.dir().unwrap_err().to_string(), "DIR"),
+        ] {
+            assert!(err.contains("is nodes only"), "{err}");
+            assert!(
+                err.contains("set-network --name partner-net --dir"),
+                "{err}"
+            );
+            assert!(err.contains(instead), "{err}");
+        }
     }
 
     const TWO_NODE_CONFIG: &str = r#"

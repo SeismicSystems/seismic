@@ -32,8 +32,8 @@
 //!
 //! A directory already gone is not an error: the entry is removed and that is
 //! said, so the stale entry a hand `rm -rf` left behind is collected too. So
-//! is an entry with no directory at all (a loose manifest, a bare node
-//! table): those files were never the CLI's, and only the entry goes.
+//! is an entry with no directory at all, a bare node table: only the entry
+//! goes.
 
 use std::io::{BufRead, IsTerminal as _};
 use std::net::ToSocketAddrs as _;
@@ -344,7 +344,8 @@ mod tests {
         let sandbox = Sandbox::new();
         let root = sandbox.network_dir("tmp-devnet-1");
         sandbox.write_config(&format!(
-            "current = \"tmp-devnet-1\"\n\n{}\n[networks.partner-net]\nmanifest = \"/m.json\"\n",
+            "current = \"tmp-devnet-1\"\n\n{}\n[networks.partner-net.nodes]\nmy-node = {{ \
+             public_ip = \"198.51.100.4\", fqdn = \"n.example.com\" }}\n",
             entry("tmp-devnet-1", &root)
         ));
 
@@ -414,15 +415,12 @@ mod tests {
     #[test]
     fn an_entry_with_no_directory_loses_only_the_entry() {
         let sandbox = Sandbox::new();
-        let manifest = sandbox.dir.path().join("network-manifest.json");
-        std::fs::write(&manifest, "{}").unwrap();
-        sandbox.write_config(&format!(
-            "[networks.partner-net]\nmanifest = {:?}\n",
-            manifest.to_str().unwrap()
-        ));
+        sandbox.write_config(
+            "[networks.partner-net.nodes]\nmy-node = { public_ip = \"198.51.100.4\", fqdn = \
+             \"n.example.com\" }\n",
+        );
 
         sandbox.rm("partner-net").unwrap();
-        assert!(manifest.exists());
         assert!(sandbox.config().networks.is_empty());
     }
 
@@ -454,7 +452,7 @@ mod tests {
     #[test]
     fn an_unknown_name_lists_the_registered_ones() {
         let sandbox = Sandbox::new();
-        sandbox.write_config("[networks.devnet-1]\nmanifest = \"/m.json\"\n");
+        sandbox.write_config("[networks.devnet-1]\ndir = \"/m\"\n");
 
         let err = sandbox.rm("devnet-2").unwrap_err().to_string();
         assert!(err.contains("no network `devnet-2`"), "{err}");

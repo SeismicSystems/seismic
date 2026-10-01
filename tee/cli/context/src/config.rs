@@ -34,15 +34,16 @@ pub struct Config {
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Network {
-    /// A network directory: the committed artifact set — manifest, genesis,
-    /// policy, harvest records. Never the cohort; that is `nodes`.
+    /// A network directory: the artifact set — manifest, genesis, policy,
+    /// harvest records — local, or fetched by `ctx set-network --dir <URL>`.
+    /// Never the cohort; that is `nodes`. Absent for a network that is
+    /// nothing but nodes (enough for `status`, `env`, `exec`).
     pub dir: Option<PathBuf>,
-    /// The network manifest on its own, for one handed over as a loose file.
-    pub manifest: Option<PathBuf>,
-    /// A published artifact set. Fetching is not built yet.
+    /// The URL `dir` was fetched from, kept as provenance: nothing reads
+    /// the network from it again.
     pub source: Option<String>,
-    /// SHA-256 of network-manifest.json: the pin a fetched or cached
-    /// artifact set is refused unless it matches.
+    /// SHA-256 of network-manifest.json, bare hex: the pin a directory is
+    /// refused unless it matches.
     pub network_id: Option<String>,
     /// The cohort: node name → address, exactly as the provisioner reported
     /// it. Written by `ctx set-nodes` from `pulumi stack output nodes --json`.
@@ -50,26 +51,9 @@ pub struct Network {
     pub nodes: Descriptors,
 }
 
-/// Where a network's artifact set is, decided once at load. The cohort is
-/// orthogonal: any shape may carry `nodes`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Shape<'a> {
-    Dir(&'a Path),
-    /// A loose manifest, or nothing but nodes (enough for `status`, `env`,
-    /// `exec`; not for anything that needs the manifest).
-    Loose {
-        manifest: Option<&'a Path>,
-    },
-    Published {
-        source: &'a str,
-        network_id: &'a str,
-    },
-}
-
 impl Network {
-    /// A network entry naming a directory, with no manifest, source or
-    /// nodes — what `network init` registers for the directory it just
-    /// scaffolded.
+    /// A network entry naming a directory, with no pin or nodes — what
+    /// `network init` registers for the directory it just scaffolded.
     pub fn of_dir(dir: &Path) -> Self {
         Self {
             dir: Some(dir.to_path_buf()),
@@ -77,36 +61,31 @@ impl Network {
         }
     }
 
-    /// Validate this entry's shape, naming `name` and `config_path` in every
+    /// Validate this entry, naming `name` and `config_path` in every
     /// failure.
     pub fn validate(&self, name: &str, config_path: &Path) -> anyhow::Result<()> {
-        let has_dir = self.dir.is_some();
-        let has_manifest = self.manifest.is_some();
-        let has_source = self.source.is_some();
-        let has_nodes = !self.nodes.is_empty();
-
-        if !has_dir && !has_manifest && !has_source && !has_nodes {
+        // Before the emptiness check: without nodes, a source-only entry would
+        // read as empty, hiding the URL that fills it.
+        if let Some(source) = &self.source
+            && self.dir.is_none()
+        {
             bail!(
-                "network `{name}` in {} is empty — set dir, manifest or source, or import its \
-                 nodes with `seismic-tee ctx set-nodes {name}`",
+                "network `{name}` in {} has a source ({source}) but no dir — source records where \
+                 a fetched dir came from; `seismic-tee ctx set-network --name {name} --dir \
+                 {source}` fetches it",
                 config_path.display(),
             );
         }
-        if has_dir && has_manifest {
+        if self.dir.is_none() && self.nodes.is_empty() {
             bail!(
-                "network `{name}` in {} sets both dir and manifest — a dir already names it",
-                config_path.display(),
-            );
-        }
-        if has_source && self.network_id.is_none() {
-            bail!(
-                "network `{name}` in {} has a source but no network_id — a source with no pin \
-                 is not a weaker check, it is no check",
+                "network `{name}` in {} is empty — register its directory with `seismic-tee ctx \
+                 set-network --name {name} --dir <PATH|URL>`, or import its nodes with \
+                 `seismic-tee ctx set-nodes {name}`",
                 config_path.display(),
             );
         }
         if let Some(id) = &self.network_id
-            && !(id.len() == 64 && id.bytes().all(|b| b.is_ascii_hexdigit()))
+            && !is_network_id(id)
         {
             bail!(
                 "network `{name}` in {}: network_id must be 32 bytes of hex, got {id}",
@@ -115,26 +94,25 @@ impl Network {
         }
         Ok(())
     }
+}
 
-    /// Which of the three shapes this entry is.
-    ///
-    /// Only meaningful once [`Self::validate`] has passed: an entry with a
-    /// `source` and no `network_id` would panic in the `Published` arm below,
-    /// but `validate` refuses to let one reach here.
-    pub fn shape(&self) -> Shape<'_> {
-        if let Some(dir) = &self.dir {
-            return Shape::Dir(dir);
-        }
-        if let Some(source) = &self.source {
-            return Shape::Published {
-                source,
-                network_id: self.network_id.as_deref().expect("validated"),
-            };
-        }
-        Shape::Loose {
-            manifest: self.manifest.as_deref(),
-        }
+/// Refuse `name` unless it can be both a context key — the `<network>` of
+/// `<network>/<node>` — and one directory under `networks/`. A fetched
+/// manifest's name is the remote's to choose, so `..` or `a/b` must not
+/// reach a path.
+pub fn check_network_name(name: &str) -> anyhow::Result<()> {
+    if name.is_empty() || name.starts_with('.') || name.contains(['/', '\\']) {
+        bail!(
+            "`{name}` cannot name a network: a name is one path segment, not starting with `.` \
+             — pass --name"
+        );
     }
+    Ok(())
+}
+
+/// Whether `id` is a network_id as the file stores it: 32 bytes of bare hex.
+pub fn is_network_id(id: &str) -> bool {
+    id.len() == 64 && id.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
 impl Config {
@@ -151,8 +129,6 @@ impl Config {
 mod tests {
     use super::*;
 
-    const HEX32: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-
     fn network(toml: &str) -> Network {
         toml::from_str::<Network>(toml).unwrap()
     }
@@ -164,35 +140,22 @@ fqdn = "alpha.example.com""#
     }
 
     #[test]
-    fn the_three_shapes_parse_with_and_without_a_nodes_table() {
-        for nodes in ["", one_node()] {
-            let dir = network(&format!("dir = \"/x\"\n{nodes}"));
-            assert!(matches!(dir.shape(), Shape::Dir(p) if p == Path::new("/x")));
-            assert_eq!(!dir.nodes.is_empty(), !nodes.is_empty());
-
-            let loose = network(&format!("manifest = \"/y/network-manifest.json\"\n{nodes}"));
-            assert!(matches!(
-                loose.shape(),
-                Shape::Loose { manifest: Some(p) } if p == Path::new("/y/network-manifest.json")
-            ));
-
-            let published = network(&format!(
-                "source = \"https://example.com/bundle\"\nnetwork_id = \"{HEX32}\"\n{nodes}"
-            ));
-            assert!(matches!(
-                published.shape(),
-                Shape::Published { source, network_id }
-                    if source == "https://example.com/bundle" && network_id == HEX32
-            ));
-        }
+    fn of_dir_names_a_dir_entry() {
+        let n = Network::of_dir(Path::new("/nets/devnet-1"));
+        n.validate("devnet-1", Path::new("config.toml")).unwrap();
+        assert_eq!(n.dir.as_deref(), Some(Path::new("/nets/devnet-1")));
+        assert!(n.nodes.is_empty());
     }
 
     #[test]
-    fn of_dir_names_a_dir_shaped_entry() {
-        let n = Network::of_dir(Path::new("/nets/devnet-1"));
-        n.validate("devnet-1", Path::new("config.toml")).unwrap();
-        assert!(matches!(n.shape(), Shape::Dir(p) if p == Path::new("/nets/devnet-1")));
-        assert!(n.nodes.is_empty());
+    fn a_network_name_is_one_segment_not_starting_with_a_dot() {
+        for good in ["fixture-devnet", "seismic-devnet-3", "a.b"] {
+            check_network_name(good).unwrap();
+        }
+        for bad in ["", ".", "..", ".hidden", "a/b", "a\\b"] {
+            let err = check_network_name(bad).unwrap_err().to_string();
+            assert!(err.contains("cannot name a network"), "{bad}: {err}");
+        }
     }
 
     #[test]
@@ -200,7 +163,7 @@ fqdn = "alpha.example.com""#
         let n = network(one_node());
         n.validate("y", Path::new("config.toml")).unwrap();
         assert_eq!(n.nodes.len(), 1);
-        assert!(matches!(n.shape(), Shape::Loose { manifest: None }));
+        assert_eq!(n.dir, None);
     }
 
     #[test]
@@ -230,7 +193,7 @@ bogus = 1"#,
     }
 
     #[test]
-    fn the_four_validation_failures_produce_their_message() {
+    fn the_validation_failures_produce_their_message() {
         let path = Path::new("config.toml");
 
         let err = Network::default()
@@ -238,25 +201,21 @@ bogus = 1"#,
             .unwrap_err()
             .to_string();
         assert!(err.contains("is empty"), "{err}");
+        assert!(err.contains("set-network --name empty --dir"), "{err}");
         assert!(err.contains("ctx set-nodes empty"), "{err}");
 
-        let err = network(r#"source = "https://example.com/bundle""#)
-            .validate("no-pin", path)
+        let err = network(r#"source = "https://github.com/o/r/tree/main/net""#)
+            .validate("orphan", path)
             .unwrap_err()
             .to_string();
-        assert!(err.contains("has a source but no network_id"), "{err}");
+        assert!(err.contains("has a source"), "{err}");
+        assert!(
+            err.contains("--dir https://github.com/o/r/tree/main/net"),
+            "{err}"
+        );
 
         let err = network(
             r#"dir = "/x"
-manifest = "/x/network-manifest.json""#,
-        )
-        .validate("both", path)
-        .unwrap_err()
-        .to_string();
-        assert!(err.contains("sets both dir and manifest"), "{err}");
-
-        let err = network(
-            r#"source = "https://example.com/bundle"
 network_id = "not-hex""#,
         )
         .validate("bad-id", path)

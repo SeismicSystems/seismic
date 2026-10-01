@@ -38,8 +38,8 @@ pub fn clear_current(path: &Path) -> anyhow::Result<()> {
     })
 }
 
-/// Create or update `[networks.<name>]`: the pointer keys (dir, manifest,
-/// source, network_id) become `network`'s; everything else in the table — its
+/// Create or update `[networks.<name>]`: the pointer keys (dir, source,
+/// network_id) become `network`'s; everything else in the table — its
 /// `nodes`, and any comment a human left on it — stays.
 pub fn set_network(path: &Path, name: &str, network: &Network) -> anyhow::Result<()> {
     edit(path, |doc| {
@@ -148,14 +148,13 @@ fn network_table<'a>(networks: &'a mut Table, name: &str) -> anyhow::Result<&'a 
 
 /// The keys that say where a network's artifact set is. `nodes` is not one:
 /// [`set_nodes`] owns it.
-const POINTER_KEYS: [&str; 4] = ["dir", "manifest", "source", "network_id"];
+const POINTER_KEYS: [&str; 3] = ["dir", "source", "network_id"];
 
 /// `network`'s pointer keys that are set, as strings for the file.
 fn pointer_values(network: &Network) -> Vec<(&'static str, String)> {
     let path = |p: &PathBuf| p.to_string_lossy().into_owned();
     [
         ("dir", network.dir.as_ref().map(path)),
-        ("manifest", network.manifest.as_ref().map(path)),
         ("source", network.source.clone()),
         ("network_id", network.network_id.clone()),
     ]
@@ -281,7 +280,7 @@ mod tests {
         let path = dir.path().join("config.toml");
         std::fs::write(
             &path,
-            "# handed over by the founder\n[networks.partner-net]\nmanifest = \"/m.json\"\n\n\
+            "# handed over by the founder\n[networks.partner-net]\ndir = \"/m\"\n\n\
              [networks.partner-net.nodes]\nmy-node = { public_ip = \"198.51.100.4\", fqdn = \
              \"n.example.com\" }\n",
         )
@@ -305,7 +304,6 @@ mod tests {
             network.dir.as_deref(),
             Some(Path::new("/networks/partner-net"))
         );
-        assert_eq!(network.manifest, None);
         assert_eq!(network.nodes.len(), 1);
         assert!(network.nodes.contains_key("my-node"));
     }
@@ -322,7 +320,7 @@ mod tests {
             "devnet-1",
             &Network {
                 dir: Some("/x".into()),
-                manifest: Some("/x/network-manifest.json".into()),
+                network_id: Some("not-hex".into()),
                 ..Default::default()
             },
         )
@@ -341,6 +339,7 @@ mod tests {
             "devnet-1",
             &Network {
                 dir: Some("/x".into()),
+                network_id: Some("ab".repeat(32)),
                 ..Default::default()
             },
         )
@@ -362,17 +361,17 @@ mod tests {
             &path,
             "devnet-1",
             &Network {
-                manifest: Some("/y/network-manifest.json".into()),
+                dir: Some("/y".into()),
                 ..Default::default()
             },
         )
         .unwrap();
         let config: Config = toml::from_str(&read(&path)).unwrap();
-        assert_eq!(config.networks["devnet-1"].dir, None);
         assert_eq!(
-            config.networks["devnet-1"].manifest.as_deref(),
-            Some(Path::new("/y/network-manifest.json"))
+            config.networks["devnet-1"].dir.as_deref(),
+            Some(Path::new("/y"))
         );
+        assert_eq!(config.networks["devnet-1"].network_id, None);
     }
 
     #[test]
@@ -494,7 +493,7 @@ mod tests {
             "current = \"devnet-1/alpha\"\nprevious = \"devnet-1\"\n\n\
              # the throwaway\n[networks.devnet-1]\ndir = \"/x\"\n\n[networks.devnet-1.nodes]\n\
              alpha = { public_ip = \"203.0.113.7\", fqdn = \"a.example.com\" }\n\n\
-             # kept\n[networks.partner-net]\nmanifest = \"/m.json\"\n",
+             # kept\n[networks.partner-net]\ndir = \"/m\"\n",
         )
         .unwrap();
 
@@ -516,7 +515,7 @@ mod tests {
         std::fs::write(
             &path,
             "current = \"partner-net\"\nprevious = \"devnet-1\"\n\n[networks.devnet-1]\ndir = \
-             \"/x\"\n\n[networks.partner-net]\nmanifest = \"/m.json\"\n",
+             \"/x\"\n\n[networks.partner-net]\ndir = \"/m\"\n",
         )
         .unwrap();
 
@@ -576,7 +575,7 @@ mod tests {
             &path,
             "current = \"partner-net/beta\"\n\n[networks.testnet]\ndir = \"/x\"\n\n\
              [networks.testnet.nodes.alpha]\npublic_ip = \"203.0.113.7\"\nfqdn = \
-             \"a.example.com\"\n\n[networks.partner-net]\nmanifest = \"/m.json\"\n",
+             \"a.example.com\"\n\n[networks.partner-net]\ndir = \"/m\"\n",
         )
         .unwrap();
 

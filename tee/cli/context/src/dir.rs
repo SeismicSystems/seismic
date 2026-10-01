@@ -59,11 +59,11 @@ impl DirArgs {
 mod tests {
     use super::*;
 
-    const LOOSE_NETWORK_CONFIG: &str = r#"
+    const NODES_ONLY_CONFIG: &str = r#"
 current = "partner-net"
 
-[networks.partner-net]
-manifest = "/m/network-manifest.json"
+[networks.partner-net.nodes]
+my-node = { public_ip = "198.51.100.4", fqdn = "my-node.example.com" }
 "#;
 
     const DIR_NETWORK_CONFIG: &str = r#"
@@ -104,13 +104,13 @@ dir = "/nets/devnet-1"
     }
 
     #[test]
-    fn a_loose_files_network_errors_with_has_no_dir() {
+    fn a_nodes_only_network_errors_naming_dir() {
         let tmp = tempfile::tempdir().unwrap();
         let config_path = tmp.path().join("config.toml");
-        std::fs::write(&config_path, LOOSE_NETWORK_CONFIG).unwrap();
+        std::fs::write(&config_path, NODES_ONLY_CONFIG).unwrap();
 
         let err = args(None, config_path).load().unwrap_err().to_string();
-        assert!(err.contains("has no dir"), "{err}");
+        assert!(err.contains("is nodes only"), "{err}");
         assert!(err.contains("pass DIR"), "{err}");
     }
 
