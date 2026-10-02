@@ -572,18 +572,6 @@ mod tests {
             vec!["network", "validate", "n"],
             vec!["network", "validate"],
             vec!["network", "assemble", "--check", "--force", "n"],
-            // init names the image, or gives all three inputs itself
-            vec!["network", "init", "n"],
-            vec!["network", "init", "n", "--reth-genesis", "g.json"],
-            vec![
-                "network",
-                "init",
-                "n",
-                "--reth-genesis",
-                "g.json",
-                "--summit-genesis",
-                "s.toml",
-            ],
             vec![
                 "network",
                 "assemble",
@@ -736,6 +724,7 @@ mod tests {
                 "https://github.com/SeismicSystems/seismic/tree/main/tee/networks/fixture-devnet",
             ],
             // network
+            vec!["network", "init"],
             vec![
                 "network",
                 "init",

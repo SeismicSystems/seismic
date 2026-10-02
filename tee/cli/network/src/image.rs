@@ -42,12 +42,60 @@ pub const RELEASES_URL: &str = "https://github.com/SeismicSystems/seismic-images
 /// The repository whose attestations a release's provenance is looked up in.
 pub const RELEASE_REPO: &str = "SeismicSystems/seismic-images";
 
+/// seismic-images' releases, newest first, as GitHub's API lists them.
+pub const RELEASES_API: &str =
+    "https://api.github.com/repos/SeismicSystems/seismic-images/releases";
+
 /// The identity a release's `SHA256SUMS` must be attested under, matched
 /// exactly against the signing certificate: the workflow that publishes
 /// releases, on the branch it publishes from. The workflow and the ref, not
 /// the repository alone, so bytes signed by another workflow or another ref
 /// — a pull request's run included — are refused.
 pub const RELEASE_SIGNER: &str = "https://github.com/SeismicSystems/seismic-images/.github/workflows/seismic.yml@refs/heads/seismic";
+
+/// The releases `api` lists that carry an [`IMAGE_JSON_ASSET`] — those
+/// published before it existed cannot be founded on — as `(tag, image.json
+/// URL)`, in the API's order, newest first.
+pub async fn releases(
+    client: &reqwest::Client,
+    api: &str,
+) -> anyhow::Result<Vec<(String, String)>> {
+    let body = client
+        .get(api)
+        .header(reqwest::header::ACCEPT, "application/vnd.github+json")
+        .send()
+        .await
+        .and_then(reqwest::Response::error_for_status)
+        .with_context(|| format!("listing {api}"))?
+        .bytes()
+        .await
+        .with_context(|| format!("reading {api}"))?;
+    parse_releases(&body).with_context(|| format!("{api}: not a release list"))
+}
+
+fn parse_releases(body: &[u8]) -> anyhow::Result<Vec<(String, String)>> {
+    #[derive(Deserialize)]
+    struct Release {
+        tag_name: String,
+        assets: Vec<Asset>,
+    }
+    #[derive(Deserialize)]
+    struct Asset {
+        name: String,
+        browser_download_url: String,
+    }
+    let releases: Vec<Release> = serde_json::from_slice(body)?;
+    Ok(releases
+        .into_iter()
+        .filter_map(|release| {
+            let asset = release
+                .assets
+                .into_iter()
+                .find(|asset| asset.name == IMAGE_JSON_ASSET)?;
+            Some((release.tag_name, asset.browser_download_url))
+        })
+        .collect())
+}
 
 /// The release's assets, by the names seismic-images gives them.
 pub const IMAGE_JSON_ASSET: &str = "image.json";
@@ -789,6 +837,26 @@ pub(crate) mod tests {
         assert_eq!(
             std::fs::read(dir.path().join("subject")).unwrap(),
             files[SHA256SUMS_ASSET]
+        );
+    }
+
+    /// A release from before image.json was published is no image to found
+    /// on, so it is not listed.
+    #[test]
+    fn releases_without_an_image_json_are_not_listed() {
+        let body = serde_json::json!([
+            {"tag_name": "new", "assets": [
+                {"name": "SHA256SUMS", "browser_download_url": "https://x/new/SHA256SUMS"},
+                {"name": "image.json", "browser_download_url": "https://x/new/image.json"},
+            ]},
+            {"tag_name": "old", "assets": [
+                {"name": "SHA256SUMS", "browser_download_url": "https://x/old/SHA256SUMS"},
+            ]},
+        ]);
+        let releases = parse_releases(body.to_string().as_bytes()).unwrap();
+        assert_eq!(
+            releases,
+            [("new".to_string(), "https://x/new/image.json".to_string())]
         );
     }
 

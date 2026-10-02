@@ -43,8 +43,8 @@ use std::process::ExitCode;
 use anyhow::{Context as _, bail};
 use clap::Args;
 use clap_complete::ArgValueCandidates;
-use seismic_tee_common::{Descriptors, NetworkDir, next_step};
-use seismic_tee_context::{Context, Selection, complete, confirm, path, write};
+use seismic_tee_common::{Descriptors, NetworkDir, home, next_step};
+use seismic_tee_context::{Context, Selection, complete, confirm, write};
 
 #[derive(Debug, Args)]
 pub struct RmArgs {
@@ -94,7 +94,7 @@ fn remove(
         );
     };
     match &network.dir {
-        Some(dir) => remove_dir(&path::expand_tilde(dir)?, name, |root| {
+        Some(dir) => remove_dir(&home::expand_tilde(dir)?, name, |root| {
             confirm(
                 root,
                 name,

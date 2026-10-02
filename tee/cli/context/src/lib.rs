@@ -37,7 +37,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context as _, bail};
 use seismic_tee_common::{
-    Descriptors, NetworkDir, NodeDescriptor, load_descriptors, select_descriptor,
+    Descriptors, NetworkDir, NodeDescriptor, home, load_descriptors, note, select_descriptor,
 };
 
 pub use args::{ConfigArgs, ContextArgs};
@@ -228,21 +228,8 @@ impl Selected<'_> {
                 name = self.selection.network,
             );
         };
-        path::expand_tilde(dir)
+        home::expand_tilde(dir)
     }
-}
-
-/// The style of the context narration: dimmed, so what the file resolved to
-/// reads as background beside the command's own report rather than as part
-/// of it. Dimmed rather than a fixed grey because it follows the terminal's
-/// foreground, so it stays legible on light and dark themes alike. Rendered
-/// only when stderr is a terminal that wants colour (see `anstream` in the
-/// workspace manifest).
-pub const NOTE: anstyle::Style = anstyle::Style::new().dimmed();
-
-/// A line of context narration on stderr, in [`NOTE`] style.
-pub fn note(line: &dyn std::fmt::Display) {
-    anstream::eprintln!("{NOTE}{line}{NOTE:#}");
 }
 
 /// What a context-resolved command is acting on, on stderr — never stdout,

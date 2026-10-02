@@ -47,13 +47,16 @@ use std::time::Duration;
 
 use anyhow::{Context as _, bail};
 use clap::Args;
+use seismic_tee_common::home::{abbreviate, expand_tilde};
 use seismic_tee_common::network_dir::{
     FOUNDERS_FILENAME, IMAGE_FILENAME, MEASUREMENTS_FILENAME, RETH_GENESIS_FILENAME,
     SUMMIT_GENESIS_FILENAME,
 };
+use seismic_tee_common::note;
+use seismic_tee_common::prompt::{Choice, Prompt};
 use seismic_tee_common::{NetworkDir, next_step};
 use seismic_tee_context::config::{Network, check_network_name};
-use seismic_tee_context::path::{abbreviate, expand_tilde, networks_root};
+use seismic_tee_context::path::networks_root;
 use seismic_tee_context::{Context, Selection, write};
 
 use crate::assemble::DEFAULT_ATTESTATION_TYPE;
@@ -438,19 +441,21 @@ pub async fn init_network_dir(
 
 #[derive(Debug, Args)]
 #[command(after_help = "Examples:\n  \
+    seismic-tee network init     asks for the image, the name and the directory\n  \
     seismic-tee network init --name devnet-4 --founders 4 --image-json https://github.com/SeismicSystems/seismic-images/releases/download/seismic_2026-10-01.6a90ed/image.json\n  \
     seismic-tee network init tee/networks/devnet-4 --image-json build/image.json --allow-unattested")]
 pub struct InitArgs {
     /// Network directory to create. Default: <NAME>/ under
     /// $XDG_DATA_HOME/seismic/networks/ (default ~/.local/share/seismic/networks/),
-    /// where `ctx set-network` fetches networks too.
+    /// where `ctx set-network` fetches networks too — offered to edit when
+    /// the name is asked for.
     #[arg(value_name = "DIR")]
     pub dir: Option<PathBuf>,
 
     /// Network name, filled in as the summit genesis's namespace when the
     /// authored genesis leaves it empty. Default: the directory's basename
     /// (which is also what assemble uses as the manifest name). Required
-    /// without DIR.
+    /// without DIR: asked for when left out on a terminal.
     #[arg(long, value_name = "NAME")]
     pub name: Option<String>,
 
@@ -463,9 +468,11 @@ pub struct InitArgs {
     /// as inputs/image.json, the record assemble and the provisioner read.
     /// Every file is verified against the SHA256SUMS beside it, itself
     /// verified as built by seismic-images' publishing workflow with `gh
-    /// attestation verify`, so gh must be installed and logged in.
+    /// attestation verify`, so gh must be installed and logged in. Required:
+    /// left out on a terminal, it is picked from seismic-images' releases, or
+    /// typed.
     #[arg(long, value_name = "PATH_OR_URL")]
-    pub image_json: String,
+    pub image_json: Option<String>,
 
     /// Found on an image no seismic-images workflow attested, such as a local
     /// build: skip the build provenance check of its SHA256SUMS. Every file
@@ -525,18 +532,47 @@ pub fn network_name(dir: &Path) -> anyhow::Result<String> {
 }
 
 pub async fn run(args: InitArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
-    run_in(args, config, &networks_root()?).await
+    let defaults = Defaults {
+        releases_api: image::RELEASES_API,
+        networks: networks_root()?,
+    };
+    run_with(args, config, &mut Prompt::stdin(), &defaults).await
 }
 
-/// [`run`], creating a network given by name alone as `<NAME>/` under
-/// `networks`.
-async fn run_in(
+/// Where `init` looks for what the command line left out; [`run`]'s are the
+/// real ones.
+struct Defaults<'a> {
+    /// The image releases offered for --image-json.
+    releases_api: &'a str,
+    /// The directory a network named NAME is created in, as `<NAME>/`.
+    networks: PathBuf,
+}
+
+/// [`run`], with `prompt` asking for what is missing: the image, then the
+/// name, then the directory, offered as the name's under
+/// `defaults.networks`.
+async fn run_with(
     args: InitArgs,
     config: Option<&Path>,
-    networks: &Path,
+    prompt: &mut Prompt,
+    defaults: &Defaults<'_>,
 ) -> anyhow::Result<ExitCode> {
+    let client = fetch_client()?;
+    // Listed ahead, the listing being async; only when it will be shown.
+    let images = if args.image_json.is_none() && prompt.can_ask() {
+        Some(image_choices(&client, defaults.releases_api, args.allow_unattested).await)
+    } else {
+        None
+    };
+    let image_json: String = prompt.choose(
+        args.image_json,
+        "Image to found on",
+        "--image-json <PATH_OR_URL>",
+        || images.expect("listed whenever it is asked for"),
+    )?;
     // Each names the other: DIR the network after its basename, NAME the
-    // directory under the networks root.
+    // directory under the networks root. The directory is offered to edit
+    // only when the name was asked for, so `--name` alone never prompts.
     let (name, root) = match (args.name, args.dir) {
         (name, Some(dir)) => {
             let root = absolute(&dir)?;
@@ -548,19 +584,21 @@ async fn run_in(
         }
         (Some(name), None) => {
             check_network_name(&name)?;
-            let root = networks.join(&name);
+            let root = defaults.networks.join(&name);
             (name, root)
         }
-        (None, None) => bail!(
-            "network init needs DIR, or --name <NAME> to create it as {}",
-            abbreviate(&networks.join("<NAME>"))
-        ),
+        (None, None) => {
+            let name: String = prompt.text(None, "Network name", "--name <NAME> (or DIR)")?;
+            check_network_name(&name)?;
+            let default = abbreviate(&defaults.networks.join(&name));
+            let dir: PathBuf = prompt.path(None, "Network directory to create", "DIR", &default)?;
+            (name, absolute(&dir)?)
+        }
     };
     let context = Context::load(config)?;
     refuse_a_registered_name(&context, &name, &root)?;
     let dir = NetworkDir::new(&root);
-    let client = fetch_client()?;
-    let mut image = ImageRelease::beside(&args.image_json)?;
+    let mut image = ImageRelease::beside(&image_json)?;
     if args.allow_unattested {
         image = image.unattested();
     }
@@ -659,6 +697,56 @@ fn refuse_a_registered_name(context: &Context, name: &str, root: &Path) -> anyho
         );
     }
     Ok(())
+}
+
+/// What `init` offers when asked for --image-json: a local build's
+/// `build/image.json` when the working directory has one (a seismic-images
+/// checkout), then the published releases, newest first. A listing that
+/// fails is noted and the local build offered alone, when there is one.
+async fn image_choices(
+    client: &reqwest::Client,
+    releases_api: &str,
+    allow_unattested: bool,
+) -> anyhow::Result<Vec<Choice>> {
+    let local = Path::new("build").join(image::IMAGE_JSON_ASSET);
+    let mut choices = Vec::new();
+    if local.is_file() {
+        let needs = if allow_unattested {
+            ""
+        } else {
+            ", which needs --allow-unattested"
+        };
+        choices.push(Choice {
+            label: format!("{} (a local build{needs})", local.display()),
+            value: local.display().to_string(),
+        });
+    }
+    note(&format_args!(
+        "Listing the releases of {}",
+        image::RELEASE_REPO
+    ));
+    let releases = match image::releases(client, releases_api).await {
+        Ok(releases) => releases,
+        Err(error) if !choices.is_empty() => {
+            note(&format_args!("{error:#}"));
+            Vec::new()
+        }
+        Err(error) => return Err(error),
+    };
+    choices.extend(
+        releases
+            .into_iter()
+            .enumerate()
+            .map(|(i, (tag, url))| Choice {
+                label: if i == 0 {
+                    format!("{tag} (newest)")
+                } else {
+                    tag
+                },
+                value: url,
+            }),
+    );
+    Ok(choices)
 }
 
 #[cfg(test)]
@@ -1217,20 +1305,47 @@ mod tests {
         assert_eq!(config.networks.len(), 1);
     }
 
-    /// Where a test's network named but not placed is created: the
-    /// directory `loose` creates its network directory in.
-    fn networks(loose: &Loose) -> &Path {
-        loose.out.root().parent().unwrap()
+    /// The defaults a test runs with: no release listing to reach, and the
+    /// networks root the one `loose` creates its network directory in.
+    fn defaults(loose: &Loose) -> Defaults<'static> {
+        Defaults {
+            releases_api: "/nonexistent/releases",
+            networks: loose.out.root().parent().unwrap().to_path_buf(),
+        }
     }
 
-    /// `--name` alone names the directory under the networks root.
+    /// Bare, on a terminal, the image, the name and the directory are asked
+    /// for, in that order — the image typed, here, the release listing being
+    /// unreachable, and the directory offered under the networks root
+    /// accepted with Enter.
+    #[tokio::test]
+    async fn the_image_name_and_directory_are_asked_for_on_a_terminal() {
+        let loose = loose();
+        let config_dir = tempfile::tempdir().unwrap();
+        let config_path = config_dir.path().join("config.toml");
+
+        run_with(
+            parse(&["--allow-unattested"]),
+            Some(&config_path),
+            &mut Prompt::scripted(&[&loose.image_json, "testnet-1", ""]),
+            &defaults(&loose),
+        )
+        .await
+        .unwrap();
+        let config = read_config(&config_path);
+        assert_eq!(config.current.as_deref(), Some("testnet-1"));
+        assert!(loose.out.inputs().join(IMAGE_FILENAME).is_file());
+    }
+
+    /// `--name` alone names the directory under the networks root, and
+    /// asks for nothing.
     #[tokio::test]
     async fn a_name_alone_creates_the_network_under_the_networks_root() {
         let loose = loose();
         let config_dir = tempfile::tempdir().unwrap();
         let config_path = config_dir.path().join("config.toml");
 
-        run_in(
+        run_with(
             parse(&[
                 "--name",
                 "testnet-1",
@@ -1239,7 +1354,8 @@ mod tests {
                 "--allow-unattested",
             ]),
             Some(&config_path),
-            networks(&loose),
+            &mut Prompt::nobody(),
+            &defaults(&loose),
         )
         .await
         .unwrap();
@@ -1252,20 +1368,33 @@ mod tests {
         );
     }
 
+    /// With no terminal, each missing value is refused by the argument that
+    /// supplies it, before anything is fetched or written.
     #[tokio::test]
-    async fn neither_dir_nor_name_is_refused_naming_both() {
+    async fn with_nobody_to_ask_a_missing_value_is_named() {
         let loose = loose();
         let config_dir = tempfile::tempdir().unwrap();
         let config_path = config_dir.path().join("config.toml");
-        let err = run_in(
-            parse(&["--image-json", &loose.image_json]),
-            Some(&config_path),
-            networks(&loose),
-        )
-        .await
-        .unwrap_err()
-        .to_string();
-        assert!(err.contains("needs DIR, or --name <NAME>"), "{err}");
+        let root = s(loose.out.root());
+        for (argv, named) in [
+            (
+                vec!["--image-json", &loose.image_json],
+                "--name <NAME> (or DIR) is required",
+            ),
+            (vec![root], "--image-json <PATH_OR_URL> is required"),
+        ] {
+            let err = run_with(
+                parse(&argv),
+                Some(&config_path),
+                &mut Prompt::nobody(),
+                &defaults(&loose),
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+            assert!(err.contains(named), "{err}");
+        }
+        assert!(!loose.out.root().exists());
         assert!(!config_path.exists());
     }
 
@@ -1283,10 +1412,11 @@ mod tests {
         )
         .unwrap();
 
-        let err = run_in(
+        let err = run_with(
             parse(&["--name", "testnet-1", "--image-json", &loose.image_json]),
             Some(&config_path),
-            networks(&loose),
+            &mut Prompt::nobody(),
+            &defaults(&loose),
         )
         .await
         .unwrap_err()

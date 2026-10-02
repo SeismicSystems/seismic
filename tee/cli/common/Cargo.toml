@@ -16,8 +16,11 @@ test-support = ["dep:tempfile"]
 [dependencies]
 seismic-network-manifest.workspace = true
 
+anstream.workspace = true
+anstyle.workspace = true
 anyhow.workspace = true
 hex.workspace = true
+inquire.workspace = true
 jsonrpsee.workspace = true
 reqwest.workspace = true
 serde.workspace = true

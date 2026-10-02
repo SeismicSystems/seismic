@@ -21,6 +21,11 @@ use seismic_tee_common::{Manifest, NetworkDir};
 
 use crate::config::check_network_name;
 
+/// The networks `ctx set-network` offers when asked for its directory: the
+/// ones committed to the monorepo.
+pub const PUBLISHED_NETWORKS: &str =
+    "https://github.com/SeismicSystems/seismic/tree/main/tee/networks";
+
 const GITHUB: &str = "https://github.com/";
 const TREE_URL: &str = "https://github.com/<owner>/<repo>/tree/<ref>/<path>";
 
@@ -175,6 +180,54 @@ impl Published {
             commit,
             network_id,
         })
+    }
+
+    /// The network directories directly under this one — those with a
+    /// manifest — as `(name, tree URL)`, read from a scratch repository that
+    /// fetches the commit's trees and none of its files.
+    pub fn networks(&self) -> anyhow::Result<Vec<(String, String)>> {
+        let (git_ref, path) = self.split()?;
+        let scratch = tempfile::tempdir().context("creating a scratch repository")?;
+        let root = scratch.path();
+        git(None, &["init", "-q", &root.to_string_lossy()])?;
+        git(
+            Some(root),
+            &[
+                "fetch",
+                "-q",
+                "--depth",
+                "1",
+                "--filter=blob:none",
+                &self.remote,
+                &git_ref,
+            ],
+        )
+        .with_context(|| format!("fetching {}", self.url))?;
+        let listing = git(
+            Some(root),
+            &[
+                "ls-tree",
+                "-r",
+                "--name-only",
+                "FETCH_HEAD",
+                "--",
+                &format!("{path}/"),
+            ],
+        )?;
+        let manifest = format!("/{}", seismic_tee_common::network_dir::MANIFEST_FILENAME);
+        Ok(listing
+            .lines()
+            .filter_map(|file| {
+                file.strip_prefix(&path)?
+                    .strip_prefix('/')?
+                    .strip_suffix(&manifest)
+            })
+            .filter(|name| !name.contains('/'))
+            .map(|name| {
+                let url = format!("{}/tree/{git_ref}/{path}/{name}", self.remote);
+                (name.to_string(), url)
+            })
+            .collect())
     }
 
     /// `rest` as `(ref, path)`: the longest branch or tag `rest` starts
@@ -377,6 +430,30 @@ mod tests {
 
     /// The fixture manifest's `name`, which differs from its directory's.
     const MANIFEST_NAME: &str = "seismic-devnet-3";
+
+    /// Only a directory holding a manifest is a network; one scaffolded but
+    /// not yet assembled, or nested deeper, is not offered.
+    #[test]
+    fn the_networks_under_a_directory_are_those_with_a_manifest() {
+        let tmp = tempfile::tempdir().unwrap();
+        let remote = remote_repo(tmp.path());
+        let repo = tmp.path().join("remote");
+        std::fs::create_dir_all(repo.join("tee/networks/scaffolded/inputs")).unwrap();
+        std::fs::write(repo.join("tee/networks/scaffolded/inputs/x.json"), "{}").unwrap();
+        fixture_git(&repo, &["add", "-A"]);
+        fixture_git(&repo, &["commit", "-q", "-m", "scaffolded"]);
+
+        let networks = Published::at(&remote, "sl/feature/tee/networks")
+            .networks()
+            .unwrap();
+        assert_eq!(
+            networks,
+            [(
+                "net-1".to_string(),
+                format!("{remote}/tree/sl/feature/tee/networks/net-1")
+            )]
+        );
+    }
 
     #[test]
     fn a_slashed_branch_fetches_the_one_directory_named_after_its_manifest() {

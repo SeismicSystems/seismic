@@ -21,14 +21,15 @@ use anyhow::{Context as _, bail};
 use clap::{Args, Subcommand};
 use clap_complete::ArgValueCandidates;
 use seismic_tee_common::descriptor::parse_descriptors;
-use seismic_tee_common::{Manifest, NetworkDir, load_descriptors, next_step};
+use seismic_tee_common::prompt::{Choice, Prompt};
+use seismic_tee_common::{Manifest, NetworkDir, load_descriptors, next_step, note};
 
 use crate::complete;
 use crate::config::{Config, Network, check_network_name, is_network_id};
 use crate::env::{self, EnvArgs};
 use crate::exec::{self, ExecArgs};
-use crate::fetch::Published;
-use crate::{Context, ContextArgs, Selected, Selection, note, path, rm, write};
+use crate::fetch::{PUBLISHED_NETWORKS, Published};
+use crate::{Context, ContextArgs, Selected, Selection, path, rm, write};
 
 /// The `ctx` command group: name networks, and select which one — and which
 /// of its nodes — the commands act on.
@@ -72,7 +73,9 @@ pub fn run(command: CtxCommand, config: Option<&Path>) -> anyhow::Result<ExitCod
         CtxCommand::View => run_view(config),
         CtxCommand::Env(args) => env::run(args, config),
         CtxCommand::Exec(args) => exec::run(args, config),
-        CtxCommand::SetNetwork(args) => run_set_network(args, config),
+        CtxCommand::SetNetwork(args) => {
+            run_set_network(args, config, &mut Prompt::stdin(), published_networks)
+        }
         CtxCommand::SetNodes(args) => run_set_nodes(args, config),
         CtxCommand::Rm(args) => rm::run(args, config),
         CtxCommand::Unset => run_unset(config),
@@ -112,19 +115,17 @@ pub struct ListArgs {
 }
 
 #[derive(Debug, Args)]
-#[command(
-    arg_required_else_help = true,
-    after_help = "Examples:\n  \
+#[command(after_help = "Examples:\n  \
     seismic-tee ctx set-network --dir https://github.com/SeismicSystems/seismic/tree/main/tee/networks/fixture-devnet\n  \
-    seismic-tee ctx set-network --dir tee/networks/devnet-1 --nodes nodes.json"
-)]
+    seismic-tee ctx set-network --dir tee/networks/devnet-1 --nodes nodes.json")]
 pub struct SetNetworkArgs {
     /// The network directory (from `network init`): manifest, genesis,
     /// policy, harvest records. A local path is registered where it is; an
     /// https://github.com/<owner>/<repo>/tree/<ref>/<path> URL is fetched to
     /// $XDG_DATA_HOME/seismic/networks/<NAME>/ (default
     /// ~/.local/share/seismic/networks/<NAME>/) and pinned to its manifest's
-    /// network_id.
+    /// network_id. Required: left out on a terminal, it is picked from the
+    /// networks committed to the monorepo, or typed.
     #[arg(long, value_name = "PATH|URL")]
     pub dir: Option<String>,
     /// What this context file calls the network: a local name, like a git
@@ -386,14 +387,15 @@ fn run_unset(config: Option<&Path>) -> anyhow::Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-fn run_set_network(args: SetNetworkArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
+/// `set-network`, with `prompt` asking for a missing --dir from what
+/// `networks` lists.
+fn run_set_network(
+    args: SetNetworkArgs,
+    config: Option<&Path>,
+    prompt: &mut Prompt,
+    networks: impl FnOnce() -> anyhow::Result<Vec<Choice>>,
+) -> anyhow::Result<ExitCode> {
     let context = Context::load(config)?;
-    let published = args
-        .dir
-        .as_deref()
-        .map(Published::parse)
-        .transpose()?
-        .flatten();
     let pin = args.network_id.as_deref().map(|id| {
         let bare = id.strip_prefix("0x").unwrap_or(id);
         bare.to_ascii_lowercase()
@@ -410,9 +412,17 @@ fn run_set_network(args: SetNetworkArgs, config: Option<&Path>) -> anyhow::Resul
     // The file is read before anything is fetched or written, so a bad map
     // leaves the registration undone too.
     let nodes = args.nodes.as_deref().map(load_descriptors).transpose()?;
+    // Asked for after every flag is checked, so a typo is refused before
+    // anything is asked.
+    let dir: String = prompt.choose(
+        args.dir,
+        "Network to register",
+        "--dir <PATH|URL>",
+        networks,
+    )?;
 
-    let (name, network) = match (&published, &args.dir) {
-        (Some(published), _) => {
+    let (name, network) = match Published::parse(&dir)? {
+        Some(published) => {
             let networks = path::networks_root()?;
             let fetched = published.fetch(&networks, args.name.as_deref(), pin.as_deref())?;
             println!(
@@ -436,29 +446,16 @@ fn run_set_network(args: SetNetworkArgs, config: Option<&Path>) -> anyhow::Resul
             };
             (fetched.name, network)
         }
-        (None, Some(dir)) => {
+        None => {
             // Stored absolute: the file is read from whatever directory the
             // next command runs in, so a relative path would point nowhere.
-            let dir = path::absolute(Path::new(dir))?;
+            let dir = path::absolute(Path::new(&dir))?;
             let name = match args.name {
                 Some(name) => name,
                 None => local_name(&dir)?,
             };
             let network = Network {
                 dir: Some(dir),
-                network_id: pin,
-                ..Default::default()
-            };
-            (name, network)
-        }
-        (None, None) => {
-            let Some(name) = args.name else {
-                bail!(
-                    "set-network needs --dir <PATH|URL>, which also names the network — a \
-                     network of nodes alone is `seismic-tee ctx set-nodes <NAME>`"
-                );
-            };
-            let network = Network {
                 network_id: pin,
                 ..Default::default()
             };
@@ -482,6 +479,21 @@ fn run_set_network(args: SetNetworkArgs, config: Option<&Path>) -> anyhow::Resul
     let context = Context::load(config)?;
     next_step::print("", &next_after_registration(context.config(), &name));
     Ok(ExitCode::SUCCESS)
+}
+
+/// The networks committed to the monorepo, for `set-network` to offer.
+fn published_networks() -> anyhow::Result<Vec<Choice>> {
+    note(&format_args!(
+        "Listing the networks in {PUBLISHED_NETWORKS}"
+    ));
+    let published = Published::parse(PUBLISHED_NETWORKS)?.expect("a URL");
+    let networks = published
+        .networks()
+        .with_context(|| format!("could not list the networks in {PUBLISHED_NETWORKS}"))?;
+    Ok(networks
+        .into_iter()
+        .map(|(label, value)| Choice { label, value })
+        .collect())
 }
 
 /// The name a local `dir` registers under: its manifest's `name` when it
@@ -660,40 +672,68 @@ mod tests {
         assert!(Probe::try_parse_from(["probe", "set-network", "devnet-1"]).is_err());
     }
 
-    /// Bare, it prints its help — examples included — rather than an error.
-    #[test]
-    fn set_network_with_no_arguments_prints_its_help() {
-        let err = Probe::try_parse_from(["probe", "set-network"])
-            .map(|_| ())
-            .unwrap_err();
-        assert_eq!(
-            err.kind(),
-            clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
-        );
-        assert!(err.to_string().contains("Examples:"), "{err}");
+    /// `set-network` parsed from `argv`, run with `prompt` answering for it
+    /// from a list of one local network, `devnet-1`.
+    fn set_network(argv: &[&str], prompt: &mut Prompt) -> anyhow::Result<ExitCode> {
+        let probe = parse(&[&["set-network"], argv].concat());
+        let CtxCommand::SetNetwork(args) = probe.command else {
+            unreachable!("parsed as set-network");
+        };
+        run_set_network(args, probe.config.config.as_deref(), prompt, || {
+            Ok(vec![Choice {
+                label: "devnet-1".to_string(),
+                value: "/networks/devnet-1/".to_string(),
+            }])
+        })
     }
 
+    /// With no terminal, a missing --dir is refused by name — --name alone
+    /// included, since a network is named after its directory, not instead
+    /// of one.
     #[test]
-    fn set_network_without_dir_says_what_names_it() {
+    fn set_network_without_dir_and_nobody_to_ask_names_dir() {
         let dir = tempfile::tempdir().unwrap();
         let config = dir.path().join("config.toml");
-        let err = invoke(&["set-network", "--config", config.to_str().unwrap()])
-            .unwrap_err()
-            .to_string();
-        assert!(err.contains("needs --dir"), "{err}");
-        assert!(err.contains("ctx set-nodes"), "{err}");
+        let config = config.to_str().unwrap();
+        for argv in [
+            &["--config", config][..],
+            &["--name", "devnet-1", "--config", config],
+        ] {
+            let err = set_network(argv, &mut Prompt::nobody())
+                .unwrap_err()
+                .to_string();
+            assert!(err.contains("--dir <PATH|URL> is required"), "{err}");
+        }
+        assert!(!dir.path().join("config.toml").exists());
+    }
 
-        let err = invoke(&[
-            "set-network",
-            "--name",
-            "devnet-1",
-            "--config",
-            config.to_str().unwrap(),
-        ])
-        .unwrap_err()
-        .to_string();
-        assert!(err.contains("is empty"), "{err}");
-        assert!(err.contains("ctx set-nodes devnet-1"), "{err}");
+    /// Bare, on a terminal, the directory is picked from the list — or typed
+    /// — and the rest derived from it as if --dir had been given.
+    #[test]
+    fn set_network_asks_for_a_missing_dir_on_a_terminal() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = dir.path().join("config.toml");
+        let config_arg = config.to_str().unwrap();
+        set_network(
+            &["--config", config_arg],
+            &mut Prompt::scripted(&["devnet-1"]),
+        )
+        .unwrap();
+        set_network(
+            &["--config", config_arg],
+            &mut Prompt::scripted(&["/elsewhere/devnet-2"]),
+        )
+        .unwrap();
+
+        let context = Context::load(Some(&config)).unwrap();
+        assert_eq!(
+            context.config().networks["devnet-1"].dir,
+            Some(PathBuf::from("/networks/devnet-1"))
+        );
+        assert_eq!(
+            context.config().networks["devnet-2"].dir,
+            Some(PathBuf::from("/elsewhere/devnet-2"))
+        );
     }
 
     #[test]

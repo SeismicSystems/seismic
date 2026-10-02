@@ -31,10 +31,10 @@ use std::process::ExitCode;
 use anyhow::bail;
 use clap::Args;
 use clap_complete::ArgValueCandidates;
-use seismic_tee_common::{Descriptors, next_step};
+use seismic_tee_common::{Descriptors, home, next_step};
 
 use crate::config::Network;
-use crate::{Context, Selection, complete, confirm, path, write};
+use crate::{Context, Selection, complete, confirm, write};
 
 #[derive(Debug, Args)]
 pub struct RmArgs {
@@ -86,7 +86,7 @@ fn remove(
 
     let Some(node) = &target.node else {
         if let Some(dir) = &network.dir {
-            let root = path::expand_tilde(dir)?;
+            let root = home::expand_tilde(dir)?;
             if std::fs::symlink_metadata(&root).is_ok() {
                 confirm_keeping(name, &root, args, interactive, input)?;
             }
