@@ -12,7 +12,7 @@ descriptors as its `nodes` stack output.
 
 For what the network is and how a founding is checked, read the
 [TEE docs](../docs/tee/README.md): the trust model, the network manifest
-reference, and the network-founding design.
+reference, and how a network is founded.
 
 ## Install
 

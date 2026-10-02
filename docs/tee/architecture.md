@@ -714,7 +714,7 @@ on the volume `root_key` unlocks, so summit cannot sign before LUKS opens, and
 LUKS cannot open before `root_key` exists. The same cycle holds after a
 whole-fleet restart. Breaking it means moving validator identity off that
 volume, either onto the host, which hands operators their keys, or under a
-platform seal, which [founding rejects](network-founding.md#key-custody-ram-only-no-tpm-sealing).
+platform seal, which [founding rejects](network-founding.md#design-rationale).
 Once the network runs, the validators could arbitrate a joiner's fetch, but
 what that would guard against, a responder admitting on a stale view, is
 [the freshness gate](chain-backed-admission.md#the-readiness-and-freshness-gate)'s

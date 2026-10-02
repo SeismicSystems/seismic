@@ -329,7 +329,7 @@ detects the rewind. The instances:
   for founding keys would rest on vTPM clone and rollback semantics the
   platform defines ([the host
   platform](#the-host-platform-and-what-it-is-trusted-for)) — and a cloned consensus key is
-  accidental equivocation ([key custody](network-founding.md#key-custody-ram-only-no-tpm-sealing)).
+  accidental equivocation ([founding](network-founding.md#design-rationale)).
 
 What no local witness can supply is freshness evidence the host cannot mint.
 Every input a guest can check by itself — its disk, its clock, its chain view

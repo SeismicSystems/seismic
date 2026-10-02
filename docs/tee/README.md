@@ -94,9 +94,9 @@ repo, plus the image that measures them:
   what the hash commits to, the transcript bindings, and the root-key pin.
   Read it when you touch the manifest, a binding, or anything that hashes it.
 - [network-founding.md](network-founding.md) — **how a network is born.** Where
-  validator keys come from, why the boot chain is sequenced the way it is, the
-  key holder, and what the manifest pins of summit's genesis. Read it before
-  changing the boot chain or the founding flow.
+  validator keys come from, the founding flow from harvest to launch checks,
+  the key holder, the founding window, and what the manifest pins of summit's
+  genesis. Read it before changing the boot chain or the founding flow.
 - [chain-backed-admission.md](chain-backed-admission.md) — **how a node gets
   in.** The root-key handshake, the admission predicate, the readiness and
   freshness gate, and which repo owns each stage of an image release. Read it
