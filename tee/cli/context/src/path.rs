@@ -101,6 +101,24 @@ pub fn expand_tilde(path: &Path) -> anyhow::Result<PathBuf> {
     expand(path, std::env::var_os("HOME"))
 }
 
+/// `path` spelled from `~` when it is under `HOME`: [`expand_tilde`]'s
+/// inverse, for a path shown to be read or edited.
+pub fn abbreviate(path: &Path) -> String {
+    abbreviated(path, std::env::var_os("HOME"))
+}
+
+/// [`abbreviate`]'s rule, with `HOME` passed in so it is testable.
+fn abbreviated(path: &Path, home: Option<OsString>) -> String {
+    let rest = home
+        .filter(|v| !v.is_empty())
+        .and_then(|home| path.strip_prefix(home).ok().map(Path::to_path_buf));
+    match rest {
+        Some(rest) if rest.as_os_str().is_empty() => "~".to_string(),
+        Some(rest) => format!("~/{}", rest.display()),
+        None => path.display().to_string(),
+    }
+}
+
 /// [`expand_tilde`]'s rule, with `HOME` passed in so it is testable.
 fn expand(path: &Path, home: Option<OsString>) -> anyhow::Result<PathBuf> {
     let Ok(rest) = path.strip_prefix("~") else {
@@ -119,6 +137,26 @@ fn expand(path: &Path, home: Option<OsString>) -> anyhow::Result<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn abbreviate_spells_a_path_under_home_from_tilde() {
+        let home = Some(OsString::from("/home/alice"));
+        let path = Path::new("/home/alice/.local/share/seismic/networks/x");
+        assert_eq!(
+            abbreviated(path, home.clone()),
+            "~/.local/share/seismic/networks/x"
+        );
+        assert_eq!(
+            expand(Path::new(&abbreviated(path, home.clone())), home.clone()).unwrap(),
+            path
+        );
+        assert_eq!(abbreviated(Path::new("/home/alice"), home.clone()), "~");
+        assert_eq!(
+            abbreviated(Path::new("/home/alicex/y"), home.clone()),
+            "/home/alicex/y"
+        );
+        assert_eq!(abbreviated(path, None), path.display().to_string());
+    }
 
     #[test]
     fn absolute_collapses_dot_and_dotdot() {

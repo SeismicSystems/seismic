@@ -52,7 +52,8 @@ use seismic_tee_common::network_dir::{
     SUMMIT_GENESIS_FILENAME,
 };
 use seismic_tee_common::{NetworkDir, next_step};
-use seismic_tee_context::config::Network;
+use seismic_tee_context::config::{Network, check_network_name};
+use seismic_tee_context::path::{abbreviate, expand_tilde, networks_root};
 use seismic_tee_context::{Context, Selection, write};
 
 use crate::assemble::DEFAULT_ATTESTATION_TYPE;
@@ -347,6 +348,25 @@ pub async fn init_network_dir(
     inputs: &InitInputs<'_>,
     force: bool,
 ) -> anyhow::Result<Vec<PathBuf>> {
+    // Refused before anything is downloaded.
+    let existing = network_state(dir);
+    if !existing.is_empty() && !force {
+        bail!(
+            "refusing to overwrite the network directory {}: it holds {} — pass --force to start \
+             it over (the authored inputs and harvest, the artifact set and nodes/ are removed \
+             first; re-authoring the inputs and re-assembling is a new network identity)",
+            dir.root().display(),
+            existing
+                .iter()
+                .map(|p| p
+                    .strip_prefix(dir.root())
+                    .unwrap_or(p)
+                    .display()
+                    .to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
     let opened = OpenedRelease::open(inputs.image.clone()).await?;
 
     let measurements_asset = opened.record.measurements_asset(DEFAULT_ATTESTATION_TYPE)?;
@@ -390,26 +410,7 @@ pub async fn init_network_dir(
         // name from it, the provisioner the blob location.
         (IMAGE_FILENAME, opened.record_bytes),
     ];
-    let existing = network_state(dir);
     if !existing.is_empty() {
-        if !force {
-            bail!(
-                "refusing to overwrite the network directory {}: it holds {} — pass --force to \
-                 start it over (the authored inputs and harvest, the artifact set and nodes/ are \
-                 removed first; re-authoring the inputs and re-assembling is a new network \
-                 identity)",
-                dir.root().display(),
-                existing
-                    .iter()
-                    .map(|p| p
-                        .strip_prefix(dir.root())
-                        .unwrap_or(p)
-                        .display()
-                        .to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
-        }
         // Whole, not just the four inputs: a harvest or artifact set left
         // from an earlier cohort would describe boxes these inputs never
         // met, and `harvest` would refuse the stale records by name later.
@@ -436,14 +437,20 @@ pub async fn init_network_dir(
 }
 
 #[derive(Debug, Args)]
+#[command(after_help = "Examples:\n  \
+    seismic-tee network init --name devnet-4 --founders 4 --image-json https://github.com/SeismicSystems/seismic-images/releases/download/seismic_2026-10-01.6a90ed/image.json\n  \
+    seismic-tee network init tee/networks/devnet-4 --image-json build/image.json --allow-unattested")]
 pub struct InitArgs {
-    /// Network directory to create.
+    /// Network directory to create. Default: <NAME>/ under
+    /// $XDG_DATA_HOME/seismic/networks/ (default ~/.local/share/seismic/networks/),
+    /// where `ctx set-network` fetches networks too.
     #[arg(value_name = "DIR")]
-    pub dir: PathBuf,
+    pub dir: Option<PathBuf>,
 
     /// Network name, filled in as the summit genesis's namespace when the
     /// authored genesis leaves it empty. Default: the directory's basename
-    /// (which is also what assemble uses as the manifest name).
+    /// (which is also what assemble uses as the manifest name). Required
+    /// without DIR.
     #[arg(long, value_name = "NAME")]
     pub name: Option<String>,
 
@@ -518,11 +525,39 @@ pub fn network_name(dir: &Path) -> anyhow::Result<String> {
 }
 
 pub async fn run(args: InitArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
-    let root = absolute(&args.dir)?;
-    let name = match &args.name {
-        Some(name) => name.clone(),
-        None => network_name(&root)?,
+    run_in(args, config, &networks_root()?).await
+}
+
+/// [`run`], creating a network given by name alone as `<NAME>/` under
+/// `networks`.
+async fn run_in(
+    args: InitArgs,
+    config: Option<&Path>,
+    networks: &Path,
+) -> anyhow::Result<ExitCode> {
+    // Each names the other: DIR the network after its basename, NAME the
+    // directory under the networks root.
+    let (name, root) = match (args.name, args.dir) {
+        (name, Some(dir)) => {
+            let root = absolute(&dir)?;
+            let name = match name {
+                Some(name) => name,
+                None => network_name(&root)?,
+            };
+            (name, root)
+        }
+        (Some(name), None) => {
+            check_network_name(&name)?;
+            let root = networks.join(&name);
+            (name, root)
+        }
+        (None, None) => bail!(
+            "network init needs DIR, or --name <NAME> to create it as {}",
+            abbreviate(&networks.join("<NAME>"))
+        ),
     };
+    let context = Context::load(config)?;
+    refuse_a_registered_name(&context, &name, &root)?;
     let dir = NetworkDir::new(&root);
     let client = fetch_client()?;
     let mut image = ImageRelease::beside(&args.image_json)?;
@@ -552,7 +587,6 @@ pub async fn run(args: InitArgs, config: Option<&Path>) -> anyhow::Result<ExitCo
     // its nodes are imported. A failed write is an error, not a warning —
     // "wrote" and "registered" already printed above it would be false, and a
     // half-done registration is worse than a loud one.
-    let context = Context::load(config)?;
     let config_path = context.path().to_path_buf();
     write::set_network(&config_path, &name, &Network::of_dir(&root))?;
     write::set_current(
@@ -601,6 +635,30 @@ pub async fn run(args: InitArgs, config: Option<&Path>) -> anyhow::Result<ExitCo
         )],
     );
     Ok(ExitCode::SUCCESS)
+}
+
+/// Refuse `name` when the context file registers it for another directory:
+/// creating it would repoint the name and leave that directory unregistered.
+/// Checked before anything is downloaded.
+fn refuse_a_registered_name(context: &Context, name: &str, root: &Path) -> anyhow::Result<()> {
+    let Some(registered) = context
+        .config()
+        .networks
+        .get(name)
+        .and_then(|network| network.dir.as_deref())
+    else {
+        return Ok(());
+    };
+    let registered = absolute(&expand_tilde(registered)?)?;
+    if registered != root {
+        bail!(
+            "network `{name}` is already registered in {}, for {} — pick another name with \
+             --name, or forget that one first (keeping its directory): seismic-tee ctx rm {name}",
+            context.path().display(),
+            registered.display(),
+        );
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1010,7 +1068,20 @@ mod tests {
         plant("nodes/bootnodes.json");
         let unrelated = plant("NOTES.md");
 
-        let err = init(&loose, 0, false).await.unwrap_err().to_string();
+        // Refused before the image is read: one that cannot be is never
+        // reached.
+        let unreadable = InitInputs {
+            name: "testnet-1",
+            image: ImageRelease::beside("/nonexistent/image.json").unwrap(),
+            measurements: None,
+            reth_genesis: None,
+            summit_genesis: None,
+            founders: 0,
+        };
+        let err = init_network_dir(&fetch_client().unwrap(), out, &unreadable, false)
+            .await
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("refusing to overwrite"), "{err}");
         assert!(err.contains("--force"), "{err}");
         for held in ["inputs", "network-manifest.json", "nodes"] {
@@ -1088,14 +1159,7 @@ mod tests {
     /// `init` as a founder types it for a local build, parsed like the
     /// binary parses it.
     fn init_args(loose: &Loose, name: Option<&str>, force: bool) -> InitArgs {
-        use clap::Parser as _;
-        #[derive(clap::Parser)]
-        struct Probe {
-            #[command(flatten)]
-            args: InitArgs,
-        }
         let mut argv = vec![
-            "init",
             s(loose.out.root()),
             "--image-json",
             &loose.image_json,
@@ -1107,7 +1171,19 @@ mod tests {
         if force {
             argv.push("--force");
         }
-        Probe::try_parse_from(argv).expect("well-formed argv").args
+        parse(&argv)
+    }
+
+    fn parse(argv: &[&str]) -> InitArgs {
+        use clap::Parser as _;
+        #[derive(clap::Parser)]
+        struct Probe {
+            #[command(flatten)]
+            args: InitArgs,
+        }
+        Probe::try_parse_from(std::iter::once(&"init").chain(argv))
+            .expect("well-formed argv")
+            .args
     }
 
     fn read_config(path: &Path) -> seismic_tee_context::config::Config {
@@ -1139,6 +1215,85 @@ mod tests {
         let config = read_config(&config_path);
         assert_eq!(config.current.as_deref(), Some("testnet-1"));
         assert_eq!(config.networks.len(), 1);
+    }
+
+    /// Where a test's network named but not placed is created: the
+    /// directory `loose` creates its network directory in.
+    fn networks(loose: &Loose) -> &Path {
+        loose.out.root().parent().unwrap()
+    }
+
+    /// `--name` alone names the directory under the networks root.
+    #[tokio::test]
+    async fn a_name_alone_creates_the_network_under_the_networks_root() {
+        let loose = loose();
+        let config_dir = tempfile::tempdir().unwrap();
+        let config_path = config_dir.path().join("config.toml");
+
+        run_in(
+            parse(&[
+                "--name",
+                "testnet-1",
+                "--image-json",
+                &loose.image_json,
+                "--allow-unattested",
+            ]),
+            Some(&config_path),
+            networks(&loose),
+        )
+        .await
+        .unwrap();
+        assert!(loose.out.inputs().join(IMAGE_FILENAME).is_file());
+        assert_eq!(
+            read_config(&config_path).networks["testnet-1"]
+                .dir
+                .as_deref(),
+            Some(loose.out.root())
+        );
+    }
+
+    #[tokio::test]
+    async fn neither_dir_nor_name_is_refused_naming_both() {
+        let loose = loose();
+        let config_dir = tempfile::tempdir().unwrap();
+        let config_path = config_dir.path().join("config.toml");
+        let err = run_in(
+            parse(&["--image-json", &loose.image_json]),
+            Some(&config_path),
+            networks(&loose),
+        )
+        .await
+        .unwrap_err()
+        .to_string();
+        assert!(err.contains("needs DIR, or --name <NAME>"), "{err}");
+        assert!(!config_path.exists());
+    }
+
+    /// A name registered for another directory is refused rather than
+    /// repointed, before anything is fetched or written.
+    #[tokio::test]
+    async fn a_name_registered_elsewhere_is_refused() {
+        let loose = loose();
+        let config_dir = tempfile::tempdir().unwrap();
+        let config_path = config_dir.path().join("config.toml");
+        write::set_network(
+            &config_path,
+            "testnet-1",
+            &Network::of_dir(&config_dir.path().join("elsewhere")),
+        )
+        .unwrap();
+
+        let err = run_in(
+            parse(&["--name", "testnet-1", "--image-json", &loose.image_json]),
+            Some(&config_path),
+            networks(&loose),
+        )
+        .await
+        .unwrap_err()
+        .to_string();
+        assert!(err.contains("already registered"), "{err}");
+        assert!(err.contains("seismic-tee ctx rm testnet-1"), "{err}");
+        assert!(!loose.out.root().exists());
     }
 
     #[tokio::test]
