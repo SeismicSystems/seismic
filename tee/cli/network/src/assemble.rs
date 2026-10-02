@@ -950,6 +950,7 @@ pub(crate) mod tests {
             &crate::init::fetch_client().unwrap(),
             &net,
             &crate::init::InitInputs {
+                attestation_type: DEFAULT_ATTESTATION_TYPE,
                 name: "testnet-1",
                 image,
                 measurements: Some(raw.to_str().unwrap()),

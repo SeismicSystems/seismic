@@ -4299,7 +4299,7 @@ dependencies = [
 [[package]]
 name = "seismic-attestation"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564#d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d4103510b080c71de8610210f6ad7a765e48b41d#d4103510b080c71de8610210f6ad7a765e48b41d"
 dependencies = [
  "attestation",
  "hex",
@@ -4319,7 +4319,7 @@ dependencies = [
 [[package]]
 name = "seismic-attestation-rpc"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564#d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d4103510b080c71de8610210f6ad7a765e48b41d#d4103510b080c71de8610210f6ad7a765e48b41d"
 dependencies = [
  "jsonrpsee",
  "secp256k1 0.30.0",
@@ -4330,7 +4330,7 @@ dependencies = [
 [[package]]
 name = "seismic-manifest"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564#d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d4103510b080c71de8610210f6ad7a765e48b41d#d4103510b080c71de8610210f6ad7a765e48b41d"
 dependencies = [
  "hex",
  "seismic-network-manifest",
@@ -4340,7 +4340,7 @@ dependencies = [
 [[package]]
 name = "seismic-measurement-admission"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564#d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d4103510b080c71de8610210f6ad7a765e48b41d#d4103510b080c71de8610210f6ad7a765e48b41d"
 dependencies = [
  "alloy-primitives",
  "hex",
@@ -4353,7 +4353,7 @@ dependencies = [
 [[package]]
 name = "seismic-network-manifest"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564#d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d4103510b080c71de8610210f6ad7a765e48b41d#d4103510b080c71de8610210f6ad7a765e48b41d"
 dependencies = [
  "hex",
  "serde",
@@ -4481,7 +4481,7 @@ dependencies = [
 [[package]]
 name = "seismic-verify-quote"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564#d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d4103510b080c71de8610210f6ad7a765e48b41d#d4103510b080c71de8610210f6ad7a765e48b41d"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4975,7 +4975,7 @@ dependencies = [
 [[package]]
 name = "tdx-init-config"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564#d977a2dbfb3f7b5bb73d4d8b1f2b1e806738b564"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d4103510b080c71de8610210f6ad7a765e48b41d#d4103510b080c71de8610210f6ad7a765e48b41d"
 dependencies = [
  "serde",
 ]
