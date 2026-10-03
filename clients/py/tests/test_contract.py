@@ -1,6 +1,8 @@
 """Tests for seismic_web3.contract.shielded — ShieldedContract namespaces."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
+
+from hexbytes import HexBytes
 
 from seismic_web3._types import (
     CompressedPublicKey,
@@ -36,6 +38,21 @@ COUNTER_ABI = [
 
 def _make_encryption():
     return get_encryption(_NETWORK_PK, _CLIENT_SK)
+
+
+# A read-only function with no shielded inputs: the smart ``read`` namespace
+# routes it through a transparent ``eth_call``.
+QUOTE_ABI = [
+    {
+        "type": "function",
+        "name": "quote",
+        "inputs": [{"name": "amount", "type": "uint256"}],
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view",
+    },
+]
+
+_QUOTE_RESULT = HexBytes("0x" + "00" * 31 + "07")
 
 
 class TestShieldedContract:
@@ -111,6 +128,38 @@ class TestShieldedContract:
         fn = contract.dwrite.setNumber
         assert callable(fn)
 
+    def test_smart_transparent_read_forwards_explicit_value_and_gas(self):
+        """read.<fn>() without shielded params must pass value and gas to eth_call."""
+        w3 = MagicMock()
+        w3.eth.call.return_value = _QUOTE_RESULT
+        encryption = _make_encryption()
+        pk = PrivateKey(b"\x01" * 32)
+        addr = "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046"
+
+        contract = ShieldedContract(w3, encryption, pk, addr, QUOTE_ABI)
+
+        assert contract.read.quote(1, value=9, gas=0) == 7
+
+        tx = w3.eth.call.call_args[0][0]
+        assert tx["value"] == 9
+        assert tx["gas"] == 0
+
+    def test_smart_transparent_read_forwards_default_call_options(self):
+        """Documented defaults (value=0, gas=30_000_000) are sent explicitly."""
+        w3 = MagicMock()
+        w3.eth.call.return_value = _QUOTE_RESULT
+        encryption = _make_encryption()
+        pk = PrivateKey(b"\x01" * 32)
+        addr = "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046"
+
+        contract = ShieldedContract(w3, encryption, pk, addr, QUOTE_ABI)
+
+        assert contract.read.quote(1) == 7
+
+        tx = w3.eth.call.call_args[0][0]
+        assert tx["value"] == 0
+        assert tx["gas"] == 30_000_000
+
 
 class TestAsyncShieldedContract:
     def test_has_all_namespaces(self):
@@ -140,3 +189,19 @@ class TestAsyncShieldedContract:
         contract = AsyncShieldedContract(w3, encryption, pk, addr, COUNTER_ABI)
         fn = contract.write.increment
         assert callable(fn)
+
+    async def test_smart_transparent_read_forwards_explicit_value_and_gas(self):
+        """Async read.<fn>() without shielded params must pass value and gas."""
+        w3 = MagicMock()
+        w3.eth.call = AsyncMock(return_value=_QUOTE_RESULT)
+        encryption = _make_encryption()
+        pk = PrivateKey(b"\x01" * 32)
+        addr = "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046"
+
+        contract = AsyncShieldedContract(w3, encryption, pk, addr, QUOTE_ABI)
+
+        assert await contract.read.quote(1, value=9, gas=0) == 7
+
+        tx = w3.eth.call.call_args[0][0]
+        assert tx["value"] == 9
+        assert tx["gas"] == 0
