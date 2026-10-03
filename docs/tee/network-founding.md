@@ -59,9 +59,9 @@ flowchart LR
 
 Each step is one command, run by the founder:
 
-1. **Provision.** The cohort's Pulumi stack in the
-   [deploy](https://github.com/SeismicSystems/deploy) repo (`pulumi up`) boots
-   every box on the measured image. No box holds any network identity yet.
+1. **Provision.** The cohort's Pulumi stack in private deploy tooling
+   (`pulumi up`) boots every box on the measured image. No box holds any
+   network identity yet.
 2. **Harvest** (`seismic-tee node harvest`). For each box, fetch the holder's
    pubkeys and a TDX quote over a fresh per-box nonce, DCAP-verify the quote
    against the network's intended measurements, and archive the result under

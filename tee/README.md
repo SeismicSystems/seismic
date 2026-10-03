@@ -6,9 +6,8 @@ archives its tests replay in [`networks/`](networks/) beside it; the installer
 is [`cli/install.sh`](cli/install.sh). The CLI is cloud-agnostic: it starts
 at a **node descriptor** (a JSON map of node name → `{public_ip, fqdn}`) and
 never provisions a machine. Provisioning — the Pulumi programs and the devnet
-runbook — lives in the private
-[deploy](https://github.com/SeismicSystems/deploy) repo, which produces those
-descriptors as its `nodes` stack output.
+runbook — lives in private deploy tooling (the `deploy` repo is not public),
+which produces those descriptors as its `nodes` stack output.
 
 For what the network is and how a founding is checked, read the
 [TEE docs](../docs/tee/README.md): the trust model, the network manifest
