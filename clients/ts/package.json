@@ -22,6 +22,7 @@
     "encrypt:test": "bun run --cwd tests/seismic-encrypt-test test",
     "react:typecheck": "bun run viem:build && bun run --cwd packages/seismic-react typecheck",
     "react:build": "bun run --cwd packages/seismic-react build",
+    "react:test": "bun run --cwd packages/seismic-react test",
     "react:publish": "npm publish -w packages/seismic-react",
     "tests:typecheck": "bun run --cwd packages/seismic-viem-tests typecheck && bun run --cwd tests/seismic-viem typecheck && bun run --cwd tests/seismic-encrypt-test typecheck",
     "tests:build": "bun run --cwd packages/seismic-viem-tests build",
