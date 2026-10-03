@@ -147,31 +147,109 @@ def _function_selector(abi_function: dict[str, Any]) -> bytes:
     return keccak(sig.encode())[:4]
 
 
-def _find_function(abi: list[dict[str, Any]], function_name: str) -> dict[str, Any]:
-    """Find a function entry in the ABI by name.
+def _find_function(
+    abi: list[dict[str, Any]],
+    function_name: str,
+    args: list[Any] | None = None,
+) -> dict[str, Any]:
+    """Find a function entry in the ABI by name, resolving overloads by args.
 
     Args:
         abi: The full contract ABI (list of entries).
         function_name: Name of the function to find.
+        args: Positional arguments of the call. When several entries share the
+            name, the one whose inputs accept these arguments wins; ``None``
+            keeps the first entry in ABI order.
 
     Returns:
         The matching ABI function entry dict.
 
     Raises:
-        ValueError: If the function is not found in the ABI.
+        ValueError: If the function is not found in the ABI, or no overload
+            accepts ``args``.
     """
-    for entry in abi:
-        if entry.get("type") == "function" and entry.get("name") == function_name:
+    candidates = [
+        entry
+        for entry in abi
+        if entry.get("type") == "function" and entry.get("name") == function_name
+    ]
+    if not candidates:
+        raise ValueError(f"Function '{function_name}' not found in ABI")
+    if len(candidates) == 1:
+        return candidates[0]
+    return _resolve_overload(function_name, candidates, args)
+
+
+def _accepts_args(entry: dict[str, Any], args: list[Any]) -> bool:
+    """Whether ``args`` ABI-encode against this entry's remapped input types."""
+    remapped = remap_abi_inputs(entry)
+    param_types = [_abi_type_string(p) for p in remapped["inputs"]]
+    try:
+        encode(param_types, args)
+    except Exception:  # a type mismatch means "not this overload"
+        return False
+    return True
+
+
+def _resolve_overload(
+    function_name: str,
+    candidates: list[dict[str, Any]],
+    args: list[Any] | None,
+) -> dict[str, Any]:
+    """Select among same-name entries the one whose inputs accept ``args``.
+
+    Candidates of a different arity are dropped first, then each survivor is
+    probed by encoding the arguments against its remapped types, so
+    ``lookup(uint256)`` declared before ``lookup(address)`` no longer captures
+    every call. The first candidate that encodes wins: genuinely ambiguous
+    calls (``uint256`` vs ``uint240`` for an ``int``) keep the ABI-order
+    behaviour they had before overload support.
+
+    Args:
+        function_name: Name of the overloaded function (for error messages).
+        candidates: ABI entries sharing ``function_name``.
+        args: Positional arguments of the call, or ``None`` for ABI order.
+
+    Returns:
+        The selected ABI function entry dict.
+
+    Raises:
+        ValueError: If no candidate has ``len(args)`` inputs, or none of them
+            accepts the arguments.
+    """
+    if args is None:
+        return candidates[0]
+
+    arity_matches = [
+        entry for entry in candidates if len(entry.get("inputs", [])) == len(args)
+    ]
+    if not arity_matches:
+        raise ValueError(
+            f"Function '{function_name}' has no overload taking {len(args)} argument(s)"
+        )
+
+    for entry in arity_matches:
+        if _accepts_args(entry, args):
             return entry
-    raise ValueError(f"Function '{function_name}' not found in ABI")
+
+    raise ValueError(
+        f"Function '{function_name}' has no overload whose inputs match the "
+        "supplied arguments"
+    )
 
 
-def has_shielded_params(abi: list[dict[str, Any]], function_name: str) -> bool:
+def has_shielded_params(
+    abi: list[dict[str, Any]],
+    function_name: str,
+    args: list[Any] | None = None,
+) -> bool:
     """Check if a function has any shielded input parameters.
 
     Args:
         abi: The full contract ABI (list of entries).
         function_name: Name of the function to check.
+        args: Positional arguments of the call, used to select the entry when
+            the name is overloaded.
 
     Returns:
         ``True`` if any input parameter is a shielded type.
@@ -179,7 +257,7 @@ def has_shielded_params(abi: list[dict[str, Any]], function_name: str) -> bool:
     Raises:
         ValueError: If the function is not found in the ABI.
     """
-    fn_entry = _find_function(abi, function_name)
+    fn_entry = _find_function(abi, function_name, args)
     remapped = remap_abi_inputs(fn_entry)
     return any(p.get("shielded", False) for p in remapped["inputs"])
 
@@ -198,15 +276,18 @@ def encode_shielded_calldata(
     Args:
         abi: The full contract ABI (list of function entries).
         function_name: Name of the function to call.
-        args: Positional arguments matching the function inputs.
+        args: Positional arguments matching the function inputs. When the name
+            is overloaded, the entry these arguments encode against is used,
+            so the selector comes from that overload.
 
     Returns:
         Encoded calldata (4-byte selector + ABI-encoded parameters).
 
     Raises:
-        ValueError: If the function is not found in the ABI.
+        ValueError: If the function is not found in the ABI, or no overload
+            accepts ``args``.
     """
-    fn_entry = _find_function(abi, function_name)
+    fn_entry = _find_function(abi, function_name, args)
 
     # Selector from ORIGINAL types
     selector = _function_selector(fn_entry)
@@ -224,6 +305,7 @@ def decode_abi_output(
     abi: list[dict[str, Any]],
     function_name: str,
     data: bytes,
+    args: list[Any] | None = None,
 ) -> Any:
     """Decode raw ABI-encoded output bytes for a contract function.
 
@@ -241,15 +323,19 @@ def decode_abi_output(
         abi: The full contract ABI (list of function entries).
         function_name: Name of the function whose output to decode.
         data: Raw ABI-encoded output bytes.
+        args: Positional arguments of the call, used to select the entry when
+            the name is overloaded and the overloads declare different
+            outputs.
 
     Returns:
         Decoded Python value(s), or ``None`` when the ABI defines no
         outputs.
 
     Raises:
-        ValueError: If the function is not found in the ABI.
+        ValueError: If the function is not found in the ABI, or no overload
+            accepts ``args``.
     """
-    fn_entry = _find_function(abi, function_name)
+    fn_entry = _find_function(abi, function_name, args)
     outputs = fn_entry.get("outputs", [])
 
     if not outputs:

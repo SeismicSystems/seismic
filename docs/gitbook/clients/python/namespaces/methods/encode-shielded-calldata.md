@@ -21,7 +21,8 @@ def encode_shielded_calldata(
 
 - **Selector** is computed from original ABI type names (e.g. `setNumber(suint256)`) so it matches the on-chain contract
 - **Parameter encoding** remaps shielded types to standard ABI types (e.g. `suint256` → `uint256`) because the values are structurally identical
-- Raises `ValueError` if function is not found
+- **Overloads** resolve against the arguments: if several ABI entries share the name, the one whose inputs accept `args` supplies the selector (an ambiguous call, or no arguments at all, keeps the first entry in ABI order)
+- Raises `ValueError` if the function is not found, or no overload accepts `args`
 
 ## Example
 
