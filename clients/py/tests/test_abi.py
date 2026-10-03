@@ -58,6 +58,46 @@ class TestRemapSeismicParam:
         assert result["type"] == "int64[]"
         assert result["shielded"] is True
 
+    def test_sbytes32(self):
+        result = remap_seismic_param({"name": "x", "type": "sbytes32"})
+        assert result["type"] == "bytes32"
+        assert result["shielded"] is True
+
+    def test_sbytes1(self):
+        result = remap_seismic_param({"name": "x", "type": "sbytes1"})
+        assert result["type"] == "bytes1"
+        assert result["shielded"] is True
+
+    def test_sbytes_dynamic(self):
+        result = remap_seismic_param({"name": "x", "type": "sbytes"})
+        assert result["type"] == "bytes"
+        assert result["shielded"] is True
+
+    def test_sbytes32_fixed_array(self):
+        result = remap_seismic_param({"name": "x", "type": "sbytes32[5]"})
+        assert result["type"] == "bytes32[5]"
+        assert result["shielded"] is True
+
+    def test_sbytes32_dynamic_array(self):
+        result = remap_seismic_param({"name": "x", "type": "sbytes32[]"})
+        assert result["type"] == "bytes32[]"
+        assert result["shielded"] is True
+
+    def test_sbytes_dynamic_array(self):
+        result = remap_seismic_param({"name": "x", "type": "sbytes[]"})
+        assert result["type"] == "bytes[]"
+        assert result["shielded"] is True
+
+    def test_sbytes_fixed_array(self):
+        result = remap_seismic_param({"name": "x", "type": "sbytes[3]"})
+        assert result["type"] == "bytes[3]"
+        assert result["shielded"] is True
+
+    def test_bytes32_passthrough(self):
+        result = remap_seismic_param({"name": "x", "type": "bytes32"})
+        assert result["type"] == "bytes32"
+        assert result["shielded"] is False
+
     def test_non_shielded_passthrough(self):
         result = remap_seismic_param({"name": "x", "type": "uint256"})
         assert result["type"] == "uint256"
@@ -194,6 +234,51 @@ class TestEncodeShieldedCalldata:
     def test_function_not_found_raises(self):
         with pytest.raises(ValueError, match="not found"):
             encode_shielded_calldata(COUNTER_ABI, "nonexistent", [])
+
+
+SECRETS_ABI = [
+    {
+        "type": "function",
+        "name": "addSecret",
+        "inputs": [{"name": "secret", "type": "sbytes"}],
+        "outputs": [],
+        "stateMutability": "nonpayable",
+    },
+    {
+        "type": "function",
+        "name": "setDigest",
+        "inputs": [{"name": "digest", "type": "sbytes32"}],
+        "outputs": [],
+        "stateMutability": "nonpayable",
+    },
+]
+
+
+class TestEncodeShieldedCalldataSbytes:
+    """``sbytes`` inputs previously fell through to eth_abi unchanged, so a
+    call to a function taking one raised before reaching the provider."""
+
+    def test_sbytes_is_reported_as_shielded(self):
+        assert has_shielded_params(SECRETS_ABI, "setDigest") is True
+        assert has_shielded_params(SECRETS_ABI, "addSecret") is True
+
+    def test_sbytes32_selector_uses_shielded_signature(self):
+        calldata = encode_shielded_calldata(SECRETS_ABI, "setDigest", [b"\xab" * 32])
+        assert bytes(calldata[:4]) == keccak(b"setDigest(sbytes32)")[:4]
+
+    def test_sbytes32_param_encoded_as_bytes32(self):
+        digest = b"\xab" * 32
+        calldata = encode_shielded_calldata(SECRETS_ABI, "setDigest", [digest])
+        assert bytes(calldata[4:]) == encode(["bytes32"], [digest])
+
+    def test_dynamic_sbytes_selector_uses_shielded_signature(self):
+        calldata = encode_shielded_calldata(SECRETS_ABI, "addSecret", [b"clown"])
+        assert bytes(calldata[:4]) == keccak(b"addSecret(sbytes)")[:4]
+
+    def test_dynamic_sbytes_param_encoded_as_bytes(self):
+        secret = b"clown"
+        calldata = encode_shielded_calldata(SECRETS_ABI, "addSecret", [secret])
+        assert bytes(calldata[4:]) == encode(["bytes"], [secret])
 
 
 # ---------------------------------------------------------------------------

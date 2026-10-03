@@ -59,14 +59,30 @@ def _remap_type(solidity_type: str) -> tuple[str, bool]:
     if solidity_type == "saddress[]":
         return "address[]", True
 
+    # sbytesN with fixed-size array: sbytes32[5] → bytes32[5]
+    m = re.match(r"^s(bytes\d*)(\[\d+\])$", solidity_type)
+    if m:
+        return f"{m.group(1)}{m.group(2)}", True
+
+    # sbytesN with dynamic array: sbytes32[] → bytes32[]
+    m = re.match(r"^s(bytes\d*)(\[\])$", solidity_type)
+    if m:
+        return f"{m.group(1)}{m.group(2)}", True
+
+    # sbytes scalar: sbytes32 → bytes32, sbytes → bytes
+    m = re.match(r"^s(bytes\d*)$", solidity_type)
+    if m:
+        return m.group(1), True
+
     return solidity_type, False
 
 
 def remap_seismic_param(param: dict[str, Any]) -> dict[str, Any]:
     """Remap one ABI parameter from shielded to standard type.
 
-    Handles ``suintN``, ``sintN``, ``sbool``, ``saddress`` — including
-    array variants and recursive tuple components.
+    Handles ``suintN``, ``sintN``, ``sbool``, ``saddress``, ``sbytesN`` and
+    dynamic ``sbytes`` — including array variants and recursive tuple
+    components.
 
     Args:
         param: An ABI parameter dict (``{"name": ..., "type": ...}``).
