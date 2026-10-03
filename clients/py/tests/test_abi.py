@@ -303,3 +303,110 @@ class TestDecodeAbiOutput:
     def test_function_not_found_raises(self):
         with pytest.raises(ValueError, match="not found"):
             decode_abi_output(DECODE_ABI, "nonexistent", b"\x00" * 32)
+
+
+# ---------------------------------------------------------------------------
+# overload resolution
+# ---------------------------------------------------------------------------
+
+_ADDRESS = "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046"
+
+# `lookup(uint256)` is deliberately declared first: without overload
+# resolution this entry captured every call, so an address argument died in
+# the uint256 encoder before any RPC dispatch.
+OVERLOADED_ABI = [
+    {
+        "type": "function",
+        "name": "lookup",
+        "inputs": [{"name": "id", "type": "uint256"}],
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view",
+    },
+    {
+        "type": "function",
+        "name": "lookup",
+        "inputs": [{"name": "owner", "type": "address"}],
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view",
+    },
+]
+
+# Same name, different arity, different outputs.
+READ_ABI = [
+    {
+        "type": "function",
+        "name": "read",
+        "inputs": [{"name": "a", "type": "uint256"}],
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view",
+    },
+    {
+        "type": "function",
+        "name": "read",
+        "inputs": [
+            {"name": "a", "type": "uint256"},
+            {"name": "b", "type": "uint256"},
+        ],
+        "outputs": [
+            {"name": "", "type": "uint256"},
+            {"name": "", "type": "bool"},
+        ],
+        "stateMutability": "view",
+    },
+]
+
+# Shielded and transparent overloads of the same arity: only the arguments
+# (or calling without any) tell them apart.
+ROUTING_ABI = [
+    {
+        "type": "function",
+        "name": "set",
+        "inputs": [{"name": "v", "type": "suint256"}],
+        "outputs": [],
+        "stateMutability": "nonpayable",
+    },
+    {
+        "type": "function",
+        "name": "set",
+        "inputs": [{"name": "who", "type": "address"}],
+        "outputs": [],
+        "stateMutability": "nonpayable",
+    },
+]
+
+
+class TestOverloadResolution:
+    def test_address_argument_selects_address_overload(self):
+        calldata = encode_shielded_calldata(OVERLOADED_ABI, "lookup", [_ADDRESS])
+        assert bytes(calldata[:4]) == keccak(b"lookup(address)")[:4]
+
+    def test_integer_argument_selects_uint256_overload(self):
+        calldata = encode_shielded_calldata(OVERLOADED_ABI, "lookup", [7])
+        assert bytes(calldata[:4]) == keccak(b"lookup(uint256)")[:4]
+
+    def test_no_overload_of_that_arity_raises(self):
+        with pytest.raises(ValueError, match="no overload taking 2 argument"):
+            encode_shielded_calldata(OVERLOADED_ABI, "lookup", [_ADDRESS, 7])
+
+    def test_arguments_matching_no_overload_raise(self):
+        with pytest.raises(ValueError, match="no overload whose inputs match"):
+            encode_shielded_calldata(OVERLOADED_ABI, "lookup", [1.5])
+
+    def test_has_shielded_params_follows_the_arguments(self):
+        assert has_shielded_params(ROUTING_ABI, "set", [42]) is True
+        assert has_shielded_params(ROUTING_ABI, "set", [_ADDRESS]) is False
+
+    def test_has_shielded_params_without_arguments_keeps_abi_order(self):
+        assert has_shielded_params(ROUTING_ABI, "set") is True
+
+    def test_decode_selects_the_overload_matching_the_arguments(self):
+        two_words = encode(["uint256", "bool"], [7, True])
+        assert decode_abi_output(READ_ABI, "read", two_words, [1, 2]) == (7, True)
+        assert decode_abi_output(READ_ABI, "read", two_words[:32], [1]) == 7
+
+    def test_decode_without_arguments_keeps_abi_order(self):
+        assert decode_abi_output(READ_ABI, "read", encode(["uint256"], [7])) == 7
+
+    def test_decode_no_matching_arity_raises(self):
+        with pytest.raises(ValueError, match="no overload taking 3 argument"):
+            decode_abi_output(READ_ABI, "read", b"", [1, 2, 3])
