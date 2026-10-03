@@ -13,7 +13,7 @@ change in the pinned enclave crates before the next real founding does.
 
 | | |
 |---|---|
-| Founded | 2026-10-01, by hand, from [the devnet runbook](https://github.com/SeismicSystems/deploy/blob/8d0048de2a951044a48a3ff0215dc7b87fe012ab/tee/runbook-devnet.md), configured and smoke-tested before teardown |
+| Founded | 2026-10-01, by hand, from the private devnet runbook, configured and smoke-tested before teardown |
 | Image | [`seismic_2026-10-01.6a90ed`](https://github.com/SeismicSystems/seismic-images/releases/tag/seismic_2026-10-01.6a90ed) (`inputs/image.json`): summit `5eb9f47`, enclave `8b5833a`, seismic-reth `39d04d1` |
 | `measurement_id` | `seismic_2026-10-01.6a90ed.vhd` (`inputs/measurements.json`) |
 | Records | 4, `inputs/harvest/tee-devnet-{1..4}.json` (harvested as `samlaf-fixture-devnet-tee-devnet-{1..4}`; the operator prefix is dropped, the stem being only a label), record `version` 1 |
