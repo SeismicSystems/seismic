@@ -37,7 +37,15 @@ Public API
     :func:`build_seismic_typed_data`
 """
 
-__version__ = "0.2.2"
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _distribution_version
+
+try:
+    # Single source of truth: the installed distribution metadata, so a release
+    # bump in pyproject.toml can never drift from the runtime version again.
+    __version__ = _distribution_version("seismic-web3")
+except PackageNotFoundError:  # pragma: no cover — running from a source tree
+    __version__ = "0.3.0"
 
 # -- Types -------------------------------------------------------------------
 from seismic_web3._types import (
