@@ -1,6 +1,13 @@
 import { describe, test } from 'bun:test'
 
 import {
+  testAesGcmDecryptDecodePreservesLeadingNul,
+  testAesGcmEncryptDecodePreservesEveryLeadingByte,
+  testAesGcmEncryptDecodePreservesInteriorZeroBytes,
+  testAesGcmEncryptDecodePreservesLeadingZeroByte,
+  testAesGcmEncryptDecodePreservesTrailingZeroByte,
+} from '@sviem-tests/tests/aesPrecompileDecode.ts'
+import {
   testNativeBalanceBlockSelection,
   testNativeBalanceModes,
   testNativeBalanceNeverFallsBack,
@@ -256,4 +263,27 @@ describe('signedCall envelope handling', () => {
   test('rejects a bare 0x result', async () => {
     await testSignedCallRejectsBareZeroX()
   })
+})
+
+describe('AES-GCM precompile result decoding', () => {
+  test(
+    'encrypt decode preserves every possible leading byte',
+    testAesGcmEncryptDecodePreservesEveryLeadingByte
+  )
+  test(
+    'encrypt decode preserves a leading zero byte',
+    testAesGcmEncryptDecodePreservesLeadingZeroByte
+  )
+  test(
+    'encrypt decode preserves a trailing zero byte',
+    testAesGcmEncryptDecodePreservesTrailingZeroByte
+  )
+  test(
+    'encrypt decode preserves interior zero bytes',
+    testAesGcmEncryptDecodePreservesInteriorZeroBytes
+  )
+  test(
+    'decrypt decode preserves a leading NUL byte',
+    testAesGcmDecryptDecodePreservesLeadingNul
+  )
 })

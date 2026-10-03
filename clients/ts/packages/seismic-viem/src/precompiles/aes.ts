@@ -7,7 +7,6 @@ import {
   numberToHex,
   stringToBytes,
   stringToHex,
-  trim,
 } from 'viem'
 
 import {
@@ -123,7 +122,7 @@ export type AesGcmDecryptionParams = AesGcmCommonParams & {
  *   - Validates and processes the AES key, nonce, and plaintext parameters.
  *   - Converts the nonce to a 12-byte hex representation.
  *   - Converts the plaintext to hex and concatenates all parameters.
- * @property {Function} decodeResult - Function that trims the result from the precompile call.
+ * @property {Function} decodeResult - Function that returns the raw ciphertext bytes from the precompile call.
  */
 export const aesGcmEncryptPrecompile: Precompile<AesGcmEncryptionParams, Hex> =
   {
@@ -138,7 +137,7 @@ export const aesGcmEncryptPrecompile: Precompile<AesGcmEncryptionParams, Hex> =
       const plaintextHex = stringToHex(plaintext)
       return `${aesKey}${nonceHex.slice(2)}${plaintextHex.slice(2)}`
     },
-    decodeResult: (result: Hex) => trim(result),
+    decodeResult: (result: Hex) => result,
   }
 
 /**
@@ -151,7 +150,7 @@ export const aesGcmEncryptPrecompile: Precompile<AesGcmEncryptionParams, Hex> =
  *   - Validates and processes the AES key, nonce, and ciphertext parameters.
  *   - Converts the nonce to a 12-byte hex representation.
  *   - Concatenates all parameters.
- * @property {Function} decodeResult - Function that trims and converts the hex result to a string.
+ * @property {Function} decodeResult - Function that converts the raw plaintext bytes from the precompile call to a string.
  */
 export const aesGcmDecryptPrecompile: Precompile<
   AesGcmDecryptionParams,
@@ -167,7 +166,7 @@ export const aesGcmDecryptPrecompile: Precompile<
     const nonceHex = numberToHex(nonce, { size: 12 })
     return `${aesKey}${nonceHex.slice(2)}${cipherText.slice(2)}`
   },
-  decodeResult: (result: Hex) => hexToString(trim(result)),
+  decodeResult: (result: Hex) => hexToString(result),
 }
 
 /**
