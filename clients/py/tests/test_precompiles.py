@@ -5,6 +5,9 @@ needing a running Seismic node.
 """
 
 import pytest
+from eth_account import Account
+from eth_account.messages import defunct_hash_message, encode_defunct
+from eth_hash.auto import keccak
 
 from seismic_web3._types import (
     Bytes32,
@@ -298,12 +301,24 @@ class TestSecp256k1GasCost:
 class TestHashMessage:
     def test_known_hash(self):
         """Verify EIP-191 hash matches the known Ethereum personal_sign hash."""
-        from eth_hash.auto import keccak
-
         msg = "hello"
         expected_prefix = b"\x19Ethereum Signed Message:\n5"
         expected = keccak(expected_prefix + b"hello")
         assert bytes(_hash_message(msg)) == expected
+
+    @pytest.mark.parametrize("message", ["", "hello", "é", "你好", "🔒"])
+    def test_personal_sign_compatibility(self, message):
+        """Match standard EIP-191 hashing and signer recovery for UTF-8 text."""
+        message_hash = _hash_message(message)
+        assert bytes(message_hash) == defunct_hash_message(text=message)
+
+        private_key = b"\x01" * 32
+        signed = Account.unsafe_sign_hash(bytes(message_hash), private_key)
+        recovered = Account.recover_message(
+            encode_defunct(text=message),
+            signature=signed.signature,
+        )
+        assert recovered == Account.from_key(private_key).address
 
     def test_returns_bytes32(self):
         result = _hash_message("test")
