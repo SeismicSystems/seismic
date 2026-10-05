@@ -50,22 +50,31 @@ values](trust-model.md#one-identity-a-succession-of-values)). The manifest is
 written once and travels as opaque bytes to every consumer.
 
 **Founding.** Validator keys have to exist before the manifest, or the manifest
-cannot pin them. So boxes boot the measured image identity-free, a key-holder
-service generates summit keypairs in RAM and proves them with a TDX quote, and
-the deploy tool verifies those quotes before minting `network_id`. Founding is
+cannot pin them. So boxes boot the measured image identity-free, a boot-time
+oneshot generates summit keypairs into guest RAM, the attestation service
+proves them with a TDX quote, and the deploy tool verifies those quotes before
+minting `network_id`. The oneshot and the attestation service's part are
+decided, not yet built
+([SEI-769](https://linear.app/seismic-systems/issue/SEI-769)); today a
+`summit-key-holder` daemon generates the keys and quotes them. Founding is
 rare and supervised; joining and verifying happen forever.
 
 **The boot chain is config-gated.** Nothing on a node starts until the operator
 POSTs its configuration. That one POST carries the manifest and both genesis
-files; `tdx-init` writes them out, the custodian keeps the candidate `root_key`
-it minted at boot if the manifest pins it or fetches the key and checks it
-against the pin, LUKS opens, and the node's own services start.
+files; `tdx-init` writes them out, the custodian mints `root_key` if the POST
+flags its box as the genesis node or fetches it from a peer otherwise, LUKS
+opens, and the node's own services start. Replacing the flag with the
+manifest's pin is decided, not yet built
+([SEI-643](https://linear.app/seismic-systems/issue/SEI-643)): every box
+mints a candidate at boot, and a custodian keeps its candidate, or installs a
+fetched key, only if it matches [the pin](network-manifest.md#the-root-key-pin).
 
-**Membership is holding `root_key`.** It is network-shared, minted once before
-the manifest so that `network_id` commits to it through `tx_io_pk@0`, and
+**Membership is holding `root_key`.** It is network-shared, minted once, and
 handed over only through an attested handshake whose transcript binds
-`network_id`. Consensus membership — a seat in the validator set — is a
-separate gate, held by the summit genesis and the deposit path.
+`network_id`. Once the pin is built, it is minted before the manifest, so that
+`network_id` commits to it through `tx_io_pk@0`. Consensus membership — a seat
+in the validator set — is a separate gate, held by the summit genesis and the
+deposit path.
 
 **Live policy is on chain.** The responder turns the joiner's verified
 measurements into a `bytes32` admission ID and asks `MeasurementRegistry` on its
@@ -75,23 +84,28 @@ authority transaction and takes effect network-wide at the next handshake.
 
 ## Where the code lives
 
-Four services, all in the [enclave](https://github.com/SeismicSystems/enclave)
+Three services, all in the [enclave](https://github.com/SeismicSystems/enclave)
 repo, plus the image that measures them:
 
 | | |
 |---|---|
-| `summit-key-holder` | Generates summit keypairs in RAM pre-POST, serves `{pubkeys, quote}` for harvest, persists them once LUKS opens. |
 | `tdx-init` | Blocks for the config POST, validates it, fans the artifacts out to `/run/seismic/conf/`. |
 | `custodian` | Owns `root_key`. No network listener, unix socket only; wraps and unwraps against verified handshake bindings. |
-| `attestation-service` | Mints quotes, runs both halves of the root-key handshake, and makes the admission decision. |
-| [seismic-images](https://github.com/SeismicSystems/seismic-images) | The measured TDX image, and `make measure`, whose output becomes the accepted measurement set. |
+| `attestation-service` | The only TPM user: mints every quote, the founding harvest's included, runs both halves of the root-key handshake, and makes the admission decision. |
+| [seismic-images](https://github.com/SeismicSystems/seismic-images) | The measured TDX image, and `make measure`, whose output becomes the accepted measurement set. Its units carry summit's keys to their keystore: summit's own `keys generate` at boot, then a persist script once LUKS opens. |
+
+Until SEI-769 is built, a fourth enclave service, `summit-key-holder`, holds
+summit's keys in its memory, serves the founding harvest and persists the
+keys, and the attestation service mints only the quotes it needs after the
+config POST.
 
 ## The docs
 
-- [architecture.md](architecture.md) — **what a TEE node is.** The processes,
-  what the outside can reach and the three networking planes, key custody and
-  the custodian's socket boundary, the keys by family, the root-key handshake
-  cryptography, the LUKS volume, and the boot chain from power-on to serving.
+- [architecture.md](architecture.md) — **what a TEE node is.** The processes
+  and how their units are grouped, the one TPM user, what the outside can
+  reach and the three networking planes, key custody and the custodian's
+  socket boundary, the keys by family, the root-key handshake cryptography,
+  the LUKS volume, and the boot chain from power-on to serving.
   Read it when you touch a service, a key, a port, or the boot order.
 - [network-manifest.md](network-manifest.md) — **what identifies a network.**
   The fields, `network_id = SHA-256(file bytes)`, the byte-exactness rule,
@@ -99,8 +113,9 @@ repo, plus the image that measures them:
   Read it when you touch the manifest, a binding, or anything that hashes it.
 - [network-founding.md](network-founding.md) — **how a network is born.** Where
   validator keys come from, the founding flow from harvest to launch checks,
-  the key holder, the founding window, and what the manifest pins of summit's
-  genesis. Read it before changing the boot chain or the founding flow.
+  how summit's keys reach their keystore, the founding window, and what the
+  manifest pins of summit's genesis. Read it before changing the boot chain or
+  the founding flow.
 - [chain-backed-admission.md](chain-backed-admission.md) — **how a node gets
   in.** The root-key handshake, the admission predicate, the readiness and
   freshness gate, and which repo owns each stage of an image release. Read it

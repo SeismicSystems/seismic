@@ -112,7 +112,7 @@ The cross-cutting question: how does a guest know its chain view is current, whe
 Move CCF-style public control-plane state (policy hashes, commitments, admission identities) into Summit, verified via checkpoints/light-client proofs.
 
 * Pros: closest analogue to Secret/Oasis public consensus roots; supports permissionless economic admission cleanly.
-* Cons: requires Summit to boot/sync/serve proofs before `root_key`; needs finality/freshness semantics; summit's keys live behind root-key LUKS today, so the [storage cycle](../architecture.md#boot-power-on-to-serving) must be broken or narrowed.
+* Cons: requires Summit to boot/sync/serve proofs before `root_key`; needs finality/freshness semantics; summit's keys live behind root-key LUKS today, so the [storage cycle](../architecture.md#node-lifecycle-power-on-to-serving) must be broken or narrowed.
 * Still relevant to: the rollback family's exit (verifying summit finality signatures against the manifest-pinned validator set), and post-open economic eligibility.
 
 # Disaster recovery
