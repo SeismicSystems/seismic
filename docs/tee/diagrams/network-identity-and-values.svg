@@ -48,8 +48,8 @@
 
   <rect width="2000" height="1150" fill="#ffffff"/>
 
-  <text class="title" x="40" y="52">Identities over time</text>
-  <text class="subtitle" x="40" y="80">network_id fixes the lineage; the head is its value at h; the control plane is chain state</text>
+  <text class="title" x="40" y="52">One identity, a succession of values</text>
+  <text class="subtitle" x="40" y="80">network_id names the network by its first value; the head is its value at h; the control plane is part of every value</text>
 
   <!-- ================= legend ================= -->
   <rect class="shipped" x="880" y="104" width="120" height="30" rx="7"/>

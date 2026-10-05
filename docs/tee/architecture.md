@@ -250,7 +250,7 @@ The shipped grants:
 | User | Granted purposes | Why exactly these |
 | --- | --- | --- |
 | `reth` | `tx-io`, `rng` | reth holds the tx-io keypair and the RNG input material for its process lifetime; it decrypts calldata during execution. |
-| `attestation` | `tx-io-public`, `create-root-key-bootstrap-attempt`, `wrap-root-key`, `install-root-key-from-verified-bootstrap-response` | Everything the handshake needs, and public-only tx-io access for minting evidence. The network-facing process must never reach `tx_io_sk`. |
+| `attestation` | `tx-io-public`, `create-root-key-bootstrap-attempt`, `wrap-root-key`, `retire-founding-policy`, `install-root-key-from-verified-bootstrap-response` | Everything the handshake needs, and public-only tx-io access for minting evidence. The network-facing process must never reach `tx_io_sk`. |
 | — | `snapshot` | Ungranted. The purpose exists in the key schedule; no process serves state transfer yet, so nothing may derive `K_snap`. |
 
 Requests are one method per purpose, never bundled, because the method is the
