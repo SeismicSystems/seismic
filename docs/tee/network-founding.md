@@ -1,16 +1,17 @@
 # Network Founding <!-- omit in toc -->
 
-**Status**: shipped. The key holder, the one config POST per box, and the
-harvest → assemble → configure flow are how the four-node devnet was founded.
-The `tx_io_pk@0` pin is decided, not yet built; today a flag in the config
-POST picks the box that mints `root_key`, and the sections below say where
-that differs.
+**Status**: shipped. The one config POST per box and the harvest → assemble →
+configure flow are how the four-node devnet was founded. How summit's keys
+reach their keystore is decided, not yet built
+([SEI-769](https://linear.app/seismic-systems/issue/SEI-769)): today one
+`summit-key-holder` daemon generates the keys, holds them in its memory, mints
+the harvest quote itself and persists them.
 
 - [Summary](#summary)
 - [The founding flow](#the-founding-flow)
 - [Why founding-time quote verification is load-bearing](#why-founding-time-quote-verification-is-load-bearing)
-- [The key holder](#the-key-holder)
-- [Key custody: RAM-only, no TPM sealing](#key-custody-ram-only-no-tpm-sealing)
+- [Summit's keys before LUKS](#summits-keys-before-luks)
+- [Key custody: guest RAM until LUKS, no TPM sealing](#key-custody-guest-ram-until-luks-no-tpm-sealing)
 - [Founding-window security](#founding-window-security)
 - [Design rationale](#design-rationale)
 
@@ -19,9 +20,9 @@ that differs.
 How a Seismic network is founded: where validator keys are born, how they get
 into the manifest, and how the node boot chain is sequenced to allow it. What
 the manifest's fields commit to, and the byte-exact rules, belong to
-[the network manifest](network-manifest.md); the holder's wire format and
-quote binding belong to its code in the
-[enclave](https://github.com/SeismicSystems/enclave/tree/seismic/bin/summit-key-holder)
+[the network manifest](network-manifest.md); the harvest's wire format and
+quote binding belong to the attestation service's code in the
+[enclave](https://github.com/SeismicSystems/enclave/tree/seismic/bin/attestation-service)
 repo.
 
 A network is named by one hash, `network_id = SHA-256(network-manifest.json)`,
@@ -33,8 +34,10 @@ The manifest commits to every founding validator's public keys, which the
 summit genesis carries, so those keys must exist before the manifest does
 ([design rationale](#design-rationale)).
 
-Boxes boot the measured image **identity-free**. A small **key-holder**
-service generates summit keypairs in RAM and proves them with a TDX quote.
+Boxes boot the measured image **identity-free**. A boot-time oneshot,
+**`summit-keygen`**, generates summit keypairs into guest RAM, and the
+attestation service, the only process that can mint a quote, proves them with
+one.
 The founder harvests and DCAP-verifies those quotes, and assemble pins the
 complete validator set before minting `network_id`. Per validator, the pin
 covers both pubkeys and the withdrawal address, never the IP
@@ -46,25 +49,18 @@ and verifying happen forever, and those check exactly one hash.
 
 ## The founding flow
 
-```mermaid
-flowchart LR
-    U["provision — boxes boot the measured image,<br/>identity-free"] --> K
-    K["holder generates summit keys in RAM,<br/>serves {pubkeys, quote} on :7879"]
-    K -. "node harvest" .-> H
-    H["harvest — fetch {pubkeys, quote} per box over a fresh nonce;<br/>DCAP-verify against the intended measurements;<br/>archive the quote with its collateral"] --> A
-    A["network assemble — replay each archive against the compiled policy,<br/>pin the complete validator set, emit the summit genesis,<br/>mint network_id"] --> C
-    C["node configure — one POST per box:<br/>manifest + reth genesis + summit genesis"] --> T
-    T["on each box: tdx-init fans the files out;<br/>custodian, attestation-service, LUKS;<br/>the holder persists the keys to summit's keystore"] --> LC
-    LC["launch checks — each box's live pubkeys == pinned;<br/>each reth block 0 == pinned hash"]
-```
+[The node lifecycle](architecture.md#node-lifecycle-power-on-to-serving)
+draws these steps against what runs inside each box, from power-on to
+serving.
 
 Each step is one command, run by the founder:
 
 1. **Provision.** The cohort's Pulumi stack in the
    [deploy](https://github.com/SeismicSystems/deploy) repo (`pulumi up`) boots
    every box on the measured image. No box holds any network identity yet.
-2. **Harvest** (`seismic-tee node harvest`). For each box, fetch the holder's
-   pubkeys and a TDX quote over a fresh per-box nonce, DCAP-verify the quote
+2. **Harvest** (`seismic-tee node harvest`). For each box, fetch its summit
+   pubkeys and a TDX quote over a fresh per-box nonce from the attestation
+   service's harvest port, DCAP-verify the quote
    against the network's intended measurements, and archive the result under
    the network directory's `inputs/harvest/`. The archive holds the DCAP
    collateral the verification used, so the quote stays verifiable after
@@ -84,8 +80,8 @@ Each step is one command, run by the founder:
    and the joiners follow.
    Each node is deploy-verified as soon as it is ready.
 5. **Launch checks**, at the end of configure and again on demand with
-   `seismic-tee node configure --check`. Every box's holder must serve exactly
-   the pubkeys harvested from it, and every reth must serve the manifest's
+   `seismic-tee node configure --check`. Every box must serve exactly the
+   pubkeys harvested from it, and every reth must serve the manifest's
    `eth.genesis_hash` as block 0.
 
 An auditor re-asks the founding's question later, offline, with
@@ -100,11 +96,9 @@ credentials — and then provisions a box and runs
 `seismic-tee node configure --bootnode`. Runtime admission and the deposit
 contract do the rest.
 
-**Who mints `root_key` today.** `--genesis-node` marks the one box whose config
+**Who mints `root_key`.** `--genesis-node` marks the one box whose config
 POST carries the genesis flag, and that box's custodian mints `root_key` once
-the POST arrives; every other box fetches it from a peer. The decided design
-mints a candidate on every box before the manifest and lets the manifest's pin
-choose ([the root-key pin](network-manifest.md#the-root-key-pin)).
+the POST arrives; every other box fetches it from a peer.
 
 ## Why founding-time quote verification is load-bearing
 
@@ -122,77 +116,96 @@ Two independent gates protect two different things:
   admission: the same check, done once, by the tool that pins the set.
 
 The harvest quote is also a stronger statement than a BLS proof-of-possession:
-measured code generated the keypair and quoted pubkeys derived from private
-keys it holds, so possession, TEE custody, and honest generation (no rogue-key
-choice) all follow from the measurement. Post-genesis joiners still provide
+measured code generated the keypair, kept the private halves where only the
+summit user can read them, and quoted the public halves, so possession, TEE
+custody, and honest generation (no rogue-key choice) all follow from the
+measurement. Post-genesis joiners still provide
 signature-based possession proofs through the deposit path.
 
-## The key holder
+## Summit's keys before LUKS
 
-`summit-key-holder.service` generates summit's keypairs (ed25519 node
-identity and BLS12-381 consensus key) in RAM at boot, before any
-configuration exists. It serves `{pubkeys, quote}` for the harvest, persists
-the keys into summit's keystore once LUKS opens, and zeroizes its RAM copies.
-It is its own unit rather than part of an existing service
-([design rationale](#design-rationale)).
+Summit's keys, an ed25519 node identity and a BLS12-381 consensus key, must
+exist before the manifest, which pins them. The keystore summit reads them
+from lives on the LUKS volume, which opens only after the config POST. Two
+oneshots carry the keys across that gap through tmpfs, both built on summit's
+own binary, and the attestation service serves their public halves. No
+process holds them in between ([design rationale](#design-rationale)).
+[The node lifecycle](architecture.md#node-lifecycle-power-on-to-serving)
+shows where each step falls.
 
-```mermaid
-flowchart LR
-    subgraph boot [identity-free boot]
-        direction TB
-        T[tdx-init<br/>blocks for POST]
-        K["summit-key-holder<br/>keys in RAM · serves {pubkeys, quote}"]
-    end
-    K -. harvest .-> D((deploy))
-    D -. "later: the ONE POST —<br/>manifest + reth genesis + summit genesis" .-> T
-    T --> C[custodian] --> A[attestation-service] --> L[LUKS opens]
-    L --> PK["holder persists keys<br/>to summit's keystore"] --> S["summit daemon starts —<br/>genesis already on disk"]
-    classDef holder fill:#fde8e8,stroke:#c81e1e,color:#111;
-    class K,PK holder;
-```
+The three summit units form one group
+([unit groups](architecture.md#unit-groups)). Every member is
+`PartOf=summit.target`, so restarting the target re-runs the setup units,
+while a restart of `summit.service` alone does not.
 
-- **Starts pre-POST**, parallel to tdx-init's wait (`After=network-online`).
-  It depends on nothing the POST produces. Network is needed only for quote
-  generation (Azure IMDS).
-- **Runs as the summit user**, plus membership of the TPM device group. This
-  keeps the custody rule intact by construction: summit's keys are persisted
-  under summit's own user and ownership into `/persistent/summit/keys`. No
-  group is shared on private keys, and serving pubkeys never grants another
-  user read access to key material.
-- **Serves plain HTTP on `:7879`.** nginx and TLS certificates exist only
-  after the POST, and deploy tooling already polls raw ports during first
-  boot. `GET /v1/keys` returns both pubkeys; `GET /v1/quote?nonce=…` adds a
+| Unit | Kind | Runs |
+| --- | --- | --- |
+| `summit-keygen.service` | setup, oneshot | at boot, in parallel with tdx-init's wait |
+| `summit-persist.service` | setup, oneshot | once per boot, after LUKS setup and `summit-keygen` |
+| `summit.service` | the service | after `summit-persist`, which it requires |
+
+- **`summit-keygen` writes the keys at boot.** It runs
+  `summit keys generate --key-store-path /run/summit-keys --no-overwrite` as
+  the summit user, and depends on nothing the POST produces. Summit writes
+  both keypairs in its own keystore format (directory 0700, files 0600, owned
+  by `summit`). A step after it writes their public halves, from
+  `summit keys show`, to a file the attestation service reads. `show` fails on
+  a half-written set, which fails the unit.
+- **The key files are their own write-once marker.** With `--no-overwrite`,
+  summit exits without writing when either key file exists, so every later
+  run in the same boot is a no-op: a restart of `summit.target`, which re-runs
+  the setup units, cannot replace the keys the manifest pins. That holds
+  because nothing deletes the tmpfs keys before the next reboot empties tmpfs.
+- **The attestation service serves the harvest on `:7879`.** It starts at
+  boot, and until the POST arrives this is all it serves. The port is plain
+  HTTP: nginx and TLS certificates exist only after the POST, and deploy
+  tooling already polls raw ports during first boot. `GET /v1/keys` returns
+  both pubkeys from the public-keys file. `GET /v1/quote?nonce=…` adds a
   quote whose `report_data` is a domain-separated binding over the
-  deploy-supplied nonce and both pubkeys. The nonce prevents replay of quotes
-  from earlier harvests. The binding cannot include `network_id`, which does
-  not exist yet; the pin itself provides the intent binding, and
+  deploy-supplied nonce and both pubkeys, which the attestation service builds
+  itself, as it builds every binding it quotes
+  ([one process opens the TPM](architecture.md#one-process-opens-the-tpm)).
+  The nonce prevents replay of quotes from earlier harvests. The binding
+  cannot include `network_id`, which does not exist yet; the pin itself
+  provides the intent binding, and
   [founding-window security](#founding-window-security) says what that costs.
-- **Stops serving quotes once the manifest file appears**, answering
-  `410 Gone`. The Azure vTPM quote path is exclusive-open and serialized
-  machine-wide (seconds per call), and attestation-service owns it from the
-  POST onward. This is per boot, not permanent: the config lives on tmpfs and
-  is re-POSTed each boot, so a rebooted node briefly serves quotes over fresh
-  RAM keys that the persist step then discards. That is harmless, since
-  nothing ever signs with them, but it is why the holder port's network
-  restriction is permanent rather than founding-only. Pubkey serving
-  continues for life: once the keystore exists, the holder reads it, which
-  makes it the source for the launch-time continuity check.
-- **Persists on summit's schedule.** summit.service's pre-start step,
-  `summit-key-holder persist-wait`, blocks until the holder has written the
-  keystore (first boot) or confirmed it already exists (reboot, where the RAM
-  keys are discarded). The unit orders it after LUKS setup, so no other
-  notification channel is needed. summit.service has no keygen step of its
-  own, and must never gain one as a fallback: one racing the holder would
-  silently mint fresh, unpinned keys, deferring the failure from a loud
-  startup error to a launch-check mismatch.
+- **Quotes stop once the manifest file appears**, answering `410 Gone`. This is
+  per boot, not permanent: the config lives on tmpfs and is re-POSTed each
+  boot, so a rebooted node briefly serves quotes over that boot's fresh keys,
+  which `summit-persist` then passes over for the keystore. That is harmless,
+  since nothing ever signs with them, but it is why the harvest port's network
+  restriction is permanent rather than founding-only. `/v1/keys` keeps
+  serving for life: `summit-persist` rewrites the public-keys file from the
+  keystore, which makes it the source for the launch-time continuity check.
+- **`summit-persist` copies the keys into the keystore** once LUKS opens. It
+  is a script in the image, and it decides from the keystore on disk, not
+  from tmpfs:
 
-Keygen, HTTP serving, and persistence run in one process, kept as separable
-modules so a later custody split stays mechanical
-([design rationale](#design-rationale)). The binary lives in the enclave repo
-and links `commonware-cryptography` from crates.io, matching summit's key
-types. The keystore format — hex-encoded keys in `node_key.pem` and
-`consensus_key.pem` — is pinned by a golden-vector test against summit's
-[`keys generate`](https://github.com/SeismicSystems/summit/blob/main/node/src/keys.rs).
+  | Keystore | Keys in tmpfs | `summit-persist` |
+  | --- | --- | --- |
+  | complete | any | `summit keys show` on the keystore must succeed; the tmpfs keys are a reboot's throwaway set |
+  | absent | present | first boot: copies each file into `/persistent/summit/keys` |
+  | absent | absent | fails, so summit never starts on keys the manifest did not pin |
+  | one of its two files | — | finishes the copy only if that file is byte-identical to its tmpfs counterpart, an interrupted first copy; anything else is refused |
+
+  Each file lands atomically, copied under a temporary name and renamed, and
+  every successful run rewrites the public-keys file from the keystore. It is
+  its own unit rather than a pre-start step of `summit.service`, so it runs
+  once per boot rather than at every summit restart, and so only it can write
+  the keystore.
+- **Summit only reads its keystore.** `summit.service` gets
+  `/persistent/summit/keys` read-only and `/run/summit-keys` inaccessible.
+  It has no keygen step of its own, and must never gain one as a fallback:
+  one would silently mint fresh, unpinned keys, deferring the failure from a
+  loud startup error to a launch-check mismatch.
+
+Summit's [`keys`](https://github.com/SeismicSystems/summit/blob/main/node/src/keys.rs)
+subcommands write and read the keystore, so its format — hex-encoded keys in
+`node_key.pem` and `consensus_key.pem` — is summit's by construction, and no
+other repo carries summit-key code. The image depends on that CLI instead:
+`generate --no-overwrite` leaving existing keys alone, the two file names,
+and `show`'s output, which the public-keys step reads through
+`summit keys show --json`.
 
 The summit genesis rides the config POST. tdx-init's `summit_genesis_base64`
 field is written to `/run/seismic/conf/summit-genesis.toml`, and summit reads
@@ -203,22 +216,30 @@ returns immediately when a valid file is present, so summit's pre-genesis
 `sendGenesis` RPC is never reached on a TEE node; deleting it is
 [SEI-139](https://linear.app/seismic-systems/issue/SEI-139).
 
-## Key custody: RAM-only, no TPM sealing
+## Key custody: guest RAM until LUKS, no TPM sealing
 
-Founding keys live in the holder's RAM (TDX-protected) until LUKS opens.
-A reboot or box loss in the harvest → LUKS-open window destroys a pinned key
-and forces a **re-found**: destroy the stacks and start over
-(`pulumi destroy` and a fresh `pulumi up`). Destroying the stacks deletes the
-data disks, which is the LUKS wipe; fresh boxes mean fresh IPs and a fresh
+Founding keys live in tmpfs from boot, and their copy there stays until the
+next reboot, also after LUKS opens. tmpfs is guest RAM, which TDX encrypts
+against the host just as it does process memory. Inside the guest, the summit
+user and root can read the files: the same parties that can read the keystore
+once LUKS opens, or the memory of a process holding the keys. The image has no
+swap, so neither tmpfs nor process memory ever leaves guest RAM.
+
+No process holds the keys, so a crash cannot lose them. A reboot or box loss
+in the harvest → LUKS-open window can, since tmpfs starts empty, and that
+destroys a pinned key and forces a **re-found**: destroy the stacks and start
+over (`pulumi destroy` and a fresh `pulumi up`). Destroying the stacks deletes
+the data disks, which is the LUKS wipe; fresh boxes mean fresh IPs and a fresh
 harvest, so nothing stale can leak into the new identity. Nothing of value
 exists pre-genesis, and founding is a rare, short, supervised internal act.
 The keys are never sealed to the TPM ([design rationale](#design-rationale)).
 
 The guard is the **launch-time pubkey-continuity assertion**. A rebooted box
-regenerates fresh RAM keys and passes admission fine, so without the check the
+generates fresh keys and passes admission fine, so without the check the
 network would launch with a silent dead founding slot. Configure retries a
-mismatch until its deadline, because the holder serves this boot's RAM keys
-until the keystore is visible; a mismatch that persists is the dead-slot case,
+mismatch until its deadline, because `/v1/keys` serves this boot's fresh keys
+until `summit-persist` rewrites the public-keys file from the keystore; a
+mismatch that persists is the dead-slot case,
 and the fix is a re-found, never launching around it. The response could be
 graded — BFT tolerates f dead of 3f+1, and the deposit path can eventually
 replace a slot — so a devnet may accept a degraded launch where mainnet
@@ -230,26 +251,21 @@ The identity-free window is an attack surface, not just an availability risk:
 tdx-init accepts the *first* config POST, and a waiting box holds pinnable
 key material. An attacker who POSTs first enrolls the box into *their*
 network — their manifest, their measurement policy, their responders — and
-can deliver a `root_key` they know, after which the holder would persist the
-harvested keys onto a LUKS volume the attacker can read. The failure is
+can deliver a `root_key` they know, after which `summit-persist` would write
+the harvested keys onto a LUKS volume the attacker can read. The failure is
 bounded — tdx-init is one-shot, so the real configure then fails loudly and a
 re-found discards those pubkeys before anything launches — but only if the
 process treats it that way. Guards:
 
 - **Network-level**: the cloud firewall restricts the config port (`:8080`)
-  and the holder port (`:7879`) to the operator's source CIDR, permanently,
+  and the harvest port (`:7879`) to the operator's source CIDR, permanently,
   since both come back on every boot
   ([what the outside can reach](architecture.md#what-the-outside-can-reach)).
 - **Burned-key rule**: a harvested key is trustworthy only if the same box
   later accepts the real configure cleanly. Any anomaly — a quote window
   already closed, a failed verification, a POST rejected, an unexpected
   reboot — burns the whole harvest: re-found, never retry-around. Harvest
-  enforces its half by aborting and writing nothing. Once `root_key` is
-  minted before the manifest, the rule carries more: the box whose candidate
-  is pinned already holds the future `root_key`, so a first POST with a
-  manifest that pins that candidate and admits the attacker's image can
-  extract it. Deploy must then refuse to continue when that box's configure
-  fails.
+  enforces its half by aborting and writing nothing.
 - **Window length**: the rootfs is measured at boot but not (yet)
   integrity-protected at runtime, so a harvest quote attests boot-time state
   only. Window length is a security parameter: keep founding short and
@@ -268,53 +284,52 @@ verbatim, validator set included, and a genesis whose keys post-date the
 manifest can never be hash-pinned by `network_id`. Keeping late-born keys
 leaves a second, unpinned trust stratum that a quote sidecar can prove
 membership of but never completeness, plus the machinery that injects the
-late facts. Generating the keys outside a TEE would delete the holder, but
+late facts. Generating the keys outside a TEE would delete the keygen step, but
 consensus signatures are verified offline, so a key that ever existed outside
 a TEE lets its holder forge signed histories for every future verifier. The
 pass that settled this, with the boot chain it replaced and every alternative
 weighed, is [the founding-reorder decision
-record](decisions/2026-07-founding-reorder.md). The same move later reached
-`root_key` ([the root-key commitment
-record](decisions/2026-09-root-key-commitment.md#mint-first)).
+record](decisions/2026-07-founding-reorder.md).
 
-**A new unit for the key holder, rather than an existing service**
-([the key holder](#the-key-holder)). None of the existing processes can host
-it:
+**Setup units and the attestation service, rather than a key-holder daemon**
+([summit's keys before LUKS](#summits-keys-before-luks)). The keys need a
+home from boot until LUKS opens, and their public halves need a quote. The
+shapes set aside:
 
-- **tdx-init** is a oneshot that blocks for the config POST, so it has no
-  process lifetime to hold RAM keys.
-- **The custodian** would invert its own design. It is deliberately the most
-  isolated process on the box: no network listener ever, no async runtime,
-  unix socket only, pre-verified authorization in and never raw evidence. The
-  holder must serve HTTP to the outside world pre-manifest and pre-admission,
-  the most exposed moment in the node's life, and would drag a BLS dependency
-  into the process that owns `root_key`. The custody models differ too: the
-  custodian guards one network-shared secret and keys derived from it, while
-  summit keys are independent per-VM randomness with a different consumer and
-  lifecycle.
-- **attestation-service** is gated behind the POST four ways: a hard unit
-  dependency on tdx-init, a required environment file the POST produces, a
-  fatal manifest load at startup, and a port it binds only once `root_key` is
-  in hand. That last one is the bound-port-is-the-readiness-signal contract
-  deploy tooling relies on, which breaks if the service ever serves earlier.
-  Restructuring all of that is strictly worse than one new unit.
-
-**One holder process, with a documented split** ([the key
-holder](#the-key-holder)). The single process's one weakness is that private
-consensus keys live in the process that serves HTTP at the node's most exposed
-moment. The founding-window guards narrow this: only a fully *silent* exploit
-that survives the configure and launch checks cashes out. The upgrade path
-replicates the custodian-split pattern *within* the holder: a custody process
-(privates in RAM, local unix socket only, writes the keystore at persist) plus
-a secret-free HTTP front that fetches pubkeys over the socket and mints the
-harvest quote. That buys "privates never live in the network-facing process"
-without touching the real custodian, and the holder's control socket is
-already the boundary it would split along.
+- **A daemon that holds the keys and quotes them itself.** It must run as the
+  summit user to write summit's keystore, so the TPM group would land on that
+  user, and `summit.service` runs as it too: the consensus daemon, network-facing
+  for the node's whole life, could quote any `report_data`. That includes a
+  root-key request for an ephemeral key of its own, which any responder would
+  answer with `root_key`. Quoting belongs to the one process that opens the
+  TPM ([one process opens the TPM](architecture.md#one-process-opens-the-tpm)).
+- **A daemon that holds the keys and serves them on a local socket**, with the
+  quote left to the attestation service. Its only job would be carrying state
+  across the gap, which costs a process for the node's life, an IPC protocol
+  the attestation service can speak without linking commonware, a per-method
+  peer check on its socket, and a founding burned by any crash of it. A tmpfs
+  file carries the same state with none of that: it is as confidential to the
+  host as process memory, and readable in the guest by the same parties.
+- **Summit generating its own keys.** Summit already loads a keystore and
+  waits for its genesis, but it would also have to know the founding window,
+  serve public keys before LUKS opens, and order itself against the disk.
+  That is orchestration the image's units express, moved into the
+  application ([unit groups](architecture.md#unit-groups)). Running summit's
+  *binary* in a setup unit is a different thing: the daemon still knows
+  nothing of the founding window or the disk, and the setup units only borrow
+  two of its CLI commands.
+- **An existing process generating them.** tdx-init is the unauthenticated
+  first-POST listener, the most exposed process before the POST. The
+  attestation service is the most exposed after it, and holds no key material.
+  The custodian would invert its own design: it is deliberately the most
+  isolated process on the box, with no network listener, no async runtime and
+  no BLS dependency, and it mediates one secret it never releases, while
+  summit's keys are handed to summit.
 
 **RAM-only rather than TPM-sealed founding keys** ([key
-custody](#key-custody-ram-only-no-tpm-sealing)). Sealing would survive a
-reboot in the window, but it adds a second sealing policy that must stay in
-lockstep with the measurement policy, unknown vTPM clone and rollback
+custody](#key-custody-guest-ram-until-luks-no-tpm-sealing)). Sealing would
+survive a reboot in the window, but it adds a second sealing policy that must
+stay in lockstep with the measurement policy, unknown vTPM clone and rollback
 semantics (a duplicated consensus key is accidental equivocation), and
 sealed-blob migration and scrubbing machinery. Sealing is not what SGX
 networks use to escape this either: the host stores the sealed blob and can

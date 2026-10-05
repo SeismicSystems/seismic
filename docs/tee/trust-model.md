@@ -357,7 +357,7 @@ open design work.
 - **Validator key custody** — must close before staking opens to outside
   operators. It has two halves. The first is the post-genesis binding of
   validator keys to a TEE. Founding validators have the binding:
-  [the harvest quote](network-founding.md#the-key-holder) proves both pubkeys
+  [the harvest quote](network-founding.md#summits-keys-before-luks) proves both pubkeys
   were generated inside a measured guest. A deposit-path validator today
   registers keys with no hardware binding, so nothing stops its consensus
   keys from living, or signing, outside a TEE. The candidate fix is binding

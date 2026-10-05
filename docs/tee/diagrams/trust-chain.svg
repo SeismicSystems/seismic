@@ -90,7 +90,7 @@
     <text class="b" x="20" y="32">founding box × N</text>
     <text class="sub" x="20" y="54">the measured image, booted identity-free</text>
     <rect class="shipped" x="20" y="76" width="760" height="54" rx="9" fill="#ffffff"/>
-    <text x="40" y="108">key holder: summit BLS + Ed25519 keypairs, born in RAM</text>
+    <text x="40" y="108">summit BLS + Ed25519 keypairs, born at boot in guest RAM</text>
     <rect class="planned" x="20" y="146" width="760" height="54" rx="9"/>
     <text x="40" y="178">custodian: a candidate root_key and its tx_io_pk@0</text>
   </g>

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2200 1380"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2220 1660"
      font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
   <style>
     text { fill: #374151; font-size: 16px; }
@@ -13,8 +13,13 @@
     /* the encrypted host disk — the only thing that survives a reboot */
     .node.volume > rect { fill: #dbeafe; stroke: #1e3a5f; }
     .node.volume text { fill: #1e3a5f; }
-    /* one-shot units: run at boot, then exit */
+    /* one-shot units: run once per boot, then exit */
     .node.oneshot > rect { fill: #fef3c7; stroke: #b45309; }
+    /* tmpfs under /run: guest RAM, empty at every boot */
+    .tmpfs { fill: #f5f3ff; stroke: #6d28d9; stroke-width: 2; stroke-dasharray: 8 5; }
+    .tmpfs-label { font-size: 15px; font-weight: 600; fill: #6d28d9; }
+    .node.dir > rect { fill: #ede9fe; stroke: #6d28d9; }
+    .node.dir .name { fill: #4c1d95; }
     .flow { stroke: #64748b; stroke-width: 2; fill: none; }
     /* white halo keeps labels readable where they sit on a line */
     .flow-label { font-size: 14px; fill: #374151; paint-order: stroke; stroke: #ffffff; stroke-width: 5px; stroke-linejoin: round; }
@@ -26,15 +31,17 @@
     </marker>
   </defs>
 
-  <rect width="2200" height="1380" fill="#ffffff"/>
+  <rect width="2220" height="1660" fill="#ffffff"/>
 
   <!-- ================= legend ================= -->
-  <rect x="620" y="48" width="24" height="24" fill="#a7f3d0" stroke="#047857" stroke-width="2"/>
-  <text class="sub" x="656" y="66">holds root_key — the network secret</text>
-  <rect x="620" y="92" width="24" height="24" fill="#dbeafe" stroke="#1e3a5f" stroke-width="2"/>
-  <text class="sub" x="656" y="110">the encrypted host disk — survives reboots</text>
-  <rect x="620" y="136" width="24" height="24" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
-  <text class="sub" x="656" y="154">one-shot — runs at every boot, then exits</text>
+  <rect x="560" y="30" width="24" height="24" fill="#a7f3d0" stroke="#047857" stroke-width="2"/>
+  <text class="sub" x="596" y="48">holds root_key — the network secret</text>
+  <rect x="560" y="70" width="24" height="24" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+  <text class="sub" x="596" y="88">one-shot — runs once per boot, then exits</text>
+  <rect x="560" y="110" width="24" height="24" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+  <text class="sub" x="596" y="128">tmpfs under /run — guest RAM, empty at every boot</text>
+  <rect x="560" y="150" width="24" height="24" fill="#dbeafe" stroke="#1e3a5f" stroke-width="2"/>
+  <text class="sub" x="596" y="168">the encrypted host disk — survives reboots</text>
 
   <!-- ================= external actors ================= -->
   <g class="node" transform="translate(140,40)">
@@ -42,121 +49,164 @@
     <text class="name" x="170" y="44">RPC clients</text>
     <text class="sub" x="170" y="76">wallets · indexers · frontends</text>
   </g>
-  <g class="node" transform="translate(1460,40)">
-    <rect width="340" height="110" rx="14"/>
-    <text class="name" x="170" y="44">operator</text>
-    <text class="sub" x="170" y="76">deploy CLI</text>
+  <g class="node" transform="translate(1260,40)">
+    <rect width="420" height="110" rx="14"/>
+    <text class="name" x="210" y="44">operator</text>
+    <text class="sub" x="210" y="76">seismic-tee CLI</text>
+  </g>
+  <g class="node" transform="translate(1930,300)">
+    <rect width="240" height="410" rx="14"/>
+    <text class="name" x="120" y="210">peer nodes</text>
   </g>
 
   <!-- ================= the TDX guest ================= -->
-  <rect class="guest" x="60" y="230" width="1800" height="810" rx="20"/>
+  <rect class="guest" x="60" y="230" width="1810" height="1130" rx="20"/>
   <text class="zone-label" x="90" y="268">the TDX guest — MRTD and the RTMRs measure this image</text>
 
-  <!-- row A: the listeners the outside reaches first -->
-  <g class="node" transform="translate(160,310)">
-    <rect width="340" height="100" rx="12"/>
-    <text class="name" x="170" y="40">nginx :443</text>
-    <text class="sub" x="170" y="70">the only TLS terminator</text>
+  <!-- band 1: what the network reaches -->
+  <g class="node" transform="translate(160,300)">
+    <rect width="400" height="110" rx="12"/>
+    <text class="name" x="200" y="44">nginx :443</text>
+    <text class="sub" x="200" y="76">the only TLS terminator</text>
   </g>
-  <g class="node" transform="translate(1050,310)">
-    <rect width="380" height="100" rx="12"/>
-    <text class="name" x="190" y="40">summit-key-holder :7879</text>
-    <text class="sub" x="190" y="70">summit keys in RAM, pre-POST</text>
+  <g class="node" transform="translate(760,300)">
+    <rect width="440" height="130" rx="12"/>
+    <text class="name" x="220" y="40">attestation-service</text>
+    <text class="sub" x="220" y="72">:7878 · :7879 · the only TPM user</text>
+    <text class="sub" x="220" y="100">root-key handshake · admission</text>
   </g>
-  <g class="node oneshot" transform="translate(1470,310)">
-    <rect width="330" height="100" rx="12"/>
-    <text class="name" x="165" y="40">tdx-init :8080</text>
-    <text class="sub" x="165" y="70">blocks for the config POST</text>
-  </g>
-
-  <!-- row B: the long-lived services -->
-  <g class="node" transform="translate(160,640)">
-    <rect width="380" height="120" rx="12"/>
-    <text class="name" x="190" y="46">reth</text>
-    <text class="sub" x="190" y="78">EVM + Ethereum RPC on loopback</text>
-  </g>
-  <g class="node" transform="translate(630,640)">
-    <rect width="360" height="120" rx="12"/>
-    <text class="name" x="180" y="46">summit</text>
-    <text class="sub" x="180" y="78">BFT consensus · drives reth</text>
-  </g>
-  <g class="node" transform="translate(1290,620)">
-    <rect width="460" height="160" rx="12"/>
-    <text class="name" x="230" y="44">attestation-service :7878</text>
-    <text class="sub" x="230" y="80">quotes · root-key handshake · admission</text>
-    <text class="sub" x="230" y="112">status endpoints for the operator</text>
+  <g class="node oneshot" transform="translate(1360,300)">
+    <rect width="400" height="110" rx="12"/>
+    <text class="name" x="200" y="44">tdx-init :8080</text>
+    <text class="sub" x="200" y="76">blocks for the config POST</text>
   </g>
 
-  <!-- row C: the secret holder — unix socket only, no network listener -->
-  <g class="node secret" transform="translate(160,890)">
-    <rect width="380" height="110" rx="12"/>
-    <text class="name" x="190" y="42">custodian</text>
-    <text class="sub" x="190" y="74">owns root_key · unix socket only</text>
+  <!-- band 2: the long-running services -->
+  <g class="node" transform="translate(160,600)">
+    <rect width="400" height="110" rx="12"/>
+    <text class="name" x="200" y="44">summit</text>
+    <text class="sub" x="200" y="76">BFT consensus · drives reth</text>
+  </g>
+  <g class="node" transform="translate(760,600)">
+    <rect width="440" height="110" rx="12"/>
+    <text class="name" x="220" y="44">reth</text>
+    <text class="sub" x="220" y="76">EVM + Ethereum RPC on loopback</text>
+  </g>
+  <g class="node secret" transform="translate(1360,600)">
+    <rect width="400" height="110" rx="12"/>
+    <text class="name" x="200" y="44">custodian</text>
+    <text class="sub" x="200" y="76">owns root_key · unix socket only</text>
+  </g>
+
+  <!-- band 3: /run, tmpfs — how units hand state to each other -->
+  <rect class="tmpfs" x="110" y="830" width="1700" height="270" rx="16"/>
+  <text class="tmpfs-label" x="140" y="862">/run — tmpfs, guest RAM</text>
+  <g class="node dir" transform="translate(160,880)">
+    <rect width="400" height="190" rx="10"/>
+    <text class="name" x="200" y="38">/run/summit-keys</text>
+    <text class="sub" x="200" y="72">node_key.pem · consensus_key.pem</text>
+    <text class="sub" x="200" y="96">0600, owned by summit</text>
+    <text class="sub" x="200" y="136">public keys: a separate file</text>
+    <text class="sub" x="200" y="160">the attestation service reads</text>
+  </g>
+  <g class="node dir" transform="translate(760,880)">
+    <rect width="440" height="190" rx="10"/>
+    <text class="name" x="220" y="38">/run/seismic/conf</text>
+    <text class="sub" x="220" y="72">network manifest · reth genesis</text>
+    <text class="sub" x="220" y="96">summit genesis · env files</text>
+    <text class="sub" x="220" y="136">read by the attestation</text>
+    <text class="sub" x="220" y="160">service, reth and summit</text>
+  </g>
+  <g class="node dir" transform="translate(1360,880)">
+    <rect width="400" height="190" rx="10"/>
+    <text class="name" x="200" y="38">/run/seismic/custodian</text>
+    <text class="sub" x="200" y="72">custodian.sock</text>
+    <text class="sub" x="200" y="112">luks-keys — the two LUKS keys,</text>
+    <text class="sub" x="200" y="136">shredded once the disk opens</text>
+  </g>
+
+  <!-- band 4: the setup units -->
+  <g class="node oneshot" transform="translate(160,1190)">
+    <rect width="400" height="110" rx="12"/>
+    <text class="name" x="200" y="44">summit-keygen</text>
+    <text class="sub" x="200" y="76">summit keys generate, at boot</text>
+  </g>
+  <g class="node oneshot" transform="translate(760,1190)">
+    <rect width="440" height="110" rx="12"/>
+    <text class="name" x="220" y="44">summit-persist</text>
+    <text class="sub" x="220" y="76">keys into the keystore</text>
+  </g>
+  <g class="node oneshot" transform="translate(1360,1190)">
+    <rect width="400" height="110" rx="12"/>
+    <text class="name" x="200" y="44">persistent-luks-setup</text>
+    <text class="sub" x="200" y="76">format or open /persistent</text>
   </g>
 
   <!-- ================= outside the guest ================= -->
-  <g class="node" transform="translate(1900,620)">
-    <rect width="240" height="140" rx="14"/>
-    <text class="name" x="120" y="78">peer nodes</text>
-  </g>
-  <g class="node volume" transform="translate(160,1180)">
-    <rect width="640" height="140" rx="14"/>
-    <text class="name" x="320" y="52">/persistent — LUKS2</text>
-    <text class="sub" x="320" y="88">reth datadir · summit keys and db · certbot state</text>
+  <g class="node volume" transform="translate(160,1440)">
+    <rect width="1600" height="140" rx="14"/>
+    <text class="name" x="800" y="56">/persistent — LUKS2</text>
+    <text class="sub" x="800" y="92">reth datadir · summit keystore and db · certbot state</text>
   </g>
 
   <!-- ================= client plane ================= -->
-  <line class="flow" x1="310" y1="150" x2="328" y2="304" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="305" y="205" text-anchor="end">HTTPS</text>
+  <line class="flow" x1="310" y1="150" x2="340" y2="294" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="310" y="226" text-anchor="end">HTTPS</text>
 
-  <line class="flow" x1="330" y1="410" x2="345" y2="634" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="255" y="530">/rpc · /ws</text>
-  <line class="flow" x1="435" y1="410" x2="785" y2="634" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="565" y="520">/summit</text>
-  <line class="flow" x1="500" y1="365" x2="1325" y2="616" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="890" y="505">/attestation</text>
+  <line class="flow" x1="560" y1="355" x2="754" y2="355" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="657" y="343" text-anchor="middle">/attestation</text>
+  <line class="flow" x1="300" y1="410" x2="300" y2="594" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="314" y="500">/summit</text>
+  <line class="flow" x1="480" y1="410" x2="860" y2="594" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="690" y="480" text-anchor="middle">/rpc · /ws</text>
 
   <!-- ================= operator plane ================= -->
-  <line class="flow" x1="1650" y1="150" x2="1640" y2="304" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="1660" y="205">config POST</text>
-  <line class="flow" x1="1540" y1="150" x2="1270" y2="304" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="1400" y="208" text-anchor="middle">harvest — pubkeys + quote</text>
-  <path class="flow" d="M 1770,150 L 1830,260 L 1830,650 L 1756,650" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="1818" y="470" text-anchor="end">status polls —</text>
-  <text class="flow-label" x="1818" y="492" text-anchor="end">health · LUKS-wipe progress</text>
-  <text class="flow-label" x="1818" y="514" text-anchor="end">admission chain</text>
+  <line class="flow" x1="1330" y1="150" x2="1100" y2="294" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1250" y="210" text-anchor="end">harvest :7879 · status</text>
+  <line class="flow" x1="1600" y1="150" x2="1600" y2="294" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1614" y="226">config POST</text>
 
   <!-- ================= inside the guest ================= -->
-  <line class="flow" x1="540" y1="700" x2="630" y2="700" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="585" y="610" text-anchor="middle">Engine API</text>
-  <text class="flow-label" x="585" y="632" text-anchor="middle">unix socket</text>
+  <line class="flow" x1="560" y1="655" x2="760" y2="655" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="660" y="630" text-anchor="middle">Engine API</text>
+  <text class="flow-label" x="660" y="690" text-anchor="middle">unix socket</text>
 
-  <line class="flow" x1="330" y1="760" x2="330" y2="884" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="345" y="810">tx-io + rng keys,</text>
-  <text class="flow-label" x="345" y="832">once at startup</text>
+  <line class="flow" x1="1200" y1="655" x2="1354" y2="655" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1262" y="640" text-anchor="middle">tx-io + rng</text>
 
-  <line class="flow" x1="1330" y1="780" x2="546" y2="930" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="900" y="930" text-anchor="middle">bootstrap · wrap · tx-io public key</text>
-  <text class="flow-label" x="900" y="952" text-anchor="middle">retire the founding policy</text>
+  <line class="flow" x1="1150" y1="430" x2="1420" y2="594" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1180" y="468" text-anchor="end">bootstrap · wrap</text>
+  <text class="flow-label" x="1180" y="490" text-anchor="end">tx-io public key</text>
 
-  <!-- ================= peer planes — the bus to the right ================= -->
-  <path class="flow" d="M 900,760 L 900,820 L 1960,820 L 1960,766" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="1300" y="808">consensus :18551 · commonware-p2p</text>
+  <!-- ================= peer planes ================= -->
+  <path class="flow" d="M 1150,294 L 1150,262 L 2050,262 L 2050,294" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1600" y="252" text-anchor="middle">root-key handshake :7878</text>
 
-  <path class="flow" d="M 500,760 L 500,856 L 2020,856 L 2020,766" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="1300" y="880">tx gossip :30303 · devp2p</text>
+  <path class="flow" d="M 360,710 L 360,750 L 1990,750 L 1990,716" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1840" y="742" text-anchor="end">consensus :18551 · commonware-p2p</text>
+  <path class="flow" d="M 980,710 L 980,790 L 2110,790 L 2110,716" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1840" y="782" text-anchor="end">tx gossip :30303 · devp2p</text>
 
-  <line class="flow" x1="1900" y1="680" x2="1760" y2="700" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="1822" y="730" text-anchor="middle">root-key</text>
-  <text class="flow-label" x="1822" y="752" text-anchor="middle">handshake :7878</text>
+  <!-- ================= writes into /run ================= -->
+  <path class="flow" d="M 1400,410 L 1330,450 L 1330,975 L 1206,975" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1316" y="560" text-anchor="end">writes</text>
 
-  <!-- ================= what persists ================= -->
-  <line class="flow" x1="330" y1="1000" x2="330" y2="1174" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="345" y="1090">LUKS keys via tmpfs</text>
+  <line class="flow" x1="1560" y1="710" x2="1560" y2="874" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1574" y="820">serves · writes</text>
 
-  <path class="flow" d="M 160,720 L 110,720 L 110,1250 L 154,1250" marker-end="url(#arrow)"/>
-  <line class="flow" x1="700" y1="760" x2="760" y2="1174" marker-end="url(#arrow)"/>
+  <line class="flow" x1="360" y1="1190" x2="360" y2="1076" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="374" y="1150">writes</text>
 
-  <path class="flow" d="M 1240,410 L 1240,1250 L 806,1250" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="1255" y="1100">persists the keystore</text>
+  <!-- ================= reads from /run ================= -->
+  <line class="flow" x1="500" y1="1070" x2="820" y2="1184" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="700" y="1138">copies</text>
+
+  <line class="flow" x1="1560" y1="1070" x2="1560" y2="1184" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1574" y="1140">reads</text>
+
+  <!-- ================= into /persistent ================= -->
+  <line class="flow" x1="980" y1="1300" x2="980" y2="1434" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="994" y="1390">summit keystore</text>
+  <line class="flow" x1="1560" y1="1300" x2="1560" y2="1434" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1574" y="1390">opens · mounts</text>
 </svg>

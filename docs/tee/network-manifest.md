@@ -476,8 +476,7 @@ only hash-checks the manifest needs.
 
 - **The custodian keeps or discards its candidate.** At configure, a custodian
   keeps its candidate only if it matches the pin, and otherwise discards it and
-  fetches `root_key` from a peer. There is no genesis flag
-  ([architecture](architecture.md#boot-power-on-to-serving)).
+  fetches `root_key` from a peer. There is no genesis flag.
 - **A joiner's custodian checks what it installs.** After unwrapping a fetched
   key, the custodian re-derives `tx_io_pk@0`, compares it with the pin in the
   manifest bytes tdx-init wrote to tmpfs, and refuses a mismatch. The joiner
