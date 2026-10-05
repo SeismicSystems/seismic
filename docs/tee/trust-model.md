@@ -18,7 +18,7 @@ caveat per mechanism.
 - [Assumptions](#assumptions)
   - [The host platform, and what it is trusted for](#the-host-platform-and-what-it-is-trusted-for)
   - [What a valid quote proves — and what it does not](#what-a-valid-quote-proves--and-what-it-does-not)
-- [Identities, and how they evolve](#identities-and-how-they-evolve)
+- [One identity, a succession of values](#one-identity-a-succession-of-values)
   - [Client trust models](#client-trust-models)
 - [The trust anchor, per action](#the-trust-anchor-per-action)
 - [Residuals](#residuals)
@@ -33,10 +33,11 @@ caveat per mechanism.
   reviewed code is not yet a member of *this* network holding *its* secret.
   The gap is closed by named mechanisms — `network_id` in every transcript,
   the registry, the key commitment — never by the quote alone.
-- **The service identity evolves through consensus.** `network_id` fixes the
-  lineage; the validator set, the accepted images and the service key are chain
-  state, so what a verifier should accept depends on the head it has verified
-  ([identities](#identities-and-how-they-evolve)).
+- **The identity is fixed; its value moves through consensus.** `network_id`
+  names the network and never changes. The validator set, the accepted images
+  and the service key are parts of the network's value at each finalized head,
+  so what a verifier should accept depends on the head it has verified
+  ([one identity, a succession of values](#one-identity-a-succession-of-values)).
 - **Each action has one anchor, matched to the actor's position.** The
   responder reads live chain state because it can; the joiner holds a frozen
   manifest because it must. [The table](#the-trust-anchor-per-action) names
@@ -133,7 +134,7 @@ closed by a mechanism the quote plugs into, never by the quote alone:
 | economically admitted | the summit genesis at founding, the deposit path afterwards ([founding](network-founding.md)) |
 | view of chain state is current | [the freshness gate](chain-backed-admission.md#the-readiness-and-freshness-gate) around the responder's policy read |
 
-## Identities, and how they evolve
+## One identity, a succession of values
 
 A measurement is a machine identity: it names the code a box booted. In a
 stateless TEE service it is also the service's identity, because the verifier
@@ -143,31 +144,33 @@ state, changed by authority transactions that validators finalize, and the
 validator set is chain state too. The measurement a verifier should accept is a
 function of time, and the verifier learns it only by following consensus.
 
-So the network has one identity and a succession of values. `network_id` names
-the lineage and never changes: it commits to the founding artifacts. The head —
-the finalized header at height h, named by its digest — is the network's value
-at h, and every head descends from the founding through finalized blocks.
-Holding `network_id` tells a verifier which lineage it wants; knowing where that
-lineage stands now takes a finalized head.
+So the network has one identity and a succession of values. The identity
+never changes, and `network_id` names it by committing to the network's first
+value: the founding artifacts in the manifest. Every later value is a finalized
+head — the header at height h, named by its digest — and descends from the
+founding through finalized blocks. A value never changes either: a new block is
+a new value, not an edit of the last one. Holding `network_id` tells a verifier
+which network it wants; knowing the network's value now takes a finalized head.
 
-| Identity | Names | Fixed or evolves | Checked by |
+| Name | What it names | Identity or value | Checked by |
 | --- | --- | --- | --- |
-| `network_id` | the network's lineage | fixed | SHA-256 of the manifest |
-| head | the network's value at h | every block | the finality certificate, against V at h |
-| measurement → admission ID | the code a box runs | per image build | a quote, against P at h |
-| PCK / vTPM AK | the platform that signed a quote | per machine | Intel and Azure collateral |
-| Ed25519 + BLS pubkeys | a validator | per validator | V at h |
-| `tx_io_pk@(root_version, epoch)` | where clients encrypt | per rotation or epoch bump | the pin, then later key records |
+| `network_id` | the network | identity, fixed for its lifetime | SHA-256 of the manifest |
+| head digest | the network's value at h | value, a new one every block | the finality certificate, against V at h |
+| measurement → admission ID | the code a box runs | value, one per image build | a quote, against P at h |
+| PCK / vTPM AK | the platform that signed a quote | identity, one per machine | Intel and Azure collateral |
+| Ed25519 + BLS pubkeys | a validator | identity, one per validator | V at h |
+| `tx_io_pk@(root_version, epoch)` | where clients encrypt | value of the key series, per rotation or epoch bump | the pin, then later key records |
 
-The control plane at h is three values of the head: the validator set V_h, the
-accepted measurement set P_h, and the service key K_h. A box is a member at h
-while its measurement is in P_h and it holds the `root_key` K_h commits to; a
-validator's keys are also in V_h.
+The control plane at h is three parts of the network's value at h: the
+validator set V_h, the accepted measurement set P_h, and the service key K_h. A
+box is a member at h while its measurement is in P_h and it holds the
+`root_key` K_h commits to; a validator's keys are also in V_h.
 
-![Identities over time: network_id commits to each lane's initial value; the
-validator set, the accepted images and the service key each change by finalized
-blocks; machines are members while their image is accepted; and each client
-model enters the timeline at a different point](diagrams/identities-over-time.svg)
+![One identity, a succession of values: network_id commits to each lane's
+initial value; the validator set, the accepted images and the service key each
+take a new value in a finalized block; machines are members while their image
+is accepted; and each client model enters the timeline at a different
+point](diagrams/network-identity-and-values.svg)
 
 **Each lane starts in the genesis of the state machine that evolves it.** V_0 is
 the summit genesis validator set, moved on by summit's finalized epoch

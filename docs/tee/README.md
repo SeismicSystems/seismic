@@ -17,7 +17,8 @@ A TEE network answers three questions, in this order:
    artifact. Every attested exchange binds it, so evidence minted on one
    network can never verify on another.
 2. **Where did the founding artifacts come from?** Validator keys are born
-   inside TEEs before the network has an identity, and the identity pins them.
+   inside TEEs before `network_id` exists, and `network_id` commits to their
+   public halves through the summit genesis.
 3. **Who is let in, and who decides?** A joining node asks an existing node for
    `root_key`; the responder reads the answer off the chain.
 
@@ -35,16 +36,18 @@ the summit chain block by block, and the three parties that rely on it — a
 client, an operator admitting an image, and a node joining at
 boot](diagrams/trust-chain.svg)
 
-The trust chain shows what commits to what; how those values move over time,
-and where a client can enter, is [identities, and how they
-evolve](trust-model.md#identities-and-how-they-evolve).
+The trust chain shows what commits to what; how the network's value moves on
+from its founding, and where a client can enter, is [one identity, a succession
+of values](trust-model.md#one-identity-a-succession-of-values).
 
-**Identity.** `network-manifest.json` is nine fields naming the network (twelve
-once the root-key pin lands), and
-`network_id` is the SHA-256 of its exact bytes. It pins the reth genesis, the
-complete summit genesis, and the bootstrap measurement policy, so a joiner that
-checks one hash has checked every founding artifact. The manifest is written
-once and travels as opaque bytes to every consumer.
+**Identity.** `network_id` names the network: the SHA-256 of the exact bytes of
+`network-manifest.json`, nine fields (twelve once the root-key pin lands) that
+commit to the network's first value. It pins the reth genesis, the complete
+summit genesis, and the bootstrap measurement policy, so a joiner that checks
+one hash has checked every founding artifact. Every later value is a finalized
+head ([one identity, a succession of
+values](trust-model.md#one-identity-a-succession-of-values)). The manifest is
+written once and travels as opaque bytes to every consumer.
 
 **Founding.** Validator keys have to exist before the manifest, or the manifest
 cannot pin them. So boxes boot the measured image identity-free, a key-holder
@@ -59,9 +62,10 @@ it minted at boot if the manifest pins it or fetches the key and checks it
 against the pin, LUKS opens, and the node's own services start.
 
 **Membership is holding `root_key`.** It is network-shared, minted once before
-the manifest so that `network_id` commits to it, and handed over only through
-an attested handshake whose transcript binds `network_id`. Consensus membership — a seat in the validator set — is a separate
-gate, held by the summit genesis and the deposit path.
+the manifest so that `network_id` commits to it through `tx_io_pk@0`, and
+handed over only through an attested handshake whose transcript binds
+`network_id`. Consensus membership — a seat in the validator set — is a
+separate gate, held by the summit genesis and the deposit path.
 
 **Live policy is on chain.** The responder turns the joiner's verified
 measurements into a `bytes32` admission ID and asks `MeasurementRegistry` on its

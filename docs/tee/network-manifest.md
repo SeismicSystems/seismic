@@ -48,6 +48,8 @@ stack pins — and the two must agree at all times.
 - [The v1 fields](#the-v1-fields)
 - [`network_id` = SHA-256 of the exact bytes](#network_id--sha-256-of-the-exact-bytes)
 - [Validation gates](#validation-gates)
+  - [What `eth.genesis_hash` covers](#what-ethgenesis_hash-covers)
+  - [What `summit.genesis_config_digest` covers](#what-summitgenesis_config_digest-covers)
 - [Consumers of `network_id`](#consumers-of-network_id)
 - [Lifecycle](#lifecycle)
 - [What the manifest cannot hold](#what-the-manifest-cannot-hold)
@@ -57,9 +59,12 @@ stack pins — and the two must agree at all times.
 
 ## Summary
 
-- **The artifact is the identity.** `network_id` is the SHA-256 of the file's
-  bytes, exactly as `sha256sum` computes it. Any holder of the bytes derives the
-  id with no schema, no parser, and no canonical-JSON spec to reimplement.
+- **The artifact names the network.** `network_id` is the SHA-256 of the
+  file's bytes, exactly as `sha256sum` computes it. Any holder of the bytes
+  derives the id with no schema, no parser, and no canonical-JSON spec to
+  reimplement. The bytes commit to the network's first value; every later
+  value is a finalized head
+  ([one identity, a succession of values](trust-model.md#one-identity-a-succession-of-values)).
 - **It is what a joiner can check before it can check anything else.** Reading
   Seismic state at all requires `root_key`, which is exactly what a joining node
   is asking for, so the manifest is its only pre-chain anchor.
@@ -130,7 +135,7 @@ documentation is this table.
 | `name`                               | string      | Human label. Intentionally part of the hash: the stated intent is part of the identity.                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `eth.chain_id`                       | int         | Must equal `config.chainId` inside the reth genesis JSON. Not derivable from `eth.genesis_hash` — the genesis hash covers the header, and `config` lives outside it — so the chain id is an independent commitment. Separates transaction replay (EIP-155).                                                                                                                                                                                                                                    |
 | `eth.genesis_hash`                   | 32-byte hex | `keccak(rlp(header(reth-genesis.json)))`, computed offline by `seismic-reth genesis-hash` down the same parse path a booting node takes. Commits to the full genesis alloc: the registry's runtime code and initial policy storage, the other predeploys, prefunds. Does not commit to the file's `config` section — see [Validation gates](#validation-gates).                                                                                                                                        |
-| `summit.genesis_config_digest`       | 32-byte hex | Summit's own `config_digest` over the complete `summit-genesis.toml`: SHA-256 over its domain-prefixed SSZ, computed offline by `summit genesis digest`. Covers the consensus parameters and, per validator, both pubkeys and the withdrawal credentials; excludes `ip_address`, which is topology rather than identity. The same value domain-separates every consensus signature, so live nodes already enforce agreement on everything it covers ([network founding](network-founding.md)). |
+| `summit.genesis_config_digest`       | 32-byte hex | Summit's own `config_digest` over the complete `summit-genesis.toml`: SHA-256 over its domain-prefixed SSZ, computed offline by `summit genesis digest`. Covers the consensus parameters and, per validator, both pubkeys and the withdrawal credentials; excludes `ip_address`, which is topology rather than identity. The same value domain-separates every consensus signature, so live nodes already enforce agreement on everything it covers ([what it covers](#what-summitgenesis_config_digest-covers)). |
 | `summit.namespace`                   | string      | The BLS signature domain separator. Must equal the genesis file's value; duplicated here so a verifier need not parse TOML. Distinct namespaces are what stop a validator key active on two chains from producing votes valid on both.                                                                                                                                                                                                                                                         |
 | `measurements.bootstrap_policy_hash` | 32-byte hex | SHA-256 of the bootstrap policy document's bytes — the founding accepted measurement set, promoted from seismic-images' `make measure` output. The document format is the [attestation crate's](https://github.com/SeismicSystems/attested-tls/blob/main/crates/attestation/README.md) list of per-image measurement records, one file covering every attestation type.                                                                                                                        |
 | `measurements.contracts.registry`    | address     | The measurement registry, duplicated from the genesis alloc for verifiers that do not hold the genesis file. Grouping it under `measurements` is deliberate: this contract's storage and the bootstrap document are two representations of one measurement set.                                                                                                                                                                                                                                |
@@ -248,17 +253,83 @@ boot:
   genesis does the rest: reaching a policy the network never authorized then
   needs the authority key, not an edited JSON file.
 
-**What `eth.genesis_hash` covers, and what it does not.** The genesis hash
-commits to the header. The genesis file's `config` section — fork activation
-times, the blob schedule, the deposit contract address — lives outside the
-header, so two genesis files differing only in a future-dated fork time hash
-identically. The manifest deliberately leaves `config` unpinned: the fork
-schedule is operator configuration, not a network-defining commitment
+### What `eth.genesis_hash` covers
+
+The genesis hash commits to the header. The genesis file's `config` section —
+fork activation times, the blob schedule, the deposit contract address — lives
+outside the header, so two genesis files differing only in a future-dated fork
+time hash identically. The manifest deliberately leaves `config` unpinned: the
+fork schedule is operator configuration, not a network-defining commitment
 ([Design rationale](#design-rationale)). Only `config.chainId` is committed,
 through `eth.chain_id`. Keeping fork times in the config POST rather than in
 the image is what lets one measured hardfork image serve devnet, testnet, and
 mainnet on different clocks, and a hardfork changes no manifest field, so
 `network_id` survives every fork.
+
+### What `summit.genesis_config_digest` covers
+
+`summit.genesis_config_digest` is summit's own `config_digest`: the
+SHA-256 over summit's domain-prefixed SSZ serialization of the genesis. That
+covers all consensus parameters and, per validator, the ed25519 node pubkey,
+the BLS consensus pubkey, and the withdrawal credentials. It deliberately
+**excludes IPs**, exactly as summit's own code does: the `ip_address` field
+is annotated "network topology, not consensus identity" and skipped from the
+digest. Configure delivers each box's current IP in the genesis it POSTs —
+peers have to be wired somewhere — but IPs are operational data, never
+identity: a wrong IP is a liveness problem only, since peers authenticate
+each other by the pinned ed25519 keys.
+
+In file form, with what the digest covers on each line:
+
+```toml
+# abridged founding summit-genesis.toml
+eth_genesis_hash  = "0x78ab9057…"      # pinned
+leader_timeout_ms = 2000               # pinned
+namespace         = "_SUMMIT"          # pinned
+validator_minimum_stake = 32000000000  # pinned
+# …remaining consensus params: same story…
+
+[[validators]]
+node_public_key        = "1be3cb06…"                                   # pinned
+consensus_public_key   = "a6f61154…"                                   # pinned
+withdrawal_credentials = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"  # pinned
+ip_address             = "20.85.237.59:18551"                          # not pinned — topology, never identity
+
+# …one [[validators]] entry per founder…
+```
+
+Assemble computes the digest by shelling out to `summit genesis digest`,
+exactly parallel to how `eth.genesis_hash` uses `seismic-reth genesis-hash`.
+That makes the genesis file mere transport: comments and delivered-IP refreshes
+never touch identity, and the pin is the exact value that already
+domain-separates consensus. Summit derives its signing and P2P domain from
+`config_digest`, so a node running a divergent genesis cannot even complete
+handshakes.
+
+**The digest is sensitive to spelling and order.** It hashes each key field as
+its hex *string* and the validator list in file order: summit parses
+`0x`-prefixed and bare hex alike but digests them differently, and nothing in
+the digest enforces a sorted list. So the canonical form comes from summit
+itself. Assemble has `summit genesis set-validators` write the validator list,
+sorted by decoded node key, and configure's IP splice is a textual rewrite of
+the `ip_address` lines that re-parses the result to confirm nothing else
+changed. Digesting decoded key bytes and rejecting unsorted lists is
+[SEI-298](https://linear.app/seismic-systems/issue/SEI-298): a domain-tag
+bump, free before any permanent network pins a digest and a fork after.
+
+**What is safe to change in the file.** Because the pin covers parsed content,
+not bytes, the committed file can carry comments without changing the
+network's identity. Operators never hand-edit IPs: configure splices each
+box's current IP into the copy it POSTs every boot, the same per-boot
+lifecycle as reth's bootnodes. The committed file is a founding-era snapshot,
+and any IP-updated variant verifies, because the digest ignores IPs. Genesis
+IPs only ever matter for founders at t=0: summit replaces committee IPs with
+its `--bootstrappers` input for ingress when one is given, and a late
+joiner's own key is not in the genesis at all. Taking topology out of the
+genesis file entirely is a summit schema change,
+[summit#447](https://github.com/SeismicSystems/summit/issues/447), with the
+deploy follow-through in
+[SEI-297](https://linear.app/seismic-systems/issue/SEI-297).
 
 ## Consumers of `network_id`
 
@@ -387,7 +458,8 @@ function of it, already served to TxSeismic clients, so no separate commitment
 construction is needed. It is also the key a client encrypts to, which a hash
 of `root_key` would not be.
 
-`root_key` is minted before the manifest so that `network_id` can commit to it.
+`root_key` is minted before the manifest so that `network_id` can commit to it,
+through `tx_io_pk@0`.
 Every founding box's custodian mints a candidate at identity-free boot, harvest
 quotes each candidate's `tx_io_pk@0` alongside the summit pubkeys, and assemble
 pins the first box by name in the manifest's `root_key` section, so
@@ -483,6 +555,41 @@ cover without touching the manifest. And no hardware receipt records which
 schedule a node booted; extending a runtime measurement register with the
 genesis bytes would add one, as auditability rather than as a correctness
 mechanism.
+
+**Summit's `config_digest` rather than the file bytes** ([what summit's digest
+covers](#what-summitgenesis_config_digest-covers)). Hashing
+`sha256(genesis.toml)` makes verification a `sha256sum`, but every byte
+becomes identity — including each validator's `ip_address` — and deploy
+becomes the sole emitter of byte-canonical TOML forever. An IP change during
+founding would force a re-found; a founder's IP change after launch would
+leave the pinned file permanently stale. The usual argument for raw-byte
+hashing, avoiding a canonicalization that several languages must implement
+identically, does not apply: `config_digest` has exactly one implementation,
+summit's, consumed by shell-out. Not pinning the summit genesis at all is not
+an option either: the domain separation makes *live nodes* agree with each
+other, but only the pin lets a joiner verify the founding set is the right,
+complete one before trusting checkpoints.
+
+**Summit's tuning knobs are network identity, for now** ([what summit's digest
+covers](#what-summitgenesis_config_digest-covers)). Ethereum separates
+these tiers architecturally: consensus-critical parameters live in the
+chainspec and beacon preset (and the beacon chain, like summit, has genesis
+validators inside its pinned genesis state root, with signature domains
+derived from `(fork_version, genesis_validators_root)` — the same move as
+`chain_domain = f(config_digest)`), while node-local tuning (timeouts, peer
+limits, message sizes) never enters the spec at all and stays client flags,
+freely different per node. Summit welds both tiers into one hashed genesis
+file, so its liveness knobs (`leader_timeout_ms`, `max_message_size_bytes`,
+…) are network identity: retuning one is a new domain, effectively a new
+network. Most *numeric consensus* parameters — stake bounds, epoch length,
+deposit and withdrawal caps — are a third tier, already chain-governed via
+`ProtocolParams.sol`, with genesis pinning only their initial values: the
+same pinned-bootstrap, governed-live layering as the measurement policy. The
+truly frozen fields are precisely the tuning knobs. If summit adopts the
+Ethereum-shaped split, moving the knobs into per-boot config the way
+[summit#447](https://github.com/SeismicSystems/summit/issues/447) moves
+topology, the manifest's coverage tracks it automatically, because it pins
+summit's own digest rather than defining its own.
 
 **The pin inside the manifest rather than in an attested addendum** ([the
 root-key pin](#the-root-key-pin)). The earlier design minted `root_key` on the
