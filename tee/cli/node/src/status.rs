@@ -52,7 +52,7 @@ pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(180);
 /// restart stays idle forever, so this bounds the wait instead of hanging.
 pub const IDLE_GRACE: Duration = Duration::from_secs(60);
 /// How long a *continuous* error status must persist before it is terminal.
-/// `setup-persistent-luks` runs under `Restart=on-failure` and retries
+/// `persistent-luks-setup` runs under `Restart=on-failure` and retries
 /// transient failures (data disk not yet attached, vTPM not ready, keyfile not
 /// written yet), writing `error` to the status file on each failed attempt and
 /// flipping back to `provisioning` on the next. So a lone `error` reading is

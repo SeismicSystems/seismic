@@ -667,7 +667,7 @@ same subset, compares, and opens with `--header` pointing at that verified copy
 — which closes the window between checking the header and configuring dm-crypt.
 A mismatch refuses the mount. Tokens are outside the MAC's scope, so storing
 the token cannot invalidate it
-([`setup-persistent-luks`](https://github.com/SeismicSystems/seismic-images/blob/seismic/modules/seismic/mkosi.extra/usr/bin/setup-persistent-luks)).
+([`persistent-luks-setup`](https://github.com/SeismicSystems/seismic-images/blob/seismic/modules/seismic/mkosi.extra/usr/bin/persistent-luks-setup)).
 
 First boot also wipes the whole device to seed the integrity tags, which takes
 an hour or more on a multi-TB disk. The script publishes byte progress to tmpfs

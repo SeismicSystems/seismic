@@ -31,8 +31,8 @@ for every long-lived node secret.
 | `TxIo` | `tx-io` | secp256k1 secret key (TEE side of transaction ECDH) | block executor, RPC signed reads |
 | `RngPrecompile` | `rng-precompile` | 64 bytes of IKM for the RNG precompile | RNG precompile (0x64) |
 | `Snapshot` | `snapshot` | AES-256-GCM key for state snapshots | snapshot encrypt/decrypt |
-| `Storage` | `storage` | LUKS volume unlock key (epoch 0 only) | setup-persistent-luks |
-| `LuksHeaderMac` | `luks-header-mac` | HMAC key for LUKS2 header verification (epoch 0 only) | setup-persistent-luks |
+| `Storage` | `storage` | LUKS volume unlock key (epoch 0 only) | persistent-luks-setup |
+| `LuksHeaderMac` | `luks-header-mac` | HMAC key for LUKS2 header verification (epoch 0 only) | persistent-luks-setup |
 
 ## Layer 2 — ECDH shared secrets
 
