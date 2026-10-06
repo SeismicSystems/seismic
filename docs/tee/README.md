@@ -53,11 +53,8 @@ written once and travels as opaque bytes to every consumer.
 cannot pin them. So boxes boot the measured image identity-free, a boot-time
 oneshot generates summit keypairs into guest RAM, the attestation service
 proves them with a TDX quote, and the deploy tool verifies those quotes before
-minting `network_id`. The oneshot and the attestation service's part are
-decided, not yet built
-([SEI-769](https://linear.app/seismic-systems/issue/SEI-769)); today a
-`summit-key-holder` daemon generates the keys and quotes them. Founding is
-rare and supervised; joining and verifying happen forever.
+minting `network_id`. Founding is rare and supervised; joining and verifying
+happen forever.
 
 **The boot chain is config-gated.** Nothing on a node starts until the operator
 POSTs its configuration. That one POST carries the manifest and both genesis
@@ -93,11 +90,6 @@ repo, plus the image that measures them:
 | `custodian` | Owns `root_key`. No network listener, unix socket only; wraps and unwraps against verified handshake bindings. |
 | `attestation-service` | The only TPM user: mints every quote, the founding harvest's included, runs both halves of the root-key handshake, and makes the admission decision. |
 | [seismic-images](https://github.com/SeismicSystems/seismic-images) | The measured TDX image, and `make measure`, whose output becomes the accepted measurement set. Its units carry summit's keys to their keystore: summit's own `keys generate` at boot, then a persist script once LUKS opens. |
-
-Until SEI-769 is built, a fourth enclave service, `summit-key-holder`, holds
-summit's keys in its memory, serves the founding harvest and persists the
-keys, and the attestation service mints only the quotes it needs after the
-config POST.
 
 ## The docs
 

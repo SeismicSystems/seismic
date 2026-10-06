@@ -349,7 +349,7 @@ pub fn consensus_key(byte: &str) -> String {
 
 /// Evidence in the backend's own serialization, claiming Azure TDX: a
 /// stand-in quote (`[1, 2, 3]` as base64) under the platform metadata
-/// the holder serves. Parses as an `AttestationExchangeMessage`; never
+/// the harvest endpoint serves. Parses as an `AttestationExchangeMessage`; never
 /// verifies.
 pub fn azure_evidence() -> serde_json::Value {
     json!({
@@ -370,7 +370,7 @@ pub fn no_attestation_evidence() -> serde_json::Value {
     json!({"attestation_evidence": null})
 }
 
-/// A harvest record as the harvest builds it from the holder's answer.
+/// A harvest record as `harvest` builds it from the endpoint's answer.
 pub fn record(node_key: &str, consensus_byte: &str) -> serde_json::Value {
     json!({
         "harvest_nonce": "11".repeat(32),

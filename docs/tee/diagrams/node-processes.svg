@@ -103,10 +103,10 @@
   <text class="tmpfs-label" x="140" y="862">/run — tmpfs, guest RAM</text>
   <g class="node dir" transform="translate(160,880)">
     <rect width="400" height="190" rx="10"/>
-    <text class="name" x="200" y="38">/run/summit-keys</text>
-    <text class="sub" x="200" y="72">node_key.pem · consensus_key.pem</text>
-    <text class="sub" x="200" y="96">0600, owned by summit</text>
-    <text class="sub" x="200" y="136">public keys: a separate file</text>
+    <text class="name" x="200" y="38">/run/seismic/summit</text>
+    <text class="sub" x="200" y="72">keys/: node_key.pem · consensus_key.pem</text>
+    <text class="sub" x="200" y="96">0700, summit only</text>
+    <text class="sub" x="200" y="136">public-keys.json, which</text>
     <text class="sub" x="200" y="160">the attestation service reads</text>
   </g>
   <g class="node dir" transform="translate(760,880)">

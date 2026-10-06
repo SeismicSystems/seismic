@@ -233,7 +233,7 @@ enum Command {
         after_help = "configure takes one of three shapes: --bootnode joins one node to a live \
                       network; --genesis-node founds a cohort, after network assemble; \
                       --check re-asserts a founded cohort's launch — after a reboot or a \
-                      re-image, or when its holders had not settled at launch — with nothing \
+                      re-image, or when some of its boxes had not settled at launch — with nothing \
                       configured."
     )]
     Node {
