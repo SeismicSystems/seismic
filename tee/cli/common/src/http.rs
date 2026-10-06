@@ -16,9 +16,13 @@ pub const TDX_INIT_PORT: u16 = 8080;
 /// The attestation service's JSON-RPC: LUKS provisioning status, deploy
 /// verification evidence, the root-key handshake.
 pub const ATTESTATION_RPC_PORT: u16 = 7878;
-/// summit-key-holder, which serves `{pubkeys, quote}` until the box takes its
-/// config POST. Plain HTTP for the same reason as tdx-init: pre-certificate.
-pub const SUMMIT_KEY_HOLDER_PORT: u16 = 7879;
+/// The attestation service's founding harvest: summit's pubkeys for the life of
+/// the boot, and a quote over them until the config POST delivers the network
+/// manifest. Plain HTTP for the same reason as tdx-init: pre-certificate.
+/// The same process as [`ATTESTATION_RPC_PORT`], on a port of its own because
+/// the NSG filters only by port: this one is operator-only, that one is open
+/// to anyone.
+pub const HARVEST_PORT: u16 = 7879;
 
 /// How long any single request waits before it is treated as unreachable.
 ///
@@ -47,9 +51,9 @@ pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 pub const USER_AGENT: &str = concat!("seismic-tee-cli/", env!("CARGO_PKG_VERSION"));
 
 /// The client the plain-HTTP requests go out on: tdx-init's config receiver
-/// and summit-key-holder, the endpoints that speak HTTP rather than JSON-RPC.
-/// JSON-RPC endpoints are reached through [`crate::rpc`] instead, with the
-/// same user agent and request timeout.
+/// and the founding harvest, the endpoints that speak HTTP rather than
+/// JSON-RPC. JSON-RPC endpoints are reached through [`crate::rpc`] instead,
+/// with the same user agent and request timeout.
 pub fn client() -> Result<reqwest::Client> {
     Ok(reqwest::Client::builder()
         .user_agent(USER_AGENT)
@@ -69,9 +73,10 @@ impl NodeDescriptor {
         format!("http://{}:{ATTESTATION_RPC_PORT}", self.public_ip)
     }
 
-    /// The summit-key-holder endpoint the founding harvest polls.
-    pub fn key_holder_url(&self) -> String {
-        format!("http://{}:{SUMMIT_KEY_HOLDER_PORT}", self.public_ip)
+    /// The attestation service's founding-harvest endpoint, which `harvest`
+    /// and the launch checks poll.
+    pub fn harvest_url(&self) -> String {
+        format!("http://{}:{HARVEST_PORT}", self.public_ip)
     }
 
     /// The node's public Ethereum JSON-RPC: nginx proxies `/rpc` to reth,
@@ -100,7 +105,7 @@ mod tests {
 
         assert_eq!(d.tdx_init_url(), "http://203.0.113.7:8080/");
         assert_eq!(d.attestation_rpc_url(), "http://203.0.113.7:7878");
-        assert_eq!(d.key_holder_url(), "http://203.0.113.7:7879");
+        assert_eq!(d.harvest_url(), "http://203.0.113.7:7879");
         assert_eq!(d.eth_rpc_url(), "https://az-1.seismicdev.net/rpc");
     }
 

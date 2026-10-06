@@ -4,10 +4,6 @@
 config-gated boot chain, three networking planes, and the attested root-key
 handshake — is what a four-node network runs today. The custody split landed in
 enclave #208–#219, with seismic-reth #435–#444 and seismic-images #43–#44.
-The attestation service as the TPM's only user, and summit's keys reaching
-their keystore through setup units, are decided, not yet built
-([SEI-769](https://linear.app/seismic-systems/issue/SEI-769)); today a
-`summit-key-holder` daemon holds summit's keys and mints the harvest quote.
 Several questions around it are still open — recovery, rotation, the joiner's
 appraisal, where summit's database belongs — and each is stated where it bites,
 with the current default named.
@@ -144,11 +140,7 @@ covers every boot of every node. The founding-only steps are marked, the
 genesis node's first boot differs from every other boot at one step, and a
 restart differs from a first boot only in what the disk setup and
 `summit-persist` find on disk. The founder's side of founding is walked
-through in [network founding](network-founding.md#the-founding-flow). The
-chain shows the decided design for summit's keys
-([SEI-769](https://linear.app/seismic-systems/issue/SEI-769)); today a
-`summit-key-holder` daemon holds them and mints the harvest quote, and the
-attestation service starts after `tdx-init`.
+through in [network founding](network-founding.md#the-founding-flow).
 
 "(oneshot)" marks units that run to completion once per boot: each one's
 lifeline ends where it exits, and a "systemd starts" note marks where it
@@ -171,7 +163,7 @@ sequenceDiagram
 
     Note over O: provision: pulumi up —<br/>the box boots the measured image
     par at boot, before any configuration
-        Note over KG: summit keys generate<br/>into /run/summit-keys
+        Note over KG: summit keys generate<br/>into /run/seismic/summit/keys
         destroy KG
         KG-)AS: public-keys file
     and
@@ -407,7 +399,7 @@ It lives in exactly one process:
 
 ```
 seismic-attestation-service (user: attestation)
-  · JSON-RPC on :7878; holds no key material
+  · JSON-RPC on :7878, the founding harvest on :7879; holds no key material
   · connects out to /run/seismic/custodian/custodian.sock for key operations
 
 seismic-custodian-service (user: custodian)

@@ -1,11 +1,7 @@
 # Network Founding <!-- omit in toc -->
 
 **Status**: shipped. The one config POST per box and the harvest → assemble →
-configure flow are how the four-node devnet was founded. How summit's keys
-reach their keystore is decided, not yet built
-([SEI-769](https://linear.app/seismic-systems/issue/SEI-769)): today one
-`summit-key-holder` daemon generates the keys, holds them in its memory, mints
-the harvest quote itself and persists them.
+configure flow are how the four-node devnet was founded.
 
 - [Summary](#summary)
 - [The founding flow](#the-founding-flow)
@@ -145,12 +141,14 @@ while a restart of `summit.service` alone does not.
 | `summit.service` | the service | after `summit-persist`, which it requires |
 
 - **`summit-keygen` writes the keys at boot.** It runs
-  `summit keys generate --key-store-path /run/summit-keys --no-overwrite` as
+  `summit keys generate --key-store-path /run/seismic/summit/keys --no-overwrite` as
   the summit user, and depends on nothing the POST produces. Summit writes
   both keypairs in its own keystore format (directory 0700, files 0600, owned
   by `summit`). A step after it writes their public halves, from
-  `summit keys show`, to a file the attestation service reads. `show` fails on
-  a half-written set, which fails the unit.
+  `summit keys show --json`, to the public-keys file
+  `/run/seismic/summit/public-keys.json`, which only summit's setup units
+  write and the attestation service reads. `show` fails on a half-written
+  set, which fails the unit.
 - **The key files are their own write-once marker.** With `--no-overwrite`,
   summit exits without writing when either key file exists, so every later
   run in the same boot is a no-op: a restart of `summit.target`, which re-runs
@@ -194,7 +192,7 @@ while a restart of `summit.service` alone does not.
   once per boot rather than at every summit restart, and so only it can write
   the keystore.
 - **Summit only reads its keystore.** `summit.service` gets
-  `/persistent/summit/keys` read-only and `/run/summit-keys` inaccessible.
+  `/persistent/summit/keys` read-only and `/run/seismic/summit/keys` inaccessible.
   It has no keygen step of its own, and must never gain one as a fallback:
   one would silently mint fresh, unpinned keys, deferring the failure from a
   loud startup error to a launch-check mismatch.

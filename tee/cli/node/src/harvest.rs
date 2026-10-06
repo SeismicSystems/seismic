@@ -4,13 +4,13 @@
 //! seismic-tee node harvest tee/networks/devnet-3
 //! ```
 //!
-//! A founding cohort boots identity-free: each box's `summit-key-holder`
-//! generates its summit keypairs in RAM at boot and serves
+//! A founding cohort boots identity-free: each box generates its summit
+//! keypairs into tmpfs at boot, and its attestation service serves
 //! `GET /v1/quote?nonce=…` → `{pubkeys, evidence}` on `:7879` until the box
 //! accepts its config POST. Harvest is the step between provisioning and
-//! `assemble`: it polls every box's holder, fetches its pubkeys plus a TDX
-//! quote over a fresh per-box nonce (`report_data` binds the nonce and both
-//! pubkeys, so a quote replayed from an earlier harvest can't satisfy it),
+//! `assemble`: it polls every box's harvest endpoint, fetches its pubkeys plus
+//! a TDX quote over a fresh per-box nonce (`report_data` binds the nonce and
+//! both pubkeys, so a quote replayed from an earlier harvest can't satisfy it),
 //! DCAP-verifies each quote against the network's intended image
 //! measurements, and archives the verified facts under `inputs/harvest/` — the
 //! provenance `assemble` pins the founding validator set from.
@@ -60,21 +60,21 @@ use serde_json::{Value, json};
 
 use crate::verify::DEFAULT_ATTESTATION_TYPE;
 
-/// Holder-readiness polling. The holder starts at network-online — well
-/// before the config POST — so an unreachable box is normally just still
+/// Harvest-endpoint polling. The attestation service serves it from boot —
+/// well before the config POST — so an unreachable box is normally just still
 /// booting; same cadence as the other cohort gathers (bootnodes, genesis).
 pub const POLL_INTERVAL: Duration = Duration::from_secs(5);
 pub const HARVEST_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 pub const WAIT_LOG_INTERVAL: Duration = Duration::from_secs(30);
 
 /// One cohort box: its node name (its key in the descriptor map, and its
-/// filename in `inputs/harvest/`), where its holder is, and the fresh 32-byte
-/// nonce minted for this run's quote request.
+/// filename in `inputs/harvest/`), where its harvest endpoint is, and the
+/// fresh 32-byte nonce minted for this run's quote request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HarvestTarget {
     pub name: String,
-    /// `http://<ip>:7879`, or wherever the holder answers.
-    pub holder_url: String,
+    /// `http://<ip>:7879`, or wherever the harvest endpoint answers.
+    pub harvest_url: String,
     pub nonce: [u8; 32],
 }
 
@@ -84,7 +84,7 @@ impl HarvestTarget {
     pub fn new(name: &str, descriptor: &NodeDescriptor) -> Self {
         Self {
             name: name.to_string(),
-            holder_url: descriptor.key_holder_url(),
+            harvest_url: descriptor.harvest_url(),
             nonce: rand::random(),
         }
     }
@@ -94,7 +94,7 @@ impl HarvestTarget {
     }
 }
 
-/// What a holder served: the pubkeys in summit's keystore wire spelling and
+/// What a box served: the pubkeys in summit's keystore wire spelling and
 /// the evidence, verbatim.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Quote {
@@ -110,19 +110,19 @@ pub enum FetchError {
     WindowClosed(String),
     /// Any other 4xx: not a boot-tail condition. Burns the harvest.
     Rejected(u16, String),
-    /// A malformed response body: retrying can't fix a holder serving the
+    /// A malformed response body: retrying can't fix an endpoint serving the
     /// wrong shape. Burns the harvest.
     Malformed(String),
     /// Transport failure or 5xx: the normal boot tail, retried.
     Retry(String),
 }
 
-/// Fetch one box's `{pubkeys, evidence}` from its summit-key-holder.
+/// Fetch one box's `{pubkeys, evidence}` from its harvest endpoint.
 pub async fn fetch_quote(
     client: &reqwest::Client,
     target: &HarvestTarget,
 ) -> Result<Quote, FetchError> {
-    let url = format!("{}/v1/quote", target.holder_url);
+    let url = format!("{}/v1/quote", target.harvest_url);
     let response = client
         .get(&url)
         .query(&[("nonce", target.nonce_hex())])
@@ -175,13 +175,14 @@ pub async fn fetch_quote(
     })
 }
 
-/// Poll every target's holder until each serves its quote, or `timeout`.
+/// Poll every target's harvest endpoint until each serves its quote, or
+/// `timeout`.
 ///
 /// Round-robin like the other cohort gathers, so a slow box doesn't serialize
 /// behind the others. Transport errors and 5xx are the normal boot tail —
 /// retried until the deadline, then aborted with a per-box report. A closed
 /// quote window (410) or any other 4xx burns the harvest immediately: waiting
-/// can't fix a box that already took its config POST, or a holder that
+/// can't fix a box that already took its config POST, or an endpoint that
 /// rejects well-formed requests.
 pub async fn collect_quotes(
     client: &reqwest::Client,
@@ -211,9 +212,9 @@ pub async fn collect_quotes(
                     target.name
                 ),
                 Err(FetchError::Rejected(status, url)) => bail!(
-                    "{}: holder rejected the quote request (HTTP {status} from {url}) — not a \
-                     boot-tail condition; check that the image and this CLI agree on the holder \
-                     API.",
+                    "{}: the harvest endpoint rejected the quote request (HTTP {status} from \
+                     {url}) — not a boot-tail condition; check that the image and this CLI \
+                     agree on the harvest API.",
                     target.name
                 ),
                 Err(FetchError::Malformed(message)) => bail!("{}: {message}", target.name),
@@ -244,7 +245,8 @@ pub async fn collect_quotes(
                 })
                 .collect();
             bail!(
-                "{} box(es) never served a founding quote after {}s (holder not up?):\n{}",
+                "{} box(es) never served a founding quote after {}s (harvest endpoint not \
+                 up?):\n{}",
                 pending.len(),
                 timeout.as_secs(),
                 listing.join("\n")
@@ -294,8 +296,8 @@ pub fn assert_unique_keys(quotes: &BTreeMap<String, Quote>) -> anyhow::Result<()
     Ok(())
 }
 
-/// One box's harvest record: the nonce this run minted, the pubkeys its holder
-/// served, and the evidence whose `report_data` binds all three.
+/// One box's harvest record: the nonce this run minted, the pubkeys its harvest
+/// endpoint served, and the evidence whose `report_data` binds all three.
 ///
 /// The verifier's input. The archive it renders carries these same four
 /// fields beside the verdict's provenance, so the document a later reader
@@ -541,10 +543,10 @@ mod tests {
         .to_string()
     }
 
-    fn target(name: &str, holder_url: &str) -> HarvestTarget {
+    fn target(name: &str, harvest_url: &str) -> HarvestTarget {
         HarvestTarget {
             name: name.to_string(),
-            holder_url: holder_url.to_string(),
+            harvest_url: harvest_url.to_string(),
             nonce: [0x11; 32],
         }
     }
@@ -685,7 +687,10 @@ mod tests {
         .await
         .unwrap_err()
         .to_string();
-        assert!(err.contains("holder rejected the quote request"), "{err}");
+        assert!(
+            err.contains("harvest endpoint rejected the quote request"),
+            "{err}"
+        );
         assert!(err.contains("HTTP 404"), "{err}");
     }
 
@@ -827,7 +832,7 @@ mod tests {
             targets.iter().map(|t| t.name.as_str()).collect::<Vec<_>>(),
             ["node-1", "node-2"]
         );
-        assert_eq!(targets[0].holder_url, "http://203.0.113.7:7879");
+        assert_eq!(targets[0].harvest_url, "http://203.0.113.7:7879");
         assert_ne!(targets[0].nonce, targets[1].nonce);
         assert_ne!(targets[0].nonce, [0; 32]);
     }

@@ -64,7 +64,7 @@
 //! harvest record — is held to the manifest's pins as it stands now. It is
 //! `assemble --check`'s sibling one step on: that holds the artifact set on
 //! disk to its inputs, this holds the live cohort to the artifact set. A
-//! founder runs it after a launch whose holders had not settled, after a
+//! founder runs it after a launch some boxes had not settled by, after a
 //! reboot or a re-image, or whenever the cohort may have drifted from what
 //! was pinned. It waits [`launch::CHECK_TIMEOUT`], not the founding's
 //! readiness window: the cohort is supposed to be up, so a node that does not
@@ -380,7 +380,7 @@ pub struct Shared {
     /// `None` under `--no-verify`.
     pub appraisal: Option<Appraisal>,
     pub dir: NetworkDir,
-    /// The plain-HTTP client: tdx-init's config receiver and the key holders.
+    /// The plain-HTTP client: tdx-init's config receiver and the harvest ports.
     /// JSON-RPC endpoints are reached through [`rpc::Client`] instead.
     pub client: reqwest::Client,
 }
@@ -971,7 +971,7 @@ pub async fn found(
 
 /// Both launch assertions, in order, each announced as it starts: every
 /// target's reth serves `genesis_hash` as block 0, then every target's
-/// holder serves its pinned founding keys. `timeout` is how long a target
+/// harvest endpoint serves its pinned founding keys. `timeout` is how long a target
 /// that does not answer is waited for — the founding's readiness window from
 /// `configure`, a short one under `--check`.
 async fn assert_launch(
@@ -986,8 +986,8 @@ async fn assert_launch(
     );
     launch::assert_cohort_genesis_hash(targets, genesis_hash, timeout, launch::POLL_INTERVAL)
         .await?;
-    println!("Launch assertion 2/2: every holder serves its pinned founding keys...");
-    launch::assert_cohort_holder_keys(client, targets, timeout, launch::POLL_INTERVAL).await?;
+    println!("Launch assertion 2/2: every box serves its pinned summit keys...");
+    launch::assert_cohort_summit_keys(client, targets, timeout, launch::POLL_INTERVAL).await?;
     println!("Launch assertions green: the cohort that launched is the cohort pinned.");
     Ok(())
 }

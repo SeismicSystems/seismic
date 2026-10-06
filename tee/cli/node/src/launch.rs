@@ -3,8 +3,8 @@
 //! Run by `configure` after every node accepts its config, these are the
 //! founding design's must-build guard: admission alone cannot catch a founder
 //! that rebooted inside the harvest → LUKS-open window, because such a box
-//! regenerates fresh RAM keys, persists *those*, and passes admission fine —
-//! launching a validator whose pinned pubkey nobody holds (a silent dead
+//! regenerates fresh keys into tmpfs, persists *those*, and passes admission
+//! fine — launching a validator whose pinned pubkey nobody holds (a silent dead
 //! consensus slot). Two checks, both against values the network manifest
 //! pins, both hard failures:
 //!
@@ -17,13 +17,14 @@
 //!    config watch uses. A *wrong* answer fails immediately — waiting can't
 //!    fix a node booted from a stale image or different genesis.
 //!
-//! 2. **holder keys** — every box's summit-key-holder (`GET /v1/keys`) must
+//! 2. **summit keys** — every box's harvest endpoint (`GET /v1/keys`) must
 //!    serve exactly the pubkeys harvested from it, i.e. the keys the
 //!    assembled genesis pins. A mismatch is retried until the deadline, not
-//!    failed fast: the holder serves this boot's RAM keys until the LUKS
-//!    volume is open and the keystore visible, so an early read can
-//!    transiently show fresh unpinned keys on a healthy node. A mismatch that
-//!    *persists* is the dead-slot case — the fix is a re-found (`pulumi
+//!    failed fast: a box serves this boot's fresh tmpfs keys until
+//!    `summit-persist`, which runs once the LUKS volume is open, republishes
+//!    the keystore's, so an early read can transiently show unpinned keys on
+//!    a healthy rebooted node. A mismatch that *persists* is the dead-slot
+//!    case — the fix is a re-found (`pulumi
 //!    destroy` + fresh `up`), never launching around it.
 //!
 //! Each node is located by its descriptor-map entry; the expected keys come
@@ -64,7 +65,7 @@ pub struct LaunchTarget {
     /// `http://<ip>:7878`.
     pub attestation_rpc_url: String,
     /// `http://<ip>:7879`.
-    pub holder_url: String,
+    pub harvest_url: String,
     pub node_public_key: String,
     pub consensus_public_key: String,
 }
@@ -75,7 +76,7 @@ impl LaunchTarget {
             name: name.to_string(),
             eth_rpc_url: descriptor.eth_rpc_url(),
             attestation_rpc_url: descriptor.attestation_rpc_url(),
-            holder_url: descriptor.key_holder_url(),
+            harvest_url: descriptor.harvest_url(),
             node_public_key: record.node_public_key.clone(),
             consensus_public_key: record.consensus_public_key.clone(),
         }
@@ -298,34 +299,34 @@ pub async fn assert_cohort_genesis_hash(
     Ok(())
 }
 
-/// Why one holder read did not produce keys.
+/// Why one `/v1/keys` read did not produce keys.
 #[derive(Debug)]
-pub enum HolderError {
+pub enum SummitKeysError {
     /// Transport/HTTP failure: callers retry a still-booting box.
     Retry(String),
-    /// A malformed response body: retrying can't fix a holder serving the
+    /// A malformed response body: retrying can't fix an endpoint serving the
     /// wrong shape.
     Malformed(String),
 }
 
-/// Fetch one box's live summit pubkeys from its summit-key-holder.
-pub async fn fetch_holder_keys(
+/// Fetch one box's live summit pubkeys from its harvest endpoint.
+pub async fn fetch_summit_keys(
     client: &reqwest::Client,
-    holder_url: &str,
-) -> Result<(String, String), HolderError> {
-    let url = format!("{holder_url}/v1/keys");
+    harvest_url: &str,
+) -> Result<(String, String), SummitKeysError> {
+    let url = format!("{harvest_url}/v1/keys");
     let response = client
         .get(&url)
         .send()
         .await
         .and_then(reqwest::Response::error_for_status)
-        .map_err(|e| HolderError::Retry(e.to_string()))?;
+        .map_err(|e| SummitKeysError::Retry(e.to_string()))?;
     let body: Value = response
         .json()
         .await
-        .map_err(|e| HolderError::Malformed(format!("{url}: response is not JSON: {e}")))?;
+        .map_err(|e| SummitKeysError::Malformed(format!("{url}: response is not JSON: {e}")))?;
     if !body.is_object() {
-        return Err(HolderError::Malformed(format!(
+        return Err(SummitKeysError::Malformed(format!(
             "{url}: expected a JSON object, got {body}"
         )));
     }
@@ -334,7 +335,7 @@ pub async fn fetch_holder_keys(
         body.get("consensus_public_key").and_then(Value::as_str),
     ) {
         (Some(node), Some(consensus)) => Ok((node.to_string(), consensus.to_string())),
-        _ => Err(HolderError::Malformed(format!(
+        _ => Err(SummitKeysError::Malformed(format!(
             "{url}: response carries no node_public_key/consensus_public_key strings: {body}"
         ))),
     }
@@ -349,16 +350,17 @@ fn describe_served(served: Option<&(String, String)>, error: Option<&String>) ->
     }
 }
 
-/// Assert every box's holder serves exactly its pinned founding keys.
+/// Assert every box's harvest endpoint serves exactly its pinned founding keys.
 ///
-/// A mismatch is retried, not failed fast: until the LUKS volume is open and
-/// the keystore visible, the holder serves this boot's fresh RAM keys, so an
-/// early read on a healthy rebooted node can transiently disagree with the
-/// pin. A mismatch still standing at the deadline is the real failure — a box
-/// persisted keys the manifest never pinned (a reboot inside the founding
-/// window), and the network must not be trusted as launched: re-found rather
-/// than running with a dead consensus slot.
-pub async fn assert_cohort_holder_keys(
+/// A mismatch is retried, not failed fast: until `summit-persist` republishes
+/// the keystore's keys, which waits for the LUKS volume, a box serves this
+/// boot's fresh tmpfs keys, so an early read on a healthy rebooted node can
+/// transiently disagree with the pin. A mismatch still standing at the
+/// deadline is the real failure — a box persisted keys the manifest never
+/// pinned (a reboot inside the founding window), and the network must not be
+/// trusted as launched: re-found rather than running with a dead consensus
+/// slot.
+pub async fn assert_cohort_summit_keys(
     client: &reqwest::Client,
     targets: &[LaunchTarget],
     timeout: Duration,
@@ -376,16 +378,16 @@ pub async fn assert_cohort_holder_keys(
             if matched.contains(name) {
                 continue;
             }
-            match fetch_holder_keys(client, &target.holder_url).await {
+            match fetch_summit_keys(client, &target.harvest_url).await {
                 Ok(keys) => {
                     if keys.0 == target.node_public_key && keys.1 == target.consensus_public_key {
                         matched.insert(name);
-                        println!("  ✓ {name}: holder serves its pinned founding keys");
+                        println!("  ✓ {name}: serves its pinned founding keys");
                     }
                     served.insert(name, keys);
                 }
-                Err(HolderError::Malformed(message)) => bail!("{name}: {message}"),
-                Err(HolderError::Retry(message)) => {
+                Err(SummitKeysError::Malformed(message)) => bail!("{name}: {message}"),
+                Err(SummitKeysError::Retry(message)) => {
                     last_error.insert(name, message);
                 }
             }
@@ -404,7 +406,7 @@ pub async fn assert_cohort_holder_keys(
         }
         if now >= next_log {
             println!(
-                "waiting for pinned holder keys ({}s elapsed, {}s until timeout): {}",
+                "waiting for pinned summit keys ({}s elapsed, {}s until timeout): {}",
                 now.duration_since(started).as_secs(),
                 deadline.saturating_duration_since(now).as_secs(),
                 pending.join(", ")
@@ -419,7 +421,7 @@ pub async fn assert_cohort_holder_keys(
         .map(|t| {
             let name = t.name.as_str();
             if matched.contains(name) {
-                format!("  ✓ {name}: holder serves its pinned founding keys")
+                format!("  ✓ {name}: serves its pinned founding keys")
             } else {
                 format!(
                     "  ✗ {name}: {}",
@@ -436,7 +438,7 @@ pub async fn assert_cohort_holder_keys(
          founding window — its pinned validator slot is dead. Re-found (`pulumi destroy` + fresh \
          `up`) rather than running degraded."
     } else {
-        "Holders that never answered may still be booting — re-assert once the cohort settles: \
+        "Boxes that never answered may still be booting — re-assert once the cohort settles: \
          `seismic-tee node configure --check`."
     };
     bail!(
@@ -462,12 +464,12 @@ mod tests {
         rpc_result(json!({"number": "0x0", "hash": hash}))
     }
 
-    fn target(name: &str, eth_rpc_url: &str, holder_url: &str) -> LaunchTarget {
+    fn target(name: &str, eth_rpc_url: &str, harvest_url: &str) -> LaunchTarget {
         LaunchTarget {
             name: name.to_string(),
             eth_rpc_url: eth_rpc_url.to_string(),
             attestation_rpc_url: refused_url(),
-            holder_url: holder_url.to_string(),
+            harvest_url: harvest_url.to_string(),
             node_public_key: "aa".repeat(32),
             consensus_public_key: "cc".repeat(48),
         }
@@ -481,8 +483,8 @@ mod tests {
         assert_cohort_genesis_hash(targets, HASH, timeout, Duration::from_millis(20)).await
     }
 
-    async fn holders(targets: &[LaunchTarget], timeout: Duration) -> anyhow::Result<()> {
-        assert_cohort_holder_keys(
+    async fn summit_keys(targets: &[LaunchTarget], timeout: Duration) -> anyhow::Result<()> {
+        assert_cohort_summit_keys(
             &http::client().unwrap(),
             targets,
             timeout,
@@ -639,9 +641,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn matching_holders_pass_and_hit_the_keys_endpoint() {
+    async fn matching_keys_pass_and_hit_the_keys_endpoint() {
         let h1 = FakeServer::serve(vec![(200, keys(&"aa".repeat(32), &"cc".repeat(48)))]);
-        holders(
+        summit_keys(
             &[target("node-1", "http://r", &h1.url)],
             Duration::from_secs(10),
         )
@@ -651,29 +653,29 @@ mod tests {
         assert_eq!(h1.requests()[0].method, "GET");
     }
 
-    /// A transient mismatch (fresh RAM keys before the keystore is visible)
-    /// is retried until the pinned keys appear.
+    /// A transient mismatch (this boot's tmpfs keys, before `summit-persist`
+    /// republishes the keystore's) is retried until the pinned keys appear.
     #[tokio::test]
-    async fn a_transient_mismatch_is_retried_until_the_keystore_is_visible() {
-        let holder = FakeServer::serve(vec![
+    async fn a_transient_mismatch_is_retried_until_the_pinned_keys_appear() {
+        let server = FakeServer::serve(vec![
             (200, keys(&"ff".repeat(32), &"ee".repeat(48))),
             (200, keys(&"aa".repeat(32), &"cc".repeat(48))),
         ]);
-        holders(
-            &[target("node-1", "http://r", &holder.url)],
+        summit_keys(
+            &[target("node-1", "http://r", &server.url)],
             Duration::from_secs(10),
         )
         .await
         .unwrap();
-        assert_eq!(holder.requests().len(), 2);
+        assert_eq!(server.requests().len(), 2);
     }
 
     #[tokio::test]
     async fn a_standing_mismatch_exits_with_refound_advice() {
         let fresh = keys(&"ff".repeat(32), &"ee".repeat(48));
-        let holder = FakeServer::serve(vec![(200, fresh.clone()); 40]);
-        let err = holders(
-            &[target("node-1", "http://r", &holder.url)],
+        let server = FakeServer::serve(vec![(200, fresh.clone()); 40]);
+        let err = summit_keys(
+            &[target("node-1", "http://r", &server.url)],
             Duration::from_millis(100),
         )
         .await
@@ -691,19 +693,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn an_unreachable_holder_is_retried_then_told_to_reassert() {
+    async fn an_unreachable_box_is_retried_then_told_to_reassert() {
         let late = FakeServer::serve_after(
             Duration::from_millis(200),
             vec![(200, keys(&"aa".repeat(32), &"cc".repeat(48)))],
         );
-        holders(
+        summit_keys(
             &[target("node-1", "http://r", &late.url)],
             Duration::from_secs(10),
         )
         .await
         .unwrap();
 
-        let err = holders(
+        let err = summit_keys(
             &[target("node-1", "http://r", &refused_url())],
             Duration::from_millis(100),
         )
@@ -715,10 +717,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_malformed_holder_response_exits_immediately() {
-        let holder = FakeServer::serve(vec![(200, "[]".to_string()), (200, "{}".to_string())]);
-        let err = holders(
-            &[target("node-1", "http://r", &holder.url)],
+    async fn a_malformed_keys_response_exits_immediately() {
+        let server = FakeServer::serve(vec![(200, "[]".to_string()), (200, "{}".to_string())]);
+        let err = summit_keys(
+            &[target("node-1", "http://r", &server.url)],
             Duration::from_secs(10),
         )
         .await
@@ -726,6 +728,6 @@ mod tests {
         .to_string();
         assert!(err.starts_with("node-1: "), "{err}");
         assert!(err.contains("expected a JSON object"), "{err}");
-        assert_eq!(holder.requests().len(), 1);
+        assert_eq!(server.requests().len(), 1);
     }
 }
