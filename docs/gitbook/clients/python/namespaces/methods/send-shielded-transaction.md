@@ -20,6 +20,7 @@ w3.seismic.send_shielded_transaction(
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
+    gas_payment: GasPayment | None = None,
 ) -> HexBytes
 
 # async
@@ -33,10 +34,11 @@ await w3.seismic.send_shielded_transaction(...same args...) -> HexBytes
 | `to` | `ChecksumAddress` | Required | Recipient contract address |
 | `data` | `HexBytes` | Required | Plaintext calldata (SDK encrypts it) |
 | `value` | `int` | `0` | Wei to transfer |
-| `gas` | `int \| None` | `None` | Gas limit (defaults to `30_000_000`) |
+| `gas` | `int \| None` | `None` | Gas limit (signed estimate when omitted, preserving `gas_payment`) |
 | `gas_price` | `int \| None` | `None` | Gas price in wei (fetched from chain if `None`) |
 | `security` | [`SeismicSecurityParams`](../../api-reference/transaction-types/seismic-security-params.md) `\| None` | `None` | Override default security parameters |
 | `eip712` | `bool` | `False` | Use EIP-712 typed-data signing path |
+| `gas_payment` | [`GasPayment`](../../api-reference/transaction-types/gas-payment.md) `\| None` | Auto | Public signed fee choice; explicit Native/Token never falls back |
 
 ## Returns
 
@@ -53,7 +55,7 @@ tx_hash = w3.seismic.send_shielded_transaction(to="0xTokenAddress", data=data)
 
 ## What's encrypted
 
-The SDK encrypts the `data` field (function selector + arguments) using AES-GCM with the ECDH-derived key. An observer can see `from`, `to`, `value`, and gas parameters, but **not** which function was called or what arguments were passed.
+The SDK encrypts the `data` field (function selector + arguments) using AES-GCM with the ECDH-derived key. An observer can see `from`, `to`, `value`, gas parameters, and `gas_payment`, but **not** which function was called or what arguments were passed.
 
 ## Notes
 

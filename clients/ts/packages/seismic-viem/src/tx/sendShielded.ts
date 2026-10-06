@@ -16,6 +16,8 @@ import {
   AccountNotFoundError,
   AccountTypeNotSupportedError,
 } from '@sviem/error/account.ts'
+import type { GasPayment } from '@sviem/tx/gasPayment.ts'
+import { normalizeGasPayment } from '@sviem/tx/gasPayment.ts'
 import {
   type TxSeismicMetadata,
   buildTxSeismicMetadata,
@@ -108,6 +110,7 @@ export async function sendShieldedTransaction<
     data: plaintextCalldata,
     gas,
     gasPrice,
+    gasPayment: gasPayment_,
     maxFeePerBlobGas,
     maxFeePerGas,
     maxPriorityFeePerGas,
@@ -125,6 +128,7 @@ export async function sendShieldedTransaction<
     throw new Error(`Account must not be null to send a Seismic transaction`)
   }
 
+  const gasPayment = normalizeGasPayment(gasPayment_)
   try {
     const assertRequestParams = {
       account,
@@ -199,6 +203,7 @@ export async function sendShieldedTransaction<
             encryptedData: estimateEncryptedCalldata,
             metadata: estimateMetadata,
             gasPrice: resolvedGasPrice,
+            gasPayment,
           })
         })())
 
@@ -232,6 +237,7 @@ export async function sendShieldedTransaction<
         ...metadata.seismicElements,
         data: encryptedCalldata,
         gasPrice: resolvedGasPrice,
+        gasPayment,
         type: 'seismic',
       } as TransactionSerializableSeismic
 
@@ -296,10 +302,12 @@ export async function estimateShieldedGas<
     encryptedData,
     metadata,
     gasPrice,
+    gasPayment,
   }: {
     encryptedData: Hex
     metadata: TxSeismicMetadata
     gasPrice: bigint
+    gasPayment?: GasPayment
   }
 ): Promise<bigint> {
   const block = await client.getBlock({ blockTag: 'latest' })
@@ -311,6 +319,7 @@ export async function estimateShieldedGas<
     nonce: metadata.legacyFields.nonce,
     gasPrice,
     gas: blockGasLimit,
+    gasPayment: normalizeGasPayment(gasPayment),
     to: metadata.legacyFields.to ?? undefined,
     value: metadata.legacyFields.value,
     data: encryptedData,

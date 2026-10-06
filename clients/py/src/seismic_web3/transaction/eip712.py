@@ -25,6 +25,7 @@ from eth_keys.main import KeyAPI as eth_keys
 from hexbytes import HexBytes
 
 from seismic_web3._constants import TYPED_DATA_MESSAGE_VERSION
+from seismic_web3.gas_payment import resolve_gas_payment
 from seismic_web3.transaction.serialize import (
     _authorization_list_rlp_items,
     serialize_signed,
@@ -51,6 +52,7 @@ TX_SEISMIC_TYPE_STR: str = (
     "uint64 nonce,"
     "uint128 gasPrice,"
     "uint64 gasLimit,"
+    "GasPayment gasPayment,"
     "address to,"
     "bool isCreate,"
     "uint256 value,"
@@ -62,8 +64,10 @@ TX_SEISMIC_TYPE_STR: str = (
     "uint64 expiresAtBlock,"
     "bool signedRead,"
     "bytes32 authorizationListHash"
-    ")"
+    ")GasPayment(uint8 kind,address token)"
 )
+
+GAS_PAYMENT_TYPE_HASH: bytes = keccak(b"GasPayment(uint8 kind,address token)")
 
 # ---------------------------------------------------------------------------
 # Domain constants
@@ -163,6 +167,12 @@ def struct_hash(tx: UnsignedSeismicTx) -> bytes:
     """
     se = tx.seismic
     enc_nonce_int = int.from_bytes(bytes(se.encryption_nonce), "big")
+    payment = resolve_gas_payment(tx.gas_payment).typed_data()
+    payment_hash = keccak(
+        GAS_PAYMENT_TYPE_HASH
+        + _pad32_int(int(payment["kind"]))
+        + _pad32_address(str(payment["token"])),
+    )
 
     return keccak(
         TX_SEISMIC_TYPE_HASH
@@ -170,6 +180,7 @@ def struct_hash(tx: UnsignedSeismicTx) -> bytes:
         + _pad32_int(tx.nonce)  # uint64
         + _pad32_int(tx.gas_price)  # uint128
         + _pad32_int(tx.gas)  # uint64 (gasLimit)
+        + payment_hash
         + _pad32_address(tx.to)  # address
         + _pad32_bool(tx.to is None)  # isCreate bool
         + _pad32_int(tx.value)  # uint256
@@ -231,11 +242,16 @@ def build_seismic_typed_data(tx: UnsignedSeismicTx) -> dict[str, Any]:
                 {"name": "chainId", "type": "uint256"},
                 {"name": "verifyingContract", "type": "address"},
             ],
+            "GasPayment": [
+                {"name": "kind", "type": "uint8"},
+                {"name": "token", "type": "address"},
+            ],
             "TxSeismic": [
                 {"name": "chainId", "type": "uint64"},
                 {"name": "nonce", "type": "uint64"},
                 {"name": "gasPrice", "type": "uint128"},
                 {"name": "gasLimit", "type": "uint64"},
+                {"name": "gasPayment", "type": "GasPayment"},
                 {"name": "to", "type": "address"},
                 {"name": "isCreate", "type": "bool"},
                 {"name": "value", "type": "uint256"},
@@ -261,6 +277,7 @@ def build_seismic_typed_data(tx: UnsignedSeismicTx) -> dict[str, Any]:
             "nonce": tx.nonce,
             "gasPrice": tx.gas_price,
             "gasLimit": tx.gas,
+            "gasPayment": resolve_gas_payment(tx.gas_payment).typed_data(),
             "to": tx.to or VERIFYING_CONTRACT,
             "isCreate": tx.to is None,
             "value": tx.value,

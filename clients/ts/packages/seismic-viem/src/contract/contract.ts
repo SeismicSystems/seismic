@@ -11,16 +11,18 @@ import type {
   GetContractReturnType,
   IsNarrowable,
   IsNever,
-  ReadContractParameters,
   ReadContractReturnType,
   Transport,
   UnionOmit,
-  WriteContractParameters,
   WriteContractReturnType,
 } from 'viem'
 import { getContract } from 'viem'
 
 import type { ShieldedWalletClient } from '@sviem/client.ts'
+import type {
+  ReadContractParameters,
+  WriteContractParameters,
+} from '@sviem/contract/parameters.ts'
 import {
   SignedReadContractParameters,
   signedReadContract,
@@ -68,6 +70,15 @@ type TransparentReadContractReturnType<
               : never
           >
         }
+        read: {
+          [functionName in _readFunctionNames]: GetReadFunction<
+            _narrowable,
+            TAbi,
+            functionName extends ContractFunctionName<TAbi, 'pure' | 'view'>
+              ? functionName
+              : never
+          >
+        }
         sread: {
           [functionName in _readFunctionNames]: GetReadFunction<
             _narrowable,
@@ -99,6 +110,21 @@ type TransparentWriteContractReturnType<
     ? unknown
     : {
         twrite: {
+          [functionName in _writeFunctionNames]: GetWriteFunction<
+            _narrowable,
+            _walletClient['chain'],
+            _walletClient['account'],
+            TAbi,
+            functionName extends ContractFunctionName<
+              TAbi,
+              'nonpayable' | 'payable'
+            >
+              ? functionName
+              : never,
+            WriteContractReturnType
+          >
+        }
+        write: {
           [functionName in _writeFunctionNames]: GetWriteFunction<
             _narrowable,
             _walletClient['chain'],
@@ -169,7 +195,7 @@ export type ShieldedContract<
     TChain,
     TAccount
   >,
-> = GetContractReturnType<TAbi, TClient, TAddress> &
+> = Omit<GetContractReturnType<TAbi, TClient, TAddress>, 'read' | 'write'> &
   TransparentReadContractReturnType<TAbi, TClient> &
   TransparentWriteContractReturnType<TAbi, TClient>
 

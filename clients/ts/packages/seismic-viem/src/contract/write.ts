@@ -9,7 +9,6 @@ import type {
   Hex,
   Transport,
   WalletActions,
-  WriteContractParameters,
   WriteContractReturnType,
 } from 'viem'
 import { numberToHex } from 'viem'
@@ -18,7 +17,13 @@ import { writeContract } from 'viem/actions'
 import type { ShieldedWalletClient } from '@sviem/client.ts'
 import { hasShieldedParams } from '@sviem/contract/abi.ts'
 import { getPlaintextCalldata } from '@sviem/contract/calldata.ts'
+import type { WriteContractParameters } from '@sviem/contract/parameters.ts'
 import { randomEncryptionNonce } from '@sviem/crypto/nonce.ts'
+import type { GasPayment } from '@sviem/tx/gasPayment.ts'
+import {
+  assertAutoGasPayment,
+  normalizeGasPayment,
+} from '@sviem/tx/gasPayment.ts'
 import { buildTxSeismicMetadata } from '@sviem/tx/metadata.ts'
 import { SEISMIC_TX_TYPE, SeismicSecurityParams } from '@sviem/tx/seismicTx.ts'
 import { sendShieldedTransaction } from '@sviem/tx/sendShielded.ts'
@@ -74,10 +79,12 @@ export async function smartWriteContract<
     )
   }
 
-  // No shielded params -> the ABI is valid for viem as-is.
+  // Keep ABI-based routing; explicit selectors require a Seismic envelope.
+  const { gasPayment, ...standardParameters } = parameters
+  assertAutoGasPayment(gasPayment)
   return writeContract(
     client as unknown as Parameters<typeof writeContract>[0],
-    parameters as unknown as Parameters<typeof writeContract>[1]
+    standardParameters as unknown as Parameters<typeof writeContract>[1]
   )
 }
 
@@ -113,8 +120,10 @@ export async function transparentWriteContract<
     functionName: _fn,
     args: _args,
     address,
+    gasPayment,
     ...txOptions
   } = parameters as WriteContractParameters & { address: Address }
+  assertAutoGasPayment(gasPayment)
   const data = getPlaintextCalldata(parameters)
   return client.sendTransaction({
     to: address,
@@ -162,6 +171,7 @@ type PlaintextTransactionParameters = {
   nonce?: number
   gas?: bigint
   gasPrice?: bigint
+  gasPayment: GasPayment
   value?: bigint
   type: Hex
 }
@@ -268,6 +278,7 @@ export async function shieldedWriteContractDebug<
       nonce: request.nonce,
       gas: request.gas,
       gasPrice: request.gasPrice,
+      gasPayment: normalizeGasPayment(request.gasPayment),
       value: request.value,
     },
     shieldedTx: {
@@ -311,7 +322,7 @@ function buildShieldedWriteRequest<
   >,
   plaintextCalldata: Hex
 ): SendSeismicTransactionParameters<TChain, TAccount> {
-  const { address, gas, gasPrice, value, nonce } = parameters
+  const { address, gas, gasPrice, gasPayment, value, nonce } = parameters
   return {
     account: client.account,
     chain: undefined,
@@ -321,5 +332,6 @@ function buildShieldedWriteRequest<
     value,
     gas,
     gasPrice,
+    gasPayment: normalizeGasPayment(gasPayment),
   }
 }

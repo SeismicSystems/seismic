@@ -2,8 +2,10 @@ import { expect } from 'bun:test'
 import {
   buildTxSeismicMetadata,
   serializeSeismicTransaction,
+  signSeismicTxTypedData,
 } from 'seismic-viem'
 import { compressPublicKey } from 'seismic-viem'
+import type { TransactionSerializableSeismic } from 'seismic-viem'
 import type { Account, Chain, Hex, TransactionSerializableLegacy } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { prepareTransactionRequest } from 'viem/actions'
@@ -57,12 +59,19 @@ export const testSeismicTxEncoding = async ({
   }
 
   const preparedTx = await prepareTransactionRequest(client, tx)
-  const serializedTransaction = await account.signTransaction!(
-    // @ts-ignore
-    { ...preparedTx, ...metadata.seismicElements },
-    // @ts-ignore
-    { serializer: serializeSeismicTransaction }
-  )
+  const seismicTx: TransactionSerializableSeismic = {
+    ...preparedTx,
+    ...metadata.seismicElements,
+    gasPayment: { type: 'auto' },
+    type: 'seismic',
+  }
+  // Match messageVersion=2: sign EIP-712, then exercise the raw codec.
+  const { signature } = await signSeismicTxTypedData(client, seismicTx)
+  const serializedTransaction = serializeSeismicTransaction(seismicTx, {
+    r: signature.r,
+    s: signature.s,
+    yParity: Number(signature.yParity) as 0 | 1,
+  })
 
   // const signature = {
   //   r: '0x1e7a28fd3647ab10173d940fe7e561f7b06185d3d6a93b83b2f210055dd27f04',
@@ -73,8 +82,8 @@ export const testSeismicTxEncoding = async ({
 
   const expected =
     chain.id === anvil.id
-      ? '0x4af90113827a6902843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a08c46a2b6020bba77fcb1e676a602a0934207181885f6859ca848f5f01091d1957444a920a2bfb262fa043c6c239f906480b850bf645e68de8096b62950fac2d5bceb71ab1a085aed2e973a8b4f961ca77209f99116130edecd27c39fc62e1b3c05ff42d9e4382f987fc55c2011f8e4f2e662045c27cf78e5c395d6d53d08d452d6dc38c001a0fe6a76bf4558e0f390443eca5bc04a432193552302d9985c62fdf2d6e18d5732a04e712b50b4d920f8921f58db25601c14717b50e7fd2b8c54339ae320fdefb9d6'
-      : '0x4af9011382140402843b9aca00830186a094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a08c46a2b6020bba77fcb1e676a602a0934207181885f6859ca848f5f01091d1957444a920a2bfb262fa043c6c239f906480b850bf645e68de8096b62950fac2d5bceb71ab1a085aed2e973a8b4f961ca77209f99116130edecd27c39fc62e1b3c05ff42d9e4382f987fc55c2011f8e4f2e6620462173f479fc03f28c1b7f00e8f75df88c001a0be45c124011f1edc575e73480a64f9f79d49c197608abd89f2bdb244ddff16c0a008bc3cf733bc66bb528215fa167edf77555c5dd108196c9f5e0ec9f5c6de4eb0'
+      ? '0x4af90116827a6902843b9aca00830186a0c2808094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a08c46a2b6020bba77fcb1e676a602a0934207181885f6859ca848f5f01091d1957444a920a2bfb262fa043c6c239f906480b850bf645e68de8096b62950fac2d5bceb71ab1a085aed2e973a8b4f961ca77209f99116130edecd27c39fc62e1b3c05ff42d9e4382f987fc55c2011f8e4f2e662045c27cf78e5c395d6d53d08d452d6dc38c080a0ab59ee17f17b5cb47b313dd2847c34a493fddd5712ba53424cd3054cc5a24965a047c1c63c7fe2163fee4c3264cf43df2ac9904c822cd6d4cd50c2e1cb40cff90f'
+      : '0x4af9011682140402843b9aca00830186a0c2808094d3e8763675e4c425df46cc3b5c0f6cbdac39604687038d7ea4c68000a1028e76821eb4d77fd30223ca971c49738eb5b5b71eabe93f96b348fdce788ae5a08c46a2b6020bba77fcb1e676a602a0934207181885f6859ca848f5f01091d1957444a920a2bfb262fa043c6c239f906480b850bf645e68de8096b62950fac2d5bceb71ab1a085aed2e973a8b4f961ca77209f99116130edecd27c39fc62e1b3c05ff42d9e4382f987fc55c2011f8e4f2e6620462173f479fc03f28c1b7f00e8f75df88c001a015a3fdf63b097ea66062ea0daccec7a5ddc4bdedd2cf835fa09aeb8b3509f618a0686b7c4e08a4f8f808b16fa2fa024b5505ea33c1d0ddb33f30c4884400c56960'
   // @ts-ignore
   expect(serializedTransaction).toBe(expected)
 }

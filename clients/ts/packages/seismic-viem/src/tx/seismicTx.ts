@@ -16,6 +16,8 @@ import type {
   TransactionSerializableLegacy,
 } from 'viem'
 
+import type { GasPayment } from '@sviem/tx/gasPayment.ts'
+import { gasPaymentRlp, normalizeGasPayment } from '@sviem/tx/gasPayment.ts'
 import { toYParitySignatureArray } from '@sviem/viem-internal/signature.ts'
 
 export const SEISMIC_TX_TYPE = 74 // '0x4a'
@@ -27,6 +29,7 @@ export const SEISMIC_TX_TYPE = 74 // '0x4a'
  * @property {number} [messageVersion] - The version of the message being sent. Used for signing transactions via messages. Normal transactions use messageVersion = 0. Txs signed with EIP-712 use messageVersion = 2
  */
 type SeismicTxExtrasBlank = {
+  gasPayment?: { type: 'auto' }
   encryptionPubkey?: undefined
   encryptionNonce?: undefined
   messageVersion?: undefined
@@ -36,6 +39,7 @@ type SeismicTxExtrasBlank = {
 }
 
 export type SeismicTxExtras = {
+  gasPayment?: GasPayment
   encryptionPubkey?: Hex | undefined
   encryptionNonce?: Hex | undefined
   messageVersion?: number | undefined
@@ -138,6 +142,7 @@ export type TxSeismic = {
   nonce?: bigint
   gasPrice?: bigint
   gasLimit?: bigint
+  gasPayment: { kind: number; token: Address }
   to?: Address | null
   isCreate?: boolean
   value?: bigint
@@ -167,8 +172,8 @@ const authorizationListRlpItems = (
     auth.contractAddress,
     auth.nonce ? toHex(auth.nonce) : '0x',
     auth.yParity ? toHex(auth.yParity) : '0x',
-    auth.r,
-    auth.s,
+    hexToBigInt(auth.r) ? toHex(hexToBigInt(auth.r)) : '0x',
+    hexToBigInt(auth.s) ? toHex(hexToBigInt(auth.s)) : '0x',
   ])
 
 export const encodeAuthorizationList = (
@@ -189,6 +194,7 @@ export const serializeSeismicTransaction: SeismicTxSerializer = (
     nonce,
     gasPrice,
     gas,
+    gasPayment,
     to,
     data,
     value = 0n,
@@ -233,17 +239,20 @@ export const serializeSeismicTransaction: SeismicTxSerializer = (
   }
 
   const rlpArray = [
-    toHex(chainId),
+    chainId ? toHex(chainId) : '0x',
     nonce ? toHex(nonce) : '0x',
     gasPrice ? toHex(gasPrice) : '0x',
     gas ? toHex(gas) : '0x',
+    gasPaymentRlp(normalizeGasPayment(gasPayment)),
     to ?? '0x',
     value ? toHex(value) : '0x',
     encryptionPubkey ?? '0x',
-    hexToBigInt(encryptionNonce) === 0n ? '0x' : encryptionNonce,
+    hexToBigInt(encryptionNonce) === 0n
+      ? '0x'
+      : toHex(hexToBigInt(encryptionNonce)),
     messageVersion === 0 ? '0x' : toHex(messageVersion),
     recentBlockHash,
-    toHex(expiresAtBlock),
+    expiresAtBlock ? toHex(expiresAtBlock) : '0x',
     signedRead ? '0x01' : '0x',
     data ?? '0x',
     authorizationListRlpItems(
@@ -252,6 +261,6 @@ export const serializeSeismicTransaction: SeismicTxSerializer = (
     ...toYParitySignatureArray(tx as TransactionSerializableLegacy, signature),
   ]
 
-  const rlpEncoded = toRlp(rlpArray as any)
+  const rlpEncoded = toRlp(rlpArray as Parameters<typeof toRlp>[0])
   return concatHex([toHex(SEISMIC_TX_TYPE), rlpEncoded])
 }

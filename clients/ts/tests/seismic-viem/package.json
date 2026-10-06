@@ -6,7 +6,7 @@
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "test:unit": "bun test src/viem-unit.test.ts"
+    "test:unit": "bun test src/viem-unit.test.ts src/gas-payment.test.ts src/gas-payment-routing.test.ts"
   },
   "devDependencies": {
     "viem": "2.x",

@@ -9,7 +9,6 @@ import type {
   ContractFunctionName,
   Hex,
   PublicActions,
-  ReadContractParameters,
   ReadContractReturnType,
   Transport,
 } from 'viem'
@@ -27,6 +26,8 @@ import {
   hasShieldedParams,
   remapSeismicAbiInputs,
 } from '@sviem/contract/abi.ts'
+import type { ReadContractParameters } from '@sviem/contract/parameters.ts'
+import { assertAutoGasPayment } from '@sviem/tx/gasPayment.ts'
 import { SeismicSecurityParams } from '@sviem/tx/seismicTx.ts'
 import type { SignedCallParameters } from '@sviem/tx/signedCall.ts'
 import { signedCall } from '@sviem/tx/signedCall.ts'
@@ -83,10 +84,11 @@ export async function smartReadContract<
     )
   }
 
-  // No shielded params -> the ABI is valid for viem as-is.
+  const { gasPayment, ...standardParameters } = parameters
+  assertAutoGasPayment(gasPayment)
   return viemReadContract(
     readClient as unknown as Parameters<typeof viemReadContract>[0],
-    parameters as unknown as Parameters<typeof viemReadContract>[1]
+    standardParameters as unknown as Parameters<typeof viemReadContract>[1]
   )
 }
 
@@ -196,8 +198,10 @@ export async function transparentReadContract<
     functionName,
     args = [],
     address,
+    gasPayment,
     ...rest
   } = parameters as ReadContractParameters
+  assertAutoGasPayment(gasPayment)
   const seismicAbi = getAbiItem({ abi, name: functionName }) as AbiFunction
   const selector = toFunctionSelector(formatAbiItem(seismicAbi))
   const ethAbi = remapSeismicAbiInputs(seismicAbi)

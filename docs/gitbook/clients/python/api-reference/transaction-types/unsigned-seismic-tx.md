@@ -20,6 +20,8 @@ class UnsignedSeismicTx:
     value: int
     data: HexBytes
     seismic: SeismicElements
+    authorization_list: list[SignedAuthorization] = field(default_factory=list)
+    gas_payment: GasPayment = field(default_factory=GasPayment.auto)
 ```
 
 ## Fields
@@ -30,6 +32,8 @@ class UnsignedSeismicTx:
 | `nonce` | `int` | Sender's transaction count |
 | `gas_price` | `int` | Gas price in wei |
 | `gas` | `int` | Gas limit |
+| `gas_payment` | [`GasPayment`](gas-payment.md) | Resolved public signed selection; defaults to Auto during construction, always present on the wire |
+| `authorization_list` | `list[SignedAuthorization]` | Authorization tuples, default empty; committed by the EIP-712 hash |
 | `to` | `ChecksumAddress \| None` | Recipient address, or `None` for contract creation |
 | `value` | `int` | Amount of wei to transfer |
 | `data` | `HexBytes` | **Encrypted** calldata (ciphertext) |

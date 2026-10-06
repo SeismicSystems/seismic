@@ -25,6 +25,7 @@ import { useShieldedWriteContract } from "seismic-react";
 | `args`         | `array`  | No       | Arguments to pass to the function       |
 | `gas`          | `bigint` | No       | Gas limit override                      |
 | `gasPrice`     | `bigint` | No       | Gas price override                      |
+| `gasPayment` | [`GasPayment`](../../viem/gas-payment.md) | No | Auto (default), Native, or a registered Token; forwarded to signing and estimation |
 
 ## Return Type
 

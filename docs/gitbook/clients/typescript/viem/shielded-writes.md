@@ -33,6 +33,7 @@ import { shieldedWriteContract } from "seismic-viem";
 | `args`         | `array`  | No       | Function arguments |
 | `gas`          | `bigint` | No       | Gas limit          |
 | `gasPrice`     | `bigint` | No       | Gas price          |
+| `gasPayment` | `GasPayment` | No | Auto (default), Native, or a registered Token |
 | `value`        | `bigint` | No       | ETH value to send  |
 
 ### Returns
@@ -112,6 +113,18 @@ When you call `shieldedWriteContract` (or `contract.swrite.functionName`), the S
 The encrypted calldata is bound to the transaction context (chain ID, nonce, block hash, expiry) via AES-GCM additional authenticated data, so it cannot be replayed or tampered with.
 
 ---
+
+## Gas Payment
+
+Pass `gasPayment` in the transaction/options object, not in `securityParams`. Omission resolves to `{ type: 'auto' }` before signing; explicit Native or Token never falls back. Signed estimates and debug views preserve the selection. See [Gas Payment](gas-payment.md) for token selection, public metadata, transparent-route restrictions, and node compatibility.
+
+```typescript
+await client.sendShieldedTransaction({
+  to: '0xYourContractAddress',
+  data: calldata,
+  gasPayment: { type: 'token', token: '0xYourGasTokenAddress' },
+});
+```
 
 ## Security Parameters
 

@@ -32,6 +32,8 @@ seismic-viem provides several approaches:
 
 The signed read paths all encrypt the calldata, sign it, and decrypt the response automatically.
 
+`signedCall`, `signedReadContract`, wallet `sreadContract`, and contract `.sread` accept top-level `gasPayment`. Omission becomes Auto before signing; the field is mandatory in signed data. Smart `.read` still follows the ABI and rejects non-Auto on a transparent route. See [Gas Payment](gas-payment.md).
+
 ---
 
 ## Standalone: `signedReadContract`
@@ -51,6 +53,7 @@ import { signedReadContract } from "seismic-viem";
 | `functionName` | `string` | Yes      | Name of the view/pure function |
 | `args`         | `array`  | No       | Function arguments             |
 | `nonce`        | `number` | No       | Override the nonce             |
+| `gasPayment` | `GasPayment` | No | Public signed fee choice, default Auto; read-only simulation does not charge canonical state |
 | `blockNumber`  | `bigint` | No       | Read state at this block number; `0n` selects genesis |
 | `blockTag`     | `BlockTag` | No     | Read state at this block tag; defaults to `"latest"` |
 

@@ -6,12 +6,12 @@ import type {
   ContractFunctionArgs,
   ContractFunctionName,
   Hex,
-  WriteContractParameters,
 } from 'viem'
 import { encodeAbiParameters, getAbiItem, toFunctionSelector } from 'viem'
 import { formatAbiItem } from 'viem/utils'
 
 import { remapSeismicAbiInputs } from '@sviem/contract/abi.ts'
+import type { WriteContractParameters } from '@sviem/contract/parameters.ts'
 
 /**
  * Builds the plaintext calldata for a Seismic contract write before any

@@ -90,6 +90,7 @@ from seismic_web3.contract.shielded import (
     AsyncShieldedContract,
     ShieldedContract,
 )
+from seismic_web3.gas_payment import GasPayment
 
 # -- Module ------------------------------------------------------------------
 from seismic_web3.module import (
@@ -139,6 +140,7 @@ __all__ = [
     "DebugWriteResult",
     "EncryptionNonce",
     "EncryptionState",
+    "GasPayment",
     "LegacyFields",
     "PlaintextTx",
     "PrivateKey",

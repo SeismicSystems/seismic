@@ -14,6 +14,10 @@ import type {
 } from 'viem'
 
 import {
+  assertAutoGasPayment,
+  normalizeGasPayment,
+} from '@sviem/tx/gasPayment.ts'
+import {
   SEISMIC_TX_TYPE,
   type SeismicTransactionRequest,
 } from '@sviem/tx/seismicTx.ts'
@@ -90,7 +94,9 @@ const formatSeismicRpcRequest = (request: SeismicTransactionRequest) => {
     }
   }
 
-  const { type, ...fmt } = formatTransactionRequest(request)
+  if (!hasSeismicFields(request)) assertAutoGasPayment(request.gasPayment)
+  const { gasPayment: _payment, ...standardRequest } = request
+  const { type, ...fmt } = formatTransactionRequest(standardRequest)
   if (hasSeismicFields(request)) {
     return { ...fmt, type: SEISMIC_TX_TYPE }
   }
@@ -166,6 +172,9 @@ export const seismicChainFormatters: ChainFormatters = {
         recentBlockHash: request.recentBlockHash,
         expiresAtBlock: request.expiresAtBlock,
         signedRead: request.signedRead,
+        ...(request.type === 'seismic' || hasSeismicFields(request)
+          ? { gasPayment: normalizeGasPayment(request.gasPayment) }
+          : {}),
       }
     },
     type: 'transactionRequest',

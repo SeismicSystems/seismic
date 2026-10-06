@@ -29,6 +29,8 @@ await w3.seismic.debug_send_shielded_transaction(...same args...) -> DebugWriteR
 
 The transaction **is** broadcast — this is not a dry run.
 
+The optional top-level `gas_payment` keyword defaults to Auto before signing. Both transaction views include the resolved `GasPayment`, and the separate signed estimate uses that same choice. See [GasPayment](../../api-reference/transaction-types/gas-payment.md) for token selection and compatibility.
+
 ## Example
 
 ```python

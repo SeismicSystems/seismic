@@ -1,3 +1,5 @@
+export type { GasPayment, GasPaymentOptions } from '@sviem/tx/gasPayment.ts'
+export { normalizeGasPayment } from '@sviem/tx/gasPayment.ts'
 export type { CreateSeismicDevnetParams } from '@sviem/chain.ts'
 export type {
   SeismicBlockParams,

@@ -23,6 +23,7 @@ import { useSignedReadContract } from "seismic-react";
 | `abi`          | `Abi`               | Yes      | Contract ABI                           |
 | `functionName` | `string`            | Yes      | Name of the view/pure function to call |
 | `args`         | `array`             | No       | Arguments to pass to the function      |
+| `gasPayment` | [`GasPayment`](../../viem/gas-payment.md) | No | Public signed selector, default Auto; does not charge canonical state |
 
 ## Return Type
 

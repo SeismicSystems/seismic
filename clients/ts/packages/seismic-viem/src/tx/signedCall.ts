@@ -25,6 +25,7 @@ import { extract, getCallError, parseAccount } from 'viem/utils'
 
 import { ShieldedWalletClient } from '@sviem/client.ts'
 import { SignedCallError } from '@sviem/error/signedCall.ts'
+import { normalizeGasPayment } from '@sviem/tx/gasPayment.ts'
 import type { TxSeismicMetadata } from '@sviem/tx/metadata.ts'
 import { buildTxSeismicMetadata } from '@sviem/tx/metadata.ts'
 import { decryptRevertError } from '@sviem/tx/revertDecrypt.ts'
@@ -225,6 +226,7 @@ export async function signedCall<
     data: plaintextCalldata,
     gas = 30_000_000,
     gasPrice,
+    gasPayment,
     maxFeePerBlobGas,
     maxFeePerGas,
     maxPriorityFeePerGas,
@@ -349,6 +351,7 @@ export async function signedCall<
     // @ts-ignore
     const seismicTx: TransactionSerializableSeismic = {
       ...preparedTx,
+      gasPayment: normalizeGasPayment(gasPayment),
       type: 'seismic',
     }
 

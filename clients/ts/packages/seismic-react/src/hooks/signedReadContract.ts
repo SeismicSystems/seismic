@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { signedReadContract } from 'seismic-viem'
+import type { GasPayment } from 'seismic-viem'
 import type { Abi, ContractFunctionArgs, ContractFunctionName } from 'viem'
 
 import { useShieldedWallet } from '@sreact/context/shieldedWallet.tsx'
@@ -13,6 +14,7 @@ export type UseSignedReadContractConfig<
   abi: TAbi
   functionName: TFunctionName
   args?: TArgs
+  gasPayment?: GasPayment
 }
 
 /**
@@ -40,6 +42,7 @@ export function useSignedReadContract<
   abi,
   functionName,
   args,
+  gasPayment,
 }: UseSignedReadContractConfig<TAbi, TFunctionName, TArgs>) {
   const { walletClient } = useShieldedWallet()
 
@@ -63,7 +66,8 @@ export function useSignedReadContract<
         abi,
         functionName,
         ...(args && { args }),
-      } as any)
+        gasPayment,
+      } as unknown as Parameters<typeof signedReadContract>[1])
       return data
     } catch (err) {
       const error =
@@ -73,7 +77,7 @@ export function useSignedReadContract<
     } finally {
       setIsLoading(false)
     }
-  }, [walletClient, address, abi, functionName, args])
+  }, [walletClient, address, abi, functionName, args, gasPayment])
 
   return {
     signedRead,

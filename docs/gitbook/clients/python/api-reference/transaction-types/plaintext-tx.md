@@ -18,6 +18,7 @@ class PlaintextTx:
     gas: int
     gas_price: int
     value: int
+    gas_payment: GasPayment = field(default_factory=GasPayment.auto)
 ```
 
 ## Fields
@@ -30,6 +31,7 @@ class PlaintextTx:
 | `gas` | `int` | Gas limit |
 | `gas_price` | `int` | Gas price in wei |
 | `value` | `int` | Amount of wei to transfer |
+| `gas_payment` | [`GasPayment`](gas-payment.md) | Resolved public fee choice, matching the signed transaction |
 
 ## Example
 

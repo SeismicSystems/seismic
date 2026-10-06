@@ -20,6 +20,7 @@ from eth_keys.main import KeyAPI as eth_keys
 from hexbytes import HexBytes
 
 from seismic_web3._constants import SEISMIC_TX_TYPE
+from seismic_web3.gas_payment import resolve_gas_payment
 from seismic_web3.transaction_types import Signature
 
 if TYPE_CHECKING:
@@ -70,7 +71,7 @@ def _tx_rlp_fields(tx: UnsignedSeismicTx) -> list:
 
     Field order matches ``serializeSeismicTransaction`` in seismic-viem::
 
-        chainId, nonce, gasPrice, gas, to, value,
+        chainId, nonce, gasPrice, gas, gasPayment, to, value,
         encPubkey, encNonce, msgVersion, recentBlockHash,
         expiresAtBlock, signedRead, data
     """
@@ -82,10 +83,11 @@ def _tx_rlp_fields(tx: UnsignedSeismicTx) -> list:
         _int_to_rlp_bytes(tx.nonce),
         _int_to_rlp_bytes(tx.gas_price),
         _int_to_rlp_bytes(tx.gas),
+        resolve_gas_payment(tx.gas_payment).rlp_parts(),
         _address_to_bytes(tx.to),
         _int_to_rlp_bytes(tx.value),
         bytes(se.encryption_pubkey),
-        bytes(se.encryption_nonce),
+        _int_to_rlp_bytes(int.from_bytes(se.encryption_nonce, "big")),
         _int_to_rlp_bytes(se.message_version),
         bytes(se.recent_block_hash),
         _int_to_rlp_bytes(se.expires_at_block),

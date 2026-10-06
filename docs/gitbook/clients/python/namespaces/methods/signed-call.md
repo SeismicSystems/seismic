@@ -19,6 +19,7 @@ w3.seismic.signed_call(
     gas: int = 30_000_000,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
+    gas_payment: GasPayment | None = None,
 ) -> HexBytes
 
 # async
@@ -35,10 +36,11 @@ await w3.seismic.signed_call(...same args...) -> HexBytes
 | `gas` | `int` | `30_000_000` | Gas limit |
 | `security` | [`SeismicSecurityParams`](../../api-reference/transaction-types/seismic-security-params.md) `\| None` | `None` | Override default security parameters |
 | `eip712` | `bool` | `False` | Use EIP-712 typed-data signing path |
+| `gas_payment` | [`GasPayment`](../../api-reference/transaction-types/gas-payment.md) `\| None` | Auto | Public signed fee choice; does not charge canonical state |
 
 ## Returns
 
-`HexBytes` — decrypted response bytes. Empty RPC result (`"0x"`) returns `HexBytes(b"")`.
+`HexBytes` — decrypted response bytes. An authenticated empty response returns `HexBytes(b"")`; a bare RPC `"0x"` is rejected as a truncated encryption envelope.
 
 ## Example
 

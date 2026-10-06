@@ -1,17 +1,14 @@
 /**
  * EIP-712 typed-data signing path for Seismic transactions.
  *
- * Used when the client's account is a wallet it does not directly control
- * (MetaMask, WalletConnect, Ledger, Trezor, etc.) and therefore cannot hand
- * us a locally-signed raw Seismic tx. Instead, we build an EIP-712 typed
- * message whose schema matches what the Seismic node validates, ask the
- * wallet to sign that, and forward the `{ typedData, signature }` pair to
- * the node via `eth_sendRawTransaction` / `eth_call` (the node
- * reconstructs and verifies the tx from those two pieces).
+ * The default local and JSON-RPC account paths both build this typed message.
+ * Wallet accounts (MetaMask, WalletConnect, Ledger, Trezor, etc.) sign via
+ * eth_signTypedData_v4; private-key accounts sign locally. The caller forwards
+ * `{ typedData, signature }` to eth_sendRawTransaction / eth_call.
  *
- * Local (private-key) accounts use a different path entirely — they sign
- * the serialized Seismic tx directly. See `tx/sendShielded.ts` and
- * `tx/signedCall.ts` for the branching.
+ * Raw-signing fallbacks use the serializer instead. See tx/sendShielded.ts
+ * and tx/signedCall.ts for the existing signing-mode branches; gas-payment
+ * selection does not change those defaults.
  */
 import {
   Account,
@@ -26,6 +23,10 @@ import {
 } from 'viem'
 import { SignTypedDataParameters, signTypedData } from 'viem/actions'
 
+import {
+  gasPaymentTypedData,
+  normalizeGasPayment,
+} from '@sviem/tx/gasPayment.ts'
 import {
   type TransactionSerializableSeismic,
   type TxSeismic,
@@ -72,6 +73,7 @@ const seismicTxTypedData = <
     nonce: tx.nonce !== undefined ? BigInt(tx.nonce) : undefined,
     gasPrice: tx.gasPrice && BigInt(tx.gasPrice),
     gasLimit: tx.gas && BigInt(tx.gas),
+    gasPayment: gasPaymentTypedData(normalizeGasPayment(tx.gasPayment)),
     to: isCreate ? '0x0000000000000000000000000000000000000000' : tx.to,
     isCreate,
     value: tx.value ? BigInt(tx.value) : 0n,
@@ -98,11 +100,16 @@ const seismicTxTypedData = <
         { name: 'chainId', type: 'uint256' },
         { name: 'verifyingContract', type: 'address' },
       ],
+      GasPayment: [
+        { name: 'kind', type: 'uint8' },
+        { name: 'token', type: 'address' },
+      ],
       TxSeismic: [
         { name: 'chainId', type: 'uint64' },
         { name: 'nonce', type: 'uint64' },
         { name: 'gasPrice', type: 'uint128' },
         { name: 'gasLimit', type: 'uint64' },
+        { name: 'gasPayment', type: 'GasPayment' },
         { name: 'to', type: 'address' },
         { name: 'isCreate', type: 'bool' },
         { name: 'value', type: 'uint256' },

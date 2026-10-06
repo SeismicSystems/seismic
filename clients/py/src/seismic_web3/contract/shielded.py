@@ -21,6 +21,7 @@ from seismic_web3.contract.abi import (
     encode_shielded_calldata,
     has_shielded_params,
 )
+from seismic_web3.gas_payment import require_auto_payment
 from seismic_web3.transaction.send import (
     async_debug_send_shielded_transaction,
     async_estimate_transparent_gas,
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
 
     from seismic_web3._types import PrivateKey
     from seismic_web3.client import EncryptionState
+    from seismic_web3.gas_payment import GasPayment
     from seismic_web3.transaction_types import DebugWriteResult, SeismicSecurityParams
 
 
@@ -77,6 +79,7 @@ class _ShieldedWriteNamespace:
             gas: int | None = None,
             gas_price: int | None = None,
             security: SeismicSecurityParams | None = None,
+            gas_payment: GasPayment | None = None,
         ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             return send_shielded_transaction(
@@ -90,6 +93,7 @@ class _ShieldedWriteNamespace:
                 gas_price=gas_price,
                 security=security,
                 eip712=self._eip712,
+                gas_payment=gas_payment,
             )
 
         return call
@@ -123,6 +127,7 @@ class _ShieldedDebugWriteNamespace:
             gas: int | None = None,
             gas_price: int | None = None,
             security: SeismicSecurityParams | None = None,
+            gas_payment: GasPayment | None = None,
         ) -> DebugWriteResult:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             return debug_send_shielded_transaction(
@@ -136,6 +141,7 @@ class _ShieldedDebugWriteNamespace:
                 gas_price=gas_price,
                 security=security,
                 eip712=self._eip712,
+                gas_payment=gas_payment,
             )
 
         return call
@@ -168,6 +174,7 @@ class _ShieldedReadNamespace:
             value: int = 0,
             gas: int = 30_000_000,
             security: SeismicSecurityParams | None = None,
+            gas_payment: GasPayment | None = None,
         ) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             raw = signed_call(
@@ -180,6 +187,7 @@ class _ShieldedReadNamespace:
                 gas=gas,
                 security=security,
                 eip712=self._eip712,
+                gas_payment=gas_payment,
             )
             return decode_abi_output(self._abi, fn_name, bytes(raw))
 
@@ -207,6 +215,7 @@ class _TransparentWriteNamespace:
         """Return a callable that sends a standard transaction for ``fn_name``."""
 
         def call(*args: Any, value: int = 0, **tx_params: Any) -> HexBytes:
+            require_auto_payment(tx_params.pop("gas_payment", None))
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             if (
                 "gas" not in tx_params
@@ -289,6 +298,7 @@ class _SmartWriteNamespace:
             gas: int | None = None,
             gas_price: int | None = None,
             security: SeismicSecurityParams | None = None,
+            gas_payment: GasPayment | None = None,
         ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             if has_shielded_params(self._abi, fn_name):
@@ -303,8 +313,10 @@ class _SmartWriteNamespace:
                     gas_price=gas_price,
                     security=security,
                     eip712=self._eip712,
+                    gas_payment=gas_payment,
                 )
             else:
+                require_auto_payment(gas_payment)
                 estimated_gas = gas
                 if estimated_gas is None:
                     estimated_gas = estimate_transparent_gas(
@@ -355,6 +367,7 @@ class _SmartReadNamespace:
             value: int = 0,
             gas: int = 30_000_000,
             security: SeismicSecurityParams | None = None,
+            gas_payment: GasPayment | None = None,
         ) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             if has_shielded_params(self._abi, fn_name):
@@ -368,9 +381,11 @@ class _SmartReadNamespace:
                     gas=gas,
                     security=security,
                     eip712=self._eip712,
+                    gas_payment=gas_payment,
                 )
                 return decode_abi_output(self._abi, fn_name, bytes(raw))
             else:
+                require_auto_payment(gas_payment)
                 raw = self._w3.eth.call({"to": self._address, "data": data})
                 return decode_abi_output(self._abi, fn_name, bytes(raw))
 
@@ -410,6 +425,7 @@ class _AsyncShieldedWriteNamespace:
             gas: int | None = None,
             gas_price: int | None = None,
             security: SeismicSecurityParams | None = None,
+            gas_payment: GasPayment | None = None,
         ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             return await async_send_shielded_transaction(
@@ -423,6 +439,7 @@ class _AsyncShieldedWriteNamespace:
                 gas_price=gas_price,
                 security=security,
                 eip712=self._eip712,
+                gas_payment=gas_payment,
             )
 
         return call
@@ -456,6 +473,7 @@ class _AsyncShieldedDebugWriteNamespace:
             gas: int | None = None,
             gas_price: int | None = None,
             security: SeismicSecurityParams | None = None,
+            gas_payment: GasPayment | None = None,
         ) -> DebugWriteResult:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             return await async_debug_send_shielded_transaction(
@@ -469,6 +487,7 @@ class _AsyncShieldedDebugWriteNamespace:
                 gas_price=gas_price,
                 security=security,
                 eip712=self._eip712,
+                gas_payment=gas_payment,
             )
 
         return call
@@ -501,6 +520,7 @@ class _AsyncShieldedReadNamespace:
             value: int = 0,
             gas: int = 30_000_000,
             security: SeismicSecurityParams | None = None,
+            gas_payment: GasPayment | None = None,
         ) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             raw = await async_signed_call(
@@ -513,6 +533,7 @@ class _AsyncShieldedReadNamespace:
                 gas=gas,
                 security=security,
                 eip712=self._eip712,
+                gas_payment=gas_payment,
             )
             return decode_abi_output(self._abi, fn_name, bytes(raw))
 
@@ -540,6 +561,7 @@ class _AsyncTransparentWriteNamespace:
         """Return an async callable that sends a standard transaction."""
 
         async def call(*args: Any, value: int = 0, **tx_params: Any) -> HexBytes:
+            require_auto_payment(tx_params.pop("gas_payment", None))
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             if (
                 "gas" not in tx_params
@@ -622,6 +644,7 @@ class _AsyncSmartWriteNamespace:
             gas: int | None = None,
             gas_price: int | None = None,
             security: SeismicSecurityParams | None = None,
+            gas_payment: GasPayment | None = None,
         ) -> HexBytes:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             if has_shielded_params(self._abi, fn_name):
@@ -636,8 +659,10 @@ class _AsyncSmartWriteNamespace:
                     gas_price=gas_price,
                     security=security,
                     eip712=self._eip712,
+                    gas_payment=gas_payment,
                 )
             else:
+                require_auto_payment(gas_payment)
                 estimated_gas = gas
                 if estimated_gas is None:
                     estimated_gas = await async_estimate_transparent_gas(
@@ -688,6 +713,7 @@ class _AsyncSmartReadNamespace:
             value: int = 0,
             gas: int = 30_000_000,
             security: SeismicSecurityParams | None = None,
+            gas_payment: GasPayment | None = None,
         ) -> Any:
             data = encode_shielded_calldata(self._abi, fn_name, list(args))
             if has_shielded_params(self._abi, fn_name):
@@ -701,9 +727,11 @@ class _AsyncSmartReadNamespace:
                     gas=gas,
                     security=security,
                     eip712=self._eip712,
+                    gas_payment=gas_payment,
                 )
                 return decode_abi_output(self._abi, fn_name, bytes(raw))
             else:
+                require_auto_payment(gas_payment)
                 raw = await self._w3.eth.call({"to": self._address, "data": data})
                 return decode_abi_output(self._abi, fn_name, bytes(raw))
 
