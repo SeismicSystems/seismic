@@ -22,6 +22,7 @@ contracts/
 │   ├── predeploys/                # Installed at fixed addresses in genesis (script/genesis-contracts.txt)
 │   │   ├── DepositContract.sol    # Eth2 staking deposits
 │   │   ├── Directory.sol          # Key management contract
+│   │   ├── GasTokenRegistry.sol   # Ordered gas-token configuration (integration pending)
 │   │   ├── Intelligence.sol       # Multi-provider encryption
 │   │   ├── KeyRotationRegistry.sol
 │   │   ├── MeasurementAuthorityDev.sol
@@ -54,6 +55,127 @@ They are built with the ssolc pinned in the root [`mise.toml`](../mise.toml) and
 TODO: we need to figure out a way to version these and make it more explicit which of these are deployed on each network, and at which block (or genesis).
 
 ## Contracts
+
+### GasTokenRegistry (`src/predeploys/GasTokenRegistry.sol`)
+
+An owner-managed, append-only registry of tokens intended for gas payment. The
+intended predeploy address is `0x0000000000000000000000476173546f6b656e73`
+(the ASCII suffix `GasTokens`). **Genesis installation and execution-client
+integration are pending; adding a token here does not yet enable gas payment.**
+
+Each entry contains a token address, an active flag, its balance mapping's storage
+slot, immutable owner-supplied `uint8 decimals` in **0–18 inclusive**, and a
+`BalanceStorageMode`: **Shielded = 0** for `mapping(address => suint256)` or
+**Public = 1** for `mapping(address => uint256)`. The mode describes only the balance
+mapping, not the token's other fields. Register the proxy address for upgradeable
+tokens. The owner must verify the slot, mode, precision, and full-width balance
+accounting, including after proxy upgrades. A precision/layout change requires
+deactivation; immutable metadata cannot be edited or the address re-registered.
+The contract does not execute token code to discover decimals or validate layout.
+
+The conversion policy is **one whole registered token per whole native unit**;
+decimals change base-unit scaling, not exchange rates. For precision `d`, the
+conversion divisor is `10^(18-d)`: maximum requirements and upfront debits round
+up, refunds round down, and the beneficiary receives the reserve remainder.
+Six-decimal entries retain the existing conversion. Zero-decimal entries are valid
+and have coarser rounding; they do not default to six decimals. The owner must
+approve this economic policy and direct balance accounting that bypasses transfer
+hooks, pause/blacklist checks, and transfer events.
+
+Future execution integration must use confidential balance operations for Shielded
+entries and public balance operations for Public entries, retaining the selected
+mode through deductions and refunds. Internal state-provider balance reads can
+access either mode. Recording a Public entry here does not by itself enable public
+token gas payment; the current hardcoded gas handler still uses confidential writes.
+
+#### Administration and reads
+
+- `addToken(address token, uint256 balanceSlot, BalanceStorageMode balanceStorageMode, uint8 decimals)`
+  appends an **active** entry and returns its permanent index. The enum accepts only
+  Shielded (`0`) or Public (`1`); unsupported values revert during ABI decoding.
+  Decimals above `MAX_DECIMALS = 18` revert with `UnsupportedDecimals(uint8)`.
+  An explicit decimals argument is required; there is no three-argument overload.
+  Zero addresses, addresses without deployed code, and duplicate addresses are
+  rejected, including inactive duplicates. Proxy addresses with deployed code are
+  accepted; implementations are not validated. Mapping slot zero is valid.
+- `activateToken(address token)` and `deactivateToken(address token)` look up the
+  registered token by address and toggle its active flag. Repeating the same
+  operation is allowed. Unregistered addresses revert with `TokenNotRegistered`.
+  Neither operation checks token code or changes the entry's address, balance slot,
+  storage mode, decimals, or priority, so a registered token can still be disabled
+  if its code becomes unusable.
+- `tokenCount()` returns the total entry count, including inactive tokens;
+  `tokens(uint256 index)` returns `(address token, bool active, BalanceStorageMode
+  balanceStorageMode, uint8 decimals, uint256 balanceSlot)`.
+- `TokenAdded` includes the index, token address, balance slot, storage mode, and decimals;
+  `TokenActivationChanged` reports the index, token address, and active flag.
+
+Entries cannot be removed, reordered, or have their address, balance slot,
+storage mode, or decimals updated. `MAX_TOKENS` is **32**, including inactive entries:
+deactivation does not free capacity. This bounds execution-client scans. Automatic
+payment is native first, then the first active, compatible entry in insertion order
+that can cover the entire maximum gas cost. Seismic transactions will also support
+strict native or explicit-token selection without fallback. No gas cost is split
+across assets; native currency alone funds transaction value.
+
+Authorization matches `ProtocolParams`: a public `owner`, `OnlyOwner` checks,
+`transferOwnership(address)`, and `renounceOwnership()`. Renouncing permanently
+freezes configuration without clearing entries. For ordinary deployments the
+constructor sets `owner = msg.sender`. Genesis installation bypasses the
+constructor and must seed owner storage with the ProtocolParams initial owner
+(`0xd412c5Ecd343e264381fF15aFC0aD78a67B79F35` in the current dev/testnet manifest).
+Ownership is independent: transferring ProtocolParams ownership does not transfer
+registry ownership.
+
+#### Storage layout for client integration
+
+The public layout is intended to be fixed for direct reads by execution clients:
+
+| Location | Contents |
+| --- | --- |
+| Slot `0` | Owner address |
+| Slot `1` | Token array length |
+| `keccak256(abi.encode(uint256(1))) + 2 * index` | Token address in bits 0–159; active byte at offset 20; mode byte at offset 21; decimals byte at offset 22 |
+| Preceding slot `+ 1` | Balance mapping slot (`uint256`) |
+
+Execution clients will read this layout directly from node state rather than call
+`tokens(index)`. For an entry's first 256-bit storage word, decode the fields as:
+
+```text
+token    = word & ((1 << 160) - 1)
+active   = ((word >> 160) & 0xff) != 0
+mode     = (word >> 168) & 0xff
+decimals = (word >> 176) & 0xff
+```
+
+Only bits 160–167 determine activation. Any nonzero value in that byte is true,
+matching Solidity's storage reads of `bool`; do not require the byte to equal `1`.
+Bits 168–175 contain mode, which must be exactly `0` (Shielded) or `1` (Public).
+Bits 176–183 contain decimals, which must be in `0..=18`; zero means zero precision,
+not missing metadata. Only bits 184–255 are ignored padding. Inactive entries are
+skipped before validating mode/decimals. Automatic selection skips unsupported
+entries without root/balance reads; explicit selection fails without fallback.
+`word >> 160 != 0` is not a valid active check: it includes mode, decimals, and padding.
+
+Canonical contract-written words are
+`token | ((active ? 1 : 0) << 160) | (mode << 168) | (decimals << 176)` with zero
+upper 72-bit padding. The two-slot entry stride and full-width mapping-root position
+are unchanged. Activation normalizes the active byte but preserves all immutable
+metadata and padding. Tests cover both modes at every supported precision, all
+256 active-byte values, full-width roots, and fuzzed padding/activation changes.
+
+The fresh-chain genesis installs the runtime with a nonzero seeded owner and
+**zero token entries** (`tokens.length = 0`). No old-entry compatibility decoder
+or legacy migration is provided. After genesis, native-funded owner transactions
+register tokens with explicitly verified decimals. Initialize Shielded balances
+through contract execution, not nonzero public genesis slots. Genesis validation
+must check the runtime/address, owner, empty length, canonical words, and public
+registry storage; runtime decoding does not reject configuration privacy flags.
+
+For each token, a sender's balance key is
+`keccak256(abi.encode(sender, balanceSlot))`. Token balances are stored at the
+registered token address, not in this registry. Raw-layout and simulated-genesis
+tests are in `test/GasTokenRegistry.t.sol`.
 
 ### Directory (`src/predeploys/Directory.sol`)
 

@@ -5,4 +5,5 @@ DepositContract
 Directory
 Intelligence
 ProtocolParams
+GasTokenRegistry
 KeyRotationRegistry
