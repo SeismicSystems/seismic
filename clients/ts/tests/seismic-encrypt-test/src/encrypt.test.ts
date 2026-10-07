@@ -1,9 +1,14 @@
 import { afterEach, expect, spyOn, test } from 'bun:test'
-import type { EncryptSeismicTxParams, GasPayment } from 'seismic-encrypt'
+import type {
+  EncryptSeismicTxParams,
+  GasPayment,
+  SeismicTxSerializer,
+} from 'seismic-encrypt'
 import { encryptSeismicTx, serializeSeismicTx } from 'seismic-encrypt'
 import { serializeSeismicTransaction } from 'seismic-viem'
 import { fromRlp, getAddress, keccak256, slice } from 'viem'
 import type { Hex } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
 
 const params: EncryptSeismicTxParams = {
   tx: {
@@ -99,6 +104,30 @@ for (const gasPayment of [undefined, ...payments]) {
     expect(rpc).toHaveBeenCalledTimes(2)
   })
 }
+
+test('documented Viem signing and returned signature callback agree', async () => {
+  const rpc = mockRpc()
+  restore.push(() => rpc.mockRestore())
+  const account = privateKeyToAccount(params.encryptionPrivateKey!)
+  const result = await encryptSeismicTx({ ...params, sender: account.address })
+  expect(result.serialize()).toBe(result.unsignedSerializedTx)
+  expect(result.serialize({ r: signature.r, s: signature.s, yParity: 0 })).toBe(
+    result.serialize(signature)
+  )
+  const signed = await account.signTransaction<SeismicTxSerializer>(
+    result.seismicTx,
+    { serializer: serializeSeismicTx }
+  )
+  const helperSerializer: SeismicTxSerializer = (_tx, sig) =>
+    result.serialize(sig)
+  const helperSigned = await account.signTransaction<SeismicTxSerializer>(
+    result.seismicTx,
+    { serializer: helperSerializer }
+  )
+  expect(helperSigned).toBe(signed)
+  expect(fromRlp(slice(signed, 1), 'hex')).toHaveLength(18)
+  expect(rpc).toHaveBeenCalledTimes(2)
+})
 
 test('changing only gasPayment leaves ciphertext/AAD unchanged, but changes signed bytes', async () => {
   const rpc = mockRpc()

@@ -11,7 +11,8 @@ npm install seismic-encrypt viem
 ## Quick start
 
 ```ts
-import { encryptSeismicTx } from 'seismic-encrypt'
+import { encryptSeismicTx, serializeSeismicTx } from 'seismic-encrypt'
+import type { SeismicTxSerializer } from 'seismic-encrypt'
 import { createPublicClient, encodeFunctionData, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
@@ -35,17 +36,16 @@ const tx = {
 }
 
 // 2. Encrypt it for Seismic
-const { seismicTx, serialize } = await encryptSeismicTx({
+const { seismicTx } = await encryptSeismicTx({
   tx,
   sender: account.address,
   rpcUrl: RPC_URL,
 })
 
 // 3. Sign and send — standard viem, nothing special
-const signed = await account.signTransaction(
-  { ...seismicTx },
-  { serializer: (_tx, sig) => serialize(sig!) }
-)
+const signed = await account.signTransaction<SeismicTxSerializer>(seismicTx, {
+  serializer: serializeSeismicTx,
+})
 
 const hash = await client.sendRawTransaction({
   serializedTransaction: signed,
@@ -88,11 +88,11 @@ That's it. The calldata is AES-256-GCM encrypted before it hits the network. The
 
 Returns a `Promise<EncryptSeismicTxResult>`:
 
-| Field                  | Type                        | Description                                                     |
-| ---------------------- | --------------------------- | --------------------------------------------------------------- |
-| `seismicTx`            | `object`                    | All transaction fields with encrypted `data`, ready to sign     |
-| `serialize`            | `(sig: { v, r, s }) => Hex` | Takes a signature and returns final signed bytes (`0x4a` + RLP) |
-| `unsignedSerializedTx` | `Hex`                       | The unsigned serialized bytes (for inspection/debugging)        |
+| Field                  | Type                       | Description                                                     |
+| ---------------------- | -------------------------- | --------------------------------------------------------------- |
+| `seismicTx`            | `object`                   | All transaction fields with encrypted `data`, ready to sign     |
+| `serialize`            | `(sig?: Signature) => Hex` | Omit for unsigned bytes; pass a Viem signature for signed bytes |
+| `unsignedSerializedTx` | `Hex`                      | The unsigned serialized bytes (for inspection/debugging)        |
 
 ### Gas payment
 
@@ -133,6 +133,10 @@ Choose a limit sufficient for encrypted-input admission and execution.
 ### `serializeSeismicTx(tx, signature?)`
 
 Lower-level serializer if you want to build the transaction yourself. Takes a full seismic transaction object and an optional signature, returns `0x4a`-prefixed RLP-encoded bytes. Its optional `gasPayment` also resolves to Auto **before signing**; the wire field is never omitted.
+
+The exported `SeismicSerializableTransaction` type describes complete standalone fields; low-level callers may omit `type`. `SeismicTxSerializer` is the Viem-compatible serializer type used in the quick start. Ordinary Ethereum or incomplete transaction inputs are rejected rather than encoded as Seismic transactions.
+
+Signatures accept Viem's `Signature`: `r`/`s` with either `v` (`0`, `1`, `27`, or `28`) or `yParity` (`0` or `1`). When both are present, `yParity` takes precedence. `serialize()` without a signature returns the same bytes as `unsignedSerializedTx`, supporting Viem's unsigned signing-hash pass.
 
 The unsigned field order is:
 
@@ -184,6 +188,19 @@ const { seismicTx, serialize } = await encryptSeismicTx({
   rpcUrl: 'http://127.0.0.1:8545',
 })
 ```
+
+## Package consumers and verification
+
+ESM imports and CommonJS `require('seismic-encrypt')` expose the same helpers. The CommonJS build uses a `.cjs` extension so Node does not interpret it as ESM under this package's `type: module`.
+
+From `clients/ts`, run:
+
+```bash
+bun run encrypt:test
+bun run encrypt:consumer:test
+```
+
+The consumer check builds the package, verifies both public module entry points against the shared Rust vectors, exercises encryption/signing with mocked RPC, and compiles public declaration examples without workspace source aliases. It does not connect to a node or broadcast transactions.
 
 ## Relationship to seismic-viem
 

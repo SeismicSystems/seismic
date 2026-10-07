@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
-import type { GasPayment } from 'seismic-encrypt'
+import type {
+  GasPayment,
+  SeismicSerializableTransaction,
+} from 'seismic-encrypt'
 import { serializeSeismicTx } from 'seismic-encrypt'
 import {
   type TransactionSerializableSeismic,
@@ -20,7 +23,7 @@ const signature: Signature & { v: bigint } = {
   s: '0x6666666666666666666666666666666666666666666666666666666666666666',
 }
 
-function transaction(): Parameters<typeof serializeSeismicTx>[0] {
+function transaction(): SeismicSerializableTransaction {
   return {
     chainId: 31337,
     nonce: 1,
@@ -77,7 +80,10 @@ describe('standalone/viem fresh-chain serialization parity', () => {
   test('omission is explicit Auto before signing, never old-layout bytes', () => {
     const tx = transaction()
     expect(serializeSeismicTx(tx, signature)).toBe(
-      serializeSeismicTx({ ...tx, gasPayment: { type: 'auto' } }, signature)
+      serializeSeismicTx(
+        { ...tx, gasPayment: { type: 'auto' as const } },
+        signature
+      )
     )
     expect(
       fromRlp(slice(serializeSeismicTx(tx, signature), 1), 'hex')
@@ -94,6 +100,60 @@ describe('standalone/viem fresh-chain serialization parity', () => {
     )
     expect(new Set(hashes).size).toBe(3)
     expect(new Set(signed).size).toBe(3)
+  })
+
+  for (const parity of [0, 1]) {
+    test(`v and yParity signatures encode identical bytes for parity ${parity}`, () => {
+      const tx = transaction()
+      const { r, s } = signature
+      const yParitySigned = serializeSeismicTx(tx, { r, s, yParity: parity })
+      expect(serializeSeismicTx(tx, { r, s, v: BigInt(parity) })).toBe(
+        yParitySigned
+      )
+      expect(serializeSeismicTx(tx, { r, s, v: BigInt(parity + 27) })).toBe(
+        yParitySigned
+      )
+      expect(yParitySigned).toBe(
+        serializeSeismicTransaction(
+          { ...tx, type: 'seismic' },
+          { r, s, yParity: parity }
+        )
+      )
+    })
+  }
+
+  test('explicit yParity takes precedence over v', () => {
+    const tx = transaction()
+    const { r, s } = signature
+    expect(serializeSeismicTx(tx, { r, s, v: 27n, yParity: 1 })).toBe(
+      serializeSeismicTx(tx, { r, s, yParity: 1 })
+    )
+  })
+
+  test('invalid recovery identifiers are rejected', () => {
+    const tx = transaction()
+    const { r, s } = signature
+    expect(() => serializeSeismicTx(tx, { r, s, v: 99n })).toThrow(
+      'Invalid Seismic signature'
+    )
+    expect(() => serializeSeismicTx(tx, { r, s, yParity: 2 })).toThrow(
+      'Invalid Seismic signature'
+    )
+  })
+
+  test('Viem-compatible serializer does not encode ordinary Ethereum transactions as Seismic', () => {
+    expect(() =>
+      serializeSeismicTx({
+        type: 'legacy',
+        chainId: 1,
+        nonce: 0,
+        gasPrice: 1n,
+        gas: 21_000n,
+        to: zeroAddress,
+        value: 0n,
+        data: '0x',
+      })
+    ).toThrow('complete Seismic transaction')
   })
 
   test('zero and leading-zero scalar fields remain canonical', () => {
@@ -198,7 +258,7 @@ describe('Rust/standalone gas-payment golden vectors', () => {
   fixture.vectors.forEach((vector, index) => {
     test(`vector ${index}: ${vector.tx.gasPayment.type}, version ${Number(vector.tx.messageVersion)}, nonce ${vector.tx.encryptionNonce}`, () => {
       const tx = vector.tx
-      const standalone: Parameters<typeof serializeSeismicTx>[0] = {
+      const standalone: SeismicSerializableTransaction = {
         chainId: Number(tx.chainId),
         nonce: Number(tx.nonce),
         gasPrice: BigInt(tx.gasPrice),
@@ -224,11 +284,19 @@ describe('Rust/standalone gas-payment golden vectors', () => {
       }
       const unsigned = serializeSeismicTx(standalone)
       const signed = serializeSeismicTx(standalone, {
-        ...vector.signature,
+        r: vector.signature.r,
+        s: vector.signature.s,
         v: BigInt(vector.signature.yParity),
       })
       expect(unsigned).toBe(vector.unsigned)
       expect(signed).toBe(vector.signed)
+      expect(
+        serializeSeismicTx(standalone, {
+          r: vector.signature.r,
+          s: vector.signature.s,
+          yParity: Number(vector.signature.yParity),
+        })
+      ).toBe(vector.signed)
       expect(keccak256(signed)).toBe(vector.txHash)
       if (standalone.messageVersion === 0) {
         expect(keccak256(unsigned)).toBe(vector.signingHash)

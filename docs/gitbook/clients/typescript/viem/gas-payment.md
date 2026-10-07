@@ -49,20 +49,25 @@ React's `useShieldedWriteContract` and `useSignedReadContract` accept the same `
 If you use `seismic-encrypt` with an ordinary Viem client instead of a shielded client, pass the same tagged choice **inside `tx`**:
 
 ```typescript
-import { encryptSeismicTx } from 'seismic-encrypt';
-import type { GasPayment } from 'seismic-encrypt';
+import { encryptSeismicTx, serializeSeismicTx } from 'seismic-encrypt';
+import type { GasPayment, SeismicTxSerializer } from 'seismic-encrypt';
 import type { Address } from 'viem';
 
 const gasTokenAddress: Address = '0xYourGasTokenAddress';
 const payment: GasPayment = { type: 'token', token: gasTokenAddress };
-const { seismicTx, serialize } = await encryptSeismicTx({
+const { seismicTx } = await encryptSeismicTx({
   tx: { ...tx, gasPayment: payment },
   sender: account.address,
   rpcUrl,
 });
+const signed = await account.signTransaction<SeismicTxSerializer>(seismicTx, {
+  serializer: serializeSeismicTx,
+});
 ```
 
 Replace the placeholder address with a valid registered token address. Omission resolves to Auto; `seismicTx.gasPayment` is always present. Both `unsignedSerializedTx` and the `serialize(signature)` result include the mandatory selector immediately after gas. The lower-level `serializeSeismicTx` follows the same rules. Invalid selectors are rejected, and the selector does not alter encryption AAD.
+
+The exported `SeismicTxSerializer` type lets Viem accept the custom transaction format without unsafe casts. Signatures may supply either `v` or `yParity`; the returned `serialize()` helper also supports the unsigned signing-hash pass. ESM and CommonJS consumers use the same public package API.
 
 The standalone helper requires an explicit `tx.gas` and preserves it; it does **not** estimate gas or apply the automatic ciphertext-gas bound described below. The caller remains responsible for supplying enough gas for encrypted-input admission and execution.
 
