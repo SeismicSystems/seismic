@@ -3,12 +3,15 @@ import {
   bytesToHex,
   concatHex,
   createPublicClient,
+  getAddress,
   hexToBigInt,
   hexToBytes,
   http,
+  isAddress,
   toHex,
   toRlp,
   trim,
+  zeroAddress,
 } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
@@ -18,10 +21,60 @@ import { secp256k1 } from '@noble/curves/secp256k1'
 import { hkdf } from '@noble/hashes/hkdf'
 import { sha256 } from '@noble/hashes/sha256'
 
+/** Public, signed fee selection. Explicit Native/Token never fall back. */
+export type GasPayment =
+  | { type: 'auto' }
+  | { type: 'native' }
+  | { type: 'token'; token: Address }
+
 export const SEISMIC_TX_TYPE = 0x4a
 const DEFAULT_SEISMIC_BLOCKS_WINDOW = 100n
 
 // ── Helpers (inlined from seismic-viem to keep this package standalone) ──
+
+// Keep selector validation/encoding aligned with seismic-viem's gasPayment.ts.
+// Omission is resolved before signing; signed bytes always include this field.
+const normalizeGasPayment = (value: unknown = undefined): GasPayment => {
+  if (value === undefined) return { type: 'auto' }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Invalid gasPayment: expected a tagged object')
+  }
+  const fields = value as Record<string, unknown>
+  const keys = Object.keys(fields)
+  if (!Object.prototype.hasOwnProperty.call(fields, 'type')) {
+    throw new Error('Invalid gasPayment: missing type')
+  }
+  if (fields.type === 'auto' || fields.type === 'native') {
+    if (keys.length !== 1) {
+      throw new Error(
+        'Invalid gasPayment: auto/native cannot carry extra fields'
+      )
+    }
+    return { type: fields.type }
+  }
+  if (
+    fields.type === 'token' &&
+    keys.length === 2 &&
+    Object.prototype.hasOwnProperty.call(fields, 'token') &&
+    typeof fields.token === 'string' &&
+    isAddress(fields.token, { strict: false }) &&
+    fields.token.toLowerCase() !== zeroAddress
+  ) {
+    return { type: 'token', token: getAddress(fields.token) }
+  }
+  throw new Error('Invalid gasPayment: expected a nonzero token address')
+}
+
+const gasPaymentRlp = (payment: GasPayment): Hex[] => {
+  switch (payment.type) {
+    case 'auto':
+      return ['0x', '0x']
+    case 'native':
+      return ['0x01', '0x']
+    case 'token':
+      return ['0x02', payment.token]
+  }
+}
 
 const compressPublicKey = (uncompressedKey: Hex): Hex => {
   const cleanKey = uncompressedKey.replace('0x', '')
@@ -149,6 +202,8 @@ export const serializeSeismicTx = (
     nonce: number
     gasPrice: bigint
     gas: bigint
+    /** Omission resolves to Auto before serialization/signing. */
+    gasPayment?: GasPayment
     to: Address | null
     value: bigint
     encryptionPubkey: Hex
@@ -163,17 +218,20 @@ export const serializeSeismicTx = (
   signature?: { v: bigint; r: Hex; s: Hex }
 ): Hex => {
   const rlpArray = [
-    toHex(tx.chainId),
+    tx.chainId ? toHex(tx.chainId) : '0x',
     tx.nonce ? toHex(tx.nonce) : '0x',
     tx.gasPrice ? toHex(tx.gasPrice) : '0x',
     tx.gas ? toHex(tx.gas) : '0x',
+    gasPaymentRlp(normalizeGasPayment(tx.gasPayment)),
     tx.to ?? '0x',
     tx.value ? toHex(tx.value) : '0x',
     tx.encryptionPubkey ?? '0x',
-    hexToBigInt(tx.encryptionNonce) === 0n ? '0x' : tx.encryptionNonce,
+    hexToBigInt(tx.encryptionNonce) === 0n
+      ? '0x'
+      : toHex(hexToBigInt(tx.encryptionNonce)),
     tx.messageVersion === 0 ? '0x' : toHex(tx.messageVersion),
     tx.recentBlockHash,
-    toHex(tx.expiresAtBlock),
+    tx.expiresAtBlock ? toHex(tx.expiresAtBlock) : '0x',
     tx.signedRead ? '0x01' : '0x',
     tx.data ?? '0x',
     (tx.authorizationList ?? []).map((auth) => [
@@ -181,12 +239,15 @@ export const serializeSeismicTx = (
       auth.contractAddress,
       auth.nonce ? toHex(auth.nonce) : '0x',
       auth.yParity ? toHex(auth.yParity) : '0x',
-      auth.r,
-      auth.s,
+      hexToBigInt(auth.r) ? toHex(hexToBigInt(auth.r)) : '0x',
+      hexToBigInt(auth.s) ? toHex(hexToBigInt(auth.s)) : '0x',
     ]),
     ...toYParitySignatureArray(signature),
   ]
-  return concatHex([toHex(SEISMIC_TX_TYPE), toRlp(rlpArray as any)])
+  return concatHex([
+    toHex(SEISMIC_TX_TYPE),
+    toRlp(rlpArray as Parameters<typeof toRlp>[0]),
+  ])
 }
 
 // ── Public API ──────────────────────────────────────────────────────
@@ -201,6 +262,8 @@ export type EncryptSeismicTxParams = {
     gasPrice: bigint
     gas: bigint
     chainId: number
+    /** Public, signed fee selection. Defaults to Auto before signing. */
+    gasPayment?: GasPayment
     authorizationList?: TransactionSerializableEIP7702['authorizationList']
   }
   /** Sender address (must match the signer) */
@@ -225,6 +288,8 @@ export type EncryptSeismicTxResult = {
     nonce: number
     gasPrice: bigint
     gas: bigint
+    /** Resolved selector, always included in the signed wire format. */
+    gasPayment: GasPayment
     to: Address | null
     value: bigint
     data: Hex
@@ -272,6 +337,7 @@ export const encryptSeismicTx = async ({
   encryptionPrivateKey,
   blocksWindow = DEFAULT_SEISMIC_BLOCKS_WINDOW,
 }: EncryptSeismicTxParams): Promise<EncryptSeismicTxResult> => {
+  const gasPayment = normalizeGasPayment(tx.gasPayment)
   const client = createPublicClient({ transport: http(rpcUrl) })
 
   // 1. Fetch TEE pubkey and latest block in parallel
@@ -319,6 +385,7 @@ export const encryptSeismicTx = async ({
     nonce: tx.nonce,
     gasPrice: tx.gasPrice,
     gas: tx.gas,
+    gasPayment,
     to: tx.to,
     value: tx.value ?? 0n,
     data: encryptedData,

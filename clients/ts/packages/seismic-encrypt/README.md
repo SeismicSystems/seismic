@@ -64,26 +64,27 @@ That's it. The calldata is AES-256-GCM encrypted before it hits the network. The
 2. Generates an **ephemeral secp256k1 keypair** (or uses one you provide)
 3. Performs **ECDH** between your ephemeral key and the TEE key, then derives an AES-256 key via SHA-256 + HKDF
 4. Encrypts your calldata with **AES-256-GCM**, using RLP-encoded transaction metadata as additional authenticated data (AAD) — this binds the ciphertext to this specific transaction so it can't be replayed or tampered with
-5. Returns the encrypted transaction fields and a `serialize` function that produces the final `0x4a`-prefixed bytes
+5. Resolves the public `gasPayment` selector (Auto if omitted), then returns the encrypted transaction fields and a `serialize` function that produces the final `0x4a`-prefixed bytes. The selector is signed metadata, not encrypted calldata or AAD.
 
 ## API
 
 ### `encryptSeismicTx(params)`
 
-| Parameter              | Type                       | Description                                                     |
-| ---------------------- | -------------------------- | --------------------------------------------------------------- |
-| `tx.to`                | `Address`                  | Destination address                                             |
-| `tx.data`              | `Hex`                      | Plaintext calldata to encrypt                                   |
-| `tx.nonce`             | `number`                   | Sender's transaction nonce                                      |
-| `tx.gasPrice`          | `bigint`                   | Gas price                                                       |
-| `tx.gas`               | `bigint`                   | Gas limit                                                       |
-| `tx.chainId`           | `number`                   | Chain ID (`5124` for Seismic testnet, `31337` for local sanvil) |
-| `tx.value`             | `bigint?`                  | ETH value in wei (default `0`)                                  |
-| `tx.authorizationList` | `SignedAuthorizationList?` | Optional EIP-7702 authorization list                            |
-| `sender`               | `Address`                  | Sender address (must match the signer)                          |
-| `rpcUrl`               | `string`                   | Seismic node RPC URL                                            |
-| `encryptionPrivateKey` | `Hex?`                     | Your own ephemeral key. One is generated per call if omitted.   |
-| `blocksWindow`         | `bigint?`                  | Blocks until the tx expires (default `100`)                     |
+| Parameter              | Type                       | Description                                                        |
+| ---------------------- | -------------------------- | ------------------------------------------------------------------ |
+| `tx.to`                | `Address`                  | Destination address                                                |
+| `tx.data`              | `Hex`                      | Plaintext calldata to encrypt                                      |
+| `tx.nonce`             | `number`                   | Sender's transaction nonce                                         |
+| `tx.gasPrice`          | `bigint`                   | Gas price                                                          |
+| `tx.gas`               | `bigint`                   | Explicit gas limit; preserved without automatic estimation         |
+| `tx.gasPayment`        | `GasPayment?`              | Public fee selector; defaults to `{ type: 'auto' }` before signing |
+| `tx.chainId`           | `number`                   | Chain ID (`5124` for Seismic testnet, `31337` for local sanvil)    |
+| `tx.value`             | `bigint?`                  | ETH value in wei (default `0`)                                     |
+| `tx.authorizationList` | `SignedAuthorizationList?` | Optional EIP-7702 authorization list                               |
+| `sender`               | `Address`                  | Sender address (must match the signer)                             |
+| `rpcUrl`               | `string`                   | Seismic node RPC URL                                               |
+| `encryptionPrivateKey` | `Hex?`                     | Your own ephemeral key. One is generated per call if omitted.      |
+| `blocksWindow`         | `bigint?`                  | Blocks until the tx expires (default `100`)                        |
 
 Returns a `Promise<EncryptSeismicTxResult>`:
 
@@ -93,9 +94,62 @@ Returns a `Promise<EncryptSeismicTxResult>`:
 | `serialize`            | `(sig: { v, r, s }) => Hex` | Takes a signature and returns final signed bytes (`0x4a` + RLP) |
 | `unsignedSerializedTx` | `Hex`                       | The unsigned serialized bytes (for inspection/debugging)        |
 
+### Gas payment
+
+The exported `GasPayment` type accepts:
+
+| Choice                              | Meaning                                                                     |
+| ----------------------------------- | --------------------------------------------------------------------------- |
+| Omitted or `{ type: 'auto' }`       | Native funds first, then eligible active registry tokens in insertion order |
+| `{ type: 'native' }`                | Native funds only; no token fallback                                        |
+| `{ type: 'token', token: address }` | Exactly this registered token; no fallback                                  |
+
+Pass the selector inside `tx`, alongside `gas` and `gasPrice`:
+
+```ts
+import type { GasPayment } from 'seismic-encrypt'
+import type { Address } from 'viem'
+
+const gasTokenAddress: Address = '0xYourGasTokenAddress'
+const payment: GasPayment = { type: 'token', token: gasTokenAddress }
+const { seismicTx, serialize } = await encryptSeismicTx({
+  tx: { ...tx, gasPayment: payment },
+  sender: account.address,
+  rpcUrl: RPC_URL,
+})
+// seismicTx.gasPayment is always resolved, including when the option is omitted.
+```
+
+Replace the placeholder with a valid nonzero 20-byte registered token address.
+The token need not be the called contract; use the registered proxy address for
+upgradeable tokens. Unknown tags, zero/malformed token addresses, extra properties,
+and token properties on Auto/Native are rejected before RPC requests.
+
+`value` and `gasPrice` remain denominated in native wei. Selection does not mint
+or fund tokens. This standalone helper preserves your explicit `gas` limit; it
+does not estimate gas or apply seismic-viem's automatic final-ciphertext minimum.
+Choose a limit sufficient for encrypted-input admission and execution.
+
 ### `serializeSeismicTx(tx, signature?)`
 
-Lower-level serializer if you want to build the transaction yourself. Takes a full seismic transaction object and an optional signature, returns `0x4a`-prefixed RLP-encoded bytes.
+Lower-level serializer if you want to build the transaction yourself. Takes a full seismic transaction object and an optional signature, returns `0x4a`-prefixed RLP-encoded bytes. Its optional `gasPayment` also resolves to Auto **before signing**; the wire field is never omitted.
+
+The unsigned field order is:
+
+```text
+[chainId, nonce, gasPrice, gas, gasPayment, to, value,
+ encryptionPubkey, encryptionNonce, messageVersion, recentBlockHash,
+ expiresAtBlock, signedRead, data, authorizationList]
+```
+
+`gasPayment` is a nested `[kind, token]` RLP list: Auto is `[0, empty]`, Native is
+`[1, empty]`, and Token is `[2, address bytes]`. Signature fields follow the unsigned
+fields. Integers, including the encryption nonce and authorization signature
+scalars, use canonical RLP encoding; encryption AAD retains its existing encoding.
+
+This format requires a node supporting the mandatory gas-payment selector. Old
+already-signed Seismic transactions are not made compatible by adding a default;
+there is no legacy wire mode or new public raw decoder.
 
 ### `SEISMIC_TX_TYPE`
 

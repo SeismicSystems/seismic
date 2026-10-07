@@ -28,11 +28,11 @@ await token.swrite.transfer(
 
 Replace placeholder addresses with valid 20-byte addresses.
 
-| Choice | Meaning |
-| --- | --- |
-| Omitted or `{ type: 'auto' }` | Native funds first, then eligible active registry tokens in insertion order |
-| `{ type: 'native' }` | Native funds only; no token fallback |
-| `{ type: 'token', token: address }` | Exactly this registered token; no fallback |
+| Choice                              | Meaning                                                                     |
+| ----------------------------------- | --------------------------------------------------------------------------- |
+| Omitted or `{ type: 'auto' }`       | Native funds first, then eligible active registry tokens in insertion order |
+| `{ type: 'native' }`                | Native funds only; no token fallback                                        |
+| `{ type: 'token', token: address }` | Exactly this registered token; no fallback                                  |
 
 Token addresses must be nonzero. Auto/Native cannot carry a token, and unknown tags or extra properties are rejected. The fee token need not be the contract being called; for proxies, select the registered proxy address, not its implementation.
 
@@ -43,6 +43,28 @@ The option is forwarded by `sendShieldedTransaction`, `shieldedWriteContract`, `
 Smart `.write`/`.read` routing remains based on the ABI. If it chooses the transparent path, only Auto is accepted: standard Ethereum envelopes cannot authenticate Native or Token selection. Use `.swrite`/`.sread` or the corresponding explicit shielded wallet helpers when you need a non-Auto selector. Non-Auto requests are rejected rather than silently dropped or routed differently.
 
 React's `useShieldedWriteContract` and `useSignedReadContract` accept the same `gasPayment` option.
+
+## Standalone encryption with seismic-encrypt
+
+If you use `seismic-encrypt` with an ordinary Viem client instead of a shielded client, pass the same tagged choice **inside `tx`**:
+
+```typescript
+import { encryptSeismicTx } from 'seismic-encrypt';
+import type { GasPayment } from 'seismic-encrypt';
+import type { Address } from 'viem';
+
+const gasTokenAddress: Address = '0xYourGasTokenAddress';
+const payment: GasPayment = { type: 'token', token: gasTokenAddress };
+const { seismicTx, serialize } = await encryptSeismicTx({
+  tx: { ...tx, gasPayment: payment },
+  sender: account.address,
+  rpcUrl,
+});
+```
+
+Replace the placeholder address with a valid registered token address. Omission resolves to Auto; `seismicTx.gasPayment` is always present. Both `unsignedSerializedTx` and the `serialize(signature)` result include the mandatory selector immediately after gas. The lower-level `serializeSeismicTx` follows the same rules. Invalid selectors are rejected, and the selector does not alter encryption AAD.
+
+The standalone helper requires an explicit `tx.gas` and preserves it; it does **not** estimate gas or apply the automatic ciphertext-gas bound described below. The caller remains responsible for supplying enough gas for encrypted-input admission and execution.
 
 ## Automatic gas limits
 
