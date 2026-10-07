@@ -22,7 +22,7 @@ contracts/
 │   ├── predeploys/                # Installed at fixed addresses in genesis (script/genesis-contracts.txt)
 │   │   ├── DepositContract.sol    # Eth2 staking deposits
 │   │   ├── Directory.sol          # Key management contract
-│   │   ├── GasTokenRegistry.sol   # Ordered gas-token configuration (integration pending)
+│   │   ├── GasTokenRegistry.sol   # Ordered gas-token configuration read by the execution client
 │   │   ├── Intelligence.sol       # Multi-provider encryption
 │   │   ├── KeyRotationRegistry.sol
 │   │   ├── MeasurementAuthorityDev.sol
@@ -58,10 +58,12 @@ TODO: we need to figure out a way to version these and make it more explicit whi
 
 ### GasTokenRegistry (`src/predeploys/GasTokenRegistry.sol`)
 
-An owner-managed, append-only registry of tokens intended for gas payment. The
-intended predeploy address is `0x0000000000000000000000476173546f6b656e73`
-(the ASCII suffix `GasTokens`). **Genesis installation and execution-client
-integration are pending; adding a token here does not yet enable gas payment.**
+An owner-managed, append-only registry of tokens accepted for gas payment. It is
+installed in genesis at `0x0000000000000000000000476173546f6b656e73` (the ASCII
+suffix `GasTokens`), and the execution client reads it directly from state when
+selecting and settling the fee asset for Seismic transactions. **Adding an active
+entry here enables gas payment in that token; the owner must verify the metadata
+below before registering, because the client trusts it without validation.**
 
 Each entry contains a token address, an active flag, its balance mapping's storage
 slot, immutable owner-supplied `uint8 decimals` in **0–18 inclusive**, and a
@@ -82,11 +84,11 @@ and have coarser rounding; they do not default to six decimals. The owner must
 approve this economic policy and direct balance accounting that bypasses transfer
 hooks, pause/blacklist checks, and transfer events.
 
-Future execution integration must use confidential balance operations for Shielded
-entries and public balance operations for Public entries, retaining the selected
-mode through deductions and refunds. Internal state-provider balance reads can
-access either mode. Recording a Public entry here does not by itself enable public
-token gas payment; the current hardcoded gas handler still uses confidential writes.
+The execution client uses confidential balance operations for Shielded entries and
+public balance operations for Public entries, retaining the selected mode through
+reserves, deductions, and refunds. A holder balance whose privacy flag contradicts
+the registered mode is never converted: automatic selection skips that entry, and
+explicit selection of it fails transaction validation.
 
 #### Administration and reads
 
@@ -114,8 +116,9 @@ Entries cannot be removed, reordered, or have their address, balance slot,
 storage mode, or decimals updated. `MAX_TOKENS` is **32**, including inactive entries:
 deactivation does not free capacity. This bounds execution-client scans. Automatic
 payment is native first, then the first active, compatible entry in insertion order
-that can cover the entire maximum gas cost. Seismic transactions will also support
-strict native or explicit-token selection without fallback. No gas cost is split
+that can cover the entire maximum gas cost. Seismic transactions carry a signed
+`gasPayment` selector: `auto` (the ordered fallback above), strict `native`, or an
+explicit registered token, the latter two without fallback. No gas cost is split
 across assets; native currency alone funds transaction value.
 
 Authorization matches `ProtocolParams`: a public `owner`, `OnlyOwner` checks,
@@ -129,7 +132,7 @@ registry ownership.
 
 #### Storage layout for client integration
 
-The public layout is intended to be fixed for direct reads by execution clients:
+The public layout is fixed for direct reads by execution clients:
 
 | Location | Contents |
 | --- | --- |
@@ -138,7 +141,7 @@ The public layout is intended to be fixed for direct reads by execution clients:
 | `keccak256(abi.encode(uint256(1))) + 2 * index` | Token address in bits 0–159; active byte at offset 20; mode byte at offset 21; decimals byte at offset 22 |
 | Preceding slot `+ 1` | Balance mapping slot (`uint256`) |
 
-Execution clients will read this layout directly from node state rather than call
+Execution clients read this layout directly from node state rather than call
 `tokens(index)`. For an entry's first 256-bit storage word, decode the fields as:
 
 ```text
