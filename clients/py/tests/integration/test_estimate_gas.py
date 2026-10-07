@@ -11,7 +11,7 @@ from hexbytes import HexBytes
 from web3 import Web3
 from web3.types import RPCEndpoint
 
-from seismic_web3 import PrivateKey
+from seismic_web3 import GasPayment, PrivateKey
 from seismic_web3.contract.abi import encode_shielded_calldata
 from seismic_web3.contract.shielded import ShieldedContract
 from seismic_web3.transaction.metadata import build_metadata
@@ -19,6 +19,7 @@ from seismic_web3.transaction.send import (
     _address_from_key,
     _build_metadata_params,
     estimate_shielded_gas,
+    send_shielded_transaction,
 )
 from tests.integration.contracts import (
     SEISMIC_COUNTER_ABI,
@@ -76,6 +77,33 @@ class TestSignedEstimateGas:
         assert isinstance(gas, int)
         assert gas > 21_000, "Gas estimate should exceed the base tx cost"
         assert gas < 30_000_000, "Gas estimate should be well below 30M"
+
+
+class TestCheapEstimatedWrite:
+    """A cheap plaintext execution must still satisfy ciphertext pool admission."""
+
+    @pytest.mark.parametrize("eip712", [False, True], ids=["raw", "eip712"])
+    @pytest.mark.parametrize("payment", [GasPayment.auto(), GasPayment.native()])
+    def test_estimate_sign_submit_and_mine(self, w3, private_key, eip712, payment):
+        # The identity precompile avoids deployment/storage costs masking the
+        # admission floor. Four plaintext bytes become 20 ciphertext bytes.
+        tx_hash = send_shielded_transaction(
+            w3,
+            encryption=w3.seismic.encryption,
+            private_key=private_key,
+            to=Web3.to_checksum_address("0x" + "00" * 19 + "04"),
+            data=HexBytes("0x313ce567"),
+            eip712=eip712,
+            gas_payment=payment,
+        )
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
+        assert receipt["status"] == 1
+        tx = w3.eth.get_transaction(tx_hash)
+        ciphertext = bytes(tx["input"])
+        assert len(ciphertext) == 20
+        tokens = sum(1 if byte == 0 else 4 for byte in ciphertext)
+        assert tx["gas"] >= 21_000 + 10 * tokens
+        assert tx["gas"] < 100_000
 
 
 class TestUnsignedEstimateGasRejected:

@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test'
+import { expect, spyOn, test } from 'bun:test'
 import {
   createShieldedWalletClient,
   getShieldedContract,
@@ -14,6 +14,10 @@ import {
   ENCRYPTION_SK,
   TEST_ACCOUNT_PRIVATE_KEY,
 } from '@sviem-tests/constants.ts'
+import { seismicPoolGasMinimum } from '@sviem/tx/gas.ts'
+import { sendShieldedTransaction } from '@sviem/tx/sendShielded.ts'
+
+type ShieldedSendClient = Parameters<typeof sendShieldedTransaction>[0]
 
 const abi = [
   {
@@ -43,7 +47,7 @@ const choices: (GasPayment | undefined)[] = [
   { type: 'token', token: `0x${'22'.repeat(20)}` },
 ]
 
-async function setup() {
+async function setup(estimateGas = 21_000n) {
   const calls: { method: string; params?: readonly unknown[] }[] = []
   const client = await createShieldedWalletClient({
     account: privateKeyToAccount(TEST_ACCOUNT_PRIVATE_KEY),
@@ -74,7 +78,7 @@ async function setup() {
                 baseFeePerGas: null,
               }
             case 'eth_estimateGas':
-              return '0x5208'
+              return numberToHex(estimateGas)
             case 'eth_sendRawTransaction':
               return `0x${'55'.repeat(32)}`
             default:
@@ -152,6 +156,12 @@ for (const gasPayment of choices) {
       expect(sends[0].params?.[0]).toMatchObject({
         data: { message: { gasPayment: expected, signedRead: false } },
       })
+      const submitted = sends[0].params?.[0] as {
+        data: { message: { input: Hex; gasLimit: bigint } }
+      }
+      expect(submitted.data.message.gasLimit).toBe(
+        seismicPoolGasMinimum(submitted.data.message.input)
+      )
     })
   }
 }
@@ -218,3 +228,89 @@ test('ordinary Ethereum signed bytes are unchanged with omitted or explicit Auto
     calls.filter(({ method }) => method === 'eth_estimateGas')
   ).toHaveLength(0)
 })
+
+const minimumCases: [Hex, boolean, number, bigint][] = [
+  ['0x', false, 0, 21_000n],
+  [`0x${'00'.repeat(20)}`, false, 0, 21_200n],
+  [`0x${'ff'.repeat(20)}`, false, 0, 21_800n],
+  [`0x${'ff'.repeat(19)}00`, false, 0, 21_770n],
+  ['0x', true, 0, 53_000n],
+  [`0x${'ff'.repeat(32)}`, true, 0, 53_514n],
+  [`0x${'ff'.repeat(33)}`, true, 0, 53_532n],
+  [`0x${'ff'.repeat(2_000)}`, true, 0, 101_000n],
+  [`0x${'ff'.repeat(20)}`, false, 2, 71_320n],
+]
+for (const [data, create, authorizations, expected] of minimumCases) {
+  test(`Prague encrypted minimum ${expected}, create=${create}, auth=${authorizations}`, () => {
+    expect(seismicPoolGasMinimum(data, create, authorizations)).toBe(expected)
+  })
+}
+
+const gasCases: [bigint, bigint | undefined, Hex, Hex, bigint][] = [
+  // Actual write costs more than the estimation twin's ciphertext.
+  [21_480n, undefined, `0x${'ff'.repeat(20)}`, `0x${'00'.repeat(20)}`, 21_800n],
+  // Count final bytes exactly; do not use the twin or a length-only bound.
+  [
+    21_480n,
+    undefined,
+    `0x${'ff'.repeat(19)}00`,
+    `0x${'ff'.repeat(20)}`,
+    21_770n,
+  ],
+  [21_480n, undefined, `0x${'00'.repeat(20)}`, `0x${'ff'.repeat(20)}`, 21_480n],
+  [
+    100_000n,
+    undefined,
+    `0x${'ff'.repeat(20)}`,
+    `0x${'00'.repeat(20)}`,
+    100_000n,
+  ],
+  // Preserve explicit gas, even below the minimum; never estimate it.
+  [21_480n, 21_000n, `0x${'ff'.repeat(20)}`, `0x${'00'.repeat(20)}`, 21_000n],
+]
+for (const gasPayment of choices) {
+  for (const [estimate, gas, write, twin, expected] of gasCases) {
+    test(`write gas ${expected} from final ciphertext, estimate=${estimate}, explicit=${gas}, payment=${gasPayment?.type ?? 'omitted'}`, async () => {
+      const { client, calls } = await setup(estimate)
+      const encrypt = spyOn(client, 'encrypt').mockImplementation(
+        async (_data, metadata) =>
+          metadata.seismicElements.signedRead ? twin : write
+      )
+      try {
+        await sendShieldedTransaction(
+          client as unknown as ShieldedSendClient,
+          {
+            chain: undefined,
+            to: address,
+            data: '0x313ce567',
+            nonce: 0,
+            gasPrice: 1n,
+            gas,
+            gasPayment,
+          },
+          pinned
+        )
+        const sends = calls.filter(
+          ({ method }) => method === 'eth_sendRawTransaction'
+        )
+        expect(sends).toHaveLength(1)
+        expect(sends[0].params?.[0]).toMatchObject({
+          data: {
+            message: { gasLimit: expected, input: write, signedRead: false },
+          },
+        })
+        const estimates = calls.filter(
+          ({ method }) => method === 'eth_estimateGas'
+        )
+        expect(estimates).toHaveLength(gas === undefined ? 1 : 0)
+        if (gas === undefined) {
+          expect(estimates[0].params?.[0]).toMatchObject({
+            data: { message: { input: twin, signedRead: true } },
+          })
+        }
+      } finally {
+        encrypt.mockRestore()
+      }
+    })
+  }
+}

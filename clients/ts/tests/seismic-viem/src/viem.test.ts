@@ -25,6 +25,7 @@ import {
   testSignedCallWithoutToThrows,
 } from '@sviem-tests/tests/errorPaths.ts'
 import {
+  testCheapWriteWithEstimatedGas,
   testLifecycleWithEstimatedGas,
   testWriteUsesEstimatedGasNot30M,
   testWriteWithExplicitGasSkipsEstimation,
@@ -169,6 +170,12 @@ describe('Security params', async () => {
 })
 
 describe('Signed estimate gas', async () => {
+  test(
+    'cheap shielded writes satisfy the encrypted calldata admission floor',
+    async () => await testCheapWriteWithEstimatedGas({ chain, url, account }),
+    { timeout: TIMEOUT_MS }
+  )
+
   test(
     'write without explicit gas auto-estimates and succeeds',
     async () =>

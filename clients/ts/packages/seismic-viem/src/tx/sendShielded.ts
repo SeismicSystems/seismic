@@ -16,6 +16,7 @@ import {
   AccountNotFoundError,
   AccountTypeNotSupportedError,
 } from '@sviem/error/account.ts'
+import { seismicPoolGasMinimum } from '@sviem/tx/gas.ts'
 import type { GasPayment } from '@sviem/tx/gasPayment.ts'
 import { normalizeGasPayment } from '@sviem/tx/gasPayment.ts'
 import {
@@ -199,12 +200,20 @@ export async function sendShieldedTransaction<
             plaintextCalldata,
             estimateMetadata
           )
-          return estimateShieldedGas(client, {
+          const estimate = await estimateShieldedGas(client, {
             encryptedData: estimateEncryptedCalldata,
             metadata: estimateMetadata,
             gasPrice: resolvedGasPrice,
             gasPayment,
           })
+          // RPC estimates decrypted execution; the pool checks encrypted input.
+          // Clamp against the actual write, whose bytes differ from the twin.
+          const minimum = seismicPoolGasMinimum(
+            encryptedCalldata,
+            to == null,
+            authorizationList?.length ?? 0
+          )
+          return estimate > minimum ? estimate : minimum
         })())
 
       // Fill remaining fee fields via prepareTransactionRequest.

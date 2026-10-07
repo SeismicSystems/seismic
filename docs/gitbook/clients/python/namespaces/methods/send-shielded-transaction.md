@@ -34,7 +34,7 @@ await w3.seismic.send_shielded_transaction(...same args...) -> HexBytes
 | `to` | `ChecksumAddress` | Required | Recipient contract address |
 | `data` | `HexBytes` | Required | Plaintext calldata (SDK encrypts it) |
 | `value` | `int` | `0` | Wei to transfer |
-| `gas` | `int \| None` | `None` | Gas limit (signed estimate when omitted, preserving `gas_payment`) |
+| `gas` | `int \| None` | `None` | Gas limit (signed estimate clamped to the final ciphertext admission minimum when omitted; explicit values are preserved) |
 | `gas_price` | `int \| None` | `None` | Gas price in wei (fetched from chain if `None`) |
 | `security` | [`SeismicSecurityParams`](../../api-reference/transaction-types/seismic-security-params.md) `\| None` | `None` | Override default security parameters |
 | `eip712` | `bool` | `False` | Use EIP-712 typed-data signing path |
@@ -52,6 +52,14 @@ from seismic_web3.contract.abi import encode_shielded_calldata
 data = encode_shielded_calldata(SRC20_ABI, "transfer", ["0xRecipient", 100])
 tx_hash = w3.seismic.send_shielded_transaction(to="0xTokenAddress", data=data)
 ```
+
+## Automatic gas limits
+
+When `gas` is omitted, both sync and async sends use `max(execution estimate, encrypted-input admission minimum)`. Estimation uses an authenticated, non-broadcastable signed-read twin. The admission minimum is calculated from the **final write ciphertext**, since the twin uses a separate encryption nonce and can have different encrypted bytes.
+
+The current Seismic pool uses Prague intrinsic gas and the calldata gas floor; the SDK applies that bound conservatively on older nodes too. Seismic ignores access-list charges. This avoids rejection of cheap plaintext executions whose encrypted input requires a higher minimum gas limit.
+
+An explicit `gas` value is never increased, even if it is below the pool minimum. A larger automatic limit can increase the upfront fee reserve without charging the entire limit as the final fee. The gas-payment selector and signed-read behavior are unchanged. Contract shielded writes and debug sends share this preparation path.
 
 ## What's encrypted
 

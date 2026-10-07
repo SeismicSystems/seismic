@@ -44,6 +44,14 @@ Smart `.write`/`.read` routing remains based on the ABI. If it chooses the trans
 
 React's `useShieldedWriteContract` and `useSignedReadContract` accept the same `gasPayment` option.
 
+## Automatic gas limits
+
+When `gas` is omitted on a shielded write, the SDK signs a separate read-only estimation twin, then sets the final transaction's gas limit to `max(execution estimate, encrypted-input admission minimum)`. The minimum is calculated from the **final write ciphertext**, not the separately encrypted estimation request.
+
+The current Seismic pool uses Prague intrinsic gas and the calldata gas floor, including applicable creation/initcode and authorization-list charges; Seismic ignores access-list charges. This bound is conservative on pre-Prague nodes. It prevents cheap plaintext executions from being rejected because their encrypted input has a higher admission minimum.
+
+An explicit `gas` value is preserved, even if the node will reject it as too low. Raising the automatically selected limit can increase the upfront fee reserve, but does not itself charge the full limit. Signed calls and transparent transaction paths are unchanged.
+
 ## Public signed metadata
 
 The selector is public, authenticated metadata, **not encrypted**. It does not belong in `securityParams`, `SeismicElements`, or AEAD/AAD. Selecting a different fee asset does not change the native-wei meaning of `value`, `gasPrice`, or receipt gas fields.

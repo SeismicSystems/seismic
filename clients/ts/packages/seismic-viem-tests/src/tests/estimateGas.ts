@@ -9,6 +9,7 @@
 import { expect } from 'bun:test'
 import { getShieldedContract } from 'seismic-viem'
 import type { Account, Chain } from 'viem'
+import { hexToBytes } from 'viem'
 
 import { httpPublicClient, httpWalletClient } from '@sviem-tests/clients.ts'
 import { seismicCounterAbi } from '@sviem-tests/tests/contract/abi.ts'
@@ -39,6 +40,37 @@ const deployCounter = async (chain: Chain, url: string, account: Account) => {
     client: walletClient,
   })
   return { publicClient, walletClient, contract, address }
+}
+
+export const testCheapWriteWithEstimatedGas = async ({
+  chain,
+  url,
+  account,
+}: EstimateGasTestArgs) => {
+  const publicClient = httpPublicClient({ chain, url })
+  const walletClient = await httpWalletClient({ chain, url, account })
+  for (const gasPayment of [{ type: 'auto' }, { type: 'native' }] as const) {
+    // Identity executes cheaply; no deployment/storage cost hides the floor.
+    const hash = await walletClient.sendShieldedTransaction({
+      to: '0x0000000000000000000000000000000000000004',
+      data: '0x313ce567',
+      gasPayment,
+    })
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash,
+      timeout: 30_000,
+    })
+    expect(receipt.status).toBe('success')
+    const tx = await publicClient.getTransaction({ hash })
+    const ciphertext = hexToBytes(tx.input)
+    expect(ciphertext.length).toBe(20)
+    const tokens = ciphertext.reduce(
+      (total, byte) => total + (byte === 0 ? 1n : 4n),
+      0n
+    )
+    expect(tx.gas).toBeGreaterThanOrEqual(21_000n + 10n * tokens)
+    expect(tx.gas).toBeLessThan(100_000n)
+  }
 }
 
 export const testWriteWithoutExplicitGasSucceeds = async ({

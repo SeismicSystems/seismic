@@ -25,6 +25,7 @@ from seismic_web3._constants import TYPED_DATA_MESSAGE_VERSION
 from seismic_web3.crypto.nonce import random_encryption_nonce
 from seismic_web3.gas_payment import GasPayment, resolve_gas_payment
 from seismic_web3.transaction.eip712 import sign_seismic_tx_eip712
+from seismic_web3.transaction.gas import seismic_pool_gas_minimum
 from seismic_web3.transaction.metadata import (
     DEFAULT_BLOCKS_WINDOW,
     MetadataParams,
@@ -496,7 +497,7 @@ def _prepare_shielded_transaction(
                 estimate_metadata,
             )
         )
-        resolved_gas = estimate_shielded_gas(
+        estimate = estimate_shielded_gas(
             w3,
             encrypted_data=estimate_encrypted,
             metadata=estimate_metadata,
@@ -504,6 +505,12 @@ def _prepare_shielded_transaction(
             private_key=private_key,
             encryption=encryption,
             gas_payment=gas_payment,
+        )
+        # RPC estimates plaintext execution, but the pool checks ciphertext.
+        # The separately encrypted estimation twin can have different bytes.
+        resolved_gas = max(
+            estimate,
+            seismic_pool_gas_minimum(encrypted_data, is_create=to is None),
         )
 
     tx = _build_unsigned_tx(
@@ -571,7 +578,7 @@ async def _async_prepare_shielded_transaction(
                 estimate_metadata,
             )
         )
-        resolved_gas = await async_estimate_shielded_gas(
+        estimate = await async_estimate_shielded_gas(
             w3,
             encrypted_data=estimate_encrypted,
             metadata=estimate_metadata,
@@ -579,6 +586,11 @@ async def _async_prepare_shielded_transaction(
             private_key=private_key,
             encryption=encryption,
             gas_payment=gas_payment,
+        )
+        # Clamp using the final write ciphertext, not the signed-read twin.
+        resolved_gas = max(
+            estimate,
+            seismic_pool_gas_minimum(encrypted_data, is_create=to is None),
         )
 
     tx = _build_unsigned_tx(
