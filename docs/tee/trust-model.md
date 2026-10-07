@@ -130,7 +130,7 @@ closed by a mechanism the quote plugs into, never by the quote alone:
 | The quote cannot prove | What closes the gap |
 | --- | --- |
 | canonical network, not a clone | every transcript binds `network_id`, recomputed by the verifier from its own manifest ([bindings](network-manifest.md#consumers-of-network_id)) |
-| holds the canonical `root_key` | the `tx_io_pk@0` pin that `network_id` commits to ([the root-key pin](network-manifest.md#the-root-key-pin)) — decided, not built |
+| holds the canonical `root_key` | the `tx_io_pk@0` pin that `network_id` commits to ([the root-key pin](network-manifest.md#the-root-key-pin)) |
 | economically admitted | the summit genesis at founding, the deposit path afterwards ([founding](network-founding.md)) |
 | view of chain state is current | [the freshness gate](chain-backed-admission.md#the-readiness-and-freshness-gate) around the responder's policy read |
 
@@ -172,12 +172,12 @@ take a new value in a finalized block; machines are members while their image
 is accepted; and each client model enters the timeline at a different
 point](diagrams/network-identity-and-values.svg)
 
-**Each lane starts in the genesis of the state machine that evolves it.** V_0 is
-the summit genesis validator set, moved on by summit's finalized epoch
+**Each lane starts in the genesis of the state machine that evolves it.** V_0
+is the summit genesis validator set, moved on by summit's finalized epoch
 transitions. P_0 is the registry's storage in the reth genesis, moved on by
 authority transactions; the manifest also pins a copy, the bootstrap policy,
 only because a joiner cannot read encrypted reth state before it holds
-`root_key`. K_0 is `tx_io_pk@0`, pinned in the manifest's `root_key` section
+`root_key`. K_0 is `tx_io_pk@0`, pinned as the manifest's `founding_tx_io_pk`
 ([the root-key pin](network-manifest.md#the-root-key-pin)). By this rule its
 home is the genesis of whatever evolves the key series, which is open
 ([SEI-645](https://linear.app/seismic-systems/issue/SEI-645)); the proposal is
@@ -187,7 +187,11 @@ header carries that state's root as `parent_beacon_block_root`, and summit
 serves SSZ branches against it, so a record there is provable from one
 finalized header and one branch. The manifest's pin then stays as a frozen
 copy, like the bootstrap policy: it is what the custodian reads, and what a
-client that only hash-checks the manifest needs.
+client that only hash-checks the manifest needs. Neither can rely on the summit
+copy. Nothing in the guest recomputes summit's SSZ `config_digest`, so nothing
+there binds the summit genesis to `network_id`, and an SDK would need summit's
+encoding to check it
+([the root-key pin](network-manifest.md#the-root-key-pin)).
 
 **No quote binds chain state today.** The bindings are:
 
@@ -242,10 +246,10 @@ in a single validator's lifecycle:
 | --- | --- | --- | --- | --- |
 | Genesis deployer | assemble the founding artifacts | which founding artifacts are canonical, before any chain exists | its own verification at assemble: recomputed genesis hashes, DCAP-verified harvest quotes, registry storage recompiled from the policy document — all committed into `network_id` | shipped |
 | Validator | release `root_key` — the responder | may this requester join the trust domain | the requester's verified quote, then `MeasurementRegistry.isAccepted` at fresh finalized state of the manifest-pinned chain | shipped |
-|  | fetch `root_key` at every boot — the joiner | is this the network's key | the POSTed manifest: its custodian re-derives `tx_io_pk@0` from the delivered key and compares it with the pin `network_id` commits to; once that check exists the responder's quote carries no weight | the `network_id` binding in both halves of the handshake is shipped; the pin and the check are decided, not built — today the joiner appraises nothing |
+|  | fetch `root_key` at every boot — the joiner | is this the network's key | the POSTed manifest: its custodian re-derives `tx_io_pk@0` from the delivered key and compares it with the pin `network_id` commits to, so the responder's quote carries no weight | built in the enclave and the image ([SEI-643](https://linear.app/seismic-systems/issue/SEI-643)) |
 |  | stake for a seat | does a validator seat imply TEE custody of its keys | at founding, the harvest quote binds both pubkeys to the measured guest; post-genesis, the deposit path registers keys with no hardware binding | open |
 |  | receive a snapshot at a resync | is this state the canonical network's | `K_snap` is derivable only from `root_key`, so a snapshot that decrypts came from inside the trust domain | designed; the purpose is ungranted and no process serves it |
-| Client | submit a TxSeismic | is this `tx_io_pk` this network's recipient key | epoch 0: the pin — hash the manifest against a pinned `network_id` and compare `tx_io_pk@0`, with no quote verification; later epochs: a record signed by the validator set, checked by a light client | epoch 0 decided, not built; later epochs open — today the SDKs trust whichever RPC they ask |
+| Client | submit a TxSeismic | is this `tx_io_pk` this network's recipient key | epoch 0: the pin — hash the manifest against a pinned `network_id` and compare `tx_io_pk@0`, with no quote verification; later epochs: a record signed by the validator set, checked by a light client | epoch 0: the pin is built, the SDK check is [SEI-646](https://linear.app/seismic-systems/issue/SEI-646); later epochs open — today the SDKs trust whichever RPC they ask |
 | Governance | change the accepted measurement set | is the change authorized | the manifest-pinned authority contract | a dev authority today; the mainnet authority is open |
 |  | rotate `root_key` to fresh entropy | is the rotation authorized, and does the successor chain to the key it replaces | undecided — the candidates are the manifest-pinned authority contract and a consensus event, and a post-recovery rotation is the security council's, authorized by the recovery ceremony itself; a published chain of wraps links each version to its predecessor, which is continuity, not authenticity: two holders can each wrap a different successor, and both chains verify. Authenticity needs an anchor `network_id` commits to; the direction is a record signed by the validator set, with the epoch-0 pin as its base case | open, and prerequisite to any nonzero purpose-key epoch |
 | Security Council | recover the network after a full-fleet loss | how does the network outlive losing every TEE at once | nothing — at least one node must stay live | open, pre-mainnet |
@@ -259,13 +263,13 @@ of the same [open decision](#open-decisions).
 
 The asymmetry between the responder and the joiner is structural, not an
 implementation gap. A responder by definition holds `root_key` and a readable
-chain — the genesis node included, from block 0 — so a genesis-pinned
-contract is a sufficient live policy source from the network's first moment.
-A joiner holds nothing yet: reading Seismic state at all is what `root_key`
-buys. So the design gives the responder the live anchor and the joiner the
-frozen one, and the joiner's protection is shaped accordingly — it holds no
-secrets yet, so a dishonest responder can at worst deliver a wrong key, and
-the check against the pin catches exactly that.
+chain — the minting custodian included, from block 0 — so a genesis-pinned
+contract is a sufficient live policy source from the network's first moment. A
+joiner holds nothing yet: reading Seismic state at all is what `root_key` buys.
+So the design gives the responder the live anchor and the joiner the frozen
+one, and the joiner's protection is shaped accordingly — it holds no secrets
+yet, so a dishonest responder can at worst deliver a wrong key, and the check
+against the pin catches exactly that.
 
 ## Residuals
 
@@ -315,19 +319,20 @@ detects the rewind. The instances:
   is internally consistent, MAC and all, and restores cleanly. Everything
   under `/persistent` — reth's datadir, summit's database, certbot state —
   can be rewound together.
-- **A chain view can be held at block 0.** That lands the responder's
-  admission gate on the founding policy, where no timestamp check bites and
-  "still at genesis" is indistinguishable from "chain withheld" from inside
-  the guest. So not every responder honors the founding policy: only the
-  custodian that minted `root_key` does, and only until the chain is seen past
-  block 0, which rules out rewinding any joined node and rewinding the genesis
-  node after block 1. What remains is the genesis node's own host keeping it
-  at block 0 from birth: it never retires the founding policy. The genesis check bounds
-  that to the founding accepted set — a reviewed list, never an image of the
-  attacker's choosing — but a founding image deprecated for a vulnerability
-  is exactly what it would revive. It is visible, since that validator never
-  takes part in consensus, and a genesis-timestamp deadline would close it
-  absent clock control; that belongs with the freshness-evidence decision.
+- **A chain view can be held at block 0.** That lands the responder's admission
+  gate on the founding policy, where no timestamp check bites and "still at
+  genesis" is indistinguishable from "chain withheld" from inside the guest. So
+  not every responder honors the founding policy: only the minting custodian,
+  whose candidate the manifest pins, does, and only until the chain is seen
+  past block 0, which rules out rewinding any joined node and rewinding the
+  minting custodian after block 1. What remains is the minting custodian's own
+  host keeping it at block 0 from birth: it never retires the founding policy.
+  The genesis check bounds that to the founding accepted set — a reviewed list,
+  never an image of the attacker's choosing — but a founding image deprecated
+  for a vulnerability is exactly what it would revive. It is visible, since
+  that validator never takes part in consensus, and a genesis-timestamp
+  deadline would close it absent clock control; that belongs with the
+  freshness-evidence decision.
 - **TPM sealing was rejected partly on rollback grounds.** Sealed durability
   for founding keys would rest on vTPM clone and rollback semantics the
   platform defines ([the host

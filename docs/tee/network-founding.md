@@ -1,7 +1,10 @@
 # Network Founding <!-- omit in toc -->
 
 **Status**: shipped. The one config POST per box and the harvest → assemble →
-configure flow are how the four-node devnet was founded.
+configure flow are how the four-node devnet was founded. The candidate
+`root_key` and its pin are built in the enclave and the image; seismic-tee's
+side, harvesting the candidate and pinning it in assemble, is
+[SEI-643](https://linear.app/seismic-systems/issue/SEI-643)'s remaining work.
 
 - [Summary](#summary)
 - [The founding flow](#the-founding-flow)
@@ -27,16 +30,17 @@ summit genesis, and the bootstrap measurement policy. Everything after founding
 is a later value, reached through finalized blocks
 ([one identity, a succession of values](trust-model.md#one-identity-a-succession-of-values)).
 The manifest commits to every founding validator's public keys, which the
-summit genesis carries, so those keys must exist before the manifest does
+summit genesis carries, and to the network's `root_key` through `tx_io_pk@0`,
+so all of them must exist before the manifest does
 ([design rationale](#design-rationale)).
 
 Boxes boot the measured image **identity-free**. A boot-time oneshot,
-**`summit-keygen`**, generates summit keypairs into guest RAM, and the
-attestation service, the only process that can mint a quote, proves them with
-one.
-The founder harvests and DCAP-verifies those quotes, and assemble pins the
-complete validator set before minting `network_id`. Per validator, the pin
-covers both pubkeys and the withdrawal address, never the IP
+**`summit-keygen`**, generates summit keypairs into guest RAM, the custodian
+mints a **candidate `root_key`**, and the attestation service, the only process
+that can mint a quote, proves the public halves of all three with one. The
+founder harvests and DCAP-verifies those quotes, and assemble pins the complete
+validator set and one box's `tx_io_pk@0` before minting `network_id`. Per
+validator, the pin covers both pubkeys and the withdrawal address, never the IP
 ([what summit's digest covers](network-manifest.md#what-summitgenesis_config_digest-covers)).
 Configure then delivers everything a node needs in one POST.
 
@@ -55,25 +59,28 @@ Each step is one command, run by the founder:
    [deploy](https://github.com/SeismicSystems/deploy) repo (`pulumi up`) boots
    every box on the measured image. No box holds any network identity yet.
 2. **Harvest** (`seismic-tee node harvest`). For each box, fetch its summit
-   pubkeys and a TDX quote over a fresh per-box nonce from the attestation
-   service's harvest port, DCAP-verify the quote
-   against the network's intended measurements, and archive the result under
-   the network directory's `inputs/harvest/`. The archive holds the DCAP
+   pubkeys, its candidate's `tx_io_pk@0`, and a TDX quote over them and a fresh
+   per-box nonce from the attestation service's harvest port, DCAP-verify the
+   quote against the network's intended measurements, and archive the result
+   under the network directory's `inputs/harvest/`. The archive holds the DCAP
    collateral the verification used, so the quote stays verifiable after
    Intel's live collateral moves on.
 3. **Assemble** (`seismic-tee network assemble`). Replay every archived quote
    offline against the policy compiled from the authored measurements. Have
    summit emit the validator list into the summit genesis, pin summit's
-   `config_digest` of it, and write the manifest. `network_id` is the SHA-256
+   `config_digest` of it, pin the `tx_io_pk@0` of the first box by name as
+   `founding_tx_io_pk`, and write the manifest. `network_id` is the SHA-256
    of the manifest bytes. The validators' IPs come from the cohort's node
    descriptors, not from the harvest.
-4. **Configure** (`seismic-tee node configure --genesis-node <name>`). POST
-   each box its configuration: the manifest, the reth genesis, and the summit
-   genesis with each box's current IP spliced in, which leaves `network_id`
-   unchanged
+4. **Configure** (`seismic-tee node configure --genesis-node <name>`, which
+   must name the pinned box). POST each box its configuration: the manifest,
+   the reth genesis, and the summit genesis with each box's current IP spliced
+   in, which leaves `network_id` unchanged
    ([what summit's digest covers](network-manifest.md#what-summitgenesis_config_digest-covers)).
-   The genesis node goes first, since its reth enode is the joiners' bootnode,
-   and the joiners follow.
+   The pinned box goes first and alone: it is the only box that will hold
+   `root_key`, and its reth enode is the joiners' bootnode. If it fails, the
+   run stops and the founding is redone
+   ([founding-window security](#founding-window-security)). The joiners follow.
    Each node is deploy-verified as soon as it is ready.
 5. **Launch checks**, at the end of configure and again on demand with
    `seismic-tee node configure --check`. Every box must serve exactly the
@@ -92,9 +99,11 @@ credentials — and then provisions a box and runs
 `seismic-tee node configure --bootnode`. Runtime admission and the deposit
 contract do the rest.
 
-**Who mints `root_key`.** `--genesis-node` marks the one box whose config
-POST carries the genesis flag, and that box's custodian mints `root_key` once
-the POST arrives; every other box fetches it from a peer.
+**Who keeps `root_key`.** Every box mints a candidate at boot, and the
+manifest's pin picks one. No flag in the POST says who mints: each custodian
+reads the pin from the manifest it was POSTed, the pinned box keeps its
+candidate, and every other box discards its own and fetches the pinned key
+([the node lifecycle](architecture.md#node-lifecycle-power-on-to-serving)).
 
 ## Why founding-time quote verification is load-bearing
 
@@ -154,19 +163,20 @@ while a restart of `summit.service` alone does not.
   run in the same boot is a no-op: a restart of `summit.target`, which re-runs
   the setup units, cannot replace the keys the manifest pins. That holds
   because nothing deletes the tmpfs keys before the next reboot empties tmpfs.
-- **The attestation service serves the harvest on `:7879`.** It starts at
-  boot, and until the POST arrives this is all it serves. The port is plain
-  HTTP: nginx and TLS certificates exist only after the POST, and deploy
-  tooling already polls raw ports during first boot. `GET /v1/keys` returns
-  both pubkeys from the public-keys file. `GET /v1/quote?nonce=…` adds a
-  quote whose `report_data` is a domain-separated binding over the
-  deploy-supplied nonce and both pubkeys, which the attestation service builds
-  itself, as it builds every binding it quotes
-  ([one process opens the TPM](architecture.md#one-process-opens-the-tpm)).
-  The nonce prevents replay of quotes from earlier harvests. The binding
-  cannot include `network_id`, which does not exist yet; the pin itself
-  provides the intent binding, and
-  [founding-window security](#founding-window-security) says what that costs.
+- **The attestation service serves the harvest on `:7879`.** It starts at boot,
+  and until the POST arrives this is all it serves. The port is plain HTTP:
+  nginx and TLS certificates exist only after the POST, and deploy tooling
+  already polls raw ports during first boot. `GET /v1/keys` returns both
+  pubkeys from the public-keys file. `GET /v1/quote?nonce=…` adds the
+  custodian's candidate `tx_io_pk@0`, from the candidate file the custodian
+  writes when it mints, and a quote whose `report_data` is a domain-separated
+  binding over the deploy-supplied nonce, both pubkeys and that key, which the
+  attestation service builds itself, as it builds every binding it quotes ([one
+  process opens the TPM](architecture.md#one-process-opens-the-tpm)). The nonce
+  prevents replay of quotes from earlier harvests. The binding cannot include
+  `network_id`, which does not exist yet; the pin itself provides the intent
+  binding, and [founding-window security](#founding-window-security) says what
+  that costs.
 - **Quotes stop once the manifest file appears**, answering `410 Gone`. This is
   per boot, not permanent: the config lives on tmpfs and is re-POSTed each
   boot, so a rebooted node briefly serves quotes over that boot's fresh keys,
@@ -250,10 +260,13 @@ tdx-init accepts the *first* config POST, and a waiting box holds pinnable
 key material. An attacker who POSTs first enrolls the box into *their*
 network — their manifest, their measurement policy, their responders — and
 can deliver a `root_key` they know, after which `summit-persist` would write
-the harvested keys onto a LUKS volume the attacker can read. The failure is
-bounded — tdx-init is one-shot, so the real configure then fails loudly and a
-re-found discards those pubkeys before anything launches — but only if the
-process treats it that way. Guards:
+the harvested keys onto a LUKS volume the attacker can read. On the pinned box
+the stake is higher: its candidate is the network's future `root_key`, and an
+attacker's manifest that pins it hands the attacker's network that key. The
+failure is bounded — tdx-init is one-shot, so the real configure then fails
+loudly and a re-found discards those pubkeys and that candidate before
+anything launches — but only if the process treats it that way, which is why
+configure stops when the pinned box fails. Guards:
 
 - **Network-level**: the cloud firewall restricts the config port (`:8080`)
   and the harvest port (`:7879`) to the operator's source CIDR, permanently,
@@ -262,8 +275,8 @@ process treats it that way. Guards:
 - **Burned-key rule**: a harvested key is trustworthy only if the same box
   later accepts the real configure cleanly. Any anomaly — a quote window
   already closed, a failed verification, a POST rejected, an unexpected
-  reboot — burns the whole harvest: re-found, never retry-around. Harvest
-  enforces its half by aborting and writing nothing.
+  reboot or custodian restart — burns the whole harvest: re-found, never
+  retry-around. Harvest enforces its half by aborting and writing nothing.
 - **Window length**: the rootfs is measured at boot but not (yet)
   integrity-protected at runtime, so a harvest quote attests boot-time state
   only. Window length is a security parameter: keep founding short and
@@ -275,6 +288,13 @@ process treats it that way. Guards:
 
 Alternatives weighed and set aside, with the reasons that decided them. Each
 names the section whose rule it settles.
+
+**Every box mints a candidate `root_key`, rather than one designated minter**
+([the founding flow](#the-founding-flow)). The key must exist before the
+manifest for `network_id` to commit to it, and before the POST no box knows its
+role; the reasoning is in [the architecture's design
+rationale](architecture.md#design-rationale) and [the root-key commitment
+decision record](decisions/2026-09-root-key-commitment.md).
 
 **Keys born before the manifest, rather than a ceremony after it**
 ([summary](#summary)). Every future joiner needs the founding summit genesis

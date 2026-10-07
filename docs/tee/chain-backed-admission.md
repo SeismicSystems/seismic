@@ -12,7 +12,7 @@ guest, but only the responder has a live policy to apply:
 | | Evidence verification (cryptographic) | Admission appraisal (policy) |
 | --- | --- | --- |
 | **Responder** admits the joiner | quote chain + platform collateral + `report_data` bound to the responder's own `network_id` | `MeasurementRegistry.isAccepted(id)`, read at fresh finalized state of the manifest-pinned chain — [`RegistryAdmission`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/attestation-service/src/admission.rs) |
-| **Joiner** admits the responder | the same check, opposite direction | none yet — [`DangerouslyAdmitAnyAzureGuest`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/attestation-service/src/admission.rs) passes any Azure TDX guest unconditionally. A joiner cannot read the chain before it holds `root_key`, so its appraisal is decided as provenance rather than policy: its custodian checks the delivered key against the `tx_io_pk@0` pin `network_id` commits to. Not yet code |
+| **Joiner** admits the responder | the same check, opposite direction | none — [`AdmitAnyAzureGuest`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/attestation-service/src/admission.rs) passes any Azure TDX guest. A joiner cannot read the chain before it holds `root_key`, so its appraisal is provenance rather than policy: its custodian installs the delivered key only if it derives the `tx_io_pk@0` pin `network_id` commits to |
 
 Nothing here is normative. The byte-exact rules are the
 [measurement-admission SPEC](https://github.com/SeismicSystems/enclave/blob/seismic/crates/measurement-admission/SPEC.md),
@@ -204,19 +204,20 @@ The decisions behind it:
   and a genesis timestamp that is arbitrarily old. Reading the policy there is
   reading the policy `network_id` itself commits to — the genesis check above
   is what makes those the same thing — and no deprecation can predate the
-  chain, so this is what lets the founding cohort join before consensus
-  starts. But a chain view at block 0 is host-supplied, and from inside the
-  guest "still at genesis" looks exactly like "chain withheld", so only the
-  custodian that minted `root_key` may act on such a verdict. It honors the
-  founding policy from minting until a watcher in the attestation service sees
-  the chain past block 0, whether or not any join arrives, and never again. An installed key never
-  honors it. A host that holds a joined node at block 0, or rewinds the
-  genesis node after block 1, gets an "unavailable" answer, and the joiner
-  asks the next peer; founding joiners are only ever pointed at the genesis
-  node. Bringing the founding policy back means restarting the custodian,
-  which loses `root_key`: the node comes back as a joiner. If the genesis node
-  dies before block 1, the founders it admitted cannot stand in for it, and
-  the remedy is to re-found.
+  chain, so this is what lets the founding cohort join before consensus starts.
+  But a chain view at block 0 is host-supplied, and from inside the guest
+  "still at genesis" looks exactly like "chain withheld", so only the minting
+  custodian, the one whose candidate the manifest pins, may act on such a
+  verdict. It honors the founding policy from keeping its candidate until a
+  watcher in the attestation service sees the chain past block 0, whether or
+  not any join arrives, and never again. An installed key never honors it. A
+  host that holds a joined node at block 0, or rewinds the minting custodian's
+  node after block 1, gets an "unavailable" answer, and the joiner asks the
+  next peer; founding joiners are only ever pointed at the minting custodian's
+  node. Bringing the founding policy back means restarting the custodian, which
+  loses `root_key`: the node comes back as a joiner. If the minting custodian's
+  node dies before block 1, the founders it admitted cannot stand in for it,
+  and the remedy is to re-found.
 - **Every failure denies.** An unreachable reth, a chain that is not this
   network's, a missing finalized block, a stale view, a founding-policy
   admission the custodian no longer honors, a failed registry read, and a
@@ -242,15 +243,15 @@ in front of the port instead: [design rationale](#design-rationale).
 
 **What the gate does not defend against**: a host that controls its guest's
 clock while eclipsing it can have an honest enclave compute a fresh-looking
-verdict; the genesis node's own host can keep it at block 0 from birth, so it
-never retires the founding policy, bounded by the genesis check to the
-founding accepted set; and one responder's yes is enough — the handshake requires no
-corroboration across independent responders. Deprecation therefore takes effect network-wide
-against every adversary except one holding host control of a node that already
-holds `root_key`. All three residuals are accepted host influence under the
-TEE threat model; [the trust model](trust-model.md#accepted-risks) states each
-plainly, with the rollback family the second belongs to and the freshness
-evidence that would close them.
+verdict; the minting custodian's own host can keep it at block 0 from birth, so
+it never retires the founding policy, bounded by the genesis check to the
+founding accepted set; and one responder's yes is enough — the handshake
+requires no corroboration across independent responders. Deprecation therefore
+takes effect network-wide against every adversary except one holding host
+control of a node that already holds `root_key`. All three residuals are
+accepted host influence under the TEE threat model; [the trust
+model](trust-model.md#accepted-risks) states each plainly, with the rollback
+family the second belongs to and the freshness evidence that would close them.
 
 ## The network manifest as the joiner's root of trust
 

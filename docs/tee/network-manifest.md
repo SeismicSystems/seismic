@@ -3,8 +3,8 @@
 **Status**: the manifest is shipped and in use (enclave
 [#190](https://github.com/SeismicSystems/enclave/pull/190),
 [#194](https://github.com/SeismicSystems/enclave/pull/194)), proven in the
-four-node founding. The `tx_io_pk@0` pin is decided, not yet built; its
-section says so again where it starts.
+four-node founding. The `tx_io_pk@0` pin is built in the enclave and the
+image; its section says what remains.
 
 What identifies a Seismic network. `network-manifest.json` is the deploy-time
 artifact a network is named by: `network_id = SHA-256(exact file bytes)`, bound
@@ -109,6 +109,7 @@ Who *does* use the manifest, and for what, is
     "chain_id": 5124,
     "genesis_hash": "0x78ab9057bb67f95a6182969c5d755ac02802c98c0d2f0d8daeb52f4bddc60be5"
   },
+  "founding_tx_io_pk": "0x03f39b46b20d0f2f9c8d45206d6c1cdf8a3332c7b7b96dad5c1f0d0051585d7329",
   "manifest_version": 1,
   "measurements": {
     "bootstrap_policy_hash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
@@ -140,9 +141,7 @@ documentation is this table.
 | `measurements.bootstrap_policy_hash` | 32-byte hex | SHA-256 of the bootstrap policy document's bytes — the founding accepted measurement set, promoted from seismic-images' `make measure` output. The document format is the [attestation crate's](https://github.com/SeismicSystems/attested-tls/blob/main/crates/attestation/README.md) list of per-image measurement records, one file covering every attestation type.                                                                                                                        |
 | `measurements.contracts.registry`    | address     | The measurement registry, duplicated from the genesis alloc for verifiers that do not hold the genesis file. Grouping it under `measurements` is deliberate: this contract's storage and the bootstrap document are two representations of one measurement set.                                                                                                                                                                                                                                |
 | `measurements.contracts.authority`   | address     | The authority allowed to mutate the registry.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `root_key.root_version`              | int         | The root version the pin is for; only `0` is accepted. Decided, not yet built ([the root-key pin](#the-root-key-pin)).                                                                                                                                                                                                                                                                                                                                                                       |
-| `root_key.epoch`                     | int         | The tx-io epoch the pin is for; only `0` is accepted. Decided, not yet built.                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `root_key.tx_io_pk`                  | 33-byte hex | `tx_io_pk@0` of the founding box's candidate `root_key`, a compressed secp256k1 point. The custodian keeps its candidate, and installs a fetched key, only if it derives this; a client encrypts to it. Decided, not yet built.                                                                                                                                                                                                                                                                 |
+| `founding_tx_io_pk`                  | 33-byte hex | `tx_io_pk@0` of the `root_key` the network was founded with: the founding box's candidate, a compressed secp256k1 point. The custodian keeps its candidate, and installs a fetched key, only if it derives this; a client encrypts to it ([the root-key pin](#the-root-key-pin)).                                                                                                                                                                                                           |
 
 Both contract fields are named by role, not by contract class, so a contract
 rename never touches the hashed schema. Today the roles are filled by
@@ -449,9 +448,13 @@ manifest pins, never attested alongside it.
 
 ## The root-key pin
 
-**Status**: decided, not yet built. Today no pin exists, the joiner admits any
-genuine Azure TDX guest as its responder, and clients trust whichever RPC they
-ask for `tx_io_pk`.
+**Status**: the custodian's side is built in the enclave and the image:
+candidates, the keep-or-discard decision, and the install check. seismic-tee's
+side, harvesting each candidate and pinning one in assemble, is
+[SEI-643](https://linear.app/seismic-systems/issue/SEI-643)'s remaining work,
+and the client check is
+[SEI-646](https://linear.app/seismic-systems/issue/SEI-646): until it lands,
+clients trust whichever RPC they ask for `tx_io_pk`.
 
 `tx_io_pk@0` is the commitment to `root_key`: a binding, deterministic, public
 function of it, already served to TxSeismic clients, so no separate commitment
@@ -459,24 +462,24 @@ construction is needed. It is also the key a client encrypts to, which a hash
 of `root_key` would not be.
 
 `root_key` is minted before the manifest so that `network_id` can commit to it,
-through `tx_io_pk@0`.
-Every founding box's custodian mints a candidate at identity-free boot, harvest
-quotes each candidate's `tx_io_pk@0` alongside the summit pubkeys, and assemble
-pins the first box by name in the manifest's `root_key` section, so
-`network_id` covers it. The section has the shape of the key record later
-epochs will use, `{ root_version: 0, epoch: 0, tx_io_pk }`, and a v1 parser
-accepts only 0 for both numbers. It is a frozen copy: the key series itself is
-to start in the summit genesis, next to the validator set
+through `tx_io_pk@0`. Every founding box's custodian mints a candidate at
+identity-free boot, and harvest quotes each candidate's `tx_io_pk@0` alongside
+the summit pubkeys. Assemble pins the first box's key as the manifest's
+`founding_tx_io_pk`, so `network_id` covers it. The name says which key this
+is: the one the network was founded with, never the current key. The manifest
+holds a frozen copy. The key series itself is to start in the summit genesis,
+next to the validator set
 ([SEI-656](https://linear.app/seismic-systems/issue/SEI-656)), and assemble
 will keep the two in agreement
-([SEI-657](https://linear.app/seismic-systems/issue/SEI-657)), the
-relationship the bootstrap policy has with the registry's reth-genesis storage.
-The manifest copy is the one the custodian reads, and the one a client that
-only hash-checks the manifest needs.
+([SEI-657](https://linear.app/seismic-systems/issue/SEI-657)), as it keeps the
+bootstrap policy in agreement with the registry's reth-genesis storage. The
+custodian reads the manifest copy, and so does a client that only hash-checks
+the manifest.
 
 - **The custodian keeps or discards its candidate.** At configure, a custodian
-  keeps its candidate only if it matches the pin, and otherwise discards it and
-  fetches `root_key` from a peer. There is no genesis flag.
+  keeps its candidate only if it matches the pin, and otherwise discards it
+  and installs the `root_key` the attestation service fetches from a peer.
+  There is no genesis flag.
 - **A joiner's custodian checks what it installs.** After unwrapping a fetched
   key, the custodian re-derives `tx_io_pk@0`, compares it with the pin in the
   manifest bytes tdx-init wrote to tmpfs, and refuses a mismatch. The joiner
@@ -485,6 +488,18 @@ only hash-checks the manifest needs.
   no weight for the joiner.
 - **A client compares a hash.** It pins `network_id`, hashes the manifest it is
   given, and compares `tx_io_pk@0`. No quote verification is needed.
+
+All three read the manifest copy, not the summit genesis copy, although
+`network_id` covers that one too, through `summit.genesis_config_digest`. That
+digest is SHA-256 over summit's own SSZ encoding, and tdx-init does not
+recompute it
+([`summit_genesis.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/tdx-init/src/summit_genesis.rs)).
+Inside the guest, a divergent summit genesis shows only as a failed summit
+handshake, so a custodian that read its pin there would act on input nothing
+has bound to `network_id`. The manifest copy is bound by construction, because
+the manifest is the file whose hash is `network_id`. A client that read the
+summit copy would need summit's SSZ encoding in every SDK, the light client's
+porting cost, instead of one hash comparison.
 
 The pin covers epoch 0 only. A joiner re-derives every later epoch from
 `root_key`, but a client needs a pin per epoch, and a fresh-entropy rotation or

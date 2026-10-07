@@ -56,20 +56,20 @@ proves them with a TDX quote, and the deploy tool verifies those quotes before
 minting `network_id`. Founding is rare and supervised; joining and verifying
 happen forever.
 
-**The boot chain is config-gated.** Nothing on a node starts until the operator
-POSTs its configuration. That one POST carries the manifest and both genesis
-files; `tdx-init` writes them out, the custodian mints `root_key` if the POST
-flags its box as the genesis node or fetches it from a peer otherwise, LUKS
-opens, and the node's own services start. Replacing the flag with the
-manifest's pin is decided, not yet built
-([SEI-643](https://linear.app/seismic-systems/issue/SEI-643)): every box
-mints a candidate at boot, and a custodian keeps its candidate, or installs a
-fetched key, only if it matches [the pin](network-manifest.md#the-root-key-pin).
+**The boot chain is config-gated.** Before the operator POSTs its
+configuration, a node runs only what the founding harvest needs: summit's
+keys, the custodian's candidate `root_key`, and the harvest listener. That one
+POST carries the manifest and both genesis files; `tdx-init` writes them out,
+the custodian keeps its candidate if the manifest pins it, or else the
+attestation service fetches the pinned key from a peer and the custodian
+installs it, LUKS opens, and the node's own services start. A custodian
+installs a fetched key only if it matches
+[the pin](network-manifest.md#the-root-key-pin).
 
 **Membership is holding `root_key`.** It is network-shared, minted once, and
 handed over only through an attested handshake whose transcript binds
-`network_id`. Once the pin is built, it is minted before the manifest, so that
-`network_id` commits to it through `tx_io_pk@0`. Consensus membership — a seat
+`network_id`. It is minted before the manifest, so that `network_id` commits
+to it through `tx_io_pk@0`. Consensus membership — a seat
 in the validator set — is a separate gate, held by the summit genesis and the
 deposit path.
 
