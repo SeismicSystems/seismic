@@ -17,6 +17,10 @@ Public API
     :class:`Signature`, :class:`LegacyFields`,
     :class:`PlaintextTx`, :class:`DebugWriteResult`
 
+**Lookup responses** (``seismic_web3.transaction_response``):
+    :class:`SeismicTransactionResponse`, :data:`GasPaymentResponse`,
+    :func:`is_seismic_transaction`
+
 **Client factories** (``seismic_web3.client``):
     :class:`EncryptionState`, :func:`get_encryption`,
     :func:`create_wallet_client`, :func:`create_async_wallet_client`,
@@ -109,6 +113,13 @@ from seismic_web3.transaction.eip712 import (
     struct_hash,
 )
 
+# -- Lookup responses --------------------------------------------------------
+from seismic_web3.transaction_response import (
+    GasPaymentResponse,
+    SeismicTransactionResponse,
+    is_seismic_transaction,
+)
+
 # -- Transaction types -------------------------------------------------------
 from seismic_web3.transaction_types import (
     DebugWriteResult,
@@ -141,6 +152,7 @@ __all__ = [
     "EncryptionNonce",
     "EncryptionState",
     "GasPayment",
+    "GasPaymentResponse",
     "LegacyFields",
     "PlaintextTx",
     "PrivateKey",
@@ -149,6 +161,7 @@ __all__ = [
     "SeismicNamespace",
     "SeismicPublicNamespace",
     "SeismicSecurityParams",
+    "SeismicTransactionResponse",
     "ShieldedContract",
     "Signature",
     "TxSeismicMetadata",
@@ -166,6 +179,7 @@ __all__ = [
     "get_encryption",
     "has_shielded_params",
     "hex_to_bytes",
+    "is_seismic_transaction",
     "make_seismic_testnet",
     "make_withdrawal_credentials",
     "sign_seismic_tx_eip712",

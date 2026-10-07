@@ -13,7 +13,7 @@ fmt-check: ## Check formatting without making changes
 	uv run ruff format --check src/ tests/
 
 typecheck: ## Run ty type checker
-	uv run ty check src/
+	uv run ty check src/ tests/test_transaction_response.py
 
 test: ## Run unit tests (no node required)
 	uv run pytest tests/ -v --ignore=tests/integration

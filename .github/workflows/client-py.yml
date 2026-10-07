@@ -47,7 +47,7 @@ jobs:
           python-version: "3.13"
           enable-cache: true
       - run: uv sync --locked --dev
-      - run: uv run ty check src/
+      - run: uv run ty check src/ tests/test_transaction_response.py
 
   test:
     runs-on: ubuntu-latest

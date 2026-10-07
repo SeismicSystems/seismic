@@ -1,7 +1,6 @@
 // Seismic chain definitions only. Seismic tx typing/serialization lives under
 // `src/tx/`, and this module wires those formatters into the exported chains.
 import { defineChain } from 'viem'
-import type { Chain } from 'viem'
 
 import { seismicChainFormatters } from '@sviem/tx/seismicRpc.ts'
 
@@ -40,7 +39,7 @@ export type CreateSeismicTestnetParams = {
 export const createSeismicDevnet = /*#__PURE__*/ ({
   nodeHost,
   explorerUrl,
-}: CreateSeismicDevnetParams): Chain => {
+}: CreateSeismicDevnetParams) => {
   if (!nodeHost) {
     throw new Error(
       'Must set `nodeHost` argument, e.g. testnet-1.seismictest.net'

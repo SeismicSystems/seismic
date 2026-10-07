@@ -61,7 +61,7 @@ echo "==> Running linter"
 uv run ruff check src/ tests/
 
 echo "==> Running type checker"
-uv run ty check src/
+uv run ty check src/ tests/test_transaction_response.py
 
 echo "==> Running unit tests"
 uv run pytest tests/ -v --ignore=tests/integration

@@ -44,6 +44,48 @@ Smart `.write`/`.read` routing remains based on the ABI. If it chooses the trans
 
 React's `useShieldedWriteContract` and `useSignedReadContract` accept the same `gasPayment` option.
 
+## Transaction lookup responses
+
+Existing `getTransaction` hash and block/index lookups, plus `getBlock({ includeTransactions: true })`, expose typed Seismic responses when the client uses an exported Seismic chain or chain factory. This includes ordinary Viem public clients and Seismic shielded public/wallet clients, for local and remote chains. Keep the chain's inferred type rather than widening it to generic `Chain`.
+
+```typescript
+import { createShieldedPublicClient, seismicTestnet } from 'seismic-viem';
+import type { GasPayment } from 'seismic-viem';
+import { http } from 'viem';
+
+const client = createShieldedPublicClient({
+  chain: seismicTestnet,
+  transport: http(),
+});
+const tx = await client.getTransaction({ hash: txHash });
+if (tx.type === 'seismic') {
+  const payment: GasPayment = tx.gasPayment;
+  if (payment.type === 'token') console.log(payment.token);
+}
+const block = await client.getBlock({
+  blockNumber: 1n,
+  includeTransactions: true,
+});
+for (const transaction of block.transactions) {
+  if (transaction.type === 'seismic') console.log(transaction.gasPayment);
+}
+```
+
+`SeismicTransaction` describes the Seismic branch; `SeismicTransactionResponse` is the union with ordinary Ethereum transactions. `RpcSeismicTransaction` and `RpcSeismicTransactionResponse` describe the unformatted RPC shapes.
+
+| Seismic response field                 | Formatted type                                                   |
+| -------------------------------------- | ---------------------------------------------------------------- |
+| `type` / `typeHex`                     | `'seismic'` / the original `'0x4a'` or `'0x4A'`                  |
+| `gasPayment`                           | Tagged `GasPayment`; Token addresses normalized to checksum form |
+| `encryptionPubkey` / `recentBlockHash` | Hex strings; public-key prefix normalized to `0x`                |
+| `encryptionNonce` / `expiresAtBlock`   | `bigint`                                                         |
+| `messageVersion`                       | `number`                                                         |
+| `signedRead`                           | `boolean`                                                        |
+
+Standard quantities, pending/null fields, and authorization entries follow Viem formatting. Ordinary Ethereum responses retain stock formatting and have no Seismic selector. Hash-only blocks remain arrays of hashes. A Seismic response missing the mandatory selector is rejected, not silently defaulted to Auto.
+
+The response contains the **signed preference**, not a report of the asset Auto ultimately selected. It remains public metadata and does not reveal decrypted calldata. Formatted lookup responses are not signing inputs; in particular, the response's encryption nonce is a quantity rather than a twelve-byte signing/encryption value.
+
 ## Standalone encryption with seismic-encrypt
 
 If you use `seismic-encrypt` with an ordinary Viem client instead of a shielded client, pass the same tagged choice **inside `tx`**:

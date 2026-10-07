@@ -244,6 +244,7 @@ test('transparent Ethereum requests retain their format and reject explicit choi
     format(standard)
   )
   expect(() =>
+    // @ts-expect-error: explicit payment choices require a Seismic envelope
     format({ ...standard, gasPayment: { type: 'native' } })
   ).toThrow()
   const tx = transaction(fixture.vectors[1])

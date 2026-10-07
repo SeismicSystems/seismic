@@ -51,6 +51,7 @@ run = [
     "bun run encrypt:test",
     "bun run --cwd tests/seismic-encrypt-test test:consumer",
     "bun run viem:unit:test",
+    "bun run --cwd tests/seismic-viem test:consumer:types",
 ]
 
 # Useful if you want to run the test suite against a remote running node (e.g. testnet).

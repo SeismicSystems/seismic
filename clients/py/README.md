@@ -54,6 +54,24 @@ result = contract.tread.getNumber()
 
 Both sync and async clients are supported. See the full documentation for details.
 
+## Transaction lookup responses
+
+Keep using the existing `w3.eth.get_transaction`, `get_transaction_by_block`, and `get_block(..., full_transactions=True)` methods. The SDK exports `SeismicTransactionResponse`, `GasPaymentResponse`, and a narrowing helper:
+
+```python
+from seismic_web3 import is_seismic_transaction
+
+transaction = w3.eth.get_transaction(tx_hash)
+if is_seismic_transaction(transaction):
+    payment = transaction["gasPayment"]
+    if payment["type"] == "token":
+        print(payment["token"])
+```
+
+The response and its payment remain web3.py `AttributeDict` mappings, **not** signing dataclasses. Standard Ethereum fields keep web3.py formatting; additional Seismic quantity fields keep their RPC hex strings. The helper does not mutate responses, checksum token addresses, or default missing selectors to Auto. It also works after awaiting async lookups and on full-block entries; ordinary Ethereum transactions and hash-only entries do not narrow.
+
+The selector describes the signed preference, not which asset Auto ultimately used. See the [GasPayment guide](https://docs.seismic.systems/clients/python/api-reference/transaction-types/gas-payment) for response typing details.
+
 ## Documentation
 
 Full docs are hosted on GitBook: **[docs.seismic.systems/clients/python](https://docs.seismic.systems/clients/python)**
