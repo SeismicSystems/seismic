@@ -489,6 +489,18 @@ the manifest.
 - **A client compares a hash.** It pins `network_id`, hashes the manifest it is
   given, and compares `tx_io_pk@0`. No quote verification is needed.
 
+All three read the manifest copy, not the summit genesis copy, although
+`network_id` covers that one too, through `summit.genesis_config_digest`. That
+digest is SHA-256 over summit's own SSZ encoding, and tdx-init does not
+recompute it
+([`summit_genesis.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/tdx-init/src/summit_genesis.rs)).
+Inside the guest, a divergent summit genesis shows only as a failed summit
+handshake, so a custodian that read its pin there would act on input nothing
+has bound to `network_id`. The manifest copy is bound by construction, because
+the manifest is the file whose hash is `network_id`. A client that read the
+summit copy would need summit's SSZ encoding in every SDK, the light client's
+porting cost, instead of one hash comparison.
+
 The pin covers epoch 0 only. A joiner re-derives every later epoch from
 `root_key`, but a client needs a pin per epoch, and a fresh-entropy rotation or
 a recovery needs one for both. Those need an anchor that can move after

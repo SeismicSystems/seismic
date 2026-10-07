@@ -187,7 +187,11 @@ header carries that state's root as `parent_beacon_block_root`, and summit
 serves SSZ branches against it, so a record there is provable from one
 finalized header and one branch. The manifest's pin then stays as a frozen
 copy, like the bootstrap policy: it is what the custodian reads, and what a
-client that only hash-checks the manifest needs.
+client that only hash-checks the manifest needs. Neither can rely on the summit
+copy. Nothing in the guest recomputes summit's SSZ `config_digest`, so nothing
+there binds the summit genesis to `network_id`, and an SDK would need summit's
+encoding to check it
+([the root-key pin](network-manifest.md#the-root-key-pin)).
 
 **No quote binds chain state today.** The bindings are:
 
