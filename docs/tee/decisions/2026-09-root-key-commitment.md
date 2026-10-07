@@ -41,7 +41,7 @@ One question, "is this the network's key?", has two askers:
 | | Joiner | Client |
 | --- | --- | --- |
 | Receives | `root_key`, wrapped, from a responder | `tx_io_pk`, from whichever RPC it uses |
-| Checks before this decision | nothing: the joiner admits any genuine Azure TDX guest ([`DangerouslyAdmitAnyAzureGuest`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/attestation-service/src/join.rs)) | nothing: the SDKs take `seismic_getTeePublicKey` on first use ([`fillers.rs`](https://github.com/SeismicSystems/seismic-alloy/blob/seismic/crates/network/src/fillers.rs)) |
+| Checks before this decision | nothing: the joiner admits any genuine Azure TDX guest ([`DangerouslyAdmitAnyAzureGuest`](https://github.com/SeismicSystems/enclave/blob/351e4ec162e591122c9cf8a64522a2b3a5682a85/bin/attestation-service/src/join.rs)) | nothing: the SDKs take `seismic_getTeePublicKey` on first use ([`fillers.rs`](https://github.com/SeismicSystems/seismic-alloy/blob/seismic/crates/network/src/fillers.rs)) |
 | Attacker | the joiner's own host, with one genuine TDX VM on any image | the RPC operator, a DNS or TLS hijacker, or a node that was itself fooled; no TEE needed |
 | A wrong key costs | the node's first-boot disk: its summit keys leave the TEE for good, and it then serves the wrong `tx_io_pk` to its clients | that client's calldata and signed-read responses |
 | Later epochs, from an epoch-0 pin | covered: every epoch re-derives from `root_key` | not covered: one pin per epoch |
@@ -354,7 +354,7 @@ Oasis Sapphire:
 
 Seismic code cited above:
 
-- [SeismicSystems/enclave `join.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/attestation-service/src/join.rs):
+- [SeismicSystems/enclave `join.rs`](https://github.com/SeismicSystems/enclave/blob/351e4ec162e591122c9cf8a64522a2b3a5682a85/bin/attestation-service/src/join.rs):
   the joiner's accept-any responder policy.
 - [SeismicSystems/seismic-alloy `fillers.rs`](https://github.com/SeismicSystems/seismic-alloy/blob/seismic/crates/network/src/fillers.rs):
   the client's unauthenticated `seismic_getTeePublicKey` fetch.

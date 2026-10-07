@@ -98,9 +98,9 @@
     <text class="sub" x="14" y="70">(+ manifest copy for joiners)</text>
   </g>
   <g transform="translate(90,475)">
-    <rect class="planned" width="280" height="80" rx="10"/>
+    <rect class="shipped" width="280" height="80" rx="10"/>
     <text class="b" x="14" y="28">tx_io_pk@0 pin</text>
-    <text class="sub" x="14" y="52">K0: manifest root_key section</text>
+    <text class="sub" x="14" y="52">K0: manifest founding_tx_io_pk</text>
     <text class="sub" x="14" y="70">(summit genesis to follow)</text>
   </g>
 
@@ -138,7 +138,7 @@
     <rect x="400" y="450" width="1490" height="110" rx="12"/>
     <text x="420" y="474">K · service key tx_io_pk@(root_version, epoch) — later records: open</text>
   </g>
-  <rect class="planned" x="520" y="490" width="680" height="50"/>
+  <rect class="shipped" x="520" y="490" width="680" height="50"/>
   <text x="536" y="520">K0 = tx_io_pk@(0, 0)</text>
   <rect class="open" x="1200" y="490" width="340" height="50"/>
   <text class="open-text" x="1216" y="520">K1 = @(0, 1): epoch bump</text>

@@ -91,7 +91,7 @@
     <text class="sub" x="20" y="54">the measured image, booted identity-free</text>
     <rect class="shipped" x="20" y="76" width="760" height="54" rx="9" fill="#ffffff"/>
     <text x="40" y="108">summit BLS + Ed25519 keypairs, born at boot in guest RAM</text>
-    <rect class="planned" x="20" y="146" width="760" height="54" rx="9"/>
+    <rect class="shipped" x="20" y="146" width="760" height="54" rx="9" fill="#ffffff"/>
     <text x="40" y="178">custodian: a candidate root_key and its tx_io_pk@0</text>
   </g>
 
@@ -139,10 +139,10 @@
     <text x="14" y="70">contracts: registry, authority</text>
   </g>
   <g transform="translate(1540,640)">
-    <rect class="planned" width="380" height="95" rx="8"/>
-    <text x="14" y="26">tx_io_pk@0, the root_key</text>
-    <text x="14" y="48">commitment (here or in the</text>
-    <text x="14" y="70">summit genesis: undecided)</text>
+    <rect class="shipped" width="380" height="95" rx="8"/>
+    <text x="14" y="26">founding_tx_io_pk: the</text>
+    <text x="14" y="48">root_key commitment every</text>
+    <text x="14" y="70">custodian checks</text>
   </g>
 
   <line class="flow" x1="670" y1="735" x2="670" y2="798" marker-end="url(#arrow)"/>
@@ -305,11 +305,11 @@
     <text x="16" y="76">/run/seismic/conf</text>
   </g>
   <g transform="translate(1020,1770)">
-    <rect class="planned" width="360" height="110" rx="12"/>
+    <rect class="shipped" width="360" height="110" rx="12"/>
     <text class="b" x="18" y="28">custodian</text>
     <text x="18" y="54">keeps its candidate if it</text>
-    <text x="18" y="76">matches the pin; else fetches</text>
-    <text x="18" y="98">root_key, checks it vs the pin</text>
+    <text x="18" y="76">matches the pin; else installs</text>
+    <text x="18" y="98">a fetched root_key if it does</text>
   </g>
   <g transform="translate(1020,1920)">
     <rect class="shipped" width="360" height="90" rx="12"/>
