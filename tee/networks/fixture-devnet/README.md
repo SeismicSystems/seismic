@@ -13,12 +13,13 @@ change in the pinned enclave crates before the next real founding does.
 
 | | |
 |---|---|
-| Founded | 2026-10-01, by hand, from [the devnet runbook](https://github.com/SeismicSystems/deploy/blob/8d0048de2a951044a48a3ff0215dc7b87fe012ab/tee/runbook-devnet.md), configured and smoke-tested before teardown |
-| Image | [`seismic_2026-10-01.6a90ed`](https://github.com/SeismicSystems/seismic-images/releases/tag/seismic_2026-10-01.6a90ed) (`inputs/image.json`): summit `5eb9f47`, enclave `8b5833a`, seismic-reth `39d04d1` |
-| `measurement_id` | `seismic_2026-10-01.6a90ed.vhd` (`inputs/measurements.json`) |
+| Founded | 2026-10-08, by hand, from [the devnet runbook](https://github.com/SeismicSystems/deploy/blob/de1f432a/tee/runbook-devnet.md)'s steps 1–4 and 8: harvested and assembled, never configured |
+| Image | [`seismic_2026-10-08.dbab6a`](https://github.com/SeismicSystems/seismic-images/releases/tag/seismic_2026-10-08.dbab6a) (`inputs/image.json`): summit `532ad6f`, enclave `56d2a91`, seismic-reth `39d04d1` |
+| `measurement_id` | `seismic_2026-10-08.dbab6a.vhd` (`inputs/measurements.json`) |
 | Records | 4, `inputs/harvest/tee-devnet-{1..4}.json` (harvested as `samlaf-fixture-devnet-tee-devnet-{1..4}`; the operator prefix is dropped, the stem being only a label), record `version` 1 |
+| `founding_tx_io_pk` | `tee-devnet-1`'s candidate, the first record by name |
 | Verifier at founding | dcap-qvl 0.5.2 (`trust_anchors.dcap_qvl_version`) |
-| `network_id` | `0xfa2dd4423242449103f1057b82480c47bc7574e0d16a639e17009091c22e64ee` |
+| `network_id` | `0x499876c363592028a6f42efbfed65e3bde740b58aaccc91aab106d356f0be01e` |
 
 The cohort was founded under this directory's own name, so the
 manifest's `name` and `namespace` are `fixture-devnet`. Both are part of

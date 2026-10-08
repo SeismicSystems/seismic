@@ -6,12 +6,15 @@
 //!     --manifest tee/networks/devnet-3/network-manifest.json
 //! ```
 //!
-//! Configures a whole cohort at once: the one genesis node (`--genesis-node`, mints
-//! `root_key` locally) plus every joining node (`--join`, fetches `root_key`
-//! from genesis via `getWrappedRootKey`). Exactly one node is genesis —
-//! assigned here, not left to a per-node flag — so a double-genesis network
-//! split is unrepresentable. This is the only caller that ever sets
-//! `genesis_node = true`.
+//! Configures a whole cohort at once: the one genesis node (`--genesis-node`)
+//! plus every joining node (`--join`). Every founding box minted a candidate
+//! `root_key` at boot and the manifest pins one box's `tx_io_pk@0`
+//! (`founding_tx_io_pk`): that box keeps its candidate, and every other
+//! discards its own and fetches `root_key` from it via `getWrappedRootKey`.
+//! So the genesis node is not a choice made here: `--genesis-node` must name
+//! the box whose harvested candidate the manifest pins, and any other name is
+//! refused before anything is sent — the joiners would otherwise be pointed
+//! at a box that does not hold the network's key.
 //!
 //! Bootnode bootstrap is inherently two-stage on a greenfield cohort: a node's
 //! reth enode isn't known until reth is up, so there is nothing to hand the
@@ -56,8 +59,8 @@
 //! [`crate::configure`]) are one command because they are one act: POST a
 //! config to one or more boxes, then verify. Both go through the same
 //! `build_config` / `post_config` primitives and status poller, so each
-//! node's POSTed config and wipe-watch are identical — only
-//! `[node].genesis_node` and the bootnode set differ.
+//! node's POSTed config and wipe-watch are identical — only the bootnode set
+//! differs.
 //!
 //! `--check` runs the launch assertions and nothing else: no config is built
 //! or POSTed, nothing is written, and every founding node — every box with a
@@ -77,7 +80,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context as _, bail};
-use seismic_tee_common::founding::{FoundingRecords, SUMMIT_CONSENSUS_PORT, load_harvest_records};
+use seismic_tee_common::founding::{
+    FoundingRecords, SUMMIT_CONSENSUS_PORT, box_holding_the_pin, load_harvest_records,
+};
 use seismic_tee_common::http::TDX_INIT_PORT;
 use seismic_tee_common::{
     Artifact, Descriptors, Manifest, NetworkDir, NodeDescriptor, hex_0x, http, next_step, rpc,
@@ -209,6 +214,31 @@ pub fn build_cohort(
         }
     }
     Ok(nodes)
+}
+
+/// The genesis node must be the box holding the manifest's pin: the harvested
+/// box whose candidate is `founding_tx_io_pk`. A name the founder typed from
+/// habit, or a manifest assembled from another harvest, fails here, before
+/// any POST.
+pub fn check_genesis_holds_the_pin(
+    genesis_node: &str,
+    records: &FoundingRecords,
+    founding_tx_io_pk: &[u8; 33],
+) -> anyhow::Result<()> {
+    match box_holding_the_pin(records, founding_tx_io_pk) {
+        Some(holder) if holder == genesis_node => Ok(()),
+        Some(holder) => bail!(
+            "--genesis-node {genesis_node} is not the box the manifest pins: founding_tx_io_pk is \
+             {holder}'s candidate root_key, and only that box keeps its key — every other node \
+             fetches it from there. Found with `--genesis-node {holder}`."
+        ),
+        None => bail!(
+            "no harvested box's candidate is the manifest's founding_tx_io_pk ({}) — the \
+             manifest was not assembled from this harvest; re-run `seismic-tee network assemble` \
+             over it, or re-found",
+            hex_0x(founding_tx_io_pk)
+        ),
+    }
 }
 
 /// Load the founding facts the delivery needs from the network directory: the
@@ -628,8 +658,8 @@ pub async fn bootstrap_greenfield(
     let mut results = run_cohort(std::slice::from_ref(genesis), shared).await?;
     if !results.get(&genesis.name).copied().unwrap_or(false) {
         println!(
-            "Genesis node failed in stage 1 — skipping joiner bootstrap: its enode is what every \
-             joiner would dial."
+            "Genesis node failed in stage 1 — skipping joiner bootstrap: it holds the only copy of \
+             the network's root_key, and its enode is what every joiner would dial."
         );
         return Ok(results);
     }
@@ -757,8 +787,9 @@ fn report(
         .any(|n| n.genesis && !results.get(&n.name).copied().unwrap_or(false))
     {
         println!(
-            "The genesis node failed — joiners depend on it for root_key and as their bootnode. \
-             Fix genesis first."
+            "The genesis node failed. It holds the only copy of the root_key the manifest pins, \
+             and a box that failed its config POST or its appraisal cannot be trusted with it: \
+             re-found (`pulumi destroy` + fresh `up`) rather than retrying around it."
         );
     }
     let failed: Vec<&str> = nodes
@@ -861,6 +892,7 @@ pub async fn found(
     }
     let summit_genesis = Artifact::new(committed.path(), spliced);
 
+    check_genesis_holds_the_pin(genesis_node, &harvest_records, &manifest.founding_tx_io_pk)?;
     let mut nodes = build_cohort(&descriptors, genesis_node, args.join.as_deref())?;
     let unharvested: Vec<&str> = nodes
         .iter()
@@ -1255,6 +1287,7 @@ mod tests {
                     "harvest_nonce": "11".repeat(32),
                     "node_public_key": key,
                     "consensus_public_key": byte.repeat(48),
+                    "candidate_tx_io_public_key": format!("02{}", byte.repeat(32)),
                     "evidence": {},
                 })
                 .to_string(),
@@ -1270,6 +1303,25 @@ mod tests {
         let err = load_founding_facts(&dir, &one).unwrap_err().to_string();
         assert!(err.contains("has no node \"node-2\""), "{err}");
         assert!(err.contains("re-found rather than configuring"), "{err}");
+
+        // Only the box whose candidate the manifest pins may be genesis.
+        let pin: [u8; 33] = hex::decode(format!("02{}", "dd".repeat(32)))
+            .unwrap()
+            .try_into()
+            .unwrap();
+        check_genesis_holds_the_pin("node-2", &records, &pin).unwrap();
+        let err = check_genesis_holds_the_pin("node-1", &records, &pin)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains("--genesis-node node-1 is not the box"),
+            "{err}"
+        );
+        assert!(err.contains("`--genesis-node node-2`"), "{err}");
+        let err = check_genesis_holds_the_pin("node-1", &records, &[0x03; 33])
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("not assembled from this harvest"), "{err}");
     }
 
     /// A cohort whose nodes are all already configured (tdx-init gone, no

@@ -9,11 +9,11 @@
 //!     --bootnode enode://<pubkey>@<ip>:30303 --manifest m.json
 //! ```
 //!
-//! With `--bootnode`, the node *joins* an existing network (`genesis_node =
-//! false`): it fetches `root_key` via `getWrappedRootKey` from a peer
-//! tdx-init derives from `--bootnode` (`http://<host>:7878` per bootnode).
-//! With `--genesis-node`, the same command founds a cohort instead —
-//! designating the one genesis node that mints `root_key` locally — and with
+//! With `--bootnode`, the node *joins* an existing network: it fetches
+//! `root_key` via `getWrappedRootKey` from a peer tdx-init derives from
+//! `--bootnode` (`http://<host>:7878` per bootnode). With `--genesis-node`,
+//! the same command founds a cohort instead — starting from the box whose
+//! candidate `root_key` the manifest pins, which keeps it — and with
 //! `--check` it re-asserts a founded cohort's launch; both are
 //! [`crate::cohort`]'s. [`build_config`] and [`post_config`] are the
 //! primitives every shape shares. The rest of this page is the joining
@@ -30,8 +30,8 @@
 //! `--manifest`, pinned by it. An operator who wants delivery alone asks for
 //! it with `--no-verify`.
 //!
-//! There is no per-node `node.toml`: `[node]` (external_ip, genesis_node)
-//! comes from the descriptor and the role, `[node.domain]` from the descriptor
+//! There is no per-node `node.toml`: `[node]` (external_ip) comes from the
+//! descriptor, `[node.domain]` from the descriptor
 //! fqdn and `--email`, and `[network]` from `--manifest`, `--reth-genesis`,
 //! `--summit-genesis` and `--bootnode`. Those network-wide artifacts stay
 //! standalone files, merged only at POST time. The config is built as the
@@ -143,7 +143,7 @@ pub struct ConfigInputs<'a> {
     /// than a path.
     pub summit_genesis: &'a Artifact,
     /// The enode set → `[network].bootnodes`. Empty is valid only on the
-    /// greenfield genesis node.
+    /// greenfield genesis node: the box whose candidate the manifest pins.
     pub bootnodes: &'a [String],
     /// The node's own public IP → `[node].external_ip` (reth's `--nat extip`).
     pub external_ip: &'a str,
@@ -152,7 +152,7 @@ pub struct ConfigInputs<'a> {
     /// → `[node.domain].email`, the Let's Encrypt registration.
     pub email: &'a str,
     /// Only ever `true` when founding (`--genesis-node`); `--bootnode` always
-    /// joins.
+    /// joins. Not sent: tdx-init tells the pinned box from the manifest.
     pub genesis_node: bool,
 }
 
@@ -206,7 +206,6 @@ pub fn build_config(inputs: &ConfigInputs<'_>) -> anyhow::Result<InitConfig> {
         },
         node: NodeConfig {
             external_ip: inputs.external_ip.to_string(),
-            genesis_node: inputs.genesis_node,
             domain: DomainConfig {
                 email: inputs.email.to_string(),
                 name: inputs.fqdn.to_string(),
@@ -486,11 +485,12 @@ pub struct ConfigureArgs {
     #[command(flatten)]
     pub node: NodeArgs,
 
-    /// Found a cohort, with this node as its genesis — the node that mints
-    /// root_key locally and that the joiners fetch it from — as keyed in the
-    /// cohort's node table. Exactly one node per network is genesis;
-    /// assigning it here (not a per-node flag) makes a double-genesis split
-    /// impossible. Every node must have a founding harvest record.
+    /// Found a cohort, with this node as its genesis — the box whose
+    /// candidate root_key the manifest pins, which keeps it and which the
+    /// joiners fetch it from — as keyed in the cohort's node table. `network
+    /// assemble` pins the first harvested box by name and names it in its
+    /// next step; any other node is refused. Every node must have a founding
+    /// harvest record.
     #[arg(
         long,
         value_name = "NAME",
@@ -499,8 +499,9 @@ pub struct ConfigureArgs {
     )]
     pub genesis_node: Option<String>,
 
-    /// With --genesis-node: a joining node of the founding cohort (fetches
-    /// root_key from genesis via getWrappedRootKey). Repeatable. Default:
+    /// With --genesis-node: a joining node of the founding cohort (discards
+    /// its own candidate and fetches root_key from genesis via
+    /// getWrappedRootKey). Repeatable. Default:
     /// every other node in the cohort's node table; name a subset to
     /// configure only those.
     #[arg(
@@ -854,8 +855,9 @@ mod tests {
             .unwrap()
     }
 
-    /// genesis: mints root_key locally, so genesis_node=true and (in the
-    /// greenfield case) no bootnodes — the key is present and empty. The
+    /// genesis: the pinned box keeps its candidate root_key, so (in the
+    /// greenfield case) no bootnodes — the key is present and empty. No role
+    /// flag is sent: tdx-init tells the pinned box from the manifest. The
     /// rendered document is exactly `[node]` + `[network]`, and the artifacts
     /// round-trip byte-exact through the base64 hop.
     #[test]
@@ -868,7 +870,7 @@ mod tests {
         let mut sections: Vec<_> = table.keys().collect();
         sections.sort();
         assert_eq!(sections, ["network", "node"]);
-        assert_eq!(table["node"]["genesis_node"].as_bool(), Some(true));
+        assert_eq!(table["node"].get("genesis_node"), None);
         assert_eq!(table["node"]["external_ip"].as_str(), Some(EXTERNAL_IP));
         assert_eq!(table["node"]["domain"]["name"].as_str(), Some(FQDN));
         assert_eq!(table["node"]["domain"]["email"].as_str(), Some(EMAIL));
@@ -888,12 +890,12 @@ mod tests {
 
         // And it is the document tdx-init deserializes.
         let reparsed: InitConfig = toml::from_str(&rendered).unwrap();
-        assert!(reparsed.node.genesis_node);
+        assert_eq!(reparsed.node.external_ip, EXTERNAL_IP);
     }
 
-    /// join: genesis_node=false and the bootnode set (root_key fetch peers are
-    /// derived from it by tdx-init) survives verbatim — a node's own enode
-    /// included, which tdx-init drops when deriving peers.
+    /// join: the bootnode set (root_key fetch peers are derived from it by
+    /// tdx-init) survives verbatim — a node's own enode included, which
+    /// tdx-init drops when deriving peers.
     #[test]
     fn join_mode_carries_the_bootnodes_verbatim() {
         let bootnodes = [
@@ -902,7 +904,6 @@ mod tests {
         ];
         let config = build(&manifest(), RETH_GENESIS, SUMMIT_GENESIS, false, &bootnodes).unwrap();
 
-        assert!(!config.node.genesis_node);
         assert_eq!(config.node.external_ip, EXTERNAL_IP);
         assert_eq!(config.network.bootnodes, bootnodes);
 

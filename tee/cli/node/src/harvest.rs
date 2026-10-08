@@ -1,19 +1,21 @@
-//! `harvest`: collect and DCAP-verify each cohort box's summit keys.
+//! `harvest`: collect and DCAP-verify each cohort box's founding keys.
 //!
 //! ```text
 //! seismic-tee node harvest tee/networks/devnet-3
 //! ```
 //!
 //! A founding cohort boots identity-free: each box generates its summit
-//! keypairs into tmpfs at boot, and its attestation service serves
-//! `GET /v1/quote?nonce=…` → `{pubkeys, evidence}` on `:7879` until the box
-//! accepts its config POST. Harvest is the step between provisioning and
-//! `assemble`: it polls every box's harvest endpoint, fetches its pubkeys plus
-//! a TDX quote over a fresh per-box nonce (`report_data` binds the nonce and
-//! both pubkeys, so a quote replayed from an earlier harvest can't satisfy it),
+//! keypairs into tmpfs at boot, its custodian mints a candidate `root_key`,
+//! and its attestation service serves `GET /v1/quote?nonce=…` → `{pubkeys,
+//! candidate tx_io_pk@0, evidence}` on `:7879` until the box accepts its
+//! config POST. Harvest is the step between provisioning and `assemble`: it
+//! polls every box's harvest endpoint, fetches its three keys plus a TDX quote
+//! over a fresh per-box nonce (`report_data` binds the nonce and all three
+//! keys, so a quote replayed from an earlier harvest can't satisfy it),
 //! DCAP-verifies each quote against the network's intended image
 //! measurements, and archives the verified facts under `inputs/harvest/` — the
-//! provenance `assemble` pins the founding validator set from.
+//! provenance `assemble` pins the founding validator set and the founding
+//! `tx_io_pk@0` from.
 //!
 //! Verification here is load-bearing, not hygiene: consensus membership is
 //! gated by whose pubkeys enter the genesis validator set, and founding keys
@@ -94,12 +96,14 @@ impl HarvestTarget {
     }
 }
 
-/// What a box served: the pubkeys in summit's keystore wire spelling and
+/// What a box served: the pubkeys in summit's keystore wire spelling, its
+/// candidate's `tx_io_pk@0` as compressed SEC1, all bare lowercase hex, and
 /// the evidence, verbatim.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Quote {
     pub node_public_key: String,
     pub consensus_public_key: String,
+    pub candidate_tx_io_public_key: String,
     pub evidence: Value,
 }
 
@@ -163,6 +167,7 @@ pub async fn fetch_quote(
     };
     let node_public_key = key("node_public_key", 32)?;
     let consensus_public_key = key("consensus_public_key", 48)?;
+    let candidate_tx_io_public_key = key("candidate_tx_io_public_key", 33)?;
     let Some(evidence) = object.get("evidence").filter(|e| e.is_object()) else {
         return Err(FetchError::Malformed(format!(
             "{url}: response carries no evidence object"
@@ -171,6 +176,7 @@ pub async fn fetch_quote(
     Ok(Quote {
         node_public_key,
         consensus_public_key,
+        candidate_tx_io_public_key,
         evidence: evidence.clone(),
     })
 }
@@ -265,11 +271,12 @@ pub async fn collect_quotes(
     }
 }
 
-/// Abort if two boxes served the same pubkey.
+/// Abort if two boxes served the same key.
 ///
 /// Summit's genesis keys validator accounts by node pubkey, so a repeated key
-/// silently collapses the set — and two boxes holding the same consensus key
-/// is accidental-equivocation material. Either way the cohort is not the N
+/// silently collapses the set; two boxes holding the same consensus key is
+/// accidental-equivocation material; and two boxes with the same candidate
+/// would both keep the pinned `root_key`. Either way the cohort is not the N
 /// distinct founders being pinned: burn.
 pub fn assert_unique_keys(quotes: &BTreeMap<String, Quote>) -> anyhow::Result<()> {
     for (field, key_of) in [
@@ -279,6 +286,9 @@ pub fn assert_unique_keys(quotes: &BTreeMap<String, Quote>) -> anyhow::Result<()
         ),
         ("consensus_public_key", |q: &Quote| {
             q.consensus_public_key.as_str()
+        }),
+        ("candidate_tx_io_public_key", |q: &Quote| {
+            q.candidate_tx_io_public_key.as_str()
         }),
     ] {
         let mut seen: BTreeMap<&str, &str> = BTreeMap::new();
@@ -296,10 +306,10 @@ pub fn assert_unique_keys(quotes: &BTreeMap<String, Quote>) -> anyhow::Result<()
     Ok(())
 }
 
-/// One box's harvest record: the nonce this run minted, the pubkeys its harvest
-/// endpoint served, and the evidence whose `report_data` binds all three.
+/// One box's harvest record: the nonce this run minted, the keys its harvest
+/// endpoint served, and the evidence whose `report_data` binds all four.
 ///
-/// The verifier's input. The archive it renders carries these same four
+/// The verifier's input. The archive it renders carries these same five
 /// fields beside the verdict's provenance, so the document a later reader
 /// re-verifies is the one the verifier passed.
 pub fn build_record(target: &HarvestTarget, quote: &Quote) -> Value {
@@ -307,6 +317,7 @@ pub fn build_record(target: &HarvestTarget, quote: &Quote) -> Value {
         "harvest_nonce": target.nonce_hex(),
         "node_public_key": quote.node_public_key,
         "consensus_public_key": quote.consensus_public_key,
+        "candidate_tx_io_public_key": quote.candidate_tx_io_public_key,
         "evidence": quote.evidence,
     })
 }
@@ -526,6 +537,8 @@ mod tests {
     use super::*;
 
     const NODE_KEY: &str = "abababababababababababababababababababababababababababababababab";
+    const CANDIDATE_TX_IO_PUBLIC_KEY: &str =
+        "02efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef";
     /// A policy the verifier parses: the committed fixture devnet's.
     const FIXTURE_POLICY: &[u8] =
         include_bytes!("../../../networks/fixture-devnet/measurement-policy-bootstrap.json");
@@ -538,6 +551,7 @@ mod tests {
         json!({
             "node_public_key": node_key,
             "consensus_public_key": consensus_key,
+            "candidate_tx_io_public_key": CANDIDATE_TX_IO_PUBLIC_KEY,
             "evidence": azure_evidence(),
         })
         .to_string()
@@ -555,11 +569,12 @@ mod tests {
         Quote {
             node_public_key: NODE_KEY.to_string(),
             consensus_public_key: consensus_key(),
+            candidate_tx_io_public_key: CANDIDATE_TX_IO_PUBLIC_KEY.to_string(),
             evidence: azure_evidence(),
         }
     }
 
-    /// The request carries this run's nonce; the answer is the three fields.
+    /// The request carries this run's nonce; the answer is the four fields.
     #[tokio::test]
     async fn fetch_quote_passes_the_nonce_and_reads_the_quote() {
         let server = FakeServer::serve(vec![(200, quote_body(NODE_KEY, &consensus_key()))]);
@@ -611,6 +626,14 @@ mod tests {
             quote_body(NODE_KEY, "cd"),
             json!({"node_public_key": NODE_KEY, "consensus_public_key": consensus_key()})
                 .to_string(),
+            // An image older than the binding this CLI verifies serves no
+            // candidate.
+            json!({
+                "node_public_key": NODE_KEY,
+                "consensus_public_key": consensus_key(),
+                "evidence": azure_evidence(),
+            })
+            .to_string(),
             "[]".to_string(),
         ] {
             let server = FakeServer::serve(vec![(200, body.clone())]);
@@ -703,6 +726,7 @@ mod tests {
             Quote {
                 node_public_key: "ef".repeat(32),
                 consensus_public_key: "12".repeat(48),
+                candidate_tx_io_public_key: format!("03{}", "56".repeat(32)),
                 ..quote()
             },
         );
@@ -722,9 +746,20 @@ mod tests {
         );
         let err = assert_unique_keys(&quotes).unwrap_err().to_string();
         assert!(err.contains("consensus_public_key"), "{err}");
+
+        quotes.insert(
+            "node-3".to_string(),
+            Quote {
+                node_public_key: "34".repeat(32),
+                consensus_public_key: "78".repeat(48),
+                ..quote()
+            },
+        );
+        let err = assert_unique_keys(&quotes).unwrap_err().to_string();
+        assert!(err.contains("candidate_tx_io_public_key"), "{err}");
     }
 
-    /// The record is the verifier's input, in the frozen shape: the four
+    /// The record is the verifier's input, in the frozen shape: the five
     /// fields, the nonce as hex, the evidence verbatim.
     #[test]
     fn the_record_is_the_verifiers_input() {
@@ -735,6 +770,7 @@ mod tests {
                 "harvest_nonce": "11".repeat(32),
                 "node_public_key": NODE_KEY,
                 "consensus_public_key": consensus_key(),
+                "candidate_tx_io_public_key": CANDIDATE_TX_IO_PUBLIC_KEY,
                 "evidence": azure_evidence(),
             })
         );

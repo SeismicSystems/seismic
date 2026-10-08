@@ -109,6 +109,9 @@ pub struct FoundingRecord {
     pub node_public_key: String,
     /// The BLS consensus pubkey, bare lowercase hex (48 bytes).
     pub consensus_public_key: String,
+    /// The `tx_io_pk@0` of the box's candidate `root_key`, bare lowercase hex
+    /// (33-byte compressed SEC1 point).
+    pub candidate_tx_io_public_key: String,
     /// The archived file, whole.
     pub document: serde_json::Value,
 }
@@ -118,11 +121,12 @@ pub type FoundingRecords = BTreeMap<String, FoundingRecord>;
 
 /// Read the harvested founding records (`inputs/harvest/<node>.json`).
 ///
-/// Validates the fields the founding set is built from — nonce, both pubkeys,
-/// the evidence object — and rejects a pubkey repeated across boxes: summit's
-/// genesis keys validator accounts by node pubkey, so a repeated key silently
-/// collapses the set, and a shared consensus key is accidental-equivocation
-/// material.
+/// Validates the fields the founding set is built from — nonce, the three
+/// keys, the evidence object — and rejects a key repeated across boxes:
+/// summit's genesis keys validator accounts by node pubkey, so a repeated key
+/// silently collapses the set; a shared consensus key is
+/// accidental-equivocation material; and a shared candidate would let two
+/// boxes keep the pinned `root_key`.
 pub fn load_harvest_records(dir: &NetworkDir) -> anyhow::Result<FoundingRecords> {
     let harvest_dir = dir.harvest();
     let mut paths: Vec<_> = match std::fs::read_dir(&harvest_dir) {
@@ -164,6 +168,7 @@ pub fn load_harvest_records(dir: &NetworkDir) -> anyhow::Result<FoundingRecords>
         field("harvest_nonce", 32)?;
         let node_public_key = field("node_public_key", 32)?;
         let consensus_public_key = field("consensus_public_key", 48)?;
+        let candidate_tx_io_public_key = field("candidate_tx_io_public_key", 33)?;
         if !object
             .get("evidence")
             .is_some_and(serde_json::Value::is_object)
@@ -183,6 +188,7 @@ pub fn load_harvest_records(dir: &NetworkDir) -> anyhow::Result<FoundingRecords>
             FoundingRecord {
                 node_public_key,
                 consensus_public_key,
+                candidate_tx_io_public_key,
                 document,
             },
         );
@@ -195,6 +201,9 @@ pub fn load_harvest_records(dir: &NetworkDir) -> anyhow::Result<FoundingRecords>
         ),
         ("consensus_public_key", |r: &FoundingRecord| {
             r.consensus_public_key.as_str()
+        }),
+        ("candidate_tx_io_public_key", |r: &FoundingRecord| {
+            r.candidate_tx_io_public_key.as_str()
         }),
     ] {
         let mut seen: BTreeMap<&str, &str> = BTreeMap::new();
@@ -210,6 +219,32 @@ pub fn load_harvest_records(dir: &NetworkDir) -> anyhow::Result<FoundingRecords>
         }
     }
     Ok(records)
+}
+
+/// The box whose candidate `root_key` `assemble` pins as the manifest's
+/// `founding_tx_io_pk`: the first harvested box in node-name order, the
+/// order the founding set is paired in. `None` only for an empty harvest,
+/// which [`load_harvest_records`] refuses.
+pub fn pinned_box(records: &FoundingRecords) -> Option<(&str, &FoundingRecord)> {
+    records
+        .iter()
+        .next()
+        .map(|(name, record)| (name.as_str(), record))
+}
+
+/// The harvested box whose candidate is `founding_tx_io_pk`: the box that
+/// keeps its `root_key` and that every other founding box fetches it from.
+/// `None` when no harvested candidate matches, so the harvest is not the one
+/// the manifest was assembled from.
+pub fn box_holding_the_pin<'a>(
+    records: &'a FoundingRecords,
+    founding_tx_io_pk: &[u8; 33],
+) -> Option<&'a str> {
+    let pin = hex::encode(founding_tx_io_pk);
+    records
+        .iter()
+        .find(|(_, record)| record.candidate_tx_io_public_key == pin)
+        .map(|(name, _)| name.as_str())
 }
 
 /// One founding validator as `summit genesis set-validators` takes it:

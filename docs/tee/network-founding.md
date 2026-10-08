@@ -89,8 +89,9 @@ Each step is one command, run by the founder:
 
 An auditor re-asks the founding's question later, offline, with
 `seismic-tee verify-founding <dir>`: every archived quote against its archived
-collateral and the pinned policy, and every archived key against the
-validator set the summit genesis seats.
+collateral and the pinned policy, every archived key against the validator
+set the summit genesis seats, and `founding_tx_io_pk` against the archived
+candidates.
 
 A joiner needs none of this. It checks `sha256(manifest) == network_id`, checks
 each artifact against the manifest — which covers the summit genesis's full

@@ -1,7 +1,7 @@
 {
   "measurements": {
     "11": {
-      "expected": "1964ec075eb42a34da0bf20a84b0f3b9846d6a5fca5e204cc8b394ac51a3de6a"
+      "expected": "0fac2bf180ab444424af2031ad06e50df480c3463ca0d696b09b1771518fcf86"
     },
     "12": {
       "expected": "0000000000000000000000000000000000000000000000000000000000000000"
@@ -13,13 +13,13 @@
       "expected": "0000000000000000000000000000000000000000000000000000000000000000"
     },
     "4": {
-      "expected": "a82c08f4eeb149b3e9c8f0952785cd43860e4f980d9f0758563b9f6c3b359532"
+      "expected": "441fec01eca7cdc9a82e64bd4d12a3ceb1ff528e7683e17878242ff7cdcec667"
     },
     "8": {
       "expected": "0000000000000000000000000000000000000000000000000000000000000000"
     },
     "9": {
-      "expected": "dcf886627fe61366ca87ba5f969c1c3ffa4adcaaa3b8901b7e0fd6de5ae51b46"
+      "expected": "62504f30955ec08a01a348bab2992c22de218e3839fb88990f0a395da28f5f1b"
     }
   },
   "EventLog": {
@@ -37,7 +37,7 @@
       },
       {
         "PCRIndex": 4,
-        "Digest": "1b7ca10c44839384bfc9ef938aa1e082660c94fb407ca15917190bc646aa4d39",
+        "Digest": "2f931a69695ed41dff141cc2df660056b41b434b9fe2de53d1f6d00bf13e6264",
         "Description": "Boot Stage 1: Unified Kernel Image (UKI)"
       },
       {
@@ -53,8 +53,8 @@
       },
       {
         "PCRIndex": 9,
-        "Digest": "b3d809a0e158d7ee96d695dd50cde9b98e9ae2a50bed123d960950ca7e028e1f",
-        "Description": "EV_EVENT_TAG: Linux LOAD_FILE2 protocol: initrd (digest b3d809a0e158d7ee96d695dd50cde9b98e9ae2a50bed123d960950ca7e028e1f)"
+        "Digest": "334187ad08ee30940466e8354e4225ae41c077e5c3349fcf97fc898e3cfee104",
+        "Description": "EV_EVENT_TAG: Linux LOAD_FILE2 protocol: initrd (digest 334187ad08ee30940466e8354e4225ae41c077e5c3349fcf97fc898e3cfee104)"
       },
       {
         "PCRIndex": 11,
@@ -86,8 +86,8 @@
       },
       {
         "PCRIndex": 11,
-        "Digest": "b3d809a0e158d7ee96d695dd50cde9b98e9ae2a50bed123d960950ca7e028e1f",
-        "Description": "EV_IPL: UKI section 3 data: b3d809a0e158d7ee96d695dd50cde9b98e9ae2a50bed123d960950ca7e028e1f"
+        "Digest": "334187ad08ee30940466e8354e4225ae41c077e5c3349fcf97fc898e3cfee104",
+        "Description": "EV_IPL: UKI section 3 data: 334187ad08ee30940466e8354e4225ae41c077e5c3349fcf97fc898e3cfee104"
       },
       {
         "PCRIndex": 11,
@@ -113,5 +113,5 @@
       }
     ]
   },
-  "measurement_id": "seismic_2026-10-01.6a90ed.vhd"
+  "measurement_id": "seismic_2026-10-08.dbab6a.vhd"
 }

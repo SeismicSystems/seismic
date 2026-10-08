@@ -1,21 +1,21 @@
 [
   {
     "attestation_type": "azure-tdx",
-    "measurement_id": "seismic_2026-10-01.6a90ed.vhd",
+    "measurement_id": "seismic_2026-10-08.dbab6a.vhd",
     "measurements": {
       "pcr4": {
         "expected_any": [
-          "a82c08f4eeb149b3e9c8f0952785cd43860e4f980d9f0758563b9f6c3b359532"
+          "441fec01eca7cdc9a82e64bd4d12a3ceb1ff528e7683e17878242ff7cdcec667"
         ]
       },
       "pcr9": {
         "expected_any": [
-          "dcf886627fe61366ca87ba5f969c1c3ffa4adcaaa3b8901b7e0fd6de5ae51b46"
+          "62504f30955ec08a01a348bab2992c22de218e3839fb88990f0a395da28f5f1b"
         ]
       },
       "pcr11": {
         "expected_any": [
-          "1964ec075eb42a34da0bf20a84b0f3b9846d6a5fca5e204cc8b394ac51a3de6a"
+          "0fac2bf180ab444424af2031ad06e50df480c3463ca0d696b09b1771518fcf86"
         ]
       }
     }

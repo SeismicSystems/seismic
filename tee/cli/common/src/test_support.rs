@@ -30,6 +30,7 @@ pub const FIXTURE_MANIFEST: &[u8] = br#"{
     "chain_id": 5124,
     "genesis_hash": "0x78ab9057bb67f95a6182969c5d755ac02802c98c0d2f0d8daeb52f4bddc60be5"
   },
+  "founding_tx_io_pk": "0x03f39b46b20d0f2f9c8d45206d6c1cdf8a3332c7b7b96dad5c1f0d0051585d7329",
   "manifest_version": 1,
   "measurements": {
     "bootstrap_policy_hash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
@@ -45,6 +46,10 @@ pub const FIXTURE_MANIFEST: &[u8] = br#"{
   }
 }
 "#;
+
+/// [`FIXTURE_MANIFEST`]'s `founding_tx_io_pk`, bare hex.
+pub const FIXTURE_FOUNDING_TX_IO_PK: &str =
+    "03f39b46b20d0f2f9c8d45206d6c1cdf8a3332c7b7b96dad5c1f0d0051585d7329";
 
 /// A valid manifest whose `bootstrap_policy_hash` commits to `policy` — an
 /// artifact set as `assemble` writes it.
@@ -347,6 +352,12 @@ pub fn consensus_key(byte: &str) -> String {
     byte.repeat(48)
 }
 
+/// A candidate `tx_io_pk@0` as the harvest endpoint spells one: a compressed
+/// point prefix, then `byte` repeated.
+pub fn candidate_tx_io_public_key(byte: &str) -> String {
+    format!("02{}", byte.repeat(32))
+}
+
 /// Evidence in the backend's own serialization, claiming Azure TDX: a
 /// stand-in quote (`[1, 2, 3]` as base64) under the platform metadata
 /// the harvest endpoint serves. Parses as an `AttestationExchangeMessage`; never
@@ -370,12 +381,15 @@ pub fn no_attestation_evidence() -> serde_json::Value {
     json!({"attestation_evidence": null})
 }
 
-/// A harvest record as `harvest` builds it from the endpoint's answer.
+/// A harvest record as `harvest` builds it from the endpoint's answer. The
+/// candidate repeats `consensus_byte` too, so records distinct in one are
+/// distinct in both.
 pub fn record(node_key: &str, consensus_byte: &str) -> serde_json::Value {
     json!({
         "harvest_nonce": "11".repeat(32),
         "node_public_key": node_key,
         "consensus_public_key": consensus_key(consensus_byte),
+        "candidate_tx_io_public_key": candidate_tx_io_public_key(consensus_byte),
         "evidence": azure_evidence(),
     })
 }
