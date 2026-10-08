@@ -4,7 +4,8 @@
 //! seismic-tee network assemble tee/networks/devnet-3
 //! ```
 //!
-//! The step that pins the founding validator set into `network_id`. It reads
+//! The step that pins the founding validator set and the founding
+//! `tx_io_pk@0` into `network_id`. It reads
 //! the authored inputs and the harvest under `inputs/`, re-verifies every
 //! archived founding quote offline from its own archive, compiles the
 //! measurement policy and injects the registry storage
@@ -50,7 +51,7 @@ use seismic_manifest::{
 };
 use seismic_measurement_admission::promote_measurements;
 use seismic_tee_common::founding::{
-    FoundingRecords, Validator, ValidatorIps, load_founding_set, seated_validator_ips,
+    FoundingRecords, Validator, ValidatorIps, load_founding_set, pinned_box, seated_validator_ips,
 };
 use seismic_tee_common::network_dir::INPUTS_DIRNAME;
 use seismic_tee_common::{Artifact, Manifest, NetworkDir, hex_0x, next_step};
@@ -101,6 +102,8 @@ pub struct AssembleInputs<'a> {
     pub policy: &'a [u8],
     /// The founding set, paired and in node-name order.
     pub validators: &'a [Validator],
+    /// The pinned box's candidate `tx_io_pk@0` (see [`pinned_box`]).
+    pub founding_tx_io_pk: [u8; 33],
     pub registry: Address,
     pub authority: Address,
 }
@@ -251,6 +254,7 @@ pub async fn assemble(
                 authority: inputs.authority.into_array(),
             },
         },
+        founding_tx_io_pk: inputs.founding_tx_io_pk,
     });
     let manifest =
         Manifest::from_json_bytes(rendered).context("the rendered manifest does not parse")?;
@@ -510,8 +514,14 @@ pub async fn run(args: AssembleArgs, config: Option<&Path>) -> anyhow::Result<Ex
         ValidatorIps::Cohort(&descriptors)
     };
     let founding = load_founding_set(&dir, &ips)?;
+    let (pinned_name, pinned_record) =
+        pinned_box(&founding.records).context("the harvest has no founding box")?;
+    let founding_tx_io_pk: [u8; 33] = hex::decode(&pinned_record.candidate_tx_io_public_key)
+        .ok()
+        .and_then(|bytes| bytes.try_into().ok())
+        .context("the pinned box's candidate_tx_io_public_key is not 33 bytes of hex")?;
     eprintln!(
-        "founding set: {} validator(s) from {}",
+        "founding set: {} validator(s) from {}; pinning {pinned_name}'s candidate root_key",
         founding.validators.len(),
         dir.harvest().display()
     );
@@ -536,6 +546,7 @@ pub async fn run(args: AssembleArgs, config: Option<&Path>) -> anyhow::Result<Ex
             summit_genesis: &Artifact::read(&summit_genesis)?,
             policy: &policy,
             validators: &founding.validators,
+            founding_tx_io_pk,
             registry: args.registry,
             authority: args.authority,
         },
@@ -552,25 +563,17 @@ pub async fn run(args: AssembleArgs, config: Option<&Path>) -> anyhow::Result<Ex
     }
     println!("network_id: {}", assembled.manifest.network_id());
     // Straight to the founding: every gate and the replay `verify-founding`
-    // runs both already ran above, over this very set. Genesis is named from
-    // the founding set just pinned, so the line cannot name a node this
-    // artifact set does not seat.
-    let genesis = founding
-        .records
-        .keys()
-        .next()
-        .cloned()
-        .unwrap_or_else(|| "<genesis-node>".to_string());
-    next_step::print("", &[configure_invocation(&genesis, &args.dir, &dir)]);
+    // runs both already ran above, over this very set. The genesis node is
+    // the box whose candidate was just pinned: configure refuses any other.
+    next_step::print("", &[configure_invocation(pinned_name, &args.dir, &dir)]);
     Ok(ExitCode::SUCCESS)
 }
 
 /// `node configure --genesis-node`, spelled as the next step after `assemble`
-/// (written or `--check`ed), with `genesis` as the genesis node. Which node is
-/// genesis is the founder's call and any founding node is a valid one, so
-/// callers pass the first in name order. `configure` takes the manifest, not
-/// `DIR`, so an explicit `DIR` becomes `--manifest`; an explicit `--context`
-/// is repeated as [`DirArgs::as_args`] would.
+/// (written or `--check`ed), with `genesis` as the genesis node: the pinned
+/// box. `configure` takes the manifest, not `DIR`, so an explicit `DIR`
+/// becomes `--manifest`; an explicit `--context` is repeated as
+/// [`DirArgs::as_args`] would.
 fn configure_invocation(genesis: &str, args: &DirArgs, dir: &NetworkDir) -> String {
     let scope = match (&args.dir, &args.context.context) {
         (Some(_), _) => format!(" --manifest {}", dir.manifest().display()),
@@ -593,6 +596,13 @@ pub(crate) mod tests {
 
     pub(crate) const AUTHORITY: Address =
         alloy_primitives::address!("0x1000000000000000000000000000000000000002");
+
+    /// The candidate `tx_io_pk@0` the tests pin.
+    pub(crate) const FOUNDING_TX_IO_PK: [u8; 33] = {
+        let mut pk = [0xef; 33];
+        pk[0] = 0x02;
+        pk
+    };
 
     /// A founding validator entry as `load_founding_set` builds it.
     pub(crate) fn validator() -> Validator {
@@ -704,6 +714,7 @@ pub(crate) mod tests {
                 summit_genesis: &Artifact::read(&authored.summit_genesis).unwrap(),
                 policy,
                 validators: &[validator()],
+                founding_tx_io_pk: FOUNDING_TX_IO_PK,
                 registry: REGISTRY,
                 authority: AUTHORITY,
             },
@@ -738,6 +749,7 @@ pub(crate) mod tests {
             first.manifest.measurements.contracts.registry,
             REGISTRY.into_array()
         );
+        assert_eq!(first.manifest.founding_tx_io_pk, FOUNDING_TX_IO_PK);
         assert_eq!(first.policy, FIXTURE_POLICY);
     }
 
@@ -813,6 +825,7 @@ pub(crate) mod tests {
                 summit_genesis: &Artifact::read(&authored.summit_genesis).unwrap(),
                 policy: FIXTURE_POLICY,
                 validators: &[],
+                founding_tx_io_pk: FOUNDING_TX_IO_PK,
                 registry: REGISTRY,
                 authority: AUTHORITY,
             },
@@ -970,6 +983,7 @@ pub(crate) mod tests {
                 summit_genesis: &Artifact::read(&net.input_summit_genesis()).unwrap(),
                 policy: FIXTURE_POLICY,
                 validators: &[validator()],
+                founding_tx_io_pk: FOUNDING_TX_IO_PK,
                 registry: REGISTRY,
                 authority: AUTHORITY,
             },
@@ -1011,6 +1025,7 @@ pub(crate) mod tests {
             seismic_tee_common::founding::FoundingRecord {
                 node_public_key: "ab".repeat(32),
                 consensus_public_key: "cd".repeat(48),
+                candidate_tx_io_public_key: hex::encode(FOUNDING_TX_IO_PK),
                 document: serde_json::json!({
                     "harvest_nonce": "11".repeat(32),
                     "node_public_key": "ab".repeat(32),
@@ -1132,6 +1147,7 @@ pub(crate) mod tests {
                     summit_genesis: &Artifact::read(&authored.summit_genesis).unwrap(),
                     policy: FIXTURE_POLICY,
                     validators,
+                    founding_tx_io_pk: FOUNDING_TX_IO_PK,
                     registry: REGISTRY,
                     authority: AUTHORITY,
                 },

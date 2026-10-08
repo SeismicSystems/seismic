@@ -26,6 +26,9 @@
 //! - reads the founding validator set from the completed `summit-genesis.toml`
 //!   beside the manifest, and checks that every archived record's keys are
 //!   seated there and every seat is vouched for by an archived record;
+//! - checks that the manifest's `founding_tx_io_pk` is an archived record's
+//!   candidate, so a replayed quote proves the network's `root_key` was minted
+//!   in a measured box;
 //! - replays every record under `inputs/harvest/` from the archive it is:
 //!   the quote against the DCAP bundle archived with it, at the instant that
 //!   verification was held to, reaching no collateral service. A record that
@@ -35,7 +38,8 @@
 //! One line per record; the first failure ends the run with a nonzero exit,
 //! naming the record. `--record <node>` narrows to one record for an auditor
 //! holding part of an archive; the pinned set is then only asked to seat that
-//! record. There is no `--pccs-url`: nothing here reaches a network.
+//! record, and the pin to be its candidate only if it is the box that holds
+//! it. There is no `--pccs-url`: nothing here reaches a network.
 //!
 //! This is `network assemble --check`'s sibling: `--check` re-derives the
 //! artifact set from its inputs and holds the set on disk to the result,
@@ -57,9 +61,11 @@ use std::process::ExitCode;
 
 use anyhow::{Context as _, bail};
 use clap::Args;
-use seismic_tee_common::founding::{FoundingRecords, is_bare_hex, load_harvest_records};
+use seismic_tee_common::founding::{
+    FoundingRecords, box_holding_the_pin, is_bare_hex, load_harvest_records,
+};
 use seismic_tee_common::network_dir::{HARVEST_DIRNAME, INPUTS_DIRNAME};
-use seismic_tee_common::{Manifest, NetworkDir};
+use seismic_tee_common::{Manifest, NetworkDir, hex_0x};
 use seismic_tee_context::{Context, ContextArgs, DirArgs};
 
 use crate::assemble::verify_harvest_records;
@@ -185,6 +191,9 @@ pub struct FoundingAudit {
     pub manifest: Manifest,
     /// The records re-verified, in node-name order.
     pub verified: Vec<String>,
+    /// The record whose candidate is the manifest's `founding_tx_io_pk`;
+    /// `None` only under `--record` naming another box.
+    pub pin_holder: Option<String>,
 }
 
 /// Read a file the manifest pins from beside it, naming the artifact set on
@@ -257,11 +266,21 @@ pub fn audit_founding(dir: &NetworkDir, record: Option<&str>) -> anyhow::Result<
             summit_path.display()
         )
     })?;
+    let pin_holder = box_holding_the_pin(&records, &manifest.founding_tx_io_pk).map(str::to_string);
+    if pin_holder.is_none() && record.is_none() {
+        bail!(
+            "{}: founding_tx_io_pk {} is no archived record's candidate — no archived quote \
+             proves the network's root_key was minted in a measured box",
+            manifest_path.display(),
+            hex_0x(&manifest.founding_tx_io_pk),
+        );
+    }
 
     verify_harvest_records(dir, &records, &policy)?;
     Ok(FoundingAudit {
         manifest,
         verified: records.keys().cloned().collect(),
+        pin_holder,
     })
 }
 
@@ -319,6 +338,9 @@ pub async fn run(args: VerifyFoundingArgs, config: Option<&Path>) -> anyhow::Res
         audit.verified.len(),
         audit.verified.join(", ")
     );
+    if let Some(holder) = &audit.pin_holder {
+        println!("founding_tx_io_pk: {holder}'s candidate root_key, quoted in its archived record");
+    }
     Ok(ExitCode::SUCCESS)
 }
 
@@ -332,8 +354,8 @@ mod tests {
         MANIFEST_FILENAME, POLICY_FILENAME, SUMMIT_GENESIS_FILENAME,
     };
     use seismic_tee_common::test_support::{
-        NODE_KEY_1, NODE_KEY_2, consensus_key, manifest_pinning, network_dir, record, write,
-        write_harvest,
+        FIXTURE_FOUNDING_TX_IO_PK, NODE_KEY_1, NODE_KEY_2, candidate_tx_io_public_key,
+        consensus_key, manifest_pinning, network_dir, record, write, write_harvest,
     };
 
     use super::*;
@@ -374,6 +396,7 @@ mod tests {
                     FoundingRecord {
                         node_public_key: node.to_string(),
                         consensus_public_key: consensus_key(consensus_byte),
+                        candidate_tx_io_public_key: candidate_tx_io_public_key(consensus_byte),
                         document: record(node, consensus_byte),
                     },
                 )
@@ -381,16 +404,18 @@ mod tests {
             .collect()
     }
 
-    /// A committed network directory as `assemble` leaves it, except that
-    /// its records are bare harvest records rather than whole founding
-    /// archives: every check before the replay passes, and the replay fails
-    /// closed on the first record.
+    /// A committed network directory as `assemble` leaves it, pinning
+    /// node-1's candidate, except that its records are bare harvest records
+    /// rather than whole founding archives: every check before the replay
+    /// passes, and the replay fails closed on the first record.
     fn committed_dir() -> (tempfile::TempDir, NetworkDir) {
         let (tmp, dir) = network_dir();
         write(
             &dir,
             Path::new(MANIFEST_FILENAME),
-            std::str::from_utf8(&manifest_pinning(POLICY)).unwrap(),
+            &String::from_utf8(manifest_pinning(POLICY))
+                .unwrap()
+                .replace(FIXTURE_FOUNDING_TX_IO_PK, &candidate_tx_io_public_key("cc")),
         );
         write(
             &dir,
@@ -592,6 +617,29 @@ mod tests {
         .unwrap();
         let err = failure(&dir, None);
         assert!(err.contains("no archived quote vouches for"), "{err}");
+    }
+
+    /// The manifest's `founding_tx_io_pk` must be an archived candidate,
+    /// asked before any replay; a partial archive of another box is not
+    /// asked it.
+    #[test]
+    fn the_pin_must_be_an_archived_candidate() {
+        let (_tmp, dir) = committed_dir();
+        let manifest = std::fs::read_to_string(dir.manifest()).unwrap();
+        std::fs::write(
+            dir.manifest(),
+            manifest.replace(
+                &candidate_tx_io_public_key("cc"),
+                &candidate_tx_io_public_key("ee"),
+            ),
+        )
+        .unwrap();
+        let err = failure(&dir, None);
+        assert!(err.contains("founding_tx_io_pk"), "{err}");
+        assert!(err.contains("no archived record's candidate"), "{err}");
+
+        let err = failure(&dir, Some("node-2"));
+        assert!(err.contains("is not a founding archive"), "{err}");
     }
 
     /// `--record` narrows the replay to one node and relaxes the set check to

@@ -65,13 +65,13 @@ seismic-tee-admission = { path = "admission" }
 # seismic-crypto. Every rule the network's identity depends on has exactly one
 # implementation, and linking it rather than reimplementing it is what keeps
 # the CLI's answer and a node's answer the same answer.
-seismic-network-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
-seismic-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
-seismic-measurement-admission = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
-seismic-verify-quote = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
+seismic-network-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "56d2a917cf4f5635651f229f59d958f64b1a7b73" }
+seismic-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "56d2a917cf4f5635651f229f59d958f64b1a7b73" }
+seismic-measurement-admission = { git = "https://github.com/SeismicSystems/enclave.git", rev = "56d2a917cf4f5635651f229f59d958f64b1a7b73" }
+seismic-verify-quote = { git = "https://github.com/SeismicSystems/enclave.git", rev = "56d2a917cf4f5635651f229f59d958f64b1a7b73" }
 # The schema of the config POSTed to tdx-init, as the type tdx-init itself
 # deserializes: a field it would reject fails to compile here.
-tdx-init-config = { git = "https://github.com/SeismicSystems/enclave.git", rev = "90bbad2554d3558ad093c18ff0027cdadf50fddf" }
+tdx-init-config = { git = "https://github.com/SeismicSystems/enclave.git", rev = "56d2a917cf4f5635651f229f59d958f64b1a7b73" }
 
 # The 20- and 32-byte words the registry gate compares — genesis storage
 # slots and the compile report's — and keccak256 over the registry's runtime
