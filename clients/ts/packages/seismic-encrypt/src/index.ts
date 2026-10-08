@@ -1,14 +1,24 @@
-import type { Address, Hex, TransactionSerializableEIP7702 } from 'viem'
+import type {
+  Address,
+  Hex,
+  SerializeTransactionFn,
+  Signature,
+  TransactionSerializable,
+  TransactionSerializableEIP7702,
+} from 'viem'
 import {
   bytesToHex,
   concatHex,
   createPublicClient,
+  getAddress,
   hexToBigInt,
   hexToBytes,
   http,
+  isAddress,
   toHex,
   toRlp,
   trim,
+  zeroAddress,
 } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
@@ -18,10 +28,60 @@ import { secp256k1 } from '@noble/curves/secp256k1'
 import { hkdf } from '@noble/hashes/hkdf'
 import { sha256 } from '@noble/hashes/sha256'
 
+/** Public, signed fee selection. Explicit Native/Token never fall back. */
+export type GasPayment =
+  | { type: 'auto' }
+  | { type: 'native' }
+  | { type: 'token'; token: Address }
+
 export const SEISMIC_TX_TYPE = 0x4a
 const DEFAULT_SEISMIC_BLOCKS_WINDOW = 100n
 
 // ── Helpers (inlined from seismic-viem to keep this package standalone) ──
+
+// Keep selector validation/encoding aligned with seismic-viem's gasPayment.ts.
+// Omission is resolved before signing; signed bytes always include this field.
+const normalizeGasPayment = (value: unknown = undefined): GasPayment => {
+  if (value === undefined) return { type: 'auto' }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Invalid gasPayment: expected a tagged object')
+  }
+  const fields = value as Record<string, unknown>
+  const keys = Object.keys(fields)
+  if (!Object.prototype.hasOwnProperty.call(fields, 'type')) {
+    throw new Error('Invalid gasPayment: missing type')
+  }
+  if (fields.type === 'auto' || fields.type === 'native') {
+    if (keys.length !== 1) {
+      throw new Error(
+        'Invalid gasPayment: auto/native cannot carry extra fields'
+      )
+    }
+    return { type: fields.type }
+  }
+  if (
+    fields.type === 'token' &&
+    keys.length === 2 &&
+    Object.prototype.hasOwnProperty.call(fields, 'token') &&
+    typeof fields.token === 'string' &&
+    isAddress(fields.token, { strict: false }) &&
+    fields.token.toLowerCase() !== zeroAddress
+  ) {
+    return { type: 'token', token: getAddress(fields.token) }
+  }
+  throw new Error('Invalid gasPayment: expected a nonzero token address')
+}
+
+const gasPaymentRlp = (payment: GasPayment): Hex[] => {
+  switch (payment.type) {
+    case 'auto':
+      return ['0x', '0x']
+    case 'native':
+      return ['0x01', '0x']
+    case 'token':
+      return ['0x02', payment.token]
+  }
+}
 
 const compressPublicKey = (uncompressedKey: Hex): Hex => {
   const cleanKey = uncompressedKey.replace('0x', '')
@@ -40,21 +100,24 @@ const randomEncryptionNonce = (): Hex => {
   return nonce
 }
 
-const toYParitySignatureArray = (signature?: {
-  v: bigint
-  r: Hex
-  s: Hex
-}): Hex[] => {
+const toYParitySignatureArray = (signature?: Signature): Hex[] => {
   if (!signature) return []
   const { v, r, s } = signature
+  const parity =
+    signature.yParity ??
+    (v === 0n || v === 27n ? 0 : v === 1n || v === 28n ? 1 : undefined)
+  if (parity !== 0 && parity !== 1) {
+    throw new Error(
+      'Invalid Seismic signature: expected yParity 0/1 or v 0/1/27/28'
+    )
+  }
   const trimR = trim(r)
   const trimS = trim(s)
-  const yParity = v === 0n || v === 27n ? '0x' : toHex(1)
   return [
-    yParity,
+    parity === 0 ? '0x' : '0x01',
     trimR === '0x00' ? '0x' : trimR,
     trimS === '0x00' ? '0x' : trimS,
-  ] as Hex[]
+  ]
 }
 
 // ── Key derivation ──────────────────────────────────────────────────
@@ -143,37 +206,76 @@ const aesGcmEncrypt = async (
 
 // ── Serializer ──────────────────────────────────────────────────────
 
-export const serializeSeismicTx = (
-  tx: {
-    chainId: number
-    nonce: number
-    gasPrice: bigint
-    gas: bigint
-    to: Address | null
-    value: bigint
-    encryptionPubkey: Hex
-    encryptionNonce: Hex
-    messageVersion: number
-    recentBlockHash: Hex
-    expiresAtBlock: bigint
-    signedRead: boolean
-    data: Hex
-    authorizationList?: TransactionSerializableEIP7702['authorizationList']
-  },
-  signature?: { v: bigint; r: Hex; s: Hex }
+/** Complete standalone fields; `type` may be omitted by low-level callers. */
+export type SeismicSerializableTransaction = {
+  type?: 'seismic'
+  chainId: number
+  nonce: number
+  gasPrice: bigint
+  gas: bigint
+  /** Omission resolves to Auto before serialization/signing. */
+  gasPayment?: GasPayment
+  to: Address | null
+  value: bigint
+  encryptionPubkey: Hex
+  encryptionNonce: Hex
+  messageVersion: number
+  recentBlockHash: Hex
+  expiresAtBlock: bigint
+  signedRead: boolean
+  data: Hex
+  authorizationList?: TransactionSerializableEIP7702['authorizationList']
+}
+
+/** Viem-compatible custom serializer type for account.signTransaction. */
+export type SeismicTxSerializer = SerializeTransactionFn<
+  SeismicSerializableTransaction,
+  'seismic'
+>
+
+const isSeismicTransaction = (
+  tx: TransactionSerializable | SeismicSerializableTransaction
+): tx is SeismicSerializableTransaction =>
+  (tx.type === undefined || tx.type === 'seismic') &&
+  tx.chainId !== undefined &&
+  tx.nonce !== undefined &&
+  tx.gasPrice !== undefined &&
+  tx.gas !== undefined &&
+  tx.to !== undefined &&
+  tx.value !== undefined &&
+  tx.data !== undefined &&
+  'encryptionPubkey' in tx &&
+  tx.encryptionPubkey !== undefined &&
+  'encryptionNonce' in tx &&
+  tx.encryptionNonce !== undefined &&
+  'messageVersion' in tx &&
+  tx.messageVersion !== undefined &&
+  'recentBlockHash' in tx &&
+  tx.recentBlockHash !== undefined &&
+  'expiresAtBlock' in tx &&
+  tx.expiresAtBlock !== undefined &&
+  'signedRead' in tx &&
+  tx.signedRead !== undefined
+
+const encodeSeismicTx = (
+  tx: SeismicSerializableTransaction,
+  signature?: Signature
 ): Hex => {
   const rlpArray = [
-    toHex(tx.chainId),
+    tx.chainId ? toHex(tx.chainId) : '0x',
     tx.nonce ? toHex(tx.nonce) : '0x',
     tx.gasPrice ? toHex(tx.gasPrice) : '0x',
     tx.gas ? toHex(tx.gas) : '0x',
+    gasPaymentRlp(normalizeGasPayment(tx.gasPayment)),
     tx.to ?? '0x',
     tx.value ? toHex(tx.value) : '0x',
     tx.encryptionPubkey ?? '0x',
-    hexToBigInt(tx.encryptionNonce) === 0n ? '0x' : tx.encryptionNonce,
+    hexToBigInt(tx.encryptionNonce) === 0n
+      ? '0x'
+      : toHex(hexToBigInt(tx.encryptionNonce)),
     tx.messageVersion === 0 ? '0x' : toHex(tx.messageVersion),
     tx.recentBlockHash,
-    toHex(tx.expiresAtBlock),
+    tx.expiresAtBlock ? toHex(tx.expiresAtBlock) : '0x',
     tx.signedRead ? '0x01' : '0x',
     tx.data ?? '0x',
     (tx.authorizationList ?? []).map((auth) => [
@@ -181,12 +283,25 @@ export const serializeSeismicTx = (
       auth.contractAddress,
       auth.nonce ? toHex(auth.nonce) : '0x',
       auth.yParity ? toHex(auth.yParity) : '0x',
-      auth.r,
-      auth.s,
+      hexToBigInt(auth.r) ? toHex(hexToBigInt(auth.r)) : '0x',
+      hexToBigInt(auth.s) ? toHex(hexToBigInt(auth.s)) : '0x',
     ]),
     ...toYParitySignatureArray(signature),
   ]
-  return concatHex([toHex(SEISMIC_TX_TYPE), toRlp(rlpArray as any)])
+  return concatHex([
+    toHex(SEISMIC_TX_TYPE),
+    toRlp(rlpArray as Parameters<typeof toRlp>[0]),
+  ])
+}
+
+/** Encode unsigned or signed Seismic bytes; standard Ethereum inputs are rejected. */
+export const serializeSeismicTx: SeismicTxSerializer = (tx, signature) => {
+  if (!isSeismicTransaction(tx)) {
+    throw new Error(
+      'serializeSeismicTx requires a complete Seismic transaction'
+    )
+  }
+  return encodeSeismicTx(tx, signature)
 }
 
 // ── Public API ──────────────────────────────────────────────────────
@@ -201,6 +316,8 @@ export type EncryptSeismicTxParams = {
     gasPrice: bigint
     gas: bigint
     chainId: number
+    /** Public, signed fee selection. Defaults to Auto before signing. */
+    gasPayment?: GasPayment
     authorizationList?: TransactionSerializableEIP7702['authorizationList']
   }
   /** Sender address (must match the signer) */
@@ -220,25 +337,13 @@ export type EncryptSeismicTxResult = {
   /** The unsigned serialized seismic tx — sign this with your wallet, then sendRawTransaction */
   unsignedSerializedTx: Hex
   /** Individual fields if you want to sign with account.signTransaction + custom serializer */
-  seismicTx: {
-    chainId: number
-    nonce: number
-    gasPrice: bigint
-    gas: bigint
-    to: Address | null
-    value: bigint
-    data: Hex
-    encryptionPubkey: Hex
-    encryptionNonce: Hex
-    messageVersion: number
-    recentBlockHash: Hex
-    expiresAtBlock: bigint
-    signedRead: boolean
-    authorizationList?: TransactionSerializableEIP7702['authorizationList']
+  seismicTx: Omit<SeismicSerializableTransaction, 'gasPayment' | 'type'> & {
+    /** Resolved selector, always included in the signed wire format. */
+    gasPayment: GasPayment
     type: 'seismic'
   }
-  /** Serialize + concat type prefix. Pass a viem Signature to get the final signed bytes. */
-  serialize: (signature: { v: bigint; r: Hex; s: Hex }) => Hex
+  /** Omit the signature for unsigned bytes; accepts Viem v or yParity signatures. */
+  serialize: (signature?: Signature) => Hex
 }
 
 /**
@@ -254,9 +359,9 @@ export type EncryptSeismicTxResult = {
  * const { seismicTx, serialize } = await encryptSeismicTx({ tx, sender, rpcUrl })
  *
  * // Option A: sign with a local account
- * const signed = await account.signTransaction(
- *   { ...seismicTx },
- *   { serializer: (_tx, sig) => serialize(sig!) },
+ * const signed = await account.signTransaction<SeismicTxSerializer>(
+ *   seismicTx,
+ *   { serializer: serializeSeismicTx },
  * )
  * await publicClient.sendRawTransaction({ serializedTransaction: signed })
  *
@@ -272,6 +377,7 @@ export const encryptSeismicTx = async ({
   encryptionPrivateKey,
   blocksWindow = DEFAULT_SEISMIC_BLOCKS_WINDOW,
 }: EncryptSeismicTxParams): Promise<EncryptSeismicTxResult> => {
+  const gasPayment = normalizeGasPayment(tx.gasPayment)
   const client = createPublicClient({ transport: http(rpcUrl) })
 
   // 1. Fetch TEE pubkey and latest block in parallel
@@ -319,6 +425,7 @@ export const encryptSeismicTx = async ({
     nonce: tx.nonce,
     gasPrice: tx.gasPrice,
     gas: tx.gas,
+    gasPayment,
     to: tx.to,
     value: tx.value ?? 0n,
     data: encryptedData,
@@ -332,7 +439,7 @@ export const encryptSeismicTx = async ({
     type: 'seismic' as const,
   }
 
-  const serialize = (signature: { v: bigint; r: Hex; s: Hex }): Hex =>
+  const serialize = (signature?: Signature): Hex =>
     serializeSeismicTx(seismicTx, signature)
 
   const unsignedSerializedTx = serializeSeismicTx(seismicTx)

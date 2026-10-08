@@ -162,7 +162,8 @@ export type ShieldedPublicActions<
  *
  * This function defines the behavior of the shielded-specific actions, such as
  * retrieving the TEE public key. It also disables unsupported actions like
- * `getStorageAt` and `getTransaction`, throwing errors if they are called.
+ * `getStorageAt`, throwing an error if called. Transaction lookups remain
+ * inherited viem actions and use the chain's response formatters.
  *
  * @param client - The shielded public client instance.
  *
@@ -178,7 +179,6 @@ export type ShieldedPublicActions<
  *
  * // Attempting to call unsupported actions
  * actions.getStorageAt(...); // Throws an error
- * actions.getTransaction(...); // Throws an error
  *
  * // Generate a random number
  * const randomNumber = await actions.rng({ numBytes: 32 });

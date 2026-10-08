@@ -4,16 +4,18 @@ import type {
   Chain,
   ContractFunctionArgs,
   ContractFunctionName,
-  ReadContractParameters,
   ReadContractReturnType,
   SendTransactionParameters,
   SendTransactionReturnType,
   Transport,
-  WriteContractParameters,
   WriteContractReturnType,
 } from 'viem'
 
 import { ShieldedWalletClient } from '@sviem/client.ts'
+import type {
+  ReadContractParameters,
+  WriteContractParameters,
+} from '@sviem/contract/parameters.ts'
 import {
   signedReadContract,
   smartReadContract,
@@ -26,6 +28,7 @@ import {
   smartWriteContract,
   transparentWriteContract,
 } from '@sviem/contract/write.ts'
+import type { GasPaymentOptions } from '@sviem/tx/gasPayment.ts'
 import { SeismicSecurityParams } from '@sviem/tx/seismicTx.ts'
 import { sendShieldedTransaction } from '@sviem/tx/sendShielded.ts'
 import { sendTransparentTransaction } from '@sviem/tx/sendTransparent.ts'
@@ -83,7 +86,8 @@ export type ShieldedWalletActions<
   // because the client has direct access to the signing key. `json-rpc` accounts
   // fall back to viem's normal unsigned estimation path.
   sendTransaction: <TChainOverride extends Chain | undefined = undefined>(
-    args: SendTransactionParameters<TChain, TAccount, TChainOverride>
+    args: SendTransactionParameters<TChain, TAccount, TChainOverride> &
+      GasPaymentOptions
   ) => Promise<SendTransactionReturnType>
   writeContract: <
     TAbi extends Abi | readonly unknown[],

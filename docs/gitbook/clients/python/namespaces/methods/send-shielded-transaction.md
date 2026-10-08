@@ -20,6 +20,7 @@ w3.seismic.send_shielded_transaction(
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
+    gas_payment: GasPayment | None = None,
 ) -> HexBytes
 
 # async
@@ -33,10 +34,11 @@ await w3.seismic.send_shielded_transaction(...same args...) -> HexBytes
 | `to` | `ChecksumAddress` | Required | Recipient contract address |
 | `data` | `HexBytes` | Required | Plaintext calldata (SDK encrypts it) |
 | `value` | `int` | `0` | Wei to transfer |
-| `gas` | `int \| None` | `None` | Gas limit (defaults to `30_000_000`) |
+| `gas` | `int \| None` | `None` | Gas limit (signed estimate clamped to the final ciphertext admission minimum when omitted; explicit values are preserved) |
 | `gas_price` | `int \| None` | `None` | Gas price in wei (fetched from chain if `None`) |
 | `security` | [`SeismicSecurityParams`](../../api-reference/transaction-types/seismic-security-params.md) `\| None` | `None` | Override default security parameters |
 | `eip712` | `bool` | `False` | Use EIP-712 typed-data signing path |
+| `gas_payment` | [`GasPayment`](../../api-reference/transaction-types/gas-payment.md) `\| None` | Auto | Public signed fee choice; explicit Native/Token never falls back |
 
 ## Returns
 
@@ -51,9 +53,17 @@ data = encode_shielded_calldata(SRC20_ABI, "transfer", ["0xRecipient", 100])
 tx_hash = w3.seismic.send_shielded_transaction(to="0xTokenAddress", data=data)
 ```
 
+## Automatic gas limits
+
+When `gas` is omitted, both sync and async sends use `max(execution estimate, encrypted-input admission minimum)`. Estimation uses an authenticated, non-broadcastable signed-read twin. The admission minimum is calculated from the **final write ciphertext**, since the twin uses a separate encryption nonce and can have different encrypted bytes.
+
+The current Seismic pool uses Prague intrinsic gas and the calldata gas floor; the SDK applies that bound conservatively on older nodes too. Seismic ignores access-list charges. This avoids rejection of cheap plaintext executions whose encrypted input requires a higher minimum gas limit.
+
+An explicit `gas` value is never increased, even if it is below the pool minimum. A larger automatic limit can increase the upfront fee reserve without charging the entire limit as the final fee. The gas-payment selector and signed-read behavior are unchanged. Contract shielded writes and debug sends share this preparation path.
+
 ## What's encrypted
 
-The SDK encrypts the `data` field (function selector + arguments) using AES-GCM with the ECDH-derived key. An observer can see `from`, `to`, `value`, and gas parameters, but **not** which function was called or what arguments were passed.
+The SDK encrypts the `data` field (function selector + arguments) using AES-GCM with the ECDH-derived key. An observer can see `from`, `to`, `value`, gas parameters, and `gas_payment`, but **not** which function was called or what arguments were passed.
 
 ## Notes
 

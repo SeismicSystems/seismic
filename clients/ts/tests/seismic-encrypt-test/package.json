@@ -5,6 +5,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "test:consumer": "node consumer/smoke.mjs && tsc --project consumer/tsconfig.json",
     "transfer": "bun run src/transfer.ts"
   },
   "dependencies": {

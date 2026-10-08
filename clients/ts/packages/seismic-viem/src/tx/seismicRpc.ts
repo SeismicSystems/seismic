@@ -1,7 +1,12 @@
 // RPC boundary helpers for Seismic txs. This module adapts the canonical
 // in-memory Seismic tx/request shape to viem/JSON-RPC formatting, including the
 // auth-list `contractAddress` -> RPC `address` translation.
-import { formatTransactionRequest, toHex } from 'viem'
+import {
+  defineBlock,
+  defineTransaction,
+  formatTransactionRequest,
+  toHex,
+} from 'viem'
 import type {
   BlockIdentifier,
   BlockNumber,
@@ -13,6 +18,14 @@ import type {
   TransactionRequestEIP7702,
 } from 'viem'
 
+import {
+  assertAutoGasPayment,
+  normalizeGasPayment,
+} from '@sviem/tx/gasPayment.ts'
+import {
+  formatSeismicBlockResponse,
+  formatSeismicTransactionResponse,
+} from '@sviem/tx/response.ts'
 import {
   SEISMIC_TX_TYPE,
   type SeismicTransactionRequest,
@@ -90,7 +103,9 @@ const formatSeismicRpcRequest = (request: SeismicTransactionRequest) => {
     }
   }
 
-  const { type, ...fmt } = formatTransactionRequest(request)
+  if (!hasSeismicFields(request)) assertAutoGasPayment(request.gasPayment)
+  const { gasPayment: _payment, ...standardRequest } = request
+  const { type, ...fmt } = formatTransactionRequest(standardRequest)
   if (hasSeismicFields(request)) {
     return { ...fmt, type: SEISMIC_TX_TYPE }
   }
@@ -99,7 +114,7 @@ const formatSeismicRpcRequest = (request: SeismicTransactionRequest) => {
 
 /**
  * Chain formatters for Seismic transactions, providing formatting utilities for
- * transaction requests.
+ * transaction requests, lookup responses, and full-block transactions.
  * @property {SeismicTransactionRequest} transactionRequest - Formatter
  * configuration for transaction requests
  * @property {Function} transactionRequest.format - Formats a Seismic
@@ -116,7 +131,9 @@ const formatSeismicRpcRequest = (request: SeismicTransactionRequest) => {
  * This function is called by viem's call, estimateGas, and sendTransaction.
  * We can use this to parse transaction request before sending it to the node
  */
-export const seismicChainFormatters: ChainFormatters = {
+export const seismicChainFormatters = {
+  transaction: defineTransaction({ format: formatSeismicTransactionResponse }),
+  block: defineBlock({ format: formatSeismicBlockResponse }),
   transactionRequest: {
     format: (request: SeismicTransactionRequest) => {
       // @ts-expect-error: anvil requires chainId to be set but estimateGas
@@ -166,8 +183,11 @@ export const seismicChainFormatters: ChainFormatters = {
         recentBlockHash: request.recentBlockHash,
         expiresAtBlock: request.expiresAtBlock,
         signedRead: request.signedRead,
+        ...(request.type === 'seismic' || hasSeismicFields(request)
+          ? { gasPayment: normalizeGasPayment(request.gasPayment) }
+          : {}),
       }
     },
     type: 'transactionRequest',
   },
-}
+} satisfies ChainFormatters

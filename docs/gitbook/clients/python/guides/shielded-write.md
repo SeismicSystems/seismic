@@ -34,6 +34,22 @@ receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 print(receipt["status"])  # 1
 ```
 
+## Gas payment
+
+Omitted `gas_payment` resolves to `GasPayment.auto()` before signing. To select another registered fee token, pass a top-level keyword (also supported by async calls):
+
+```python
+from seismic_web3 import GasPayment
+
+tx_hash = token.swrite.transfer(
+    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    1000,
+    gas_payment=GasPayment.token("0xYourGasTokenAddress"),
+)
+```
+
+The selector is public, signed metadata. Explicit Native/Token never falls back. Smart routing stays ABI-based and rejects non-Auto on transparent paths; use `.swrite` to force a Seismic transaction. Estimates and debug views preserve the choice. See [GasPayment](../api-reference/transaction-types/gas-payment.md) for validation, fee units, and SDK/node compatibility.
+
 ## Security parameters
 
 Every shielded transaction includes a block-hash freshness check and an expiry window. The defaults are sane (100-block window, random nonce, latest block hash), but you can override them per-call:

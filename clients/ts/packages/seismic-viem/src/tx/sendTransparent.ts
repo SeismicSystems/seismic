@@ -3,6 +3,7 @@ import type {
   BaseError,
   Chain,
   SendTransactionParameters,
+  SendTransactionRequest,
   SendTransactionReturnType,
   Transport,
 } from 'viem'
@@ -16,6 +17,8 @@ import { assertRequest, getAction, getTransactionError } from 'viem/utils'
 
 import { ShieldedWalletClient } from '@sviem/client.ts'
 import { AccountNotFoundError } from '@sviem/error/account.ts'
+import type { GasPaymentOptions } from '@sviem/tx/gasPayment.ts'
+import { assertAutoGasPayment } from '@sviem/tx/gasPayment.ts'
 import { buildTxSeismicMetadata } from '@sviem/tx/metadata.ts'
 import { estimateShieldedGas } from '@sviem/tx/sendShielded.ts'
 
@@ -38,8 +41,11 @@ export async function sendTransparentTransaction<
   TChainOverride extends Chain | undefined = undefined,
 >(
   client: ShieldedWalletClient<Transport, TChain, TAccount>,
-  parameters: SendTransactionParameters<TChain, TAccount, TChainOverride>
+  parameters: SendTransactionParameters<TChain, TAccount, TChainOverride> &
+    GasPaymentOptions
 ): Promise<SendTransactionReturnType> {
+  const { gasPayment, ...standardParameters } = parameters
+  assertAutoGasPayment(gasPayment)
   const {
     account: account_ = client.account,
     chain = client.chain,
@@ -55,7 +61,7 @@ export async function sendTransparentTransaction<
     nonce,
     value,
     ...rest
-  } = parameters
+  } = standardParameters
   if (typeof account_ === 'undefined')
     throw new AccountNotFoundError({
       docsPath: '/docs/actions/wallet/sendTransaction',
@@ -76,7 +82,19 @@ export async function sendTransparentTransaction<
     // private key in-process, so we currently fall back to viem's standard
     // unsigned `sendTransaction` behavior.
     if (account?.type !== 'local') {
-      return await viemSendTransaction(client, parameters)
+      return await viemSendTransaction<
+        TChain,
+        TAccount,
+        SendTransactionRequest<TChain, TChainOverride>,
+        TChainOverride
+      >(
+        client,
+        standardParameters as SendTransactionParameters<
+          TChain,
+          TAccount,
+          TChainOverride
+        >
+      )
     }
 
     // Fill nonce / fees / type using viem, but intentionally skip viem's gas
@@ -145,6 +163,7 @@ export async function sendTransparentTransaction<
           encryptedData,
           metadata,
           gasPrice: gasPrice_,
+          gasPayment: { type: 'auto' },
         })
       })())
 

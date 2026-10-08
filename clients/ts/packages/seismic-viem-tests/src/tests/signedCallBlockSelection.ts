@@ -1,4 +1,5 @@
 import { expect } from 'bun:test'
+import type { GasPayment } from 'seismic-viem'
 import { createShieldedWalletClient, sanvil, signedCall } from 'seismic-viem'
 import type {
   Account,
@@ -21,7 +22,8 @@ export const testSignedCallBlockSelection = async (
   mode: 'local' | 'json-rpc' | 'raw',
   selector: UnionOmit<GetBalanceParameters, 'address'>,
   expectedBlock: Hex | BlockTag,
-  nonce?: number
+  nonce?: number,
+  gasPayment: GasPayment = { type: 'auto' }
 ) => {
   const resolvedNonce = 7
   const expectedNonce = nonce ?? resolvedNonce
@@ -80,6 +82,7 @@ export const testSignedCallBlockSelection = async (
         gas: 100_000n,
         gasPrice: 1n,
         nonce,
+        gasPayment,
         ...selector,
       },
       {
@@ -106,13 +109,34 @@ export const testSignedCallBlockSelection = async (
     expect(typeof envelope).toBe('string')
     expect(String(envelope).startsWith('0x4a')).toBe(true)
     const fields = fromRlp(slice(envelope as Hex, 1), 'hex')
+    expect(fields[4]).toEqual(
+      gasPayment.type === 'token'
+        ? ['0x02', gasPayment.token]
+        : [gasPayment.type === 'auto' ? '0x' : '0x01', '0x']
+    )
     const encodedNonce = fields[1] as Hex
     expect(encodedNonce === '0x' ? 0 : hexToNumber(encodedNonce)).toBe(
       expectedNonce
     )
   } else {
     expect(envelope).toMatchObject({
-      data: { message: { nonce: BigInt(expectedNonce) } },
+      data: {
+        message: {
+          nonce: BigInt(expectedNonce),
+          gasPayment: {
+            kind:
+              gasPayment.type === 'auto'
+                ? 0
+                : gasPayment.type === 'native'
+                  ? 1
+                  : 2,
+            token:
+              gasPayment.type === 'token'
+                ? gasPayment.token
+                : '0x0000000000000000000000000000000000000000',
+          },
+        },
+      },
     })
     expect(envelope).toHaveProperty('signature')
   }

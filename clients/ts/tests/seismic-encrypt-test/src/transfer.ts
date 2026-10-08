@@ -1,4 +1,5 @@
-import { encryptSeismicTx } from 'seismic-encrypt'
+import { encryptSeismicTx, serializeSeismicTx } from 'seismic-encrypt'
+import type { SeismicTxSerializer } from 'seismic-encrypt'
 import { createPublicClient, encodeFunctionData, http, parseAbi } from 'viem'
 import type { Address, Hex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
@@ -69,7 +70,7 @@ const main = async () => {
 
   // 3. Encrypt for Seismic
   console.log('Encrypting transaction...')
-  const { seismicTx, serialize } = await encryptSeismicTx({
+  const { seismicTx } = await encryptSeismicTx({
     tx,
     sender: account.address,
     rpcUrl: RPC_URL,
@@ -79,10 +80,9 @@ const main = async () => {
   console.log()
 
   // 4. Sign with the local account
-  const signed = await account.signTransaction(
-    { ...seismicTx },
-    { serializer: (_tx, sig) => serialize(sig!) }
-  )
+  const signed = await account.signTransaction<SeismicTxSerializer>(seismicTx, {
+    serializer: serializeSeismicTx,
+  })
 
   // 5. Send via standard eth_sendRawTransaction
   console.log('Sending raw transaction...')

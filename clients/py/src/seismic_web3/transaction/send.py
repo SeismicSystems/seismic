@@ -23,7 +23,9 @@ from web3.types import RPCEndpoint
 
 from seismic_web3._constants import TYPED_DATA_MESSAGE_VERSION
 from seismic_web3.crypto.nonce import random_encryption_nonce
+from seismic_web3.gas_payment import GasPayment, resolve_gas_payment
 from seismic_web3.transaction.eip712 import sign_seismic_tx_eip712
+from seismic_web3.transaction.gas import seismic_pool_gas_minimum
 from seismic_web3.transaction.metadata import (
     DEFAULT_BLOCKS_WINDOW,
     MetadataParams,
@@ -134,6 +136,7 @@ def _build_unsigned_tx(
     gas_price: int,
     gas: int,
     data: HexBytes,
+    gas_payment: GasPayment | None = None,
 ) -> UnsignedSeismicTx:
     """Build an ``UnsignedSeismicTx`` from metadata and gas parameters."""
     return UnsignedSeismicTx(
@@ -145,6 +148,7 @@ def _build_unsigned_tx(
         value=metadata.legacy_fields.value,
         data=data,
         seismic=metadata.seismic_elements,
+        gas_payment=resolve_gas_payment(gas_payment),
     )
 
 
@@ -161,6 +165,7 @@ def estimate_shielded_gas(
     gas_price: int,
     private_key: PrivateKey,
     encryption: EncryptionState | None = None,
+    gas_payment: GasPayment | None = None,
 ) -> int:
     """Estimate gas for a shielded transaction by signing it first (sync).
 
@@ -176,7 +181,13 @@ def estimate_shielded_gas(
     ``ContractLogicError`` carries the plaintext revert reason.
     """
     block_gas_limit = w3.eth.get_block("latest")["gasLimit"]
-    temp_tx = _build_unsigned_tx(metadata, gas_price, block_gas_limit, encrypted_data)
+    temp_tx = _build_unsigned_tx(
+        metadata,
+        gas_price,
+        block_gas_limit,
+        encrypted_data,
+        gas_payment,
+    )
     signed = _sign_tx(temp_tx, private_key, _is_eip712(metadata))
 
     response = w3.provider.make_request(
@@ -196,13 +207,20 @@ async def async_estimate_shielded_gas(
     gas_price: int,
     private_key: PrivateKey,
     encryption: EncryptionState | None = None,
+    gas_payment: GasPayment | None = None,
 ) -> int:
     """Estimate gas for a shielded transaction by signing it first (async).
 
     Async variant of :func:`estimate_shielded_gas`.
     """
     block_gas_limit = (await w3.eth.get_block("latest"))["gasLimit"]
-    temp_tx = _build_unsigned_tx(metadata, gas_price, block_gas_limit, encrypted_data)
+    temp_tx = _build_unsigned_tx(
+        metadata,
+        gas_price,
+        block_gas_limit,
+        encrypted_data,
+        gas_payment,
+    )
     signed = _sign_tx(temp_tx, private_key, _is_eip712(metadata))
 
     response = await w3.provider.make_request(
@@ -267,6 +285,7 @@ def estimate_transparent_gas(
         gas_price=w3.eth.gas_price,
         private_key=private_key,
         encryption=encryption,
+        gas_payment=GasPayment.auto(),
     )
 
 
@@ -309,6 +328,7 @@ async def async_estimate_transparent_gas(
         gas_price=await w3.eth.gas_price,
         private_key=private_key,
         encryption=encryption,
+        gas_payment=GasPayment.auto(),
     )
 
 
@@ -432,6 +452,7 @@ def _prepare_shielded_transaction(
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
+    gas_payment: GasPayment | None = None,
 ) -> tuple[HexBytes, UnsignedSeismicTx, TxSeismicMetadata]:
     """Build, encrypt, and sign a shielded transaction (sync).
 
@@ -476,16 +497,29 @@ def _prepare_shielded_transaction(
                 estimate_metadata,
             )
         )
-        resolved_gas = estimate_shielded_gas(
+        estimate = estimate_shielded_gas(
             w3,
             encrypted_data=estimate_encrypted,
             metadata=estimate_metadata,
             gas_price=resolved_gas_price,
             private_key=private_key,
             encryption=encryption,
+            gas_payment=gas_payment,
+        )
+        # RPC estimates plaintext execution, but the pool checks ciphertext.
+        # The separately encrypted estimation twin can have different bytes.
+        resolved_gas = max(
+            estimate,
+            seismic_pool_gas_minimum(encrypted_data, is_create=to is None),
         )
 
-    tx = _build_unsigned_tx(metadata, resolved_gas_price, resolved_gas, encrypted_data)
+    tx = _build_unsigned_tx(
+        metadata,
+        resolved_gas_price,
+        resolved_gas,
+        encrypted_data,
+        gas_payment,
+    )
     signed = _sign_tx(tx, private_key, eip712)
     return signed, tx, metadata
 
@@ -502,6 +536,7 @@ async def _async_prepare_shielded_transaction(
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
+    gas_payment: GasPayment | None = None,
 ) -> tuple[HexBytes, UnsignedSeismicTx, TxSeismicMetadata]:
     """Build, encrypt, and sign a shielded transaction (async).
 
@@ -543,16 +578,28 @@ async def _async_prepare_shielded_transaction(
                 estimate_metadata,
             )
         )
-        resolved_gas = await async_estimate_shielded_gas(
+        estimate = await async_estimate_shielded_gas(
             w3,
             encrypted_data=estimate_encrypted,
             metadata=estimate_metadata,
             gas_price=resolved_gas_price,
             private_key=private_key,
             encryption=encryption,
+            gas_payment=gas_payment,
+        )
+        # Clamp using the final write ciphertext, not the signed-read twin.
+        resolved_gas = max(
+            estimate,
+            seismic_pool_gas_minimum(encrypted_data, is_create=to is None),
         )
 
-    tx = _build_unsigned_tx(metadata, resolved_gas_price, resolved_gas, encrypted_data)
+    tx = _build_unsigned_tx(
+        metadata,
+        resolved_gas_price,
+        resolved_gas,
+        encrypted_data,
+        gas_payment,
+    )
     signed = _sign_tx(tx, private_key, eip712)
     return signed, tx, metadata
 
@@ -574,6 +621,7 @@ def send_shielded_transaction(
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
+    gas_payment: GasPayment | None = None,
 ) -> HexBytes:
     """Send a shielded transaction (sync).
 
@@ -605,6 +653,7 @@ def send_shielded_transaction(
         gas_price=gas_price,
         security=security,
         eip712=eip712,
+        gas_payment=gas_payment,
     )
     return send_shielded_raw(w3, signed)
 
@@ -621,6 +670,7 @@ async def async_send_shielded_transaction(
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
+    gas_payment: GasPayment | None = None,
 ) -> HexBytes:
     """Send a shielded transaction (async).
 
@@ -652,6 +702,7 @@ async def async_send_shielded_transaction(
         gas_price=gas_price,
         security=security,
         eip712=eip712,
+        gas_payment=gas_payment,
     )
     return await async_send_shielded_raw(w3, signed)
 
@@ -673,6 +724,7 @@ def debug_send_shielded_transaction(
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
+    gas_payment: GasPayment | None = None,
 ) -> DebugWriteResult:
     """Send a shielded transaction and return debug info (sync).
 
@@ -705,6 +757,7 @@ def debug_send_shielded_transaction(
         gas_price=gas_price,
         security=security,
         eip712=eip712,
+        gas_payment=gas_payment,
     )
     tx_hash = send_shielded_raw(w3, signed)
 
@@ -715,6 +768,7 @@ def debug_send_shielded_transaction(
         gas=unsigned_tx.gas,
         gas_price=unsigned_tx.gas_price,
         value=value,
+        gas_payment=unsigned_tx.gas_payment,
     )
     return DebugWriteResult(
         plaintext_tx=plaintext_tx,
@@ -735,6 +789,7 @@ async def async_debug_send_shielded_transaction(
     gas_price: int | None = None,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
+    gas_payment: GasPayment | None = None,
 ) -> DebugWriteResult:
     """Send a shielded transaction and return debug info (async).
 
@@ -767,6 +822,7 @@ async def async_debug_send_shielded_transaction(
         gas_price=gas_price,
         security=security,
         eip712=eip712,
+        gas_payment=gas_payment,
     )
     tx_hash = await async_send_shielded_raw(w3, signed)
 
@@ -777,6 +833,7 @@ async def async_debug_send_shielded_transaction(
         gas=unsigned_tx.gas,
         gas_price=unsigned_tx.gas_price,
         value=value,
+        gas_payment=unsigned_tx.gas_payment,
     )
     return DebugWriteResult(
         plaintext_tx=plaintext_tx,
@@ -801,6 +858,7 @@ def signed_call(
     gas: int = _DEFAULT_GAS,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
+    gas_payment: GasPayment | None = None,
 ) -> HexBytes:
     """Execute a signed read (sync).
 
@@ -831,7 +889,7 @@ def signed_call(
 
     gas_price = w3.eth.gas_price
 
-    tx = _build_unsigned_tx(metadata, gas_price, gas, HexBytes(encrypted))
+    tx = _build_unsigned_tx(metadata, gas_price, gas, HexBytes(encrypted), gas_payment)
     signed = _sign_tx(tx, private_key, eip712)
 
     response = w3.provider.make_request(
@@ -860,6 +918,7 @@ async def async_signed_call(
     gas: int = _DEFAULT_GAS,
     security: SeismicSecurityParams | None = None,
     eip712: bool = False,
+    gas_payment: GasPayment | None = None,
 ) -> HexBytes:
     """Execute a signed read (async).
 
@@ -890,7 +949,7 @@ async def async_signed_call(
 
     gas_price = await w3.eth.gas_price
 
-    tx = _build_unsigned_tx(metadata, gas_price, gas, HexBytes(encrypted))
+    tx = _build_unsigned_tx(metadata, gas_price, gas, HexBytes(encrypted), gas_payment)
     signed = _sign_tx(tx, private_key, eip712)
 
     response = await w3.provider.make_request(

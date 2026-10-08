@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { shieldedWriteContract } from 'seismic-viem'
+import type { GasPayment } from 'seismic-viem'
 import type { Abi, ContractFunctionArgs, ContractFunctionName, Hex } from 'viem'
 
 import { useShieldedWallet } from '@sreact/context/shieldedWallet.tsx'
@@ -19,6 +20,7 @@ export type UseShieldedWriteContractConfig<
   args?: TArgs
   gas?: bigint
   gasPrice?: bigint
+  gasPayment?: GasPayment
 }
 
 /**
@@ -32,6 +34,7 @@ export type UseShieldedWriteContractConfig<
  *   - `args` (array) - The arguments to pass to the contract function.
  *   - `gas` (bigint) - Optional gas limit for the transaction.
  *   - `gasPrice` (bigint) - Optional gas price for the transaction.
+ *   - `gasPayment` ({@link GasPayment}) - Optional public signed fee choice; defaults to Auto.
  *
  * @returns {object} An object containing:
  *   - `writeContract` (function): A function to execute contract writes.
@@ -54,6 +57,7 @@ export function useShieldedWriteContract<
   args,
   gas,
   gasPrice,
+  gasPayment,
 }: UseShieldedWriteContractConfig<TAbi, TFunctionName, TArgs>) {
   const { walletClient } = useShieldedWallet()
 
@@ -80,7 +84,8 @@ export function useShieldedWriteContract<
         ...(args && { args }),
         ...(gas && { gas }),
         ...(gasPrice && { gasPrice }),
-      } as any)
+        gasPayment,
+      } as unknown as Parameters<typeof shieldedWriteContract>[1])
       console.log('tx', tx)
       setHash(tx)
       return tx
@@ -92,7 +97,16 @@ export function useShieldedWriteContract<
     } finally {
       setIsLoading(false)
     }
-  }, [walletClient, address, abi, functionName, args, gas, gasPrice])
+  }, [
+    walletClient,
+    address,
+    abi,
+    functionName,
+    args,
+    gas,
+    gasPrice,
+    gasPayment,
+  ])
 
   return {
     writeContract,

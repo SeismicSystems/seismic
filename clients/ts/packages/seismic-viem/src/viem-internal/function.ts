@@ -9,12 +9,15 @@ import type {
   IsUndefined,
   Or,
   Prettify,
-  ReadContractParameters,
   ReadContractReturnType,
   UnionOmit,
-  WriteContractParameters,
   WriteContractReturnType,
 } from 'viem'
+
+import type {
+  ReadContractParameters,
+  WriteContractParameters,
+} from '@sviem/contract/parameters.ts'
 
 export function getFunctionParameters(
   values: [args?: readonly unknown[] | undefined, options?: object | undefined]

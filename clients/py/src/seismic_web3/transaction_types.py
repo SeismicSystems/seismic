@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from seismic_web3.gas_payment import GasPayment, resolve_gas_payment
+
 if TYPE_CHECKING:
     from eth_typing import ChecksumAddress
     from hexbytes import HexBytes
@@ -173,6 +175,10 @@ class UnsignedSeismicTx:
     data: HexBytes
     seismic: SeismicElements
     authorization_list: list[SignedAuthorization] = field(default_factory=list)
+    gas_payment: GasPayment = field(default_factory=GasPayment.auto)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "gas_payment", resolve_gas_payment(self.gas_payment))
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +235,7 @@ class PlaintextTx:
     gas: int
     gas_price: int
     value: int
+    gas_payment: GasPayment = field(default_factory=GasPayment.auto)
 
 
 @dataclass(frozen=True)

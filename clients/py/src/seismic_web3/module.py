@@ -46,6 +46,7 @@ if TYPE_CHECKING:
 
     from seismic_web3._types import CompressedPublicKey, PrivateKey
     from seismic_web3.client import EncryptionState
+    from seismic_web3.gas_payment import GasPayment
     from seismic_web3.transaction_types import DebugWriteResult, SeismicSecurityParams
 
 
@@ -293,6 +294,7 @@ class SeismicNamespace(SeismicPublicNamespace):
         gas_price: int | None = None,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
+        gas_payment: GasPayment | None = None,
     ) -> HexBytes:
         """Send a shielded transaction (sync).
 
@@ -322,6 +324,7 @@ class SeismicNamespace(SeismicPublicNamespace):
             gas_price=gas_price,
             security=security,
             eip712=eip712,
+            gas_payment=gas_payment,
         )
 
     def signed_call(
@@ -333,6 +336,7 @@ class SeismicNamespace(SeismicPublicNamespace):
         gas: int = 30_000_000,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
+        gas_payment: GasPayment | None = None,
     ) -> HexBytes:
         """Execute a signed read (sync).
 
@@ -360,6 +364,7 @@ class SeismicNamespace(SeismicPublicNamespace):
             gas=gas,
             security=security,
             eip712=eip712,
+            gas_payment=gas_payment,
         )
 
     def debug_send_shielded_transaction(
@@ -372,6 +377,7 @@ class SeismicNamespace(SeismicPublicNamespace):
         gas_price: int | None = None,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
+        gas_payment: GasPayment | None = None,
     ) -> DebugWriteResult:
         """Send a shielded transaction and return debug info (sync).
 
@@ -400,6 +406,7 @@ class SeismicNamespace(SeismicPublicNamespace):
             gas_price=gas_price,
             security=security,
             eip712=eip712,
+            gas_payment=gas_payment,
         )
 
     # ------------------------------------------------------------------
@@ -542,6 +549,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
         gas_price: int | None = None,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
+        gas_payment: GasPayment | None = None,
     ) -> HexBytes:
         """Send a shielded transaction (async).
 
@@ -571,6 +579,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
             gas_price=gas_price,
             security=security,
             eip712=eip712,
+            gas_payment=gas_payment,
         )
 
     async def signed_call(
@@ -582,6 +591,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
         gas: int = 30_000_000,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
+        gas_payment: GasPayment | None = None,
     ) -> HexBytes:
         """Execute a signed read (async).
 
@@ -609,6 +619,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
             gas=gas,
             security=security,
             eip712=eip712,
+            gas_payment=gas_payment,
         )
 
     async def debug_send_shielded_transaction(
@@ -621,6 +632,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
         gas_price: int | None = None,
         security: SeismicSecurityParams | None = None,
         eip712: bool = False,
+        gas_payment: GasPayment | None = None,
     ) -> DebugWriteResult:
         """Send a shielded transaction and return debug info (async).
 
@@ -649,6 +661,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
             gas_price=gas_price,
             security=security,
             eip712=eip712,
+            gas_payment=gas_payment,
         )
 
     # ------------------------------------------------------------------

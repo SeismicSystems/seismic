@@ -61,6 +61,39 @@ sforge script script/Counter.s.sol --rpc-url http://127.0.0.1:8545 --broadcast -
 
 ---
 
+### Gas payment with scast
+
+Encrypted `scast send --seismic` and `scast call --seismic` support
+`--gas-payment auto|native|token:ADDRESS`:
+
+* Omitted or `auto`: delegate fee-asset selection to the network.
+* `native`: require native payment, without fallback.
+* `token:ADDRESS`: require that nonzero token address, without fallback. The token
+  must be eligible under the target network's gas-token registry.
+
+```bash
+scast send "$CONTRACT" 'setNumber(uint256)' 42 --seismic \
+  --gas-payment "token:$GAS_TOKEN" --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY"
+scast call "$CONTRACT" 'number()(uint256)' --seismic \
+  --gas-payment native --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY"
+```
+
+The preference is authenticated by the transaction signature. It does not change
+calldata encryption or AAD. Signed gas estimation preserves the same preference;
+explicit gas limits are preserved. Native/Token is rejected on ordinary Ethereum
+routes and local `call --trace` execution rather than silently ignored.
+
+These tools use the mandatory Seismic transaction format, with the selector after
+gas limit. They do not upgrade old signed bytes. `scast decode-transaction` can
+inspect new-format writes offline, but rejects signed-read bytes and unknown types;
+it does not decrypt calldata. `scast tx HASH gasPayment` displays the signed
+preference. An Auto response does **not** identify the asset ultimately charged.
+
+Use a compatible Seismic Reth network for registry-backed token gas. Full `sanvil`
+token-gas execution parity is not part of this tooling migration.
+
+---
+
 ### Local node
 
 Use `sanvil` to run a local Seismic node for development and testing:

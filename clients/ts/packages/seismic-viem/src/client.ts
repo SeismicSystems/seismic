@@ -51,7 +51,8 @@ import { seismicRpcSchema } from '@sviem/tx/seismicRpc.ts'
  * This is the same as viem's public client, with a few notable differences:
  * - `getNativeBalance`: actual native funds via eth_getAccountInfo; ordinary getBalance returns a compatibility placeholder on updated reth
  * - `getTeePublicKey`: a new function specific to Seismic. It takes no parameters and returns a Promise that resolves to the network's public key
- * - `getStorageAt` and `getTransaction`: both of these will return an error since Seismic does not support these endpoints
+ * - `getStorageAt`: disabled; use contract reads rather than raw storage access
+ * - `getTransaction` and full-block transactions: inherited viem actions use the chain's typed Seismic response formatters
  * - `deposit`: deposit into the deposit contract
  * - `getDepositRoot`: get the deposit root from the deposit contract
  * - `getDepositCount`: get the deposit count from the deposit contract
