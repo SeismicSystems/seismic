@@ -79,6 +79,52 @@ own reth, at a finalized block recent enough to prove the view is current, on
 the chain `network_id` commits to. Admitting or deprecating an image is one
 authority transaction and takes effect network-wide at the next handshake.
 
+## In standard terms
+
+If you know confidential computing and protocol design, three standard
+vocabularies cover the system.
+
+**Identity: a self-certifying name.** `network_id` is the hash of the manifest,
+in the sense of Mazières's SFS: the name is the commitment. A verifier that
+holds the name can check every founding artifact without trusting whoever
+served it. Each later state is a finalized head reached from that name.
+
+**Attestation: IETF RATS ([RFC 9334](https://www.rfc-editor.org/rfc/rfc9334)).**
+Admission follows the background-check model: the joiner sends evidence, and
+the member it asks verifies that evidence and acts on the result.
+
+| RATS role | In Seismic |
+| --- | --- |
+| Attester | The TDX guest. The attestation service mints every quote. |
+| Endorser | Intel (DCAP) and Azure (vTPM), through their root certificates. |
+| Reference value provider | A reviewed seismic-images build, whose `make measure` output is the accepted measurement set. |
+| Appraisal policy for evidence | `MeasurementRegistry`, read at a fresh finalized block. |
+| Verifier and relying party | The responder in the root-key handshake: one process, both roles. |
+| Relying party | A client that appraises the quote over `tx_io_pk`. |
+
+**Key exchange: Noise patterns ([the Noise spec](https://noiseprotocol.org/noise.html)).**
+Both encrypted flows use one primitive stack: secp256k1 ECDH, HKDF-SHA256, and
+AES-256-GCM.
+
+- **Client to network: Noise N.** The client knows `tx_io_pk` from its attested
+  evidence (`<- s`) and encrypts to it (`-> e, es`). Its `e` is the SDK
+  provider's keypair, minted once per provider. Signed reads come back under
+  the same key.
+- **Root-key handshake: Noise NN, with `network_id` as the prologue.** The
+  joiner sends `-> e`. The member answers `<- e, ee`, with `root_key` as the
+  encrypted payload. Each side's TDX quote carries a hash over the transcript
+  fields in its `report_data`. This is Noise's channel binding, which makes the
+  handshake SIGMA-style: an ephemeral DH, authenticated by signatures over the
+  transcript.
+  The member appraises the joiner against live policy. The joiner checks that
+  the member is a genuine TDX guest bound to this transcript.
+
+These names describe the protocol's shape, not its wire format. The handshake
+derives its keys with its own KDF schedule and labels, not Noise's chaining
+key. [architecture.md](architecture.md#the-root-key-handshake) has the
+construction, and [network-manifest.md](network-manifest.md) has the exact
+transcript bindings.
+
 ## Where the code lives
 
 Three services, all in the [enclave](https://github.com/SeismicSystems/enclave)
