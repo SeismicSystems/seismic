@@ -3,7 +3,8 @@
 //! A deployed node is a sealed VM: there is no SSH, so every interaction is an
 //! HTTP or JSON-RPC call to one of the ports below. Two of them are
 //! operator-only and reachable only from the CIDR the node's NSG pins
-//! (`operator_ip_cidr`); the RPC is public, behind nginx and a real cert.
+//! (`operator_ip_cidr`); the RPC is public, behind the node's HTTPS proxy and a
+//! real cert.
 
 use std::time::Duration;
 
@@ -11,7 +12,7 @@ use crate::descriptor::NodeDescriptor;
 use crate::error::Result;
 
 /// tdx-init's one-shot config receiver, up only until a boot's POST is
-/// consumed. Plain HTTP: it runs before certbot has issued anything.
+/// consumed. Plain HTTP: it runs before the node has a certificate.
 pub const TDX_INIT_PORT: u16 = 8080;
 /// The attestation service's JSON-RPC: LUKS provisioning status, deploy
 /// verification evidence, the root-key handshake.
@@ -79,7 +80,7 @@ impl NodeDescriptor {
         format!("http://{}:{HARVEST_PORT}", self.public_ip)
     }
 
-    /// The node's public Ethereum JSON-RPC: nginx proxies `/rpc` to reth,
+    /// The node's public Ethereum JSON-RPC: its HTTPS proxy sends `/rpc` to reth,
     /// which is why this one goes to the FQDN over TLS rather than to the IP.
     pub fn eth_rpc_url(&self) -> String {
         format!("https://{}/rpc", self.fqdn)

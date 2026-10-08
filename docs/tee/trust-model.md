@@ -317,7 +317,7 @@ detects the rewind. The instances:
 - **LUKS is tamper-evident, not rollback-protected.** The header MAC and
   dm-integrity refuse an *edited* volume, but a snapshot of the whole volume
   is internally consistent, MAC and all, and restores cleanly. Everything
-  under `/persistent` — reth's datadir, summit's database, certbot state —
+  under `/persistent` — reth's datadir, summit's database, Caddy's certificate —
   can be rewound together.
 - **A chain view can be held at block 0.** That lands the responder's admission
   gate on the founding policy, where no timestamp check bites and "still at

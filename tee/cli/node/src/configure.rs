@@ -465,7 +465,7 @@ pub fn print_summary(fqdn: &str, public_ip: &str, record: &Path) {
     println!("\nNode:       {fqdn}");
     println!("IP Address: {public_ip}");
     println!("Config:     {} (as POSTed)", record.display());
-    println!("\nNginx + SSL set up automatically after initialization.");
+    println!("\nThe node takes its TLS certificate itself after initialization.");
     println!("Endpoints (once the node settles):");
     println!("  https://{fqdn}/rpc");
     println!("  https://{fqdn}/ws");
@@ -553,7 +553,7 @@ pub struct ConfigureArgs {
     )]
     pub bootnode: Vec<String>,
 
-    /// Contact email for the node's Let's Encrypt registration (certbot); goes
+    /// Contact email for the node's Let's Encrypt registration; goes
     /// into [node.domain].email of the POSTed config. Same across a cohort.
     #[arg(long, default_value = DEFAULT_EMAIL)]
     pub email: String,
