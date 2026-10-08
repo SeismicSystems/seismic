@@ -16,6 +16,7 @@ seismic-tee-context.workspace = true
 seismic-tee-network.workspace = true
 seismic-tee-node.workspace = true
 
+anstream.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 clap_complete.workspace = true

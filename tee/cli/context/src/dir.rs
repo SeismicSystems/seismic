@@ -10,11 +10,12 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::{Context, ContextArgs, echo};
+use crate::{Context, ContextArgs, NoContextSelected, echo};
 use clap::Args;
 
 #[derive(Debug, Clone, Args)]
 pub struct DirArgs {
+    /// Network directory. Default: the current context's network.
     #[arg(value_name = "DIR")]
     pub dir: Option<PathBuf>,
 
@@ -31,7 +32,11 @@ impl DirArgs {
         }
         let context = Context::load(config)?;
         if self.context.context.is_none() && context.config().current.is_none() {
-            anyhow::bail!("no context selected — pass DIR, or run `seismic-tee ctx use <network>`");
+            return Err(NoContextSelected {
+                flag: "DIR".to_string(),
+                selection: "<network>",
+            }
+            .into());
         }
         let selected = context.select(self.context.context.as_deref())?;
         let dir = selected.dir()?;
@@ -118,9 +123,14 @@ dir = "/nets/devnet-1"
         // A config path that names no file: an empty config, no `current`.
         let config_path = tmp.path().join("config.toml");
 
-        let err = args(None).load(Some(&config_path)).unwrap_err().to_string();
-        assert!(err.contains("DIR"), "{err}");
-        assert!(err.contains("ctx use"), "{err}");
+        let err = args(None).load(Some(&config_path)).unwrap_err();
+        let missing = err
+            .downcast_ref::<NoContextSelected>()
+            .expect("a usage error, for the binary to answer with the help");
+        assert_eq!(missing.flag, "DIR");
+        let err = err.to_string();
+        assert!(err.contains("pass DIR"), "{err}");
+        assert!(err.contains("ctx use <network>"), "{err}");
     }
 
     #[test]
