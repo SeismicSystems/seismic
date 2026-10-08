@@ -56,12 +56,12 @@ use std::process::{Command as Process, ExitCode, Stdio};
 
 use anyhow::{Context as _, bail};
 use clap::error::ErrorKind;
-use clap::{CommandFactory as _, Parser, Subcommand};
+use clap::{ArgMatches, CommandFactory as _, FromArgMatches as _, Parser, Subcommand};
 use clap_complete::Shell;
 use clap_complete::env::{CompleteEnv, Shells};
 use seismic_tee_admission::AdmissionCommand;
-use seismic_tee_context::ConfigArgs;
 use seismic_tee_context::cmd::CtxCommand;
+use seismic_tee_context::{ConfigArgs, NoContextSelected};
 use seismic_tee_network::NetworkCommand;
 use seismic_tee_network::verify_founding::VerifyFoundingArgs;
 use seismic_tee_node::NodeCommand;
@@ -374,13 +374,40 @@ fn stand_alone(cli: &Cli) -> Result<(), clap::Error> {
     }
 }
 
+/// The subcommand `matches` ran, as a command whose help renders under its
+/// full name (`seismic-tee network assemble`).
+fn invoked(matches: &ArgMatches) -> clap::Command {
+    let mut command = Cli::command();
+    command.build();
+    let mut matches = matches;
+    while let Some((name, sub_matches)) = matches.subcommand() {
+        command = command
+            .find_subcommand(name)
+            .expect("clap matched a subcommand of this command")
+            .clone();
+        matches = sub_matches;
+    }
+    command
+}
+
+/// The answer to a command run with nothing naming its target: the command's
+/// help, so the missing argument is seen beside the others, then what was
+/// missing and the two ways to supply it.
+fn usage_error(matches: &ArgMatches, missing: &NoContextSelected) -> String {
+    format!(
+        "{}\nerror: {missing}\n",
+        invoked(matches).render_help().ansi()
+    )
+}
+
 fn main() -> ExitCode {
     // A completion callback never reaches the parser: it answers and exits
     // here, before anything below can open a file or a socket.
     CompleteEnv::with_factory(Cli::command)
         .var(COMPLETE_VAR)
         .complete();
-    let cli = Cli::parse();
+    let matches = Cli::command().get_matches();
+    let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|error| error.exit());
     if let Err(error) = stand_alone(&cli) {
         error.exit();
     }
@@ -411,12 +438,20 @@ fn main() -> ExitCode {
     });
     match result {
         Ok(code) => code,
-        Err(error) => {
-            // The whole chain, one cause per line: a DCAP failure is several
-            // layers deep and the last one alone rarely says what happened.
-            eprintln!("error: {error:?}");
-            ExitCode::FAILURE
-        }
+        Err(error) => match error.downcast_ref::<NoContextSelected>() {
+            Some(missing) => {
+                anstream::eprint!("{}", usage_error(&matches, missing));
+                // clap's code for a usage error: the command was not run.
+                ExitCode::from(2)
+            }
+            None => {
+                // The whole chain, one cause per line: a DCAP failure is
+                // several layers deep and the last one alone rarely says
+                // what happened.
+                eprintln!("error: {error:?}");
+                ExitCode::FAILURE
+            }
+        },
     }
 }
 
@@ -429,6 +464,32 @@ mod tests {
     #[test]
     fn the_command_tree_is_well_formed() {
         Cli::command().debug_assert();
+    }
+
+    /// A command run with no target and no context answers with its own
+    /// help, under its full name, and then the error.
+    #[test]
+    fn a_missing_target_shows_the_commands_help() {
+        let matches = Cli::command()
+            .try_get_matches_from([BIN_NAME, "verify-founding"])
+            .unwrap();
+        let missing = NoContextSelected {
+            flag: "DIR".to_string(),
+            selection: "<network>",
+        };
+        let rendered = anstream::adapter::strip_str(&usage_error(&matches, &missing)).to_string();
+        assert!(
+            rendered.contains("Usage: seismic-tee verify-founding [OPTIONS] [DIR]"),
+            "{rendered}"
+        );
+        assert!(rendered.contains("--record <NODE>"), "{rendered}");
+        assert!(
+            rendered.ends_with(
+                "error: no DIR given and no context selected — pass DIR, or select one with \
+                 `seismic-tee ctx use <network>`\n"
+            ),
+            "{rendered}"
+        );
     }
 
     /// The released binary reports the crate's version and its build

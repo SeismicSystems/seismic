@@ -44,6 +44,33 @@ pub use args::{ConfigArgs, ContextArgs};
 use config::{Config, Network};
 pub use dir::DirArgs;
 
+/// Nothing names what a command acts on: its `flag` was not given and no
+/// context is selected, so there is no default to fall back to.
+///
+/// A usage error, not a failure: the binary answers it with the command's
+/// help, then this message.
+#[derive(Debug)]
+pub struct NoContextSelected {
+    /// The argument that would have named the target (`DIR`, `--node`).
+    pub flag: String,
+    /// What `ctx use` takes to select one (`<network>`, `<network>/<node>`).
+    pub selection: &'static str,
+}
+
+impl std::fmt::Display for NoContextSelected {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "no {flag} given and no context selected — pass {flag}, or select one with \
+             `seismic-tee ctx use {selection}`",
+            flag = self.flag,
+            selection = self.selection,
+        )
+    }
+}
+
+impl std::error::Error for NoContextSelected {}
+
 /// A selection: a network, and optionally one of its nodes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Selection {
@@ -244,7 +271,7 @@ pub fn echo(selection: &Selection, resolved: &dyn std::fmt::Display) {
 /// rather than one node — `harvest`, founding `configure`, `assemble` — each
 /// with its own escape-hatch flag (`--node FILE` in the node group, `--nodes
 /// FILE` on assemble; the `pulumi stack output nodes --json` shape either
-/// way); `flag_name` is spelled into the "no context selected" error, naming
+/// way); `flag_name` is spelled into the [`NoContextSelected`] error, naming
 /// the one flag this particular caller actually has.
 pub fn load_nodes(
     flag: Option<&Path>,
@@ -260,10 +287,11 @@ pub fn load_nodes(
     }
     let context = Context::load(config)?;
     if args.context.is_none() && context.config().current.is_none() {
-        bail!(
-            "no context selected — pass {flag_name}, or run `seismic-tee ctx use \
-             <network>/<node>`"
-        );
+        return Err(NoContextSelected {
+            flag: flag_name.to_string(),
+            selection: "<network>",
+        }
+        .into());
     }
     let selected = context.select(args.context.as_deref())?;
     let nodes = selected.nodes()?;
