@@ -161,6 +161,7 @@ sequenceDiagram
         participant SP as summit-persist<br/>(oneshot)
         participant SU as summit
         participant RE as reth
+        participant NG as nginx
     end
 
     Note over O: provision: pulumi up —<br/>the box boots the measured image
@@ -182,6 +183,7 @@ sequenceDiagram
     end
 
     O->>TI: node configure — POST manifest + reth genesis + summit genesis<br/>(founding: the pinned box first)
+    TI-)NG: domain.env
     destroy TI
     TI-)AS: /run/seismic/conf, then its done marker
     Note over AS: :7879 now serves only /v1/keys,<br/>/v1/quote answers 410
@@ -202,7 +204,7 @@ sequenceDiagram
     Note over LK: first boot: format<br/>restart: verify the header MAC
     destroy LK
     LK-)SP: /persistent<br/>mounted
-    Note over RE: systemd starts reth,<br/>after nginx-ssl-setup
+    Note over RE: systemd starts reth
     RE->>CU: fetch the tx-io + rng keys, over the socket
     CU-->>RE: tx-io keypair + rng input
     Note over SP: systemd starts it
@@ -211,6 +213,9 @@ sequenceDiagram
     SP-)SU: keystore in<br/>/persistent/summit/keys
     Note over SU: systemd starts summit,<br/>which only reads the keystore
     SU->>RE: Engine API — drives forkchoice
+    Note over NG: systemd starts nginx-ssl-setup<br/>once /persistent is mounted:<br/>first boot: certbot takes the certificate<br/>every boot: starts nginx
+    NG->>RE: proxies /rpc and /ws
+    Note over NG: nothing waits on it: a failed<br/>certificate costs public HTTPS only
 
     opt founding only
         O->>AS: launch checks — GET :7879/v1/keys
