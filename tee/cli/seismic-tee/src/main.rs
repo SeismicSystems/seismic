@@ -221,11 +221,12 @@ enum Command {
         command: NetworkCommand,
     },
     /// Running nodes, one or a cohort: harvest a founding's keys, configure
-    /// on first boot, verify attestation, watch the first-boot disk wipe.
+    /// on first boot, verify attestation, show their live state.
     #[command(
         long_about = "The running machines of a Seismic TEE network, one node or a whole \
                       cohort: harvest a founding cohort's keys, configure nodes on first boot, \
-                      verify a node's attestation, watch its first-boot disk wipe.\n\n\
+                      verify a node's attestation, show the live state of every node and of \
+                      the network.\n\n\
                       Every command here contacts a node. Cloud-agnostic, and never provisions: \
                       each command consumes the descriptors of already-running nodes and \
                       reaches them over HTTP. An operator joining a network needs only this \
@@ -1010,8 +1011,27 @@ mod tests {
                 "http://pccs",
             ],
             vec!["node", "status", "--node", "n.json", "--name", "dev-2"],
-            vec!["node", "status", "--node", "n.json", "--once"],
-            vec!["node", "status", "--node", "n.json", "--interval", "10"],
+            vec!["node", "status", "--node", "n.json", "--json"],
+            vec![
+                "node",
+                "status",
+                "--node",
+                "n.json",
+                "--watch",
+                "--interval",
+                "10",
+            ],
+            // `node status --help`'s examples
+            vec!["node", "status", "--watch"],
+            vec!["node", "status", "--json"],
+            vec![
+                "node",
+                "status",
+                "--node",
+                "nodes.json",
+                "--manifest",
+                "network-manifest.json",
+            ],
             // resolved from the context
             vec!["node", "status"],
             vec!["node", "status", "--name", "alpha"],

@@ -22,9 +22,10 @@
 //! come up — one node joining a live network, or a whole founding cohort at
 //! once ([`cohort`]), whose launch it then asserts against what the manifest
 //! pins; [`verify`] appraises a running node's attestation; and [`status`]
-//! watches the first-boot disk wipe on its own. The cohort flow does to each
-//! node what the single-node flows do to one, so building the config, POSTing
-//! it, the status poller and the appraisal are shared library surface.
+//! shows the live state of every node and of the network, read by
+//! [`probe`]. The cohort flow does to each node what the single-node flows do
+//! to one, so building the config, POSTing it, the status poller, the probe
+//! and the appraisal are shared library surface.
 //!
 //! This crate and the network crate depend on neither each other, only on
 //! [`seismic_tee_common`] and [`seismic_tee_context`]: the network-directory
@@ -37,6 +38,7 @@ pub mod configure;
 pub mod dashboard;
 pub mod harvest;
 pub mod launch;
+pub mod probe;
 pub mod status;
 pub mod verify;
 
@@ -65,7 +67,8 @@ pub enum NodeCommand {
     Configure(configure::ConfigureArgs),
     /// Deploy-verify a node's TDX attestation against the intended image.
     Verify(verify::VerifyArgs),
-    /// Watch a node's first-boot LUKS provisioning progress.
+    /// Show the live state of every node in the node table, and what it says
+    /// about the network.
     Status(status::StatusArgs),
 }
 

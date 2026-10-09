@@ -12,7 +12,7 @@
 //! `$ETH_RPC_URL` and `$SEISMIC_CONTEXT` to `$SEISMIC_TEST_LOG` and exits 7.
 //!
 //! The same reasoning makes `node status`'s echo a subprocess test too: the
-//! echo goes to the real stderr and the status to the real stdout, and only
+//! echo goes to the real stderr and the reading to the real stdout, and only
 //! a spawned child separates the two streams the way `Command::output` does.
 
 use std::fs;
@@ -379,19 +379,20 @@ fn a_network_only_context_needs_name() {
     );
 }
 
-/// `node status`, resolved from the context with no `--node`: the target is
-/// echoed to stderr before the node is reached, and the status the node
-/// reports lands on stdout — the same separation `ctx env` depends on, now
-/// checked for a `node` command.
+/// `node status`, resolved from the context with no `--node`: the node table
+/// is echoed to stderr before any node is reached, and the reading lands on
+/// stdout — the same separation `ctx env` depends on, now checked for a
+/// `node` command.
 ///
 /// Both selection shapes are exercised here rather than in a test apiece:
 /// `NodeDescriptor::attestation_rpc_url` fixes the port at `:7878` — it is
 /// not a parameter the way `FakeServer::serve`'s is — so a second test
 /// reaching a node would race this one's server across nextest's parallel
 /// processes. One server, one process, two queued responses is deterministic
-/// instead.
+/// instead. Nothing listens on loopback `:7879`, so the node's config state
+/// reads as unknown.
 #[test]
-fn node_status_echoes_the_resolved_node_on_stderr_and_the_status_on_stdout() {
+fn node_status_echoes_the_node_table_on_stderr_and_the_reading_on_stdout() {
     let _server = FakeServer::serve_at(
         ATTESTATION_RPC_PORT,
         vec![
@@ -400,42 +401,44 @@ fn node_status_echoes_the_resolved_node_on_stderr_and_the_status_on_stdout() {
         ],
     );
 
-    // A selection that already names its node.
+    // A selection that names a node still reads the whole table: here, one
+    // node.
     let sandbox = Sandbox::new(LOOPBACK_NODE_CONFIG);
     let output = sandbox
         .command()
-        .args(["node", "status", "--once"])
+        .args(["node", "status", "--json"])
         .output()
         .unwrap();
 
     assert!(output.status.success(), "{output:?}");
-    let stdout = String::from_utf8(output.stdout).unwrap();
-    assert!(stdout.contains("\"state\":\"idle\""), "{stdout}");
+    let reading: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(reading["nodes"]["alpha"]["key_holder"], true, "{reading}");
+    assert_eq!(
+        reading["nodes"]["alpha"]["disk"]["state"], "idle",
+        "{reading}"
+    );
+    assert_eq!(reading["network"]["state"], "live", "{reading}");
     let stderr = String::from_utf8(output.stderr).unwrap();
-    // NodeArgs::load echoes the node's public RPC URL — the same value every
-    // context-resolved `node` command echoes, regardless of which endpoint
-    // that particular command goes on to call.
     assert!(
-        stderr.contains("context devnet-1/alpha → https://alpha.example.com/rpc"),
+        stderr.contains("context devnet-1/alpha → 1 node(s)"),
         "{stderr}"
     );
 
-    // A network-only selection, with --name supplying the node: the echo
-    // names the node it resolved to, not merely the network the selection
-    // spelled, so what the command acts on is what it says it acts on.
+    // A network-only selection, narrowed by --name: only that node is read,
+    // so the unroutable beta is never waited on.
     let sandbox = Sandbox::new(NETWORK_ONLY_LOOPBACK_CONFIG);
     let output = sandbox
         .command()
-        .args(["node", "status", "--once", "--name", "alpha"])
+        .args(["node", "status", "--json", "--name", "alpha"])
         .output()
         .unwrap();
 
     assert!(output.status.success(), "{output:?}");
+    let reading: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let nodes: Vec<&String> = reading["nodes"].as_object().unwrap().keys().collect();
+    assert_eq!(nodes, ["alpha"], "{reading}");
     let stderr = String::from_utf8(output.stderr).unwrap();
-    assert!(
-        stderr.contains("context devnet-1/alpha → https://alpha.example.com/rpc"),
-        "{stderr}"
-    );
+    assert!(stderr.contains("context devnet-1 → 2 node(s)"), "{stderr}");
 }
 
 /// One tab press, as the registration script makes it: the binary entered

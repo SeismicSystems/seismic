@@ -117,8 +117,12 @@ pub enum FetchError {
     /// A malformed response body: retrying can't fix an endpoint serving the
     /// wrong shape. Burns the harvest.
     Malformed(String),
-    /// Transport failure or 5xx: the normal boot tail, retried.
-    Retry(String),
+    /// No connection: the normal boot tail, retried.
+    Unreachable(String),
+    /// Connected, but a 5xx or no full answer in time: the box is up and its
+    /// keys or candidate are not written yet, or its quote is queued behind
+    /// another's — retried.
+    NotReady(String),
 }
 
 /// Fetch one box's `{pubkeys, evidence}` from its harvest endpoint.
@@ -132,7 +136,13 @@ pub async fn fetch_quote(
         .query(&[("nonce", target.nonce_hex())])
         .send()
         .await
-        .map_err(|e| FetchError::Retry(e.to_string()))?;
+        .map_err(|e| {
+            if e.is_connect() {
+                FetchError::Unreachable(e.to_string())
+            } else {
+                FetchError::NotReady(e.to_string())
+            }
+        })?;
     let status = response.status();
     if status.as_u16() == 410 {
         return Err(FetchError::WindowClosed(url));
@@ -141,7 +151,7 @@ pub async fn fetch_quote(
         return Err(FetchError::Rejected(status.as_u16(), url));
     }
     if !status.is_success() {
-        return Err(FetchError::Retry(format!(
+        return Err(FetchError::NotReady(format!(
             "HTTP {} from {url}",
             status.as_u16()
         )));
@@ -224,7 +234,7 @@ pub async fn collect_quotes(
                     target.name
                 ),
                 Err(FetchError::Malformed(message)) => bail!("{}: {message}", target.name),
-                Err(FetchError::Retry(message)) => {
+                Err(FetchError::Unreachable(message) | FetchError::NotReady(message)) => {
                     last_error.insert(target.name.clone(), message);
                 }
             }
@@ -594,7 +604,8 @@ mod tests {
     }
 
     /// 410 is a closed window and burns; another 4xx is a rejection and burns;
-    /// a 5xx and no answer are retried; a malformed body burns.
+    /// a 5xx, a dropped connection and no connection are retried; a malformed
+    /// body burns.
     #[tokio::test]
     async fn fetch_quote_sorts_failures_by_what_waiting_could_fix() {
         let client = http::client().unwrap();
@@ -611,14 +622,24 @@ mod tests {
             Err(FetchError::Rejected(400, _))
         ));
 
-        let server = FakeServer::serve(vec![(500, "boom".to_string())]);
+        let server = FakeServer::serve(vec![(503, "not yet".to_string())]);
         assert!(matches!(
             fetch_quote(&client, &target("n", &server.url)).await,
-            Err(FetchError::Retry(_))
+            Err(FetchError::NotReady(_))
         ));
         assert!(matches!(
             fetch_quote(&client, &target("n", &refused_url())).await,
-            Err(FetchError::Retry(_))
+            Err(FetchError::Unreachable(_))
+        ));
+
+        // A box that took the connection is up, whatever became of the
+        // request: a quote timing out behind another lands here too.
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || drop(listener.accept()));
+        assert!(matches!(
+            fetch_quote(&client, &target("n", &url)).await,
+            Err(FetchError::NotReady(_))
         ));
 
         for body in [

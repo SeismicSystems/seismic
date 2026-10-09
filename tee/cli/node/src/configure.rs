@@ -455,6 +455,17 @@ pub async fn post_config_within(
     )
 }
 
+/// The flags that point `node status` at the node just configured: its node
+/// table, narrowed to it by name — `status` reads the whole table otherwise,
+/// even when the context names one node.
+fn status_flags(node: &NodeArgs, name: &str) -> String {
+    NodeArgs {
+        name: Some(name.to_string()),
+        ..node.clone()
+    }
+    .as_flags()
+}
+
 /// The success banner. Nothing prints it before the last gate. `record` is
 /// where the POSTed config was written.
 pub fn print_summary(fqdn: &str, public_ip: &str, record: &Path) {
@@ -731,7 +742,10 @@ async fn join(args: ConfigureArgs, config: Option<&Path>) -> anyhow::Result<Exit
             // the operator left; re-watch to see it settle.
             next_step::print(
                 "",
-                &[format!("seismic-tee node status{}", args.node.as_flags())],
+                &[format!(
+                    "seismic-tee node status --watch{}",
+                    status_flags(&args.node, &name)
+                )],
             );
             return Ok(ExitCode::SUCCESS);
         };
@@ -761,8 +775,8 @@ async fn join(args: ConfigureArgs, config: Option<&Path>) -> anyhow::Result<Exit
              within the watch window (attestation service :{ATTESTATION_RPC_PORT} never came \
              up, or the LUKS wipe errored). It may still be bootstrapping, or stuck — check \
              attestation-service logs on the node, then re-watch with:\n    seismic-tee node \
-             status{}",
-            args.node.as_flags(),
+             status --watch{}",
+            status_flags(&args.node, &name),
         );
     }
 
