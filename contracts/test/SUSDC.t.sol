@@ -22,6 +22,13 @@ interface IERC20 {
     function totalSupply() external view returns (uint256);
 }
 
+/// @dev xERC20-style mint/burn as seen by a bridge router (e.g. Hyperlane HypXERC20).
+///      Exercises selectors mint(address,uint256) 0x40c10f19 and burn(address,uint256) 0x9dc29fac.
+interface IXERC20MintBurn {
+    function mint(address to, uint256 amount) external;
+    function burn(address from, uint256 amount) external;
+}
+
 contract SUSDCTest is Test {
     SUSDC token;
     IERC20 erc20;
@@ -176,6 +183,83 @@ contract SUSDCTest is Test {
         vm.prank(bob);
         assertEq(erc20.balanceOf(bob), 50e6);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                              BRIDGE ROLE
+    //////////////////////////////////////////////////////////////*/
+
+    address bridge = makeAddr("bridge");
+
+    function test_SetBridgeEmitsAndStores() public {
+        vm.expectEmit(true, true, false, false);
+        emit SUSDC.BridgeUpdated(address(0), bridge);
+        token.setBridge(bridge);
+        assertEq(token.bridge(), bridge);
+    }
+
+    function test_RevertWhen_NonAdminSetsBridge() public {
+        vm.prank(alice);
+        vm.expectRevert("SUSDC: caller is not admin");
+        token.setBridge(bridge);
+    }
+
+    function test_BridgeMintsAndBurnsViaXERC20Selectors() public {
+        token.setBridge(bridge);
+        IXERC20MintBurn xerc20 = IXERC20MintBurn(address(token));
+
+        vm.prank(bridge);
+        xerc20.mint(alice, 100e6);
+        assertEq(token.totalSupply(), 100e6);
+        vm.prank(alice);
+        assertEq(erc20.balanceOf(alice), 100e6);
+
+        // Router burns from the transfer initiator without an allowance, like admin burn.
+        vm.prank(bridge);
+        xerc20.burn(alice, 30e6);
+        assertEq(token.totalSupply(), 70e6);
+        vm.prank(alice);
+        assertEq(erc20.balanceOf(alice), 70e6);
+    }
+
+    function test_BridgeCanUseShieldedMintBurn() public {
+        token.setBridge(bridge);
+        vm.prank(bridge);
+        token.mint(alice, suint256(5e6));
+        vm.prank(bridge);
+        token.burn(alice, suint256(2e6));
+        assertEq(token.totalSupply(), 3e6);
+    }
+
+    function test_AdminCanUseXERC20Selectors() public {
+        IXERC20MintBurn(address(token)).mint(alice, 1e6);
+        IXERC20MintBurn(address(token)).burn(alice, 1e6);
+        assertEq(token.totalSupply(), 0);
+    }
+
+    function test_RevertWhen_NonBridgeMintsOrBurns() public {
+        token.setBridge(bridge);
+        IXERC20MintBurn xerc20 = IXERC20MintBurn(address(token));
+
+        vm.prank(alice);
+        vm.expectRevert("SUSDC: caller is not admin or bridge");
+        xerc20.mint(alice, 1e6);
+
+        vm.prank(alice);
+        vm.expectRevert("SUSDC: caller is not admin or bridge");
+        xerc20.burn(alice, 1e6);
+
+        vm.prank(alice);
+        vm.expectRevert("SUSDC: caller is not admin or bridge");
+        token.mint(alice, suint256(1e6));
+    }
+
+    function test_ClearedBridgeLosesMintRights() public {
+        token.setBridge(bridge);
+        token.setBridge(address(0));
+        vm.prank(bridge);
+        vm.expectRevert("SUSDC: caller is not admin or bridge");
+        IXERC20MintBurn(address(token)).mint(alice, 1e6);
+    }
 }
 
 contract SUSDCProxyTest is Test {
@@ -295,6 +379,24 @@ contract SUSDCProxyTest is Test {
         assertEq(token.balanceOf(alice), 100e6);
         assertEq(token.totalSupply(), 100e6);
         assertEq(token.admin(), admin);
+    }
+
+    function test_BridgeRoleLivesInProxyStorage() public {
+        address bridge = makeAddr("bridge");
+        vm.prank(admin);
+        token.setBridge(bridge);
+        assertEq(token.bridge(), bridge);
+        assertEq(implementation.bridge(), address(0));
+
+        vm.prank(bridge);
+        IXERC20MintBurn(address(token)).mint(alice, 10e6);
+        assertEq(token.totalSupply(), 10e6);
+
+        // Survives upgrade: `bridge` is appended after `paused`.
+        SUSDC newImplementation = new SUSDC();
+        vm.prank(proxyOwner);
+        proxyAdmin.upgradeAndCall(ITransparentUpgradeableProxy(address(token)), address(newImplementation), "");
+        assertEq(token.bridge(), bridge);
     }
 
     function test_RevertWhen_NonOwnerUpgrades() public {
