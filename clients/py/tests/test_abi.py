@@ -171,6 +171,103 @@ class TestHasShieldedParams:
 
 
 class TestEncodeShieldedCalldata:
+    @pytest.mark.parametrize("reverse", [False, True])
+    @pytest.mark.parametrize(
+        ("param_type", "value"),
+        [
+            ("uint256", 42),
+            ("address", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+        ],
+    )
+    def test_overload_selected_by_arguments(self, reverse, param_type, value):
+        abi = [
+            {
+                "type": "function",
+                "name": "lookup",
+                "inputs": [{"type": ty}],
+            }
+            for ty in ("uint256", "address")
+        ]
+        if reverse:
+            abi.reverse()
+
+        calldata = encode_shielded_calldata(abi, "lookup", [value])
+
+        expected = keccak(f"lookup({param_type})".encode())[:4]
+        assert bytes(calldata) == expected + encode([param_type], [value])
+
+    @pytest.mark.parametrize("args", [[], [42], [42, 7]])
+    def test_overload_selected_by_argument_count(self, args):
+        abi = [
+            {
+                "type": "function",
+                "name": "lookup",
+                "inputs": [{"type": "uint256"}] * count,
+            }
+            for count in (2, 1, 0)
+        ]
+        types = ["uint256"] * len(args)
+        expected = keccak(f"lookup({','.join(types)})".encode())[:4]
+
+        assert bytes(encode_shielded_calldata(abi, "lookup", args)) == (
+            expected + encode(types, args)
+        )
+
+    def test_overload_matches_remapped_tuple_array(self):
+        abi = [
+            {
+                "type": "function",
+                "name": "lookup",
+                "inputs": [{"type": "saddress"}],
+            },
+            {
+                "type": "function",
+                "name": "lookup",
+                "inputs": [
+                    {
+                        "type": "tuple[]",
+                        "components": [{"type": "suint256"}, {"type": "sbool"}],
+                    },
+                ],
+            },
+        ]
+        args = [[(42, True)]]
+        expected = keccak(b"lookup((suint256,sbool)[])")[:4]
+
+        assert bytes(encode_shielded_calldata(abi, "lookup", args)) == (
+            expected + encode(["(uint256,bool)[]"], args)
+        )
+
+    @pytest.mark.parametrize("args", [[], [True], [42, 7]])
+    def test_no_matching_overload_raises(self, args):
+        abi = [
+            {
+                "type": "function",
+                "name": "lookup",
+                "inputs": [{"type": ty}],
+            }
+            for ty in ("uint256", "address")
+        ]
+        with pytest.raises(ValueError, match="No matching overload"):
+            encode_shielded_calldata(abi, "lookup", args)
+
+    @pytest.mark.parametrize("types", [("uint8", "uint256"), ("uint256", "suint256")])
+    @pytest.mark.parametrize("reverse", [False, True])
+    def test_ambiguous_overload_raises(self, types, reverse):
+        abi = [
+            {
+                "type": "function",
+                "name": "lookup",
+                "inputs": [{"type": ty}],
+            }
+            for ty in types
+        ]
+        if reverse:
+            abi.reverse()
+
+        with pytest.raises(ValueError, match="Ambiguous overload"):
+            encode_shielded_calldata(abi, "lookup", [42])
+
     def test_selector_uses_original_types(self):
         """The 4-byte selector must be computed from "setNumber(suint256)",
         not "setNumber(uint256)"."""
