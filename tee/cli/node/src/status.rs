@@ -1,11 +1,17 @@
-//! `status`: watch a node's first-boot LUKS-provisioning progress.
+//! `status`: the live state of every node in the node table, and what it
+//! says about the network; and the first-boot disk-wipe watch `configure`
+//! waits on after its POST.
 //!
-//! The attestation service serves `getLuksProvisioningStatus` on `:7878`
-//! (JSON-RPC) for the duration of the first-boot disk wipe — the one long
-//! (1h+), otherwise opaque phase. This module polls it and renders a progress
-//! bar, and is the shared poller behind both `seismic-tee node status` and
-//! `configure`'s default post-POST wait (and the founding cohort's dashboard,
-//! which is why the state machine renders nothing itself).
+//! The command reads each node through [`crate::probe`] — reachable, awaiting
+//! or past its config, its candidate against the manifest's pin, key holder,
+//! disk — and prints a row per node under a network line: live, unfounded, or
+//! no reachable key holder. `--watch` re-reads and repaints until ctrl-C.
+//!
+//! The watch: the attestation service serves `getLuksProvisioningStatus` on
+//! `:7878` (JSON-RPC) through the first-boot disk wipe — the one long (1h+),
+//! otherwise opaque phase. [`poll_provisioning`] polls it to completion, and
+//! is the shared poller behind `configure`'s post-POST wait and the founding
+//! cohort's dashboard, which is why the state machine renders nothing itself.
 //!
 //! States, as the attestation service's `LuksProvisioningStatus` serializes
 //! them:
@@ -23,20 +29,29 @@
 //! only the wipe — it is NOT a node-readiness gate (summit/reth/genesis come
 //! later).
 
+use std::collections::BTreeMap;
 use std::io::{IsTerminal as _, Write as _};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
-use anyhow::Context as _;
 use clap::Args;
 use jsonrpsee::rpc_params;
-use seismic_tee_common::http::ATTESTATION_RPC_PORT;
-use seismic_tee_common::{Error, rpc};
+use seismic_tee_common::founding::load_harvest_records;
+use seismic_tee_common::http::{ATTESTATION_RPC_PORT, HARVEST_PORT};
+use seismic_tee_common::{
+    Descriptors, Error, NetworkDir, http, next_step, note, rpc, select_descriptor,
+};
+use seismic_tee_context::{Context, load_nodes};
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use crate::args::NodeArgs;
+use crate::dashboard::Painter;
+use crate::load_manifest;
+use crate::probe::{
+    self, Asked, ConfigState, Disk, Founding, NetworkState, NodeState, assess, probe_all,
+};
 
 /// The attestation service's status method.
 pub const RPC_METHOD: &str = "getLuksProvisioningStatus";
@@ -435,43 +450,448 @@ pub async fn watch_luks_provisioning(client: &rpc::Client, interval: Duration) -
 }
 
 #[derive(Debug, Args)]
+#[command(after_help = "Examples:\n  \
+    seismic-tee node status                    every node in the selected network, and the network line\n  \
+    seismic-tee node status --name alpha       one node\n  \
+    seismic-tee node status --watch            repaint every 5s until ctrl-C\n  \
+    seismic-tee node status --json             the same reading, for a script\n  \
+    seismic-tee node status --node nodes.json --manifest network-manifest.json")]
 pub struct StatusArgs {
+    /// The node table: every node in it is read. --name narrows it to one.
     #[command(flatten)]
     pub node: NodeArgs,
 
-    /// Print the current status as JSON and exit (no polling).
-    #[arg(long)]
-    pub once: bool,
+    /// Network manifest JSON, for its pinned candidate (founding_tx_io_pk)
+    /// and the harvest records beside it, which name the pinned box. Omit it
+    /// to use the current context's network; without either, a node's
+    /// candidate is shown but not judged, and the network never reads as
+    /// unfounded.
+    #[arg(long, value_name = "FILE")]
+    pub manifest: Option<PathBuf>,
 
-    /// Poll interval (default 5s).
-    #[arg(long, value_name = "SECONDS", default_value_t = POLL_INTERVAL.as_secs())]
+    /// Re-read every node and repaint, until ctrl-C.
+    #[arg(long)]
+    pub watch: bool,
+
+    /// With --watch: seconds between readings.
+    #[arg(
+        long,
+        value_name = "SECONDS",
+        default_value_t = POLL_INTERVAL.as_secs(),
+        requires = "watch"
+    )]
     pub interval: u64,
+
+    /// Print the reading as JSON on stdout.
+    #[arg(long, conflicts_with = "watch")]
+    pub json: bool,
+}
+
+impl StatusArgs {
+    /// The flags that name this node table and manifest, for a suggested
+    /// command acting on the same nodes. `--name` is left to the caller.
+    fn table_flags(&self) -> String {
+        let mut flags = String::new();
+        if let Some(node) = &self.node.node {
+            flags.push_str(&format!(" --node {}", node.display()));
+        } else if let Some(context) = &self.node.context.context {
+            flags.push_str(&format!(" --context {context}"));
+        }
+        flags
+    }
+
+    fn manifest_flag(&self) -> String {
+        self.manifest
+            .as_ref()
+            .map(|path| format!(" --manifest {}", path.display()))
+            .unwrap_or_default()
+    }
+}
+
+/// The node table, narrowed by `--name`: `--node FILE` when given, else the
+/// context's network.
+fn load_table(args: &StatusArgs, config: Option<&Path>) -> anyhow::Result<Descriptors> {
+    let nodes = load_nodes(
+        args.node.node.as_deref(),
+        &args.node.context,
+        config,
+        "--node",
+    )?;
+    let Some(name) = args.node.name.as_deref() else {
+        return Ok(nodes);
+    };
+    let holder = match &args.node.node {
+        Some(path) => path.display().to_string(),
+        None => "the node table".to_string(),
+    };
+    let (name, descriptor) = select_descriptor(&nodes, Some(name), &holder)?;
+    Ok(Descriptors::from([(name.to_string(), descriptor.clone())]))
+}
+
+/// The founding the manifest and its harvest pin, when a manifest is at
+/// hand: `--manifest`, else the context network's, when it has a directory
+/// and that directory has been assembled. An explicit `--node` keeps the
+/// context unread, as everywhere.
+fn load_founding(args: &StatusArgs, config: Option<&Path>) -> anyhow::Result<Option<Founding>> {
+    let path = match &args.manifest {
+        Some(path) => path.clone(),
+        None if args.node.node.is_some() => return Ok(None),
+        None => {
+            let context = Context::load(config)?;
+            let selected = context.select(args.node.context.context.as_deref())?;
+            if selected.network.dir.is_none() {
+                return Ok(None);
+            }
+            let path = selected.manifest()?;
+            if !path.is_file() {
+                return Ok(None);
+            }
+            path
+        }
+    };
+    let manifest = load_manifest(&path)?;
+    let dir = NetworkDir::of_manifest(&path);
+    let records = if dir.harvest().is_dir() {
+        match load_harvest_records(&dir) {
+            Ok(records) => Some(records),
+            Err(error) => {
+                note(&format_args!(
+                    "harvest records unreadable, so the pinned box is unknown: {error:#}"
+                ));
+                None
+            }
+        }
+    } else {
+        None
+    };
+    Ok(Some(Founding::new(&manifest, records.as_ref())))
+}
+
+/// A `:7879` reading, as `--json` spells it.
+fn config_value(config: &ConfigState) -> &'static str {
+    match config {
+        ConfigState::Awaiting { .. } => "awaiting",
+        ConfigState::Configured => "configured",
+        ConfigState::NotReady(_) => "not_ready",
+        ConfigState::Refused(_) => "refused",
+        ConfigState::NoAnswer(_) => "no_answer",
+    }
+}
+
+/// A `:7879` reading, as the table shows it: no answer is `-`, as in every
+/// other column.
+fn config_cell(config: &ConfigState) -> &'static str {
+    match config {
+        ConfigState::NotReady(_) => "not ready",
+        ConfigState::NoAnswer(_) => "-",
+        other => config_value(other),
+    }
+}
+
+/// An awaiting node's candidate, judged against the pin when one is known.
+fn candidate_cell(config: &ConfigState, founding: Option<&Founding>) -> String {
+    let ConfigState::Awaiting {
+        candidate_tx_io_public_key,
+        ..
+    } = config
+    else {
+        return "-".to_string();
+    };
+    match founding {
+        Some(founding) if founding.pins(candidate_tx_io_public_key) => "pinned".to_string(),
+        Some(_) => "not pinned".to_string(),
+        None => format!("0x{}…", &candidate_tx_io_public_key[..8]),
+    }
+}
+
+fn disk_cell(key_holder: Option<&Disk>) -> String {
+    match key_holder {
+        None => "-".to_string(),
+        Some(Disk::Error(_)) => "unread".to_string(),
+        Some(Disk::Status(status)) => match LuksProvisioningStatus::from_result(status) {
+            LuksProvisioningStatus::Idle => "idle".to_string(),
+            LuksProvisioningStatus::Provisioning {
+                bytes_done,
+                bytes_total,
+                eta_seconds,
+            } => format_provisioning(bytes_done, bytes_total, eta_seconds),
+            LuksProvisioningStatus::Error { error } => format!("error, retrying: {error}"),
+            LuksProvisioningStatus::Unknown => "unknown".to_string(),
+            LuksProvisioningStatus::Other(state) => state,
+        },
+    }
+}
+
+fn yes_no(value: bool) -> &'static str {
+    if value { "yes" } else { "no" }
+}
+
+/// The network line, without its next step.
+fn network_line(network: &NetworkState) -> String {
+    let reading = match network {
+        NetworkState::Live { key_holders } => {
+            format!("live — key holder(s): {}", key_holders.join(", "))
+        }
+        NetworkState::Unfounded { pinned_box } => format!(
+            "unfounded — the pinned box {pinned_box} awaits its config, still holding the pinned \
+             candidate"
+        ),
+        NetworkState::NoReachableKeyHolder(Asked::EveryFounder {
+            pinned_box,
+            pinned_box_answered: true,
+        }) => format!(
+            "no reachable key holder — every founding node is in this node table, and the pinned \
+             box {pinned_box} no longer holds the pinned candidate: the founding root_key is gone"
+        ),
+        NetworkState::NoReachableKeyHolder(Asked::EveryFounder {
+            pinned_box,
+            pinned_box_answered: false,
+        }) => format!(
+            "no reachable key holder — the pinned box {pinned_box} does not answer: still \
+             booting, or gone"
+        ),
+        NetworkState::NoReachableKeyHolder(Asked::Some) => "no reachable key holder among these \
+             nodes — a node table without every founding node says nothing about the rest of the \
+             network"
+            .to_string(),
+    };
+    format!("network: {reading}")
+}
+
+/// One reading of the node table, rendered.
+struct Report<'a> {
+    states: &'a BTreeMap<String, NodeState>,
+    founding: Option<&'a Founding>,
+    network: NetworkState,
+}
+
+impl<'a> Report<'a> {
+    fn new(states: &'a BTreeMap<String, NodeState>, founding: Option<&'a Founding>) -> Self {
+        Self {
+            states,
+            founding,
+            network: assess(states, founding),
+        }
+    }
+
+    /// The table, what a cell could not hold, and the network line.
+    fn lines(&self) -> Vec<String> {
+        let header = [
+            "NODE",
+            "REACHABLE",
+            "CONFIG",
+            "CANDIDATE",
+            "KEY HOLDER",
+            "DISK",
+        ]
+        .map(String::from);
+        let mut rows = vec![header];
+        let mut details = Vec::new();
+        for (name, state) in self.states {
+            rows.push([
+                name.clone(),
+                yes_no(state.reachable()).to_string(),
+                config_cell(&state.config).to_string(),
+                candidate_cell(&state.config, self.founding),
+                yes_no(state.key_holder.is_some()).to_string(),
+                disk_cell(state.key_holder.as_ref()),
+            ]);
+            if let ConfigState::NotReady(message) | ConfigState::Refused(message) = &state.config {
+                details.push(format!("{name}: :{HARVEST_PORT}: {message}"));
+            }
+            if let Some(Disk::Error(message)) = &state.key_holder {
+                details.push(format!("{name}: :{ATTESTATION_RPC_PORT}: {message}"));
+            }
+        }
+        let mut widths = [0; 6];
+        for row in &rows {
+            for (width, cell) in widths.iter_mut().zip(row) {
+                *width = (*width).max(cell.chars().count());
+            }
+        }
+        let mut lines: Vec<String> = rows
+            .iter()
+            .map(|row| {
+                let mut line = String::new();
+                for (i, (cell, width)) in row.iter().zip(widths).enumerate() {
+                    if i + 1 == row.len() {
+                        line.push_str(cell);
+                    } else {
+                        line.push_str(&format!("{cell:<width$}  "));
+                    }
+                }
+                line.trim_end().to_string()
+            })
+            .collect();
+        lines.extend(details);
+        lines.push(String::new());
+        lines.push(network_line(&self.network));
+        lines
+    }
+
+    /// The nodes awaiting their config.
+    fn awaiting(&self) -> Vec<&str> {
+        self.states
+            .iter()
+            .filter(|(_, state)| matches!(state.config, ConfigState::Awaiting { .. }))
+            .map(|(name, _)| name.as_str())
+            .collect()
+    }
+
+    /// The command to run next, with its lead.
+    fn next_step(&self, args: &StatusArgs) -> Option<(String, Vec<String>)> {
+        let table = args.table_flags();
+        let manifest = args.manifest_flag();
+        let join = |lead: &str| {
+            let awaiting = self.awaiting();
+            (!awaiting.is_empty()).then(|| {
+                (
+                    lead.to_string(),
+                    awaiting
+                        .iter()
+                        .map(|name| {
+                            format!(
+                                "seismic-tee node configure{table} --name {name} --bootnode \
+                                 <ENODE>{manifest}"
+                            )
+                        })
+                        .collect(),
+                )
+            })
+        };
+        match &self.network {
+            NetworkState::Unfounded { pinned_box } => Some((
+                "found it:".to_string(),
+                vec![format!(
+                    "seismic-tee node configure{table} --genesis-node {pinned_box}{manifest}"
+                )],
+            )),
+            NetworkState::Live { key_holders } => join(&format!(
+                "join through a key holder's enode (`seismic_nodeInfo` on {}):",
+                key_holders[0]
+            )),
+            NetworkState::NoReachableKeyHolder(Asked::EveryFounder {
+                pinned_box_answered: true,
+                ..
+            }) => {
+                let dir = args
+                    .manifest
+                    .as_deref()
+                    .map(NetworkDir::of_manifest)
+                    .filter(|dir| !dir.root().as_os_str().is_empty())
+                    .map(|dir| format!(" {}", dir.root().display()))
+                    .unwrap_or_default();
+                // The fresh boxes keep their names, so their harvest records
+                // are already there to replace.
+                Some((
+                    "re-found: `pulumi destroy`, a fresh `pulumi up`, then".to_string(),
+                    vec![format!("seismic-tee node harvest{dir}{table} --force")],
+                ))
+            }
+            NetworkState::NoReachableKeyHolder(Asked::EveryFounder {
+                pinned_box_answered: false,
+                ..
+            }) => Some((
+                "watch for it to come up:".to_string(),
+                vec![format!("seismic-tee node status --watch{table}{manifest}")],
+            )),
+            NetworkState::NoReachableKeyHolder(Asked::Some) => {
+                join("join through a live peer's enode (its `seismic_nodeInfo`):")
+            }
+        }
+    }
+
+    fn json(&self) -> Value {
+        let nodes: serde_json::Map<String, Value> = self
+            .states
+            .iter()
+            .map(|(name, state)| {
+                let (candidate, pinned) = match &state.config {
+                    ConfigState::Awaiting {
+                        candidate_tx_io_public_key,
+                        ..
+                    } => (
+                        Some(candidate_tx_io_public_key.as_str()),
+                        self.founding.map(|f| f.pins(candidate_tx_io_public_key)),
+                    ),
+                    _ => (None, None),
+                };
+                let disk = match &state.key_holder {
+                    Some(Disk::Status(status)) => status.clone(),
+                    Some(Disk::Error(message)) => json!({"error": message}),
+                    None => Value::Null,
+                };
+                (
+                    name.clone(),
+                    json!({
+                        "reachable": state.reachable(),
+                        "config": config_value(&state.config),
+                        "candidate_tx_io_public_key": candidate,
+                        "candidate_pinned": pinned,
+                        "key_holder": state.key_holder.is_some(),
+                        "disk": disk,
+                    }),
+                )
+            })
+            .collect();
+        let network = match &self.network {
+            NetworkState::Live { key_holders } => {
+                json!({"state": "live", "key_holders": key_holders})
+            }
+            NetworkState::Unfounded { pinned_box } => {
+                json!({"state": "unfounded", "pinned_box": pinned_box})
+            }
+            NetworkState::NoReachableKeyHolder(Asked::EveryFounder {
+                pinned_box,
+                pinned_box_answered,
+            }) => json!({
+                "state": "no_reachable_key_holder",
+                "every_founder_asked": true,
+                "pinned_box": pinned_box,
+                "pinned_box_answered": pinned_box_answered,
+            }),
+            NetworkState::NoReachableKeyHolder(Asked::Some) => json!({
+                "state": "no_reachable_key_holder",
+                "every_founder_asked": false,
+            }),
+        };
+        json!({"nodes": nodes, "network": network})
+    }
 }
 
 pub async fn run(args: StatusArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
-    let (_, descriptor) = args.node.load(config)?;
-    let client = rpc::Client::new(&descriptor.attestation_rpc_url())?;
+    let table = load_table(&args, config)?;
+    let founding = load_founding(&args, config)?;
+    let targets = probe::targets(&table);
+    let client = http::client()?;
 
-    if args.once {
-        let status = match fetch_status(&client).await {
-            Ok(status) => status,
-            // The service answered: its error already names the endpoint and
-            // the reason, and "not reachable" would be untrue.
-            Err(error @ Error::Rpc { .. }) => return Err(error.into()),
-            Err(error) => {
-                return Err(error).with_context(|| {
-                    format!("attestation service :{ATTESTATION_RPC_PORT} not reachable")
-                });
-            }
-        };
-        println!("{status}");
+    if !args.watch {
+        let states = probe_all(&client, &targets).await;
+        let report = Report::new(&states, founding.as_ref());
+        if args.json {
+            println!("{}", report.json());
+            return Ok(ExitCode::SUCCESS);
+        }
+        for line in report.lines() {
+            println!("{line}");
+        }
+        if let Some((lead, commands)) = report.next_step(&args) {
+            next_step::print(&lead, &commands);
+        }
         return Ok(ExitCode::SUCCESS);
     }
 
-    tokio::select! {
-        ok = watch_luks_provisioning(&client, Duration::from_secs(args.interval)) => {
-            Ok(if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE })
+    let interval = Duration::from_secs(args.interval);
+    let mut painter = Painter::new();
+    let watch = async {
+        loop {
+            let states = probe_all(&client, &targets).await;
+            painter.paint(&Report::new(&states, founding.as_ref()).lines());
+            tokio::time::sleep(interval).await;
         }
+    };
+    tokio::select! {
+        () = watch => unreachable!("the watch runs until ctrl-C"),
         _ = tokio::signal::ctrl_c() => {
             println!("\nStopped watching.");
             Ok(ExitCode::from(130))
@@ -484,9 +904,102 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::test_support::{FakeServer, refused_url, rpc_result};
+    use crate::test_support::{
+        FIXTURE_FOUNDING_TX_IO_PK, FakeServer, candidate_tx_io_public_key, refused_url, rpc_result,
+    };
 
     const GIB: u64 = 1 << 30;
+
+    fn status_args(argv: &[&str]) -> StatusArgs {
+        #[derive(clap::Parser)]
+        struct Cli {
+            #[command(flatten)]
+            status: StatusArgs,
+        }
+        <Cli as clap::Parser>::parse_from(std::iter::once("status").chain(argv.iter().copied()))
+            .status
+    }
+
+    /// The pinned box re-minted (its candidate is no longer the pin) and the
+    /// other founders are configured: the founding root_key is gone.
+    fn lost_founding() -> (BTreeMap<String, NodeState>, Founding) {
+        let awaiting = |candidate: String| NodeState {
+            config: ConfigState::Awaiting {
+                node_public_key: "ab".repeat(32),
+                candidate_tx_io_public_key: candidate,
+            },
+            key_holder: None,
+        };
+        let configured = || NodeState {
+            config: ConfigState::Configured,
+            key_holder: None,
+        };
+        let states = BTreeMap::from([
+            (
+                "alpha".to_string(),
+                awaiting(candidate_tx_io_public_key("aa")),
+            ),
+            ("beta".to_string(), configured()),
+        ]);
+        let founding = Founding {
+            pin: FIXTURE_FOUNDING_TX_IO_PK.to_string(),
+            pinned_box: Some("alpha".to_string()),
+            founders: ["alpha", "beta"].map(String::from).into(),
+        };
+        (states, founding)
+    }
+
+    /// The fresh boxes keep their names, so the harvest the re-found step
+    /// names has records to replace: without --force it would refuse.
+    #[test]
+    fn the_re_found_step_replaces_the_harvest_in_the_manifests_directory() {
+        let (states, founding) = lost_founding();
+        let report = Report::new(&states, Some(&founding));
+        let args = status_args(&[
+            "--node",
+            "nodes.json",
+            "--manifest",
+            "net/network-manifest.json",
+        ]);
+        let (_, commands) = report.next_step(&args).unwrap();
+        assert_eq!(
+            commands,
+            ["seismic-tee node harvest net --node nodes.json --force"]
+        );
+
+        // A manifest in the working directory leaves DIR out, not blank.
+        let args = status_args(&[
+            "--node",
+            "nodes.json",
+            "--manifest",
+            "network-manifest.json",
+        ]);
+        let (_, commands) = report.next_step(&args).unwrap();
+        assert_eq!(
+            commands,
+            ["seismic-tee node harvest --node nodes.json --force"]
+        );
+    }
+
+    #[test]
+    fn json_spells_every_config_reading_as_a_word() {
+        for (config, value) in [
+            (ConfigState::Configured, "configured"),
+            (ConfigState::NotReady("HTTP 503".to_string()), "not_ready"),
+            (ConfigState::Refused("HTTP 404".to_string()), "refused"),
+            (ConfigState::NoAnswer("refused".to_string()), "no_answer"),
+        ] {
+            let states = BTreeMap::from([(
+                "alpha".to_string(),
+                NodeState {
+                    config,
+                    key_holder: None,
+                },
+            )]);
+            let json = Report::new(&states, None).json();
+            assert_eq!(json["nodes"]["alpha"]["config"], value, "{json}");
+        }
+    }
 
     fn now() -> Instant {
         Instant::now()
