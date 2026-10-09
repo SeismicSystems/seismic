@@ -103,14 +103,14 @@
   </g>
   <g class="chip pervm" transform="translate(820,598)">
     <rect width="360" height="44" rx="10"/>
-    <text x="180" y="23">nginx TLS certificate key</text>
+    <text x="180" y="23">caddy TLS certificate key</text>
   </g>
 
   <!-- ================= /persistent volume ================= -->
   <g class="volume">
     <rect class="volume" x="520" y="860" width="700" height="130" rx="16"/>
     <text class="volume-title" x="870" y="915" text-anchor="middle">/persistent — LUKS2</text>
-    <text x="870" y="950" text-anchor="middle">reth datadir · summit keys and db · certbot state</text>
+    <text x="870" y="950" text-anchor="middle">reth datadir · summit keys and db · caddy certificate</text>
   </g>
 
   <!-- LUKS keys unlock the volume -->
@@ -167,7 +167,7 @@
   </g>
   <g class="chip pervm" transform="translate(1490,598)">
     <rect width="220" height="44" rx="10"/>
-    <text x="110" y="23">nginx TLS cert key</text>
+    <text x="110" y="23">caddy TLS cert key</text>
   </g>
   <text class="sub" x="1490" y="684">same kinds of keys — its own randomness</text>
 

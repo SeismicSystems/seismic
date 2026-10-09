@@ -66,7 +66,7 @@
   <!-- band 1: what the network reaches -->
   <g class="node" transform="translate(160,300)">
     <rect width="400" height="110" rx="12"/>
-    <text class="name" x="200" y="44">nginx :443</text>
+    <text class="name" x="200" y="44">caddy :443</text>
     <text class="sub" x="200" y="76">the only TLS terminator</text>
   </g>
   <g class="node" transform="translate(760,300)">
@@ -146,7 +146,7 @@
   <g class="node volume" transform="translate(160,1440)">
     <rect width="1600" height="140" rx="14"/>
     <text class="name" x="800" y="56">/persistent — LUKS2</text>
-    <text class="sub" x="800" y="92">reth datadir · summit keystore and db · certbot state</text>
+    <text class="sub" x="800" y="92">reth datadir · summit keystore and db · caddy certificate</text>
   </g>
 
   <!-- ================= client plane ================= -->

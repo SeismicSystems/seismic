@@ -63,7 +63,7 @@ process holds it, and says what anchors it.
 Five long-lived processes, and the oneshots that prepare them, all measured
 into the image:
 
-![the guest's processes and what reaches each one: clients through nginx,
+![the guest's processes and what reaches each one: clients through Caddy,
 the operator on tdx-init and on the attestation service's harvest and status
 endpoints, peers on summit, reth, and the attestation service; the custodian
 holds root_key behind a unix socket; the setup units hand state to the
@@ -78,7 +78,7 @@ survives a reboot](diagrams/node-processes.svg)
 | `summit-keygen`, `summit-persist` | Summit's consensus keypairs, as two oneshots and no process: one runs `summit keys generate` into tmpfs at boot, before any configuration exists, and the other copies the keys into summit's keystore once `/persistent` is mounted ([network founding](network-founding.md#summits-keys-before-luks)). |
 | `reth` | Execution: the EVM, Ethereum JSON-RPC, chain state, and the tx-gossip plane. |
 | `summit` | Consensus: BFT voting, checkpoints, and reth's forkchoice over the Engine API. |
-| `nginx` | TLS termination and path routing to loopback backends. Its certificate key is generated in the guest and renewed by certbot. |
+| `caddy` | The public HTTPS proxy: TLS termination and path routing to loopback backends, as an unprivileged user. It takes and renews its certificate itself, from Let's Encrypt or ZeroSSL, with a key generated in the guest. |
 
 Unit ordering, users, groups, and flag-by-flag rationale live with the image
 that ships them, in the
@@ -161,7 +161,7 @@ sequenceDiagram
         participant SP as summit-persist<br/>(oneshot)
         participant SU as summit
         participant RE as reth
-        participant NG as nginx
+        participant CA as caddy
     end
 
     Note over O: provision: pulumi up —<br/>the box boots the measured image
@@ -183,7 +183,7 @@ sequenceDiagram
     end
 
     O->>TI: node configure — POST manifest + reth genesis + summit genesis<br/>(founding: the pinned box first)
-    TI-)NG: domain.env
+    TI-)CA: domain.env
     destroy TI
     TI-)AS: /run/seismic/conf, then its done marker
     Note over AS: :7879 now serves only /v1/keys,<br/>/v1/quote answers 410
@@ -213,9 +213,11 @@ sequenceDiagram
     SP-)SU: keystore in<br/>/persistent/summit/keys
     Note over SU: systemd starts summit,<br/>which only reads the keystore
     SU->>RE: Engine API — drives forkchoice
-    Note over NG: systemd starts nginx-ssl-setup<br/>once /persistent is mounted:<br/>first boot: certbot takes the certificate<br/>every boot: starts nginx
-    NG->>RE: proxies /rpc and /ws
-    Note over NG: nothing waits on it: a failed<br/>certificate costs public HTTPS only
+    Note over CA: systemd starts caddy<br/>once /persistent is mounted:<br/>first boot: takes the certificate<br/>then renews it in-process
+    CA->>RE: proxies /rpc, /ws, /metrics/reth
+    CA->>SU: proxies /summit, /metrics/summit
+    CA->>AS: proxies /attestation
+    Note over CA: nothing waits on it: a failed<br/>certificate costs public HTTPS only
 
     opt founding only
         O->>AS: launch checks — GET :7879/v1/keys
@@ -325,7 +327,7 @@ node's cloud firewall rules
 
 | Port | Source | What answers |
 | --- | --- | --- |
-| `:443`, `:80` | anyone | nginx, proxying `/rpc` and `/ws` to reth, `/summit` to summit's JSON-RPC (health, checkpoints, staking and deposit queries), `/attestation` to the attestation service, and `/metrics/reth` + `/metrics/summit` to the two Prometheus endpoints |
+| `:443` | anyone | Caddy, proxying `/rpc` and `/ws` to reth, `/summit` to summit's JSON-RPC (health, checkpoints, staking and deposit queries), `/attestation` to the attestation service, and `/metrics/reth` + `/metrics/summit` to the two Prometheus endpoints |
 | `:7878` | anyone | the attestation service directly: the root-key handshake, tx-io evidence, health, first-boot disk-provisioning progress, and admission-chain status |
 | `:18551` | anyone | summit's consensus plane |
 | `:30303` TCP+UDP | anyone | reth's devp2p plane |
@@ -412,7 +414,7 @@ unrepresentable, and a node that must fetch `root_key` but is POSTed with no
 usable peer fails the POST rather than booting with no way to obtain it
 ([`peers.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/tdx-init/src/peers.rs)).
 
-Browsers reach the attestation service through nginx's `/attestation` route
+Browsers reach the attestation service through Caddy's `/attestation` route
 instead, since mixed-content rules bar a plain-HTTP fetch from an HTTPS origin.
 The TLS hop is hygiene, not a boundary: the evidence a browser fetches is
 verifiable on its own.
@@ -578,7 +580,7 @@ per-VM keys persist inside LUKS](diagrams/key-families.svg)
 | summit BLS12-381 | per-VM random | born at boot in tmpfs by `summit-keygen`, persisted under `/persistent/summit/keys` | the harvest quote at founding; the validator set the manifest pins, or the deposit path afterwards |
 | summit Ed25519 | per-VM random | same | same, and it is the commonware-p2p peer id |
 | reth devp2p secp256k1 | per-VM random | generated by reth at `<datadir>/discovery-secret`, inside LUKS | nothing — transport identity only; its public form is served by `seismic_nodeInfo` |
-| nginx TLS certificate key | per-VM random | generated in the guest, stored with certbot's state inside LUKS | Let's Encrypt, renewed on a timer |
+| TLS certificate key | per-VM random | generated in the guest by Caddy, stored in `/persistent/caddy` inside LUKS | Let's Encrypt, or ZeroSSL when that fails; renewed by Caddy |
 
 The per-VM keys are stable for the life of the node because they sit on the LUKS
 volume — the enode a peer dialed yesterday still answers today.
@@ -684,7 +686,7 @@ with the responder still attesting the joiner.
 ## `/persistent`: the LUKS volume
 
 One LUKS2 volume holds everything a node keeps across boots: reth's datadir,
-summit's keystore and database, and certbot's certificates. Its unlock key is
+summit's keystore and database, and Caddy's certificate. Its unlock key is
 derived from `root_key`, so the volume is readable only by a guest that the
 network has admitted. No human and no cloud operator ever holds the unlock
 material, and there is no TPM seal to migrate or scrub.
@@ -796,6 +798,18 @@ shares the service's privileges, while a oneshot setup unit runs once per boot
 under its own sandbox, and systemd already expresses the ordering. A
 long-running process kept only to carry state between phases costs a
 lifecycle, an IPC surface and a crash mode for something a tmpfs file does.
+
+**An unprivileged Caddy rather than nginx and certbot**
+([what the outside can reach](#what-the-outside-can-reach)). In-guest root
+defeats every access control on the node: root can read `root_key` out of the
+custodian's memory, whatever the socket's ACL or the units' sandboxing. So the
+lever left is running as little as possible as root, and the public proxy is
+the most exposed process on the node while nothing in its job needs
+privilege: binding `:443` takes `CAP_NET_BIND_SERVICE` alone. nginx runs its
+master as root, and certbot is a root Python process that talks to the network
+and rewrites the proxy's config. Caddy takes and renews its certificate in the
+same unprivileged process that serves, from a static config in the measured
+image, so every node runs the config its measurement names.
 
 **`root_key` in RAM only, with no on-disk backup**
 ([key custody](#key-custody-one-process-holds-root_key)). Sealing it to the

@@ -8,7 +8,7 @@
 //! beside the descriptors as `nodes/bootnodes.json`.
 //!
 //! `seismic_nodeInfo` is read over the node's public JSON-RPC
-//! (`https://<fqdn>/rpc`, nginx in front of reth) with the same client the
+//! (`https://<fqdn>/rpc`, the HTTPS proxy in front of reth) with the same client the
 //! attestation service is read with ([`rpc::Client`]); the `seismic` namespace
 //! deliberately keeps nodeInfo public (reth's `admin` namespace is disabled on
 //! these nodes).
