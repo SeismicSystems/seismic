@@ -5,7 +5,11 @@ import "seismic-std-lib/SRC20.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /// @notice A basic USDC-like stablecoin built on SRC20 with shielded balances.
-/// @dev 6 decimals, admin-controlled minting/burning, pausable.
+/// @dev 6 decimals, admin-controlled minting/burning, pausable. An optional
+/// `bridge` (e.g. a Hyperlane `HypXERC20` router) may also mint and burn via the
+/// plain-`uint256` overloads, which resolve to the xERC20/ERC20 selectors
+/// (`mint(address,uint256)` 0x40c10f19, `burn(address,uint256)` 0x9dc29fac)
+/// that bridge contracts written against IERC20-style interfaces invoke.
 ///
 /// Deployable two ways:
 /// - Directly: the constructor sets metadata and `admin = msg.sender`.
@@ -16,17 +20,25 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 ///
 /// Upgrade-safety: SRC20's storage layout is the base of this contract's
 /// layout. Never reorder or insert variables in SRC20 or before `admin`;
-/// future versions may only append new variables after `paused`.
+/// future versions may only append new variables after `bridge`.
 contract SUSDC is SRC20, Initializable {
     address public admin;
     bool public paused;
+    /// @notice Address allowed to mint and burn besides `admin` (zero = none).
+    address public bridge;
 
     event AdminTransferred(address indexed oldAdmin, address indexed newAdmin);
+    event BridgeUpdated(address indexed oldBridge, address indexed newBridge);
     event Paused(address indexed account);
     event Unpaused(address indexed account);
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "SUSDC: caller is not admin");
+        _;
+    }
+
+    modifier onlyAdminOrBridge() {
+        require(msg.sender == admin || msg.sender == bridge, "SUSDC: caller is not admin or bridge");
         _;
     }
 
@@ -59,12 +71,18 @@ contract SUSDC is SRC20, Initializable {
         return computeDomainSeparator();
     }
 
-    function mint(address to, suint256 amount) external onlyAdmin {
+    function mint(address to, suint256 amount) external onlyAdminOrBridge {
         _mint(to, amount);
     }
 
-    function burn(address from, suint256 amount) external onlyAdmin {
+    function burn(address from, suint256 amount) external onlyAdminOrBridge {
         _burn(from, amount);
+    }
+
+    /// @notice Set (or clear with zero) the bridge allowed to mint and burn.
+    function setBridge(address newBridge) external onlyAdmin {
+        emit BridgeUpdated(bridge, newBridge);
+        bridge = newBridge;
     }
 
     function pause() external onlyAdmin {
@@ -121,6 +139,16 @@ contract SUSDC is SRC20, Initializable {
 
     function approve(address spender, uint256 amount) public returns (bool) {
         return approve(spender, suint256(amount));
+    }
+
+    /// @notice xERC20/ERC20-style mint used by bridge routers. Amount is public calldata.
+    function mint(address to, uint256 amount) external onlyAdminOrBridge {
+        _mint(to, suint256(amount));
+    }
+
+    /// @notice xERC20/ERC20-style burn used by bridge routers. Amount is public calldata.
+    function burn(address from, uint256 amount) external onlyAdminOrBridge {
+        _burn(from, suint256(amount));
     }
 
     /// @notice ERC20-compatible balance query, restricted to the account itself
