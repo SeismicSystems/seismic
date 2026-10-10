@@ -67,8 +67,9 @@ def _hash_message(message: str) -> Bytes32:
 
     Equivalent to viem's ``hashMessage()``.
     """
-    prefix = f"\x19Ethereum Signed Message:\n{len(message)}".encode()
-    return Bytes32(keccak(prefix + message.encode()))
+    message_bytes = message.encode("utf-8")
+    prefix = f"\x19Ethereum Signed Message:\n{len(message_bytes)}".encode()
+    return Bytes32(keccak(prefix + message_bytes))
 
 
 def secp256k1_sign(
