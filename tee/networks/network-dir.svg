@@ -240,5 +240,5 @@
   <text class="caption" x="1370" y="979" text-anchor="middle">holder /v1/keys == pinned founding keys</text>
 
   <!-- footnote -->
-  <text class="caption" x="60" y="1010">nodes/ — gitignored runtime state beside the artifact set: descriptors, bootnodes.json</text>
+  <text class="caption" x="60" y="1010">nodes/ — gitignored runtime state beside the artifact set: descriptors, the configs configure POSTed</text>
 </svg>

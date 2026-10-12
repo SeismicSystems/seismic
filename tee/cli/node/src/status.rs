@@ -37,11 +37,8 @@ use std::time::{Duration, Instant};
 
 use clap::Args;
 use jsonrpsee::rpc_params;
-use seismic_tee_common::founding::load_harvest_records;
 use seismic_tee_common::http::{ATTESTATION_RPC_PORT, HARVEST_PORT};
-use seismic_tee_common::{
-    Descriptors, Error, NetworkDir, http, next_step, note, rpc, select_descriptor,
-};
+use seismic_tee_common::{Descriptors, Error, NetworkDir, http, next_step, rpc, select_descriptor};
 use seismic_tee_context::{Context, load_nodes};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -50,7 +47,8 @@ use crate::args::NodeArgs;
 use crate::dashboard::Painter;
 use crate::load_manifest;
 use crate::probe::{
-    self, Asked, ConfigState, Disk, Founding, NetworkState, NodeState, assess, probe_all,
+    self, Asked, ConfigState, Disk, Founding, NetworkState, NodeState, assess, harvest_records,
+    probe_all,
 };
 
 /// The attestation service's status method.
@@ -551,19 +549,7 @@ fn load_founding(args: &StatusArgs, config: Option<&Path>) -> anyhow::Result<Opt
     };
     let manifest = load_manifest(&path)?;
     let dir = NetworkDir::of_manifest(&path);
-    let records = if dir.harvest().is_dir() {
-        match load_harvest_records(&dir) {
-            Ok(records) => Some(records),
-            Err(error) => {
-                note(&format_args!(
-                    "harvest records unreadable, so the pinned box is unknown: {error:#}"
-                ));
-                None
-            }
-        }
-    } else {
-        None
-    };
+    let records = harvest_records(&dir);
     Ok(Some(Founding::new(&manifest, records.as_ref())))
 }
 
@@ -627,7 +613,7 @@ fn yes_no(value: bool) -> &'static str {
 }
 
 /// The network line, without its next step.
-fn network_line(network: &NetworkState) -> String {
+pub(crate) fn network_line(network: &NetworkState) -> String {
     let reading = match network {
         NetworkState::Live { key_holders } => {
             format!("live — key holder(s): {}", key_holders.join(", "))
@@ -742,7 +728,9 @@ impl<'a> Report<'a> {
     fn next_step(&self, args: &StatusArgs) -> Option<(String, Vec<String>)> {
         let table = args.table_flags();
         let manifest = args.manifest_flag();
-        let join = |lead: &str| {
+        // `bootnode` is what the join names as its peer: nothing when the
+        // table holds a key holder, which configure finds and appraises.
+        let join = |lead: &str, bootnode: &str| {
             let awaiting = self.awaiting();
             (!awaiting.is_empty()).then(|| {
                 (
@@ -751,8 +739,7 @@ impl<'a> Report<'a> {
                         .iter()
                         .map(|name| {
                             format!(
-                                "seismic-tee node configure{table} --name {name} --bootnode \
-                                 <ENODE>{manifest}"
+                                "seismic-tee node configure{table} --name {name}{bootnode}{manifest}"
                             )
                         })
                         .collect(),
@@ -766,10 +753,13 @@ impl<'a> Report<'a> {
                     "seismic-tee node configure{table} --genesis-node {pinned_box}{manifest}"
                 )],
             )),
-            NetworkState::Live { key_holders } => join(&format!(
-                "join through a key holder's enode (`seismic_nodeInfo` on {}):",
-                key_holders[0]
-            )),
+            NetworkState::Live { key_holders } => join(
+                &format!(
+                    "join through the key holder(s) {}, each deploy-verified first:",
+                    key_holders.join(", ")
+                ),
+                "",
+            ),
             NetworkState::NoReachableKeyHolder(Asked::EveryFounder {
                 pinned_box_answered: true,
                 ..
@@ -795,9 +785,10 @@ impl<'a> Report<'a> {
                 "watch for it to come up:".to_string(),
                 vec![format!("seismic-tee node status --watch{table}{manifest}")],
             )),
-            NetworkState::NoReachableKeyHolder(Asked::Some) => {
-                join("join through a live peer's enode (its `seismic_nodeInfo`):")
-            }
+            NetworkState::NoReachableKeyHolder(Asked::Some) => join(
+                "join through a live peer's enode (its `seismic_nodeInfo`):",
+                " --bootnode <ENODE>",
+            ),
         }
     }
 

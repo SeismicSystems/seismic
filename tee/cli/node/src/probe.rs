@@ -19,8 +19,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use jsonrpsee::rpc_params;
-use seismic_tee_common::founding::{FoundingRecords, box_holding_the_pin};
-use seismic_tee_common::{Descriptors, Error, Manifest, rpc};
+use seismic_tee_common::founding::{FoundingRecords, box_holding_the_pin, load_harvest_records};
+use seismic_tee_common::{Descriptors, Error, Manifest, NetworkDir, note, rpc};
 use serde_json::Value;
 use tokio::task::JoinSet;
 
@@ -189,6 +189,24 @@ impl Founding {
     /// harvest endpoint's spelling is checked by [`fetch_quote`].
     pub fn pins(&self, candidate: &str) -> bool {
         candidate == self.pin
+    }
+}
+
+/// The network directory's harvest records, when it has any: without them
+/// the founding is known only by its pin. Unreadable ones are noted, not
+/// fatal — they only inform.
+pub fn harvest_records(dir: &NetworkDir) -> Option<FoundingRecords> {
+    if !dir.harvest().is_dir() {
+        return None;
+    }
+    match load_harvest_records(dir) {
+        Ok(records) => Some(records),
+        Err(error) => {
+            note(&format_args!(
+                "harvest records unreadable, so the pinned box is unknown: {error:#}"
+            ));
+            None
+        }
     }
 }
 

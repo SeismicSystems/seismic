@@ -25,10 +25,9 @@
 //! - Stage 2 — configure the joiners in parallel with `bootnodes = [genesis
 //!   enode]`.
 //!
-//! Then every node's enode is collected and the founding set is persisted to
-//! `nodes/bootnodes.json`. On a later configure run (reboot or re-provision)
-//! that file exists, so the two-stage dance is skipped and the full founding
-//! set goes to every node in one parallel pass.
+//! A founding box configured later — one this run failed, or one rebooted
+//! since — takes the joining shape, whose bootnodes are the network's live
+//! key holders ([`crate::bootnodes`]).
 //!
 //! Root-key bootstrap rides the same list: tdx-init derives each node's
 //! root-key fetch peers from its POSTed bootnodes (`http://<host>:7878`, the
@@ -42,9 +41,8 @@
 //! party the moment stage 2 hands genesis's enode to the joiners, so the
 //! genesis gate lands before that: a genesis node that does not pass stops the
 //! founding rather than pointing the cohort at an unappraised box. The verdict
-//! is the node's result: a node that fails its appraisal counts as failed, its
-//! enode never enters `nodes/bootnodes.json`, and the launch assertions never
-//! run.
+//! is the node's result: a node that fails its appraisal counts as failed, and
+//! the launch assertions never run.
 //!
 //! The summit genesis is delivered with current IPs spliced in: the committed
 //! `summit-genesis.toml` is a founding-era snapshot whose
@@ -55,8 +53,8 @@
 //! the launch assertions (see [`crate::launch`]) verify each box against what
 //! the manifest pins.
 //!
-//! Founding and joining an already-live network (`configure --bootnode`, in
-//! [`crate::configure`]) are one command because they are one act: POST a
+//! Founding and joining an already-live network (`configure`'s default shape,
+//! in [`crate::configure`]) are one command because they are one act: POST a
 //! config to one or more boxes, then verify. Both go through the same
 //! `build_config` / `post_config` primitives and status poller, so each
 //! node's POSTed config and wipe-watch are identical — only the bootnode set
@@ -91,7 +89,7 @@ use seismic_tee_context::{Context, load_nodes};
 use tokio::sync::mpsc;
 use tokio::task::JoinSet;
 
-use crate::bootnodes::{self, Bootnode};
+use crate::bootnodes;
 use crate::configure::{
     ConfigInputs, ConfigureArgs, TDX_INIT_LISTENER_TIMEOUT, TDX_INIT_RETRY_INTERVAL, build_config,
     post_config_within, render_config, resolve_reth_genesis, resolve_summit_genesis, write_record,
@@ -114,8 +112,7 @@ pub const APPRAISAL_RETRY: Duration = Duration::from_secs(15);
 ///
 /// `bootnodes` (→ `[network].bootnodes`: reth p2p + tdx-init's derived
 /// root-key fetch peers) is assigned by the configure flow, not here — empty
-/// for the greenfield genesis node, `[genesis enode]` for its joiners, the
-/// full founding set on re-configure.
+/// for the genesis node, `[genesis enode]` for its joiners.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Node {
     /// The node's key in the descriptor map.
@@ -425,8 +422,8 @@ fn report_status(status: &StatusTx, node: &Node, line: impl Into<String>) {
 /// Deploy-verify one ready node, recording the verdict as its status line.
 ///
 /// The verdict is the node's result, not a warning beside it: an unappraised
-/// box must not be handed to the joiners as a bootnode, written into the
-/// founding `bootnodes.json`, or counted as a founded node.
+/// box must not be handed to the joiners as a bootnode, or counted as a
+/// founded node.
 async fn appraise(node: &Node, shared: &Shared, appraisal: &Appraisal, status: &StatusTx) -> bool {
     let endpoint = node.descriptor().attestation_rpc_url();
     let mut attempt = 1;
@@ -637,12 +634,12 @@ pub async fn run_cohort(
     Ok(results)
 }
 
-/// Two-stage greenfield bootstrap: genesis first (so its enode exists), then
+/// Two-stage bootstrap: genesis first (so its enode exists), then
 /// the joiners pointed at it. Returns `{node name: ok}` across both stages.
 ///
 /// Stage 1 ends with the genesis node ready *and* appraised, which is the gate
-/// the stage boundary exists for: its enode is what every joiner dials and
-/// what `nodes/bootnodes.json` records. If genesis fails either half, the
+/// the stage boundary exists for: its enode is what every joiner dials. If
+/// genesis fails either half, the
 /// joiners aren't configured (they'd have neither a root_key source nor a
 /// bootnode); the missing results read as failures in the report.
 pub async fn bootstrap_greenfield(
@@ -686,79 +683,6 @@ pub async fn bootstrap_greenfield(
     }
     results.extend(run_cohort(joiners, shared).await?);
     Ok(results)
-}
-
-/// Collect every node's enode and write the founding set to `bootnodes.json`.
-///
-/// Only writes when every node came up ready and appraised — a partial
-/// founding set would silently drop a node from every later re-configure, and
-/// an unappraised box must not be recorded as one the cohort dials. If any
-/// node failed, skip the write and warn; the report surfaces the failure.
-///
-/// Best-effort: config delivery has already succeeded by the time this runs,
-/// and `bootnodes.json` is only a refresh for later runs, so a failure to
-/// collect the enodes degrades to a warning rather than aborting before the
-/// cohort report prints. The next configure run re-establishes the set.
-pub async fn persist_founding_bootnodes(
-    nodes: &[Node],
-    results: &BTreeMap<String, bool>,
-    path: &std::path::Path,
-) {
-    let failed: Vec<&str> = nodes
-        .iter()
-        .filter(|n| !results.get(&n.name).copied().unwrap_or(false))
-        .map(|n| n.name.as_str())
-        .collect();
-    if !failed.is_empty() {
-        eprintln!(
-            "warning: not writing {} — {}/{} node(s) failed: {}",
-            path.display(),
-            failed.len(),
-            nodes.len(),
-            failed.join(", ")
-        );
-        return;
-    }
-
-    println!("Collecting the founding bootnode set (seismic_nodeInfo)...");
-    let targets: Vec<(String, String)> = nodes
-        .iter()
-        .map(|n| (n.name.clone(), n.descriptor().eth_rpc_url()))
-        .collect();
-    let enodes = match bootnodes::collect_enodes(
-        &targets,
-        bootnodes::ENODE_TIMEOUT,
-        bootnodes::POLL_INTERVAL,
-    )
-    .await
-    {
-        Ok(enodes) => enodes,
-        Err(error) => {
-            eprintln!(
-                "warning: not writing {} — could not collect the founding enode set: {error:#}",
-                path.display()
-            );
-            return;
-        }
-    };
-    let set: Vec<Bootnode> = nodes
-        .iter()
-        .map(|n| {
-            bootnodes::warn_on_ip_mismatch(&enodes[&n.name], &n.public_ip, &n.name);
-            Bootnode {
-                name: n.name.clone(),
-                enode: enodes[&n.name].clone(),
-            }
-        })
-        .collect();
-    match bootnodes::save_bootnodes(path, &set) {
-        Ok(()) => println!(
-            "Wrote founding bootnode set ({} node(s)) to {}",
-            set.len(),
-            path.display()
-        ),
-        Err(error) => eprintln!("warning: not writing {}: {error:#}", path.display()),
-    }
 }
 
 /// The cohort report, and the failure it ends in if any node did not make it.
@@ -903,7 +827,7 @@ pub async fn found(
         bail!(
             "node(s) without a founding harvest record: {} — this command configures a founding \
              cohort, and every box's launch is asserted against the keys harvested from it. A \
-             joiner arriving after founding uses `seismic-tee node configure --bootnode`.",
+             joiner arriving after founding uses `seismic-tee node configure --name <node>`.",
             unharvested.join(", ")
         );
     }
@@ -936,36 +860,11 @@ pub async fn found(
         client: http::client()?,
     });
 
-    // bootnodes.json lives under the network directory's nodes/ — the
-    // founding enode set from a prior run.
-    let bootnodes_path = dir.bootnodes();
-    let outcome = if bootnodes_path.exists() {
-        // Re-configure: hand the full founding set to every node (a node
-        // listing its own enode is harmless) and configure in one parallel
-        // pass — no genesis-first staging, since the enodes are already known.
-        // Each node is still appraised the moment it is ready.
-        let founding = bootnodes::load_bootnodes(&bootnodes_path)?;
-        let enodes: Vec<String> = founding.into_iter().map(|b| b.enode).collect();
-        println!(
-            "Reusing {} founding bootnode(s) from {}; configuring the whole cohort in one pass.",
-            enodes.len(),
-            bootnodes_path.display()
-        );
-        for node in &mut nodes {
-            node.bootnodes = enodes.clone();
-        }
-        run_cohort(&nodes, &shared).await
-    } else {
-        bootstrap_greenfield(&mut nodes, &shared).await
-    };
-    let results = match outcome {
+    let results = match bootstrap_greenfield(&mut nodes, &shared).await {
         Ok(results) => results,
         Err(error) if error.is::<Interrupted>() => return Ok(ExitCode::from(130)),
         Err(error) => return Err(error),
     };
-
-    // Refresh the founding set from every node's live enode (fresh each run).
-    persist_founding_bootnodes(&nodes, &results, &bootnodes_path).await;
     report(&nodes, &results, args, &manifest_path)?;
 
     // Every node accepted its config — now assert the launch against what the
@@ -1006,7 +905,7 @@ pub async fn found(
 /// harvest endpoint serves its pinned founding keys. `timeout` is how long a target
 /// that does not answer is waited for — the founding's readiness window from
 /// `configure`, a short one under `--check`.
-async fn assert_launch(
+pub(crate) async fn assert_launch(
     client: &reqwest::Client,
     genesis_hash: [u8; 32],
     targets: &[LaunchTarget],
@@ -1325,8 +1224,7 @@ mod tests {
     }
 
     /// A cohort whose nodes are all already configured (tdx-init gone, no
-    /// attestation service) fails per node without aborting the rest, and
-    /// the founding bootnode set is not written.
+    /// attestation service) fails per node without aborting the rest.
     #[tokio::test]
     async fn run_cohort_reports_every_node_and_keeps_going_on_failure() {
         let tmp = tempfile::tempdir().unwrap();
@@ -1359,33 +1257,6 @@ mod tests {
         let results = run_cohort(&nodes, &shared).await.unwrap();
         assert_eq!(results.get("node-2"), Some(&false));
         assert!(!dir.init_config("node-2").exists());
-
-        let path = dir.bootnodes();
-        persist_founding_bootnodes(&nodes, &results, &path).await;
-        assert!(!path.exists());
-    }
-
-    /// The founding set is written only when every node is ok, from the live
-    /// enodes; a collect failure degrades to a warning.
-    #[tokio::test]
-    async fn persist_writes_the_full_set_or_nothing() {
-        let tmp = tempfile::tempdir().unwrap();
-        let path = tmp.path().join("nodes").join("bootnodes.json");
-        let nodes = vec![Node {
-            name: "node-1".into(),
-            public_ip: "1.1.1.1".into(),
-            fqdn: "n1.example.com".into(),
-            genesis: true,
-            bootnodes: Vec::new(),
-        }];
-        let mut results = BTreeMap::new();
-        results.insert("node-1".to_string(), true);
-        // The node's fqdn resolves nowhere useful here: the collect fails
-        // within the short timeout only if we shorten it — so instead prove
-        // the failed-node branch and the write path through save_bootnodes.
-        results.insert("node-1".to_string(), false);
-        persist_founding_bootnodes(&nodes, &results, &path).await;
-        assert!(!path.exists());
     }
 
     #[tokio::test]
@@ -1428,8 +1299,6 @@ mod tests {
             probe.join.as_deref(),
             Some(&["b".to_string(), "c".to_string()][..])
         );
-
-        assert!(Probe::try_parse_from(["configure", "--manifest", "m.json"]).is_err());
 
         // A missing manifest fails before anything else is read.
         let probe = Probe::try_parse_from([

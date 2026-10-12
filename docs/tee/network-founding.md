@@ -96,9 +96,10 @@ candidates.
 A joiner needs none of this. It checks `sha256(manifest) == network_id`, checks
 each artifact against the manifest — which covers the summit genesis's full
 consensus content, parameters plus every validator's keys and withdrawal
-credentials — and then provisions a box and runs
-`seismic-tee node configure --bootnode`. Runtime admission and the deposit
-contract do the rest.
+credentials — and then provisions a box and runs `seismic-tee node configure`.
+Its bootnodes, the peers it fetches `root_key` from, are the key holders in
+its node table that pass their appraisal, or a live peer it names with
+`--bootnode`. Runtime admission and the deposit contract do the rest.
 
 **Who keeps `root_key`.** Every box mints a candidate at boot, and the
 manifest's pin picks one. No flag in the POST says who mints: each custodian

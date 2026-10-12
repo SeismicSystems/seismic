@@ -5,19 +5,25 @@
 //! manifest, and POST it to the node's tdx-init HTTP receiver:
 //!
 //! ```text
-//! seismic-tee node configure --node n2.json \
-//!     --bootnode enode://<pubkey>@<ip>:30303 --manifest m.json
+//! seismic-tee node configure --node nodes.json --name n2 --manifest m.json
 //! ```
 //!
-//! With `--bootnode`, the node *joins* an existing network: it fetches
-//! `root_key` via `getWrappedRootKey` from a peer tdx-init derives from
-//! `--bootnode` (`http://<host>:7878` per bootnode). With `--genesis-node`,
-//! the same command founds a cohort instead — starting from the box whose
-//! candidate `root_key` the manifest pins, which keeps it — and with
-//! `--check` it re-asserts a founded cohort's launch; both are
-//! [`crate::cohort`]'s. [`build_config`] and [`post_config`] are the
-//! primitives every shape shares. The rest of this page is the joining
-//! shape's.
+//! By default the node *joins* a live network: it fetches `root_key` via
+//! `getWrappedRootKey` from a peer tdx-init derives from its bootnodes
+//! (`http://<host>:7878` per bootnode). The bootnodes are the node table's
+//! key holders that pass their appraisal ([`crate::bootnodes`]), or the
+//! peers `--bootnode` names. With `--genesis-node`, the same command founds a
+//! cohort instead — starting from the box whose candidate `root_key` the
+//! manifest pins, which keeps it — and with `--check` it re-asserts a founded
+//! cohort's launch; both are [`crate::cohort`]'s. [`build_config`] and
+//! [`post_config`] are the primitives every shape shares. The rest of this
+//! page is the joining shape's.
+//!
+//! A founding box that rebooted joins the same way: its fresh candidate is
+//! not the pin, so it fetches `root_key` like any joiner. It has a harvest
+//! record, though, so once it is up it is also held to the founding's launch
+//! assertions ([`crate::launch`]): block 0, and the summit keys harvested
+//! from it.
 //!
 //! The node is deploy-verified once it reaches a ready state — the `verify`
 //! step, run inline here so a node is appraised in the same breath it is
@@ -33,7 +39,7 @@
 //! There is no per-node `node.toml`: `[node]` (external_ip) comes from the
 //! descriptor, `[node.domain]` from the descriptor
 //! fqdn and `--email`, and `[network]` from `--manifest`, `--reth-genesis`,
-//! `--summit-genesis` and `--bootnode`. Those network-wide artifacts stay
+//! `--summit-genesis` and the bootnodes. Those network-wide artifacts stay
 //! standalone files, merged only at POST time. The config is built as the
 //! [`InitConfig`] type tdx-init deserializes it with (`deny_unknown_fields`
 //! at the far end), so this CLI and the node image cannot disagree on the
@@ -66,8 +72,12 @@ use sha2::{Digest as _, Sha256};
 use tdx_init_config::{DomainConfig, InitConfig, NetworkConfig, NodeConfig};
 
 use crate::args::NodeArgs;
+use crate::bootnodes::{self, Remedy};
+use crate::cohort::{self, Appraisal};
+use crate::launch::{self, LaunchTarget};
+use crate::probe::{self, Founding};
+use crate::status;
 use crate::verify::{self, PolicySourceArgs, VerifierArgs};
-use crate::{cohort, launch, status};
 
 /// How long to wait for tdx-init's HTTP listener to come up. tdx-init starts
 /// after persistent-luks-setup, which can take ~20-40s on first boot (LUKS
@@ -151,8 +161,8 @@ pub struct ConfigInputs<'a> {
     pub fqdn: &'a str,
     /// → `[node.domain].email`, the Let's Encrypt registration.
     pub email: &'a str,
-    /// Only ever `true` when founding (`--genesis-node`); `--bootnode` always
-    /// joins. Not sent: tdx-init tells the pinned box from the manifest.
+    /// Only ever `true` when founding (`--genesis-node`); the joining shape
+    /// never. Not sent: tdx-init tells the pinned box from the manifest.
     pub genesis_node: bool,
 }
 
@@ -220,8 +230,8 @@ pub fn render_config(config: &InitConfig) -> anyhow::Result<String> {
 }
 
 /// Where the rendered config is recorded: `--dump-config`, or the network
-/// directory's `nodes/<name>.init-config.toml` beside `--manifest` — the tier
-/// that holds the bootnode set, per-deploy output like this.
+/// directory's `nodes/<name>.init-config.toml` beside `--manifest` — its
+/// per-deploy tier.
 pub fn resolve_record_path(flag: Option<&Path>, manifest_path: &Path, name: &str) -> PathBuf {
     flag.map_or_else(
         || NetworkDir::of_manifest(manifest_path).init_config(name),
@@ -485,12 +495,11 @@ pub fn print_summary(fqdn: &str, public_ip: &str, record: &Path) {
 }
 
 /// One command, three shapes, told apart by the flags that name the target:
-/// `--bootnode` joins one node to a live network (`--name`, `--node` or the
+/// by default it joins one node to a live network (`--name`, `--node` or the
 /// context say which), `--genesis-node` founds a cohort (every other node in
 /// the table joins it, or the `--join` subset), and `--check` re-asserts a
-/// founded cohort's launch. There is no default among them: delivery is one
-/// POST per boot, and founding mints `root_key`, so the target is always
-/// named.
+/// founded cohort's launch. Joining names one node and asks before it sends;
+/// founding mints `root_key`, so it names its genesis node.
 #[derive(Debug, Args)]
 pub struct ConfigureArgs {
     #[command(flatten)]
@@ -549,19 +558,15 @@ pub struct ConfigureArgs {
     #[arg(long, value_name = "FILE")]
     pub summit_genesis: Option<PathBuf>,
 
-    /// Join one node to a live network through this bootnode enode URL
-    /// (enode://<pubkey>@<host>:<port>) → [network].bootnodes. reth dials it
-    /// on startup, and tdx-init derives the root_key fetch peer from it
-    /// (http://<host>:7878). Repeatable; required unless founding or
-    /// checking — a joining node has no root_key of its own. Fetch a running
-    /// node's enode from its seismic_nodeInfo RPC (the founding set a
-    /// network writes to nodes/bootnodes.json).
-    #[arg(
-        long,
-        value_name = "ENODE",
-        required_unless_present_any = ["genesis_node", "check"],
-        conflicts_with = "genesis_node"
-    )]
+    /// Join through this peer's enode URL (enode://<pubkey>@<host>:<port>)
+    /// → [network].bootnodes. reth dials it on startup, and tdx-init derives
+    /// the root_key fetch peer from it (http://<host>:7878). Repeatable.
+    /// Default: the enode of every other node in the node table that holds
+    /// root_key (serves :7878) and passes its deploy verification, under
+    /// --no-verify too; with none, nothing is sent. Name a peer when the
+    /// table holds no key holder — your own nodes joining someone else's
+    /// network — from its seismic_nodeInfo RPC.
+    #[arg(long, value_name = "ENODE", conflicts_with = "genesis_node")]
     pub bootnode: Vec<String>,
 
     /// Contact email for the node's Let's Encrypt registration; goes
@@ -569,9 +574,11 @@ pub struct ConfigureArgs {
     #[arg(long, default_value = DEFAULT_EMAIL)]
     pub email: String,
 
-    /// Configure without deploy-verifying. By default each node is appraised
-    /// once it is up — the same check as `seismic-tee node verify`, against
-    /// the policy --manifest pins — and a node that fails counts as failed.
+    /// Configure without deploy-verifying the node(s) configured. By default
+    /// each node is appraised once it is up — the same check as `seismic-tee
+    /// node verify`, against the policy --manifest pins — and a node that
+    /// fails counts as failed. The key holders a joining node fetches root_key
+    /// from are appraised either way.
     #[arg(long)]
     pub no_verify: bool,
 
@@ -634,7 +641,50 @@ pub async fn run(args: ConfigureArgs, config: Option<&Path>) -> anyhow::Result<E
     join(args, config).await
 }
 
-/// Join one node to a live network: preview, confirm, POST, watch, appraise.
+/// What a refusal before the POST suggests instead, with this run's flags.
+fn remedy(args: &ConfigureArgs) -> Remedy {
+    let manifest = args.manifest.as_deref();
+    Remedy {
+        table: NodeArgs {
+            name: None,
+            ..args.node.clone()
+        }
+        .as_flags(),
+        manifest: manifest
+            .map(|path| format!(" --manifest {}", path.display()))
+            .unwrap_or_default(),
+        dir: manifest
+            .map(NetworkDir::of_manifest)
+            .filter(|dir| !dir.root().as_os_str().is_empty())
+            .map(|dir| format!(" {}", dir.root().display()))
+            .unwrap_or_default(),
+    }
+}
+
+/// The policy the key holders are appraised against under `--no-verify`,
+/// which skips appraising the joining node only: the network's own, beside
+/// --manifest (`--no-verify` refuses --policy and --measurements).
+fn key_holder_policy(
+    args: &ConfigureArgs,
+    name: &str,
+    manifest_path: &Path,
+    manifest: &Manifest,
+) -> anyhow::Result<verify::ResolvedPolicy> {
+    let path = NetworkDir::of_manifest(manifest_path).policy();
+    if !path.is_file() {
+        bail!(
+            "measurement policy not found: {}
+The key holders' enodes are handed out only once              they pass their appraisal, against the network's policy beside --manifest;              --no-verify skips appraising {name} only. Nothing was sent. Instead, fetch the              network directory (`seismic-tee ctx set-network`), or name a peer yourself:
+    {}",
+            path.display(),
+            remedy(args).bootnode(name)
+        );
+    }
+    verify::resolve_policy(&args.policy_source, manifest_path, manifest, false)
+}
+
+/// Join one node to a live network: find its bootnodes, preview, confirm,
+/// POST, watch, appraise, and — for a founding box — assert its launch.
 async fn join(args: ConfigureArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     let (name, descriptor) = args.node.load(config)?;
     verify::check_policy_source_files(&args.policy_source, args.no_verify)?;
@@ -661,8 +711,8 @@ async fn join(args: ConfigureArgs, config: Option<&Path>) -> anyhow::Result<Exit
         )?)
     };
 
-    // Assemble the POST config before contacting the node, so bad local input
-    // (a genesis that isn't the manifest's, a missing bootnode) fails fast.
+    // Read the local inputs before contacting any node, so a missing one
+    // fails fast.
     let reth_genesis = Artifact::read(&resolve_reth_genesis(
         args.reth_genesis.as_deref(),
         &manifest_path,
@@ -671,11 +721,35 @@ async fn join(args: ConfigureArgs, config: Option<&Path>) -> anyhow::Result<Exit
         args.summit_genesis.as_deref(),
         &manifest_path,
     )?)?;
+    let dir = NetworkDir::of_manifest(&manifest_path);
+    let records = probe::harvest_records(&dir);
+    let bootnodes = if args.bootnode.is_empty() {
+        let policy = match &policy {
+            Some(policy) => policy.bytes.clone(),
+            None => key_holder_policy(&args, &name, &manifest_path, &manifest)?.bytes,
+        };
+        let appraisal = Appraisal {
+            policy,
+            pccs_url: args.verifier.pccs_url.clone(),
+        };
+        bootnodes::from_key_holders(
+            &http::client()?,
+            &args.node.table(config)?,
+            &name,
+            Some(&Founding::new(&manifest, records.as_ref())),
+            &manifest,
+            &appraisal,
+            &remedy(&args),
+        )
+        .await?
+    } else {
+        args.bootnode.clone()
+    };
     let inputs = ConfigInputs {
         manifest: &manifest,
         reth_genesis: &reth_genesis,
         summit_genesis: &summit_genesis,
-        bootnodes: &args.bootnode,
+        bootnodes: &bootnodes,
         external_ip: public_ip,
         fqdn,
         email: &args.email,
@@ -798,6 +872,28 @@ async fn join(args: ConfigureArgs, config: Option<&Path>) -> anyhow::Result<Exit
                     args.node.as_flags(),
                     manifest_path.display(),
                     verify::retry_flags(&args.policy_source, &args.verifier),
+                );
+                return Ok(ExitCode::from(130));
+            }
+        }
+    }
+    // A founding box, rejoining: held to what was harvested from it, as the
+    // founding held it.
+    if let Some(harvested) = records.as_ref().and_then(|records| records.get(&name)) {
+        let target = LaunchTarget::new(&name, &descriptor, harvested);
+        tokio::select! {
+            result = cohort::assert_launch(
+                &client,
+                manifest.eth.genesis_hash,
+                std::slice::from_ref(&target),
+                launch::READY_TIMEOUT,
+            ) => result?,
+            _ = tokio::signal::ctrl_c() => {
+                println!(
+                    "\nInterrupted during the launch assertions — the config is delivered. \
+                     Re-run them with:\n    seismic-tee node configure --check{}{}",
+                    remedy(&args).table,
+                    remedy(&args).manifest,
                 );
                 return Ok(ExitCode::from(130));
             }
@@ -1163,11 +1259,47 @@ mod tests {
             verify::DEFAULT_ATTESTATION_TYPE
         );
 
-        // A joiner has no root_key of its own: the bootnode is required.
-        assert!(
+        // Without --bootnode, the joiner's bootnodes are found when it runs.
+        let probe =
             Probe::try_parse_from(["configure", "--node", "n.json", "--manifest", "m.json"])
-                .is_err()
+                .unwrap()
+                .args;
+        assert!(probe.bootnode.is_empty());
+    }
+
+    /// --no-verify skips appraising the joining node, not the key holders it
+    /// joins through: without the network's policy, nothing is sent, and the
+    /// refusal names the way on.
+    #[test]
+    fn no_verify_still_appraises_the_key_holders() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest_path = dir.path().join(MANIFEST_FILENAME);
+        let args = Probe::try_parse_from([
+            "configure",
+            "--name",
+            "dev-2",
+            "--manifest",
+            manifest_path.to_str().unwrap(),
+            "--no-verify",
+        ])
+        .unwrap()
+        .args;
+
+        let error = format!(
+            "{:#}",
+            key_holder_policy(&args, "dev-2", &manifest_path, &manifest()).unwrap_err()
         );
+        for expected in [
+            "measurement policy not found",
+            "--no-verify skips appraising dev-2 only",
+            "Nothing was sent",
+            "--name dev-2 --bootnode <ENODE>",
+        ] {
+            assert!(
+                error.contains(expected),
+                "missing {expected:?} in:\n{error}"
+            );
+        }
     }
 
     /// The preview names what the base64 hides: the manifest by identity,

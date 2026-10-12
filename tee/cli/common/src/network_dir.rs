@@ -25,7 +25,6 @@
 //! summit-genesis.toml                          the completed summit genesis
 //! measurement-policy-bootstrap.json            the founding accepted measurement set
 //!
-//! nodes/bootnodes.json                         the founding enode set
 //! nodes/<node>.init-config.toml                the config `configure` POSTed
 //!                                              to that node, byte-exact
 //! ```
@@ -58,11 +57,10 @@ pub const IMAGE_FILENAME: &str = "image.json";
 pub const INPUTS_DIRNAME: &str = "inputs";
 pub const HARVEST_DIRNAME: &str = "harvest";
 pub const NODES_DIRNAME: &str = "nodes";
-pub const BOOTNODES_FILENAME: &str = "bootnodes.json";
 /// `<node>` + this: the tdx-init config as it was POSTed to that node, kept
 /// as the record of what the node booted with and as a body `curl` can
 /// replay. Under `nodes/` because it is per-deploy output — it carries live
-/// IPs and the bootnode set of the moment.
+/// IPs and the bootnodes of the moment.
 pub const INIT_CONFIG_SUFFIX: &str = ".init-config.toml";
 
 /// One network directory, addressed by the layout above.
@@ -174,10 +172,6 @@ impl NetworkDir {
         ]
     }
 
-    pub fn bootnodes(&self) -> PathBuf {
-        self.nodes().join(BOOTNODES_FILENAME)
-    }
-
     /// The record of the config POSTed to `node`.
     pub fn init_config(&self, node: &str) -> PathBuf {
         self.nodes().join(format!("{node}{INIT_CONFIG_SUFFIX}"))
@@ -205,10 +199,6 @@ mod tests {
         assert_eq!(
             dir.harvest_record("dev-bootstrap-node-1"),
             Path::new("tee/networks/devnet-3/inputs/harvest/dev-bootstrap-node-1.json")
-        );
-        assert_eq!(
-            dir.bootnodes(),
-            Path::new("tee/networks/devnet-3/nodes/bootnodes.json")
         );
         assert_eq!(
             dir.init_config("dev-bootstrap-node-1"),

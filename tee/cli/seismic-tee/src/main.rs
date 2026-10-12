@@ -231,8 +231,9 @@ enum Command {
                       each command consumes the descriptors of already-running nodes and \
                       reaches them over HTTP. An operator joining a network needs only this \
                       group.",
-        after_help = "configure takes one of three shapes: --bootnode joins one node to a live \
-                      network; --genesis-node founds a cohort, after network assemble; \
+        after_help = "configure takes one of three shapes: by default it joins one node to a live \
+                      network, through the node table's key holders or the peers --bootnode \
+                      names; --genesis-node founds a cohort, after network assemble; \
                       --check re-asserts a founded cohort's launch — after a reboot or a \
                       re-image, or when some of its boxes had not settled at launch — with nothing \
                       configured."
@@ -1059,6 +1060,18 @@ mod tests {
                 "dev-2",
                 "--bootnode",
                 "enode://ab@1.2.3.4:30303",
+            ],
+            // joining through the node table's key holders
+            vec!["node", "configure", "--name", "dev-2"],
+            vec![
+                "node",
+                "configure",
+                "--node",
+                "nodes.json",
+                "--name",
+                "dev-2",
+                "--manifest",
+                "network-manifest.json",
             ],
             // admission
             vec![

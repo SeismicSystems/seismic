@@ -1153,7 +1153,7 @@ mod tests {
         };
         let stale_record = plant("inputs/harvest/old-1.json");
         plant("network-manifest.json");
-        plant("nodes/bootnodes.json");
+        plant("nodes/old-1.init-config.toml");
         let unrelated = plant("NOTES.md");
 
         // Refused before the image is read: one that cannot be is never

@@ -61,9 +61,9 @@ pub enum NodeCommand {
     /// Harvest + DCAP-verify a founding cohort's summit keys into the network
     /// directory's inputs/.
     Harvest(harvest::HarvestArgs),
-    /// Configure nodes on first boot: join one to a live network
-    /// (--bootnode), or found a cohort (--genesis-node [--join …]); --check
-    /// re-asserts a founded cohort's launch.
+    /// Configure nodes on first boot: join one to a live network, or found a
+    /// cohort (--genesis-node [--join …]); --check re-asserts a founded
+    /// cohort's launch.
     Configure(configure::ConfigureArgs),
     /// Deploy-verify a node's TDX attestation against the intended image.
     Verify(verify::VerifyArgs),

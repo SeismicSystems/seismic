@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use anyhow::bail;
 use clap::Args;
 use clap_complete::ArgValueCandidates;
-use seismic_tee_common::{NodeDescriptor, load_descriptors, select_descriptor};
+use seismic_tee_common::{Descriptors, NodeDescriptor, load_descriptors, select_descriptor};
 use seismic_tee_context::{Context, ContextArgs, Selection, complete, echo};
 
 #[derive(Debug, Clone, Args)]
@@ -67,6 +67,18 @@ impl NodeArgs {
         };
         echo(&selection, &descriptor.eth_rpc_url());
         Ok((name.to_string(), descriptor.clone()))
+    }
+
+    /// The whole node table these flags name the node in: `--node FILE`,
+    /// else the context's network. Not echoed — [`Self::load`] already said
+    /// what resolved.
+    pub fn table(&self, config: Option<&Path>) -> anyhow::Result<Descriptors> {
+        if let Some(path) = self.node.as_deref() {
+            return Ok(load_descriptors(path)?);
+        }
+        let context = Context::load(config)?;
+        let selected = context.select(self.context.context.as_deref())?;
+        Ok(selected.nodes()?.clone())
     }
 
     /// `--node FILE [--name NAME]`, resolved without the context: every

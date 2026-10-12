@@ -39,7 +39,6 @@ tee/networks/<name>/
 │                                   collateral ages past it
 ├── nodes/                        the records `configure` writes as it runs
 │   │                               (gitignored: per-deploy output, not identity)
-│   ├── bootnodes.json              founding enode set from `configure`
 │   └── <node>.init-config.toml     the config `configure` POSTed to that
 │                                   node, byte-exact
 │
