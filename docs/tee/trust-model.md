@@ -172,26 +172,23 @@ take a new value in a finalized block; machines are members while their image
 is accepted; and each client model enters the timeline at a different
 point](diagrams/network-identity-and-values.svg)
 
-**Each lane starts in the genesis of the state machine that evolves it.** V_0
-is the summit genesis validator set, moved on by summit's finalized epoch
-transitions. P_0 is the registry's storage in the reth genesis, moved on by
-authority transactions; the manifest also pins a copy, the bootstrap policy,
-only because a joiner cannot read encrypted reth state before it holds
-`root_key`. K_0 is `tx_io_pk@0`, pinned as the manifest's `founding_tx_io_pk`
-([the root-key pin](network-manifest.md#the-root-key-pin)). By this rule its
-home is the genesis of whatever evolves the key series, which is open
-([SEI-645](https://linear.app/seismic-systems/issue/SEI-645)); the proposal is
-a leaf of summit's Merkleized `ConsensusState`, seeded from the summit genesis
-([SEI-656](https://linear.app/seismic-systems/issue/SEI-656)). Every summit
+**Each lane starts in the genesis of the component that holds it in its state,
+or in the manifest alone when none does.** V_0 is the summit genesis validator
+set, moved on by summit's finalized epoch transitions. P_0 is the registry's
+storage in the reth genesis, moved on by authority transactions, and the
+manifest also pins it directly, as the bootstrap policy. K_0 is `tx_io_pk@0`,
+which no component holds in its state, since every node derives it from
+`root_key`, so its one pin is the manifest's `founding_tx_io_pk`. Why each
+lands where it does is in
+[direct pins and genesis pins](network-manifest.md#direct-pins-and-genesis-pins).
+Later keys are to be records in a leaf of summit's Merkleized
+`ConsensusState`, starting at epoch 1
+([SEI-656](https://linear.app/seismic-systems/issue/SEI-656)), the proposal of
+the still-open anchor decision
+([SEI-645](https://linear.app/seismic-systems/issue/SEI-645)). Every summit
 header carries that state's root as `parent_beacon_block_root`, and summit
 serves SSZ branches against it, so a record there is provable from one
-finalized header and one branch. The manifest's pin then stays as a frozen
-copy, like the bootstrap policy: it is what the custodian reads, and what a
-client that only hash-checks the manifest needs. Neither can rely on the summit
-copy. Nothing in the guest recomputes summit's SSZ `config_digest`, so nothing
-there binds the summit genesis to `network_id`, and an SDK would need summit's
-encoding to check it
-([the root-key pin](network-manifest.md#the-root-key-pin)).
+finalized header and one branch.
 
 **No quote binds chain state today.** The bindings are:
 

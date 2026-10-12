@@ -95,13 +95,13 @@
     <rect class="shipped" width="280" height="80" rx="10"/>
     <text class="b" x="14" y="28">reth genesis</text>
     <text x="14" y="50">P0: registry storage</text>
-    <text class="sub" x="14" y="70">(+ manifest copy for joiners)</text>
+    <text class="sub" x="14" y="70">(+ a direct manifest pin)</text>
   </g>
   <g transform="translate(90,475)">
     <rect class="shipped" width="280" height="80" rx="10"/>
     <text class="b" x="14" y="28">tx_io_pk@0 pin</text>
     <text class="sub" x="14" y="52">K0: manifest founding_tx_io_pk</text>
-    <text class="sub" x="14" y="70">(summit genesis to follow)</text>
+    <text class="sub" x="14" y="70">(the one pin: no genesis holds K)</text>
   </g>
 
 
