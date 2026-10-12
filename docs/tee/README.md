@@ -141,10 +141,16 @@ repo, plus the image that measures them:
 
 - [architecture.md](architecture.md) — **what a TEE node is.** The processes
   and how their units are grouped, the one TPM user, what the outside can
-  reach and the three networking planes, key custody and the custodian's
-  socket boundary, the keys by family, the root-key handshake cryptography,
-  the LUKS volume, and the boot chain from power-on to serving.
+  reach, key custody and the custodian's socket boundary, the keys by family,
+  the root-key handshake cryptography, the LUKS volume, and the boot chain
+  from power-on to serving.
   Read it when you touch a service, a key, a port, or the boot order.
+- [networking.md](networking.md) — **how nodes find each other.** The three
+  planes and each one's identity, discovery and trust posture; the names a node
+  carries, in RFC 1498's terms; where every address comes from, who binds it
+  and when, how DNS names are made, and what is verified about an address;
+  and bootstrap phase by phase. Read it when you touch a plane, bootnodes, an
+  address, or DNS.
 - [network-manifest.md](network-manifest.md) — **what identifies a network.**
   The fields, `network_id = SHA-256(file bytes)`, the byte-exactness rule,
   what the hash commits to, the transcript bindings, and the root-key pin.

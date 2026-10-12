@@ -25,7 +25,6 @@ process holds it, and says what anchors it.
   - [One process opens the TPM](#one-process-opens-the-tpm)
 - [Node lifecycle: power-on to serving](#node-lifecycle-power-on-to-serving)
 - [What the outside can reach](#what-the-outside-can-reach)
-  - [Three networking planes](#three-networking-planes)
 - [Who holds which key](#who-holds-which-key)
   - [Key custody: one process holds `root_key`](#key-custody-one-process-holds-root_key)
   - [Per-purpose keys](#per-purpose-keys)
@@ -320,7 +319,7 @@ the node can derive that key. A node without a snapshot syncs from consensus.
 
 ## What the outside can reach
 
-One port is the whole public API surface, and one more is peer-facing. The rest
+One port is the whole public API surface, and three are peer-facing. The rest
 is either loopback or restricted to the operator's own address range by the
 node's cloud firewall rules
 ([the port table](https://github.com/SeismicSystems/deploy/blob/main/tee/pulumi/seismic_node/__main__.py)).
@@ -353,69 +352,13 @@ loopback only. reth's public namespace list is `eth,net,web3`, and its general
 IPC-RPC server is disabled, so `admin`, `debug`, and `txpool` have no path to
 the outside; the `seismic` namespace registers alongside `eth`.
 
-### Three networking planes
-
-Each plane has its own identity key, its own discovery, and — deliberately — its
-own trust posture, so a compromise or eclipse of one never cascades into
-another.
-
-| Plane | Port | Protocol | Identity key | Discovery | Membership |
-| --- | --- | --- | --- | --- | --- |
-| Consensus | `:18551` | commonware-p2p | Ed25519 | none: the validator set itself | closed — the peer set *is* the validator set |
-| Tx gossip | `:30303` TCP+UDP | devp2p: RLPx + discv5 | secp256k1 | the cohort from the config POST as discv5 bootnodes *and* RLPx trusted peers, then the discv5 DHT | open to anything carrying the `seismic` fork id |
-| Enclave peer RPC | `:7878` | JSON-RPC over HTTP | none standing | the same bootnode list, as `http://<host>:7878` | attested per exchange |
-
-**Consensus.** BLS12-381 signs consensus messages and Ed25519 is the transport
-identity. There is no discovery: peer addresses come from the validator set, so
-membership and the peer set are the same thing. commonware-p2p authenticates by
-pubkey, so only a set member completes a handshake.
-
-**Tx gossip.** The identity is reth's own `discovery-secret`, under LUKS, so the
-node's `enode://` address is stable for its life. Discovery is discv5 only —
-discv4 and DNS discovery are off — keyed by the `seismic` ENR fork id, so
-Seismic nodes match only each other. The cohort is operational data, delivered
-per boot in the config POST and never part of the hashed manifest; one live
-bootnode is enough for discv5 to flood the rest.
-
-One enode list feeds both of reth's devp2p flags, because the two do different
-jobs with it. `--trusted-peers` is how a node reaches the cohort: direct RLPx
-dials, retried, and exempt from reputation slashing. `--bootnodes` is how it
-reaches everyone else — it seeds discv5, and the DHT floods the rest, including
-joiners that no founding-era list could have named. Keeping both matters because
-discv5 bootstrap is one-shot: reth resolves a bare `enode://` with a live UDP
-round-trip at startup and never retries a lost one, so on the discovery path
-alone a single dropped packet could cost a node its seat in the mesh until the
-next reboot. Both flags are re-delivered every boot, since the conf dir is
-tmpfs.
-
-Open membership on this plane is safe by construction, in three independent
-ways:
-
-- **`GetNodeData` and `NodeData` are hard-rejected** as bad messages, because
-  raw trie nodes would carry FlaggedStorage values straight past the RPC
-  layer's private-slot redaction.
-- **Sync never follows devp2p** — summit drives reth's forkchoice over the
-  Engine API — so eclipsing this plane costs transaction liveness, never
-  safety.
-- **The payload is ciphertext**: a gossip peer learns timing and size, nothing
-  else.
-
-**Enclave peer RPC.** There is no standing transport identity here. Each
-exchange carries its own attestation and its own AEAD in the message body, so
-the channel is deliberately plain HTTP. Peers are derived, not configured
-separately: `tdx-init` takes one bootnode list, drops this node's own entry, and
-renders every consumer from what remains:
-
-- **reth's `--bootnodes`** and **`--trusted-peers`**, both the peer enodes.
-- **`http://<host>:7878` per peer** for the root-key fetch.
-
-All of them name the same machines by construction, so skew between the lists is
-unrepresentable, and a node that must fetch `root_key` but is POSTed with no
-usable peer fails the POST rather than booting with no way to obtain it
-([`peers.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/tdx-init/src/peers.rs)).
+Each peer-facing port serves one of three planes — consensus, transaction
+gossip, and the enclave peer RPC — each with its own identity, discovery and
+trust posture: [networking.md](networking.md).
 
 Browsers reach the attestation service through Caddy's `/attestation` route
-instead, since mixed-content rules bar a plain-HTTP fetch from an HTTPS origin.
+rather than `:7878` directly, since mixed-content rules bar a plain-HTTP fetch
+from an HTTPS origin.
 The TLS hop is hygiene, not a boundary: the evidence a browser fetches is
 verifiable on its own.
 
@@ -877,11 +820,3 @@ clock, is an [accepted risk](trust-model.md#accepted-risks) whose candidate
 fixes are freshness evidence, not a vote. Whether a later rotation is
 authorized by a consensus event is a separate question, open in [the trust
 model](trust-model.md#open-decisions).
-
-**Three planes rather than one multiplexed transport**
-([the planes](#three-networking-planes)). One transport with one identity would
-be less machinery, and would couple the failure domains: eclipsing it would cost
-consensus, gossip, and bootstrap together, and the identity key would inherit
-the strictest requirement of all three. Separate planes let each keep the
-posture it actually needs — a closed pubkey-authenticated set for consensus,
-open membership for gossip, per-message attestation for bootstrap.

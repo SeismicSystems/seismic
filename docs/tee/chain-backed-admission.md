@@ -253,6 +253,13 @@ accepted host influence under the TEE threat model; [the trust
 model](trust-model.md#accepted-risks) states each plainly, with the rollback
 family the second belongs to and the freshness evidence that would close them.
 
+**One gap inside the guest**: the attestation service reads the chain through
+reth's RPC on loopback TCP, `127.0.0.1:8545`. A TCP port has no owner, so
+while reth is down any process in the guest can bind it and answer every check
+above, the registry read included. The engine API and the custodian use Unix
+sockets instead, which carry an owner and file modes. Closing this is
+[SEI-626](https://linear.app/seismic-systems/issue/SEI-626).
+
 ## The network manifest as the joiner's root of trust
 
 The two sides of the handshake reach for different anchors, because they are
