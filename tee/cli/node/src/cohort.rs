@@ -83,9 +83,9 @@ use tokio::task::JoinSet;
 
 use crate::bootnodes;
 use crate::configure::{
-    ConfigInputs, ConfigureArgs, Preview, TDX_INIT_LISTENER_TIMEOUT, TDX_INIT_RETRY_INTERVAL,
-    Target, build_config, confirm_run, post_config_within, remedy, render_config, render_preview,
-    resolve_reth_genesis, resolve_summit_genesis, resolve_target, write_record,
+    ConfigInputs, ConfigureArgs, Inputs, Preview, TDX_INIT_LISTENER_TIMEOUT,
+    TDX_INIT_RETRY_INTERVAL, build_config, confirm_run, post_config_within, remedy, render_config,
+    render_preview, resolve_reth_genesis, resolve_summit_genesis, write_record,
 };
 use crate::dashboard::CohortDashboard;
 use crate::harvest::{FetchError, HarvestTarget, build_record, fetch_quote, verify_quote};
@@ -915,12 +915,8 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
     check_policy_source_files(&args.policy_source, args.no_verify)?;
     // Validate the shared network artifacts once, so a bad one fails fast
     // here rather than as N identical per-node errors mid-dashboard.
-    let Target {
-        manifest: manifest_path,
-        table,
-        table_source,
-        network,
-    } = resolve_target(args, config)?;
+    let inputs = Inputs::new(args, config);
+    let manifest_path = inputs.manifest()?;
     let manifest = load_manifest(&manifest_path)?;
     let reth_genesis = Artifact::read(&resolve_reth_genesis(
         args.reth_genesis.as_deref(),
@@ -964,6 +960,7 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
     // layout): the harvest supplies each box's pinned keys; the node table
     // (the context's, or --node) supplies its current IP.
     let dir = NetworkDir::of_manifest(&manifest_path);
+    let (table, table_source) = inputs.table()?;
     let records = founding_records(&dir, &manifest)?;
     let founding = Founding::new(&manifest, records.as_ref());
     let remedy = remedy(args);
@@ -1174,7 +1171,7 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
                 .collect::<Vec<_>>(),
         );
     } else if let Some(pinned) = &pinned
-        && let Some(network) = &network
+        && let Some(network) = inputs.network()?
     {
         // The founding is done; what follows is using the network, which
         // has a name to select a node under only when the context supplied
@@ -1226,13 +1223,11 @@ pub async fn check(
     config: Option<&Path>,
     timeout: Duration,
 ) -> anyhow::Result<ExitCode> {
-    let Target {
-        manifest: manifest_path,
-        table: descriptors,
-        ..
-    } = resolve_target(args, config)?;
+    let inputs = Inputs::new(args, config);
+    let manifest_path = inputs.manifest()?;
     let manifest = load_manifest(&manifest_path)?;
     let dir = NetworkDir::of_manifest(&manifest_path);
+    let (descriptors, _) = inputs.table()?;
     let harvest_records = load_harvest_records(&dir)?;
     current_ips(&harvest_records, &descriptors)?;
     let later: Vec<&str> = descriptors
