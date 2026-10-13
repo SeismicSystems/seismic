@@ -319,7 +319,7 @@ pub async fn run(args: VerifyArgs, config: Option<&Path>) -> anyhow::Result<Exit
     let (_, descriptor) = args.node.load(config)?;
     check_policy_source_files(&args.policy_source, false)?;
     let manifest_path =
-        crate::resolve_manifest(args.manifest.as_deref(), &args.node.context, config)?;
+        crate::resolve_manifest(args.manifest.as_deref(), &args.node.cohort.context, config)?;
     let manifest = crate::load_manifest(&manifest_path)?;
 
     let policy = resolve_policy(&args.policy_source, &manifest_path, &manifest, false)?;

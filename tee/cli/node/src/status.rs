@@ -38,7 +38,7 @@ use clap::Args;
 use jsonrpsee::rpc_params;
 use seismic_tee_common::http::{ATTESTATION_RPC_PORT, HARVEST_PORT};
 use seismic_tee_common::{Descriptors, Error, NetworkDir, http, next_step, rpc, select_descriptor};
-use seismic_tee_context::{Context, load_nodes};
+use seismic_tee_context::Context;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -450,16 +450,11 @@ impl StatusArgs {
 /// The node table, narrowed by `--name`: `--node FILE` when given, else the
 /// context's network.
 fn load_table(args: &StatusArgs, config: Option<&Path>) -> anyhow::Result<Descriptors> {
-    let nodes = load_nodes(
-        args.node.node.as_deref(),
-        &args.node.context,
-        config,
-        "--node",
-    )?;
+    let nodes = args.node.cohort.load(config)?;
     let Some(name) = args.node.name.as_deref() else {
         return Ok(nodes);
     };
-    let holder = match &args.node.node {
+    let holder = match &args.node.cohort.node {
         Some(path) => path.display().to_string(),
         None => "the node table".to_string(),
     };
@@ -474,10 +469,10 @@ fn load_table(args: &StatusArgs, config: Option<&Path>) -> anyhow::Result<Descri
 fn load_founding(args: &StatusArgs, config: Option<&Path>) -> anyhow::Result<Option<Founding>> {
     let path = match &args.manifest {
         Some(path) => path.clone(),
-        None if args.node.node.is_some() => return Ok(None),
+        None if args.node.cohort.node.is_some() => return Ok(None),
         None => {
             let context = Context::load(config)?;
-            let selected = context.select(args.node.context.context.as_deref())?;
+            let selected = context.select(args.node.cohort.context.context.as_deref())?;
             if selected.network.dir.is_none() {
                 return Ok(None);
             }
@@ -667,7 +662,7 @@ impl<'a> Report<'a> {
 
     /// The command to run next, with its lead.
     fn next_step(&self, args: &StatusArgs) -> Option<(String, Vec<String>)> {
-        let table = args.node.table_flags();
+        let table = args.node.cohort.as_flags();
         let manifest = args.manifest_flag();
         // `bootnode` is what the join names as its peer: nothing when the
         // table holds a key holder, which configure finds and appraises.

@@ -45,8 +45,8 @@ use anyhow::{Context as _, bail};
 use base64::Engine as _;
 use clap::Args;
 use clap_complete::ArgValueCandidates;
-use seismic_tee_common::{Artifact, Manifest, NetworkDir};
-use seismic_tee_context::complete;
+use seismic_tee_common::{Artifact, Descriptors, Manifest, NetworkDir};
+use seismic_tee_context::{Context, complete, echo, read_nodes};
 use sha2::{Digest as _, Sha256};
 use tdx_init_config::{DomainConfig, InitConfig, NetworkConfig, NodeConfig};
 
@@ -220,9 +220,7 @@ pub fn write_record(path: &Path, rendered: &str) -> anyhow::Result<()> {
 
 /// What a `configure` run is about to do, decoded for a human.
 pub struct Preview<'a> {
-    /// Where the node table came from ([`CohortArgs::source`]): named on the
-    /// first line, beside the network, so a stale context shows.
-    pub table: &'a str,
+    pub table: &'a TableSource,
     pub manifest_path: &'a Path,
     pub manifest: &'a Manifest,
     pub reth_genesis: &'a Artifact,
@@ -567,6 +565,87 @@ pub(crate) fn remedy(args: &ConfigureArgs) -> Remedy {
             .unwrap_or_default(),
         appraisal: retry_flags(&args.policy_source, &args.verifier),
     }
+}
+
+/// What a `configure` run acts on: the manifest and the node table, each its
+/// own flag, else the selected context network's.
+pub struct Target {
+    pub manifest: PathBuf,
+    pub table: Descriptors,
+    pub table_source: TableSource,
+    /// The context network whose directory holds the manifest; `None` under
+    /// `--manifest`, which may name a directory no network is registered
+    /// for.
+    pub network: Option<String>,
+}
+
+/// Where the node table came from, named in the preview beside the network
+/// so a stale context shows.
+pub enum TableSource {
+    File(PathBuf),
+    Context(String),
+}
+
+impl std::fmt::Display for TableSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::File(path) => write!(f, "--node {}", path.display()),
+            Self::Context(network) => write!(f, "context {network}"),
+        }
+    }
+}
+
+/// Resolve [`Target`], reading the context file once, and only when an input
+/// falls back to it: with both `--node` and `--manifest` given it is never
+/// read, so the command line is a complete record of what the run acted on.
+pub(crate) fn resolve_target(
+    args: &ConfigureArgs,
+    config: Option<&Path>,
+) -> anyhow::Result<Target> {
+    let node = args.cohort.node.as_deref();
+    let manifest = args.manifest.as_deref();
+    let context = match (node, manifest) {
+        (Some(_), Some(_)) => None,
+        _ => Some(Context::load(config)?),
+    };
+    let missing = if node.is_none() {
+        "--node"
+    } else {
+        "--manifest"
+    };
+    let selected = context
+        .as_ref()
+        .map(|context| context.select_for(&args.cohort.context, missing))
+        .transpose()?;
+    let selected = || selected.as_ref().expect("a missing flag reads the context");
+
+    let (table, table_source) = match node {
+        Some(path) => (
+            read_nodes(path, "--node")?,
+            TableSource::File(path.to_path_buf()),
+        ),
+        None => {
+            let selected = selected();
+            let nodes = selected.nodes()?;
+            echo(&selected.selection, &format!("{} node(s)", nodes.len()));
+            let network = selected.selection.network.clone();
+            (nodes.clone(), TableSource::Context(network))
+        }
+    };
+    let (manifest, network) = match manifest {
+        Some(path) => (path.to_path_buf(), None),
+        None => {
+            let selected = selected();
+            let network = selected.selection.network.clone();
+            (selected.manifest()?, Some(network))
+        }
+    };
+    Ok(Target {
+        manifest,
+        table,
+        table_source,
+        network,
+    })
 }
 
 #[cfg(test)]
@@ -1035,7 +1114,7 @@ mod tests {
             rest: vec![planned("beta", Up::Awaiting), planned("gamma", Up::NotUp)],
         };
         let text = render_preview(&Preview {
-            table: "context devnet-1",
+            table: &TableSource::Context("devnet-1".to_string()),
             manifest_path: Path::new("/nets/devnet/network-manifest.json"),
             manifest: &manifest,
             reth_genesis: &reth_genesis,
@@ -1088,7 +1167,7 @@ mod tests {
         let skipped = ["alpha".to_string()];
         let bootnodes = [bootnode()];
         let text = render_preview(&Preview {
-            table: "context devnet-1",
+            table: &TableSource::Context("devnet-1".to_string()),
             manifest_path: Path::new("/nets/devnet/network-manifest.json"),
             manifest: &manifest,
             reth_genesis: &reth_genesis,
@@ -1172,5 +1251,100 @@ mod tests {
         // And it is the document tdx-init would take.
         let reparsed: InitConfig = toml::from_str(&rendered).unwrap();
         assert_eq!(reparsed.network.bootnodes, [bootnode()]);
+    }
+
+    const CONTEXT: &str = r#"
+current = "devnet-1"
+
+[networks.devnet-1]
+dir = "/nets/devnet-1"
+
+[networks.devnet-1.nodes]
+alpha = { public_ip = "203.0.113.7", fqdn = "alpha.example.com" }
+"#;
+
+    /// `resolve_target` falls back to `SEISMIC_CONTEXT` too; nextest gives
+    /// each test its own process, so clearing it here races no other test.
+    fn clear_context_env() {
+        // SAFETY: this process runs this one test.
+        unsafe { std::env::remove_var("SEISMIC_CONTEXT") };
+    }
+
+    /// Neither flag: the one read of the context supplies the table, the
+    /// manifest, and the network the closing step selects a node under.
+    #[test]
+    fn resolve_target_without_flags_takes_everything_from_the_context() {
+        clear_context_env();
+        let dir = tempfile::tempdir().unwrap();
+        let config = write_file(&dir, "config.toml", CONTEXT.as_bytes());
+
+        let target = resolve_target(&parse(&[]).unwrap(), Some(&config)).unwrap();
+        assert_eq!(target.table.keys().collect::<Vec<_>>(), ["alpha"]);
+        assert_eq!(target.table_source.to_string(), "context devnet-1");
+        assert_eq!(
+            target.manifest,
+            Path::new("/nets/devnet-1/network-manifest.json")
+        );
+        assert_eq!(target.network.as_deref(), Some("devnet-1"));
+    }
+
+    /// Both flags: the context is never read, so even a malformed one is no
+    /// obstacle.
+    #[test]
+    fn resolve_target_with_both_flags_never_reads_the_context() {
+        clear_context_env();
+        let dir = tempfile::tempdir().unwrap();
+        let config = write_file(&dir, "config.toml", b"not toml [");
+        let nodes = write_file(
+            &dir,
+            "nodes.json",
+            br#"{"solo": {"public_ip": "203.0.113.9", "fqdn": "solo.example.com"}}"#,
+        );
+        let args = parse(&[
+            "--node",
+            nodes.to_str().unwrap(),
+            "--manifest",
+            "net/network-manifest.json",
+        ])
+        .unwrap();
+
+        let target = resolve_target(&args, Some(&config)).unwrap();
+        assert_eq!(target.table.keys().collect::<Vec<_>>(), ["solo"]);
+        assert_eq!(
+            target.table_source.to_string(),
+            format!("--node {}", nodes.display())
+        );
+        assert_eq!(target.manifest, Path::new("net/network-manifest.json"));
+        assert_eq!(target.network, None);
+    }
+
+    /// One flag and no context selected: the refusal names the flag that is
+    /// missing.
+    #[test]
+    fn resolve_target_with_no_context_names_the_missing_flag() {
+        clear_context_env();
+        let dir = tempfile::tempdir().unwrap();
+        // Names no file: an empty config, with no `current`.
+        let config = dir.path().join("config.toml");
+        let nodes = write_file(
+            &dir,
+            "nodes.json",
+            br#"{"solo": {"public_ip": "203.0.113.9", "fqdn": "solo.example.com"}}"#,
+        );
+
+        for (argv, missing) in [
+            (vec!["--manifest", "m.json"], "no --node given"),
+            (
+                vec!["--node", nodes.to_str().unwrap()],
+                "no --manifest given",
+            ),
+        ] {
+            let err = resolve_target(&parse(&argv).unwrap(), Some(&config))
+                .err()
+                .expect("nothing selected")
+                .to_string();
+            assert!(err.contains(missing), "{err}");
+            assert!(err.contains("ctx use"), "{err}");
+        }
     }
 }

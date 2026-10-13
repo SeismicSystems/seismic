@@ -13,94 +13,12 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::bail;
 use clap::Args;
 use clap_complete::ArgValueCandidates;
-use seismic_tee_common::{Descriptors, NodeDescriptor, load_descriptors, select_descriptor};
-use seismic_tee_context::{Context, ContextArgs, Selection, complete, echo, load_nodes};
-
-#[derive(Debug, Clone, Args)]
-pub struct NodeArgs {
-    /// Descriptor map JSON: `pulumi stack output nodes --json`, i.e.
-    /// {<name>: {public_ip, fqdn}, …}. Provides the node's public_ip/fqdn.
-    /// With one entry it is the node; with several, --name says which. Omit
-    /// it to use the current context (`seismic-tee ctx use`).
-    #[arg(long, value_name = "FILE")]
-    pub node: Option<PathBuf>,
-
-    /// Which node in --node to act on (its key). Optional when the file holds
-    /// exactly one, or when the context names it.
-    #[arg(long, value_name = "NAME", add = ArgValueCandidates::new(complete::nodes))]
-    pub name: Option<String>,
-
-    #[command(flatten)]
-    pub context: ContextArgs,
-}
-
-impl NodeArgs {
-    /// Resolve the flags to the one node, with its name.
-    ///
-    /// An explicit `--node` wins outright and the context is never read, so a
-    /// command line remains a complete record of what it acted on. Otherwise
-    /// the context supplies the node table — `--context`, else
-    /// `SEISMIC_CONTEXT`, else the file's `current` — and the resolved target
-    /// is echoed on stderr before anything happens.
-    ///
-    /// (No clap `conflicts_with` between `--node` and `--context`: clap
-    /// counts an env-sourced value as present, so a shell that exported
-    /// `SEISMIC_CONTEXT` could never pass `--node`. Precedence is decided
-    /// here instead.)
-    pub fn load(&self, config: Option<&Path>) -> anyhow::Result<(String, NodeDescriptor)> {
-        if let Some(path) = self.node.as_deref() {
-            return Self::select(path, self.name.as_deref());
-        }
-        let context = Context::load(config)?;
-        let selected = context.select(self.context.context.as_deref())?;
-        // --name composes with a network-only context: the network half
-        // supplies the table, the flag supplies the key.
-        let (name, descriptor) = selected.node(self.name.as_deref())?;
-        // Echoed pinned to the node it resolved to, so a network-only
-        // selection plus --name still names the node in the echo — what the
-        // command acts on is what it says it acts on.
-        let selection = Selection {
-            network: selected.selection.network.clone(),
-            node: Some(name.to_string()),
-        };
-        echo(&selection, &descriptor.eth_rpc_url());
-        Ok((name.to_string(), descriptor.clone()))
-    }
-
-    /// `--node FILE [--name NAME]`, resolved without the context: every
-    /// failure names the file, absent, malformed, or not singling out a
-    /// node.
-    fn select(path: &Path, name: Option<&str>) -> anyhow::Result<(String, NodeDescriptor)> {
-        if !path.is_file() {
-            bail!("--node descriptor file not found: {}", path.display());
-        }
-        let descriptors = load_descriptors(path)?;
-        let (name, descriptor) = select_descriptor(&descriptors, name, &path.display())?;
-        Ok((name.to_string(), descriptor.clone()))
-    }
-
-    /// These flags as they were given, for a suggested follow-up command that
-    /// must name the same node. Empty when the context supplied the target —
-    /// the persisted selection is still in force for the next command, so
-    /// nothing needs repeating; an explicit `--context` is not persisted
-    /// anywhere, so it is repeated like `--node` is. Leading space included,
-    /// so it splices into a command line.
-    pub fn as_flags(&self) -> String {
-        let mut flags = self.table_flags();
-        if let Some(name) = &self.name {
-            flags.push_str(&format!(" --name {name}"));
-        }
-        flags
-    }
-
-    /// [`Self::as_flags`] without `--name`: the node table alone.
-    pub fn table_flags(&self) -> String {
-        table_flags(self.node.as_deref(), &self.context)
-    }
-}
+use seismic_tee_common::{Descriptors, NodeDescriptor, select_descriptor};
+use seismic_tee_context::{
+    Context, ContextArgs, Selection, complete, echo, load_nodes, read_nodes,
+};
 
 /// `--node <file>`, or the current context's network: the whole cohort.
 #[derive(Debug, Clone, Default, Args)]
@@ -122,33 +40,81 @@ impl CohortArgs {
         load_nodes(self.node.as_deref(), &self.context, config, "--node")
     }
 
-    /// Where the node table came from, for a human: `--node FILE`, or the context
-    /// network that supplied it.
-    pub fn source(&self, config: Option<&Path>) -> anyhow::Result<String> {
-        if let Some(node) = &self.node {
-            return Ok(format!("--node {}", node.display()));
-        }
-        let context = Context::load(config)?;
-        let selected = context.select(self.context.context.as_deref())?;
-        Ok(format!("context {}", selected.selection.network))
-    }
-
     /// These flags as they were given, for a suggested follow-up command on
-    /// the same cohort, as [`NodeArgs::as_flags`] spells them.
+    /// the same cohort: `--node FILE`, else an explicit `--context`. Empty
+    /// when the persisted selection supplied the table — it is still in
+    /// force for the next command, so nothing needs repeating; an explicit
+    /// `--context` is not persisted anywhere, so it is repeated like
+    /// `--node` is. Leading space included, so it splices into a command
+    /// line.
     pub fn as_flags(&self) -> String {
-        table_flags(self.node.as_deref(), &self.context)
+        if let Some(node) = &self.node {
+            format!(" --node {}", node.display())
+        } else if let Some(context) = &self.context.context {
+            format!(" --context {context}")
+        } else {
+            String::new()
+        }
     }
 }
 
-/// `--node FILE`, else an explicit `--context`, as a suggested command
-/// repeats them; empty when the persisted selection supplied the table.
-fn table_flags(node: Option<&Path>, context: &ContextArgs) -> String {
-    if let Some(node) = node {
-        format!(" --node {}", node.display())
-    } else if let Some(context) = &context.context {
-        format!(" --context {context}")
-    } else {
-        String::new()
+/// The cohort, and which one of its nodes to act on.
+#[derive(Debug, Clone, Args)]
+pub struct NodeArgs {
+    #[command(flatten)]
+    pub cohort: CohortArgs,
+
+    /// Which node of the cohort to act on (its key). Optional when the
+    /// cohort holds exactly one, or when the context names it.
+    #[arg(long, value_name = "NAME", add = ArgValueCandidates::new(complete::nodes))]
+    pub name: Option<String>,
+}
+
+impl NodeArgs {
+    /// Resolve the flags to the one node, with its name.
+    ///
+    /// An explicit `--node` wins outright and the context is never read, so a
+    /// command line remains a complete record of what it acted on; every
+    /// failure then names the file, absent, malformed, or not singling out a
+    /// node. Otherwise the context supplies the node table — `--context`,
+    /// else `SEISMIC_CONTEXT`, else the file's `current` — and the resolved
+    /// target is echoed on stderr before anything happens.
+    ///
+    /// (No clap `conflicts_with` between `--node` and `--context`: clap
+    /// counts an env-sourced value as present, so a shell that exported
+    /// `SEISMIC_CONTEXT` could never pass `--node`. Precedence is decided
+    /// here instead.)
+    pub fn load(&self, config: Option<&Path>) -> anyhow::Result<(String, NodeDescriptor)> {
+        if let Some(path) = self.cohort.node.as_deref() {
+            let nodes = read_nodes(path, "--node")?;
+            let (name, descriptor) =
+                select_descriptor(&nodes, self.name.as_deref(), &path.display())?;
+            return Ok((name.to_string(), descriptor.clone()));
+        }
+        let context = Context::load(config)?;
+        let selected = context.select(self.cohort.context.context.as_deref())?;
+        // --name composes with a network-only context: the network half
+        // supplies the table, the flag supplies the key.
+        let (name, descriptor) = selected.node(self.name.as_deref())?;
+        // Echoed pinned to the node it resolved to, so a network-only
+        // selection plus --name still names the node in the echo — what the
+        // command acts on is what it says it acts on.
+        let selection = Selection {
+            network: selected.selection.network.clone(),
+            node: Some(name.to_string()),
+        };
+        echo(&selection, &descriptor.eth_rpc_url());
+        Ok((name.to_string(), descriptor.clone()))
+    }
+
+    /// [`CohortArgs::as_flags`] plus `--name`, for a suggested follow-up
+    /// command that must name the same node.
+    pub fn as_flags(&self) -> String {
+        let mut flags = self.cohort.as_flags();
+        if let Some(name) = &self.name {
+            flags.push_str(&format!(" --name {name}"));
+        }
+        flags
     }
 }
 
@@ -329,29 +295,6 @@ beta = { public_ip = "203.0.113.8", fqdn = "beta.example.com" }
             .to_string();
         assert!(err.contains("--node"), "{err}");
         assert!(err.contains("ctx use"), "{err}");
-    }
-
-    /// The node table's source, as the configure preview names it: the file, or
-    /// the context network.
-    #[test]
-    fn a_cohorts_source_names_the_file_or_the_context_network() {
-        clear_context_env();
-        let cohort = |node: Option<&str>| CohortArgs {
-            node: node.map(PathBuf::from),
-            ..CohortArgs::default()
-        };
-        assert_eq!(
-            cohort(Some("nodes.json")).source(None).unwrap(),
-            "--node nodes.json"
-        );
-
-        let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("config.toml");
-        std::fs::write(&config_path, TWO_NODE_CONFIG).unwrap();
-        assert_eq!(
-            cohort(None).source(Some(&config_path)).unwrap(),
-            "context devnet-1"
-        );
     }
 
     #[test]

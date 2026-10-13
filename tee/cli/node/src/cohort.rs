@@ -77,7 +77,6 @@ use seismic_tee_common::http::{HARVEST_PORT, TDX_INIT_PORT};
 use seismic_tee_common::{
     Artifact, Descriptors, Manifest, NetworkDir, NodeDescriptor, hex_0x, http, next_step, rpc,
 };
-use seismic_tee_context::Context;
 use seismic_verify_quote::SeismicMeasurementPolicy;
 use tokio::sync::mpsc;
 use tokio::task::JoinSet;
@@ -85,17 +84,17 @@ use tokio::task::JoinSet;
 use crate::bootnodes;
 use crate::configure::{
     ConfigInputs, ConfigureArgs, Preview, TDX_INIT_LISTENER_TIMEOUT, TDX_INIT_RETRY_INTERVAL,
-    build_config, confirm_run, post_config_within, remedy, render_config, render_preview,
-    resolve_reth_genesis, resolve_summit_genesis, write_record,
+    Target, build_config, confirm_run, post_config_within, remedy, render_config, render_preview,
+    resolve_reth_genesis, resolve_summit_genesis, resolve_target, write_record,
 };
 use crate::dashboard::CohortDashboard;
 use crate::harvest::{FetchError, HarvestTarget, build_record, fetch_quote, verify_quote};
 use crate::launch::{self, LaunchTarget};
+use crate::load_manifest;
 use crate::plan::{self, Pinned, Plan, Planned, Remedy, Run, Through, Up};
 use crate::probe::{self, Founding, probe_all};
 use crate::status::{POLL_INTERVAL, ProvisioningWatch, poll_provisioning};
 use crate::verify::{check_policy_source_files, resolve_policy};
-use crate::{load_manifest, resolve_manifest};
 
 /// A whole cohort's wipes tend to finish together, so every challenge hits the
 /// PCCS at once — and a DCAP collateral fetch is the one transient way a
@@ -916,7 +915,12 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
     check_policy_source_files(&args.policy_source, args.no_verify)?;
     // Validate the shared network artifacts once, so a bad one fails fast
     // here rather than as N identical per-node errors mid-dashboard.
-    let manifest_path = resolve_manifest(args.manifest.as_deref(), &args.cohort.context, config)?;
+    let Target {
+        manifest: manifest_path,
+        table,
+        table_source,
+        network,
+    } = resolve_target(args, config)?;
     let manifest = load_manifest(&manifest_path)?;
     let reth_genesis = Artifact::read(&resolve_reth_genesis(
         args.reth_genesis.as_deref(),
@@ -960,8 +964,6 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
     // layout): the harvest supplies each box's pinned keys; the node table
     // (the context's, or --node) supplies its current IP.
     let dir = NetworkDir::of_manifest(&manifest_path);
-    let table = args.cohort.load(config)?;
-    let table_source = args.cohort.source(config)?;
     let records = founding_records(&dir, &manifest)?;
     let founding = Founding::new(&manifest, records.as_ref());
     let remedy = remedy(args);
@@ -1172,16 +1174,11 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
                 .collect::<Vec<_>>(),
         );
     } else if let Some(pinned) = &pinned
-        && args.manifest.is_none()
+        && let Some(network) = &network
     {
-        // The founding is done; what follows is using the network. Only a
-        // context-supplied network has a name to select a node under — an
-        // explicit --manifest may be a directory nothing is registered for.
-        let context = Context::load(config)?;
-        let network = &context
-            .select(args.cohort.context.context.as_deref())?
-            .selection
-            .network;
+        // The founding is done; what follows is using the network, which
+        // has a name to select a node under only when the context supplied
+        // the manifest.
         next_step::print(
             "select a node, and point a tool at it:",
             &[
@@ -1229,10 +1226,13 @@ pub async fn check(
     config: Option<&Path>,
     timeout: Duration,
 ) -> anyhow::Result<ExitCode> {
-    let manifest_path = resolve_manifest(args.manifest.as_deref(), &args.cohort.context, config)?;
+    let Target {
+        manifest: manifest_path,
+        table: descriptors,
+        ..
+    } = resolve_target(args, config)?;
     let manifest = load_manifest(&manifest_path)?;
     let dir = NetworkDir::of_manifest(&manifest_path);
-    let descriptors = args.cohort.load(config)?;
     let harvest_records = load_harvest_records(&dir)?;
     current_ips(&harvest_records, &descriptors)?;
     let later: Vec<&str> = descriptors

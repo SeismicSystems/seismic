@@ -150,6 +150,19 @@ impl Context {
         &self.config
     }
 
+    /// [`Self::select`] standing in for `flag`, which was not given: with
+    /// nothing selected, a [`NoContextSelected`] naming that flag.
+    pub fn select_for(&self, args: &ContextArgs, flag: &str) -> anyhow::Result<Selected<'_>> {
+        if args.context.is_none() && self.config.current.is_none() {
+            return Err(NoContextSelected {
+                flag: flag.to_string(),
+                selection: "<network>",
+            }
+            .into());
+        }
+        self.select(args.context.as_deref())
+    }
+
     /// The selection this invocation acts on: `requested` (from `--context`
     /// or `SEISMIC_CONTEXT`), else the file's `current`.
     pub fn select(&self, requested: Option<&str>) -> anyhow::Result<Selected<'_>> {
@@ -280,23 +293,22 @@ pub fn load_nodes(
     flag_name: &str,
 ) -> anyhow::Result<Descriptors> {
     if let Some(path) = flag {
-        if !path.is_file() {
-            bail!("{flag_name} descriptor file not found: {}", path.display());
-        }
-        return Ok(load_descriptors(path)?);
+        return read_nodes(path, flag_name);
     }
     let context = Context::load(config)?;
-    if args.context.is_none() && context.config().current.is_none() {
-        return Err(NoContextSelected {
-            flag: flag_name.to_string(),
-            selection: "<network>",
-        }
-        .into());
-    }
-    let selected = context.select(args.context.as_deref())?;
+    let selected = context.select_for(args, flag_name)?;
     let nodes = selected.nodes()?;
     echo(&selected.selection, &format!("{} node(s)", nodes.len()));
     Ok(nodes.clone())
+}
+
+/// The node table in `path`, given as `flag_name`, which names it when it is
+/// absent.
+pub fn read_nodes(path: &Path, flag_name: &str) -> anyhow::Result<Descriptors> {
+    if !path.is_file() {
+        bail!("{flag_name} descriptor file not found: {}", path.display());
+    }
+    Ok(load_descriptors(path)?)
 }
 
 #[cfg(test)]
