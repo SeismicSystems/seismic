@@ -1,141 +1,29 @@
 # Seismic in a TEE
 
-Seismic nodes run inside TDX confidential VMs. That single fact drives
-everything in this directory: if the execution environment is the thing being
-trusted, then a node has to prove what code it is running before the network
-gives it anything, and the network itself has to be a thing that can be named,
-pinned, and proven against.
+Seismic keeps transaction calldata and shielded contract state private,
+including from the operators who run its nodes. The design follows from a short
+chain of constraints:
 
-This README is the one-pass orientation. Read it end to end, then follow a link
-when you need the depth.
+1. **Every node sees every input.** A blockchain stays correct because every
+   node re-executes every transaction.
+2. **So each node runs inside a TDX confidential VM.** The host cannot read the
+   guest's memory, and the hardware signs a quote stating which code the guest
+   booted.
+3. **The host is the adversary.** It owns the guest's disk, network, clock and
+   lifecycle, and it can boot as many guests as it likes.
+4. **Every node must decrypt the same client traffic.** So the network shares
+   one secret, `root_key`, and derives every network key from it.
+5. **Joining the network means being handed `root_key`.** Most of the design is
+   about who may receive it.
+6. **A quote proves execution, not membership.** It shows a genuine guest
+   running reviewed code, but anyone can boot the same image and found a clone
+   network.
+7. **So the network is named by a hash of its founding artifacts**,
+   `network_id`, and every attested exchange binds it.
 
-## The three questions
-
-A TEE network answers three questions, in this order:
-
-1. **What network is this?** One hash, `network_id`, over one deploy-time
-   artifact. Every attested exchange binds it, so evidence minted on one
-   network can never verify on another.
-2. **Where did the founding artifacts come from?** Validator keys are born
-   inside TEEs before `network_id` exists, and `network_id` commits to their
-   public halves through the summit genesis.
-3. **Who is let in, and who decides?** A joining node asks an existing node for
-   `root_key`; the responder reads the answer off the chain.
-
-## The trust chain
-
-One rule runs through every doc here: a verifier trusts only what `network_id`
-commits to, or what an authority it commits to signs. Founding produces the
-manifest; the manifest's pins seed the chain; the validator set and the
-registry authority those pins name move the chain and its policy forward; and
-every party that checks something reaches back to `network_id` along one of
-these arrows. Each band's title names the doc that owns it.
-
-![The trust chain: roots published out of band, founding, the manifest's pins,
-the summit chain block by block, and the three parties that rely on it — a
-client, an operator admitting an image, and a node joining at
-boot](diagrams/trust-chain.svg)
-
-The trust chain shows what commits to what; how the network's value moves on
-from its founding, and where a client can enter, is [one identity, a succession
-of values](trust-model.md#one-identity-a-succession-of-values).
-
-**Identity.** `network_id` names the network: the SHA-256 of the exact bytes of
-`network-manifest.json`, nine fields (twelve once the root-key pin lands) that
-commit to the network's first value. It pins the reth genesis, the complete
-summit genesis, and the bootstrap measurement policy, so a joiner that checks
-one hash has checked every founding artifact. Every later value is a finalized
-head ([one identity, a succession of
-values](trust-model.md#one-identity-a-succession-of-values)). The manifest is
-written once and travels as opaque bytes to every consumer.
-
-**Founding.** Validator keys have to exist before the manifest, or the manifest
-cannot pin them. So boxes boot the measured image identity-free, a boot-time
-oneshot generates summit keypairs into guest RAM, the attestation service
-proves them with a TDX quote, and the deploy tool verifies those quotes before
-minting `network_id`. Founding is rare and supervised; joining and verifying
-happen forever.
-
-**The boot chain is config-gated.** Before the operator POSTs its
-configuration, a node runs only what the founding harvest needs: summit's
-keys, the custodian's candidate `root_key`, and the harvest listener. That one
-POST carries the manifest and both genesis files; `tdx-init` writes them out,
-the custodian keeps its candidate if the manifest pins it, or else the
-attestation service fetches the pinned key from a peer and the custodian
-installs it, LUKS opens, and the node's own services start. A custodian
-installs a fetched key only if it matches
-[the pin](network-manifest.md#the-root-key-pin).
-
-**Membership is holding `root_key`.** It is network-shared, minted once, and
-handed over only through an attested handshake whose transcript binds
-`network_id`. It is minted before the manifest, so that `network_id` commits
-to it through `tx_io_pk@0`. Consensus membership — a seat
-in the validator set — is a separate gate, held by the summit genesis and the
-deposit path.
-
-**Live policy is on chain.** The responder turns the joiner's verified
-measurements into a `bytes32` admission ID and asks `MeasurementRegistry` on its
-own reth, at a finalized block recent enough to prove the view is current, on
-the chain `network_id` commits to. Admitting or deprecating an image is one
-authority transaction and takes effect network-wide at the next handshake.
-
-## In standard terms
-
-If you know confidential computing and protocol design, three standard
-vocabularies cover the system.
-
-**Identity: a self-certifying name.** `network_id` is the hash of the manifest,
-in the sense of Mazières's SFS: the name is the commitment. A verifier that
-holds the name can check every founding artifact without trusting whoever
-served it. Each later state is a finalized head reached from that name.
-
-**Attestation: IETF RATS ([RFC 9334](https://www.rfc-editor.org/rfc/rfc9334)).**
-Admission follows the background-check model: the joiner sends evidence, and
-the member it asks verifies that evidence and acts on the result.
-
-| RATS role | In Seismic |
-| --- | --- |
-| Attester | The TDX guest. The attestation service mints every quote. |
-| Endorser | Intel (DCAP) and Azure (vTPM), through their root certificates. |
-| Reference value provider | A reviewed seismic-images build, whose `make measure` output is the accepted measurement set. |
-| Appraisal policy for evidence | `MeasurementRegistry`, read at a fresh finalized block. |
-| Verifier and relying party | The responder in the root-key handshake: one process, both roles. |
-| Relying party | A client that appraises the quote over `tx_io_pk`. |
-
-**Key exchange: Noise patterns ([the Noise spec](https://noiseprotocol.org/noise.html)).**
-Both encrypted flows use one primitive stack: secp256k1 ECDH, HKDF-SHA256, and
-AES-256-GCM.
-
-- **Client to network: Noise N.** The client knows `tx_io_pk` from its attested
-  evidence (`<- s`) and encrypts to it (`-> e, es`). Its `e` is the SDK
-  provider's keypair, minted once per provider. Signed reads come back under
-  the same key.
-- **Root-key handshake: Noise NN, with `network_id` as the prologue.** The
-  joiner sends `-> e`. The member answers `<- e, ee`, with `root_key` as the
-  encrypted payload. Each side's TDX quote carries a hash over the transcript
-  fields in its `report_data`. This is Noise's channel binding, which makes the
-  handshake SIGMA-style: an ephemeral DH, authenticated by signatures over the
-  transcript.
-  The member appraises the joiner against live policy. The joiner checks that
-  the member is a genuine TDX guest bound to this transcript.
-
-These names describe the protocol's shape, not its wire format. The handshake
-derives its keys with its own KDF schedule and labels, not Noise's chaining
-key. [architecture.md](architecture.md#the-root-key-handshake) has the
-construction, and [network-manifest.md](network-manifest.md) has the exact
-transcript bindings.
-
-## Where the code lives
-
-Three services, all in the [enclave](https://github.com/SeismicSystems/enclave)
-repo, plus the image that measures them:
-
-| | |
-|---|---|
-| `tdx-init` | Blocks for the config POST, validates it, fans the artifacts out to `/run/seismic/conf/`. |
-| `custodian` | Owns `root_key`. No network listener, unix socket only; wraps and unwraps against verified handshake bindings. |
-| `attestation-service` | The only TPM user: mints every quote, the founding harvest's included, runs both halves of the root-key handshake, and makes the admission decision. |
-| [seismic-images](https://github.com/SeismicSystems/seismic-images) | The measured TDX image, and `make measure`, whose output becomes the accepted measurement set. Its units carry summit's keys to their keystore: summit's own `keys generate` at boot, then a persist script once LUKS opens. |
+Each doc below covers one topic, so start with the one that matches your
+question. For the whole picture in one diagram, start at [the trust
+chain](trust-model.md#the-trust-chain).
 
 ## The docs
 
@@ -165,10 +53,15 @@ repo, plus the image that measures them:
   freshness gate, and which repo owns each stage of an image release. Read it
   when working on admission, the registry, or the measurement pipeline.
 - [trust-model.md](trust-model.md) — **what is trusted, and what is
-  accepted.** What a quote does and does not prove, the anchor each actor
-  verifies against, the accepted risks including the rollback family, and the
-  open decisions. Read it before extending trust to a new actor, accepting a
-  new residual, or closing a listed decision.
+  accepted.** The trust chain from the out-of-band roots to every check, what a
+  quote does and does not prove, the anchor each actor verifies against, how
+  the standard vocabularies (RATS, Noise) map onto the design, the accepted
+  risks including the rollback family, and the open decisions. Read it before
+  extending trust to a new actor, accepting a new residual, or closing a listed
+  decision.
+- [decisions/](decisions/) — **dated decision records.** The options weighed
+  at one point in time, never updated afterwards. The docs above are the
+  authority on the current design.
 
 Normative specs live next to the code that implements them:
 
@@ -179,26 +72,14 @@ Normative specs live next to the code that implements them:
   — the Azure guest-measurement review: what each register covers, and why the
   schema pins the ones it does.
 
-## How these docs are written
+## The code
 
-One file per topic, in two parts: the architecture — what the thing is and how
-it behaves — and then a single trailing `## Design rationale` holding the
-alternatives that were weighed and set aside. **No argument appears in both
-halves.** Where a decision has to be visible up front, because a reader who
-misses it would undo it, the body states the rule in a sentence and links down
-to the rationale.
+Three services, all in the [enclave](https://github.com/SeismicSystems/enclave)
+repo, plus the image that measures them:
 
-[decisions/](decisions/) holds dated decision records: point-in-time captures
-of an options pass, never updated as the design moves. The current-state docs
-above stay the authority; a record is linked from the design rationale of the
-doc whose choice it settled.
-
-Cross-doc routing lives here, in [The docs](#the-docs), and nowhere else. A doc
-opens with its own scope and its normative boundary — which spec owns the
-byte-exact rules — and links a sibling at the point in the text where a reader
-needs it, never in an index of its own. A second index drifts: two hand-written
-summaries of one doc's contents stop matching, and neither one is the authority.
-
-[diagrams/README.md](diagrams/README.md) is the diagram convention for the whole
-repo — mermaid first, hand-authored structured SVG only when spatial layout
-carries meaning. Follow it before creating or editing any diagram.
+| | |
+|---|---|
+| `tdx-init` | Blocks for the config POST, validates it, fans the artifacts out to `/run/seismic/conf/`. |
+| `custodian` | Owns `root_key`. No network listener, unix socket only; wraps and unwraps against verified handshake bindings. |
+| `attestation-service` | The only TPM user: mints every quote, the founding harvest's included, runs both halves of the root-key handshake, and makes the admission decision. |
+| [seismic-images](https://github.com/SeismicSystems/seismic-images) | The measured TDX image, and `make measure`, whose output becomes the accepted measurement set. Its units carry summit's keys to their keystore: summit's own `keys generate` at boot, then a persist script once LUKS opens. |

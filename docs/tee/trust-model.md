@@ -5,8 +5,9 @@ pieces that are specified but not built, each marked. The open decisions at
 the end are the live list; an entry leaves it by becoming a mechanism in a
 sibling doc.
 
-What the TEE design trusts, what an attestation quote does and does not
-prove, and which risks are accepted. The mechanisms themselves live in the
+What the TEE design trusts, how every check reaches back to `network_id`,
+what an attestation quote does and does not prove, and which risks are
+accepted. The mechanisms themselves live in the
 sibling docs — [the node](architecture.md), [the
 manifest](network-manifest.md), [founding](network-founding.md), and
 [admission](chain-backed-admission.md) — and nothing here is normative. This
@@ -15,12 +16,14 @@ accepted risk can be reviewed as one list rather than reassembled from a
 caveat per mechanism.
 
 - [Summary](#summary)
+- [The trust chain](#the-trust-chain)
 - [Assumptions](#assumptions)
   - [The host platform, and what it is trusted for](#the-host-platform-and-what-it-is-trusted-for)
   - [What a valid quote proves — and what it does not](#what-a-valid-quote-proves--and-what-it-does-not)
 - [One identity, a succession of values](#one-identity-a-succession-of-values)
   - [Client trust models](#client-trust-models)
 - [The trust anchor, per action](#the-trust-anchor-per-action)
+- [In standard terms](#in-standard-terms)
 - [Residuals](#residuals)
   - [Accepted risks](#accepted-risks)
   - [The rollback family](#the-rollback-family)
@@ -29,6 +32,9 @@ caveat per mechanism.
 
 ## Summary
 
+- **Every check reaches back to one hash.** A verifier trusts only what
+  `network_id` commits to, or what an authority it commits to signs
+  ([the trust chain](#the-trust-chain)).
 - **A quote proves execution, never membership.** A genuine TDX guest running
   reviewed code is not yet a member of *this* network holding *its* secret.
   The gap is closed by named mechanisms — `network_id` in every transcript,
@@ -60,6 +66,20 @@ caveat per mechanism.
   custody must close before staking opens to outside operators; root-key
   rotation must close before any purpose key
   ships a nonzero epoch.
+
+## The trust chain
+
+One rule runs through every doc in this directory: a verifier trusts only what
+`network_id` commits to, or what an authority it commits to signs. Founding
+produces the manifest; the manifest's pins seed the chain; the validator set and the
+registry authority those pins name move the chain and its policy forward; and
+every party that checks something reaches back to `network_id` along one of
+these arrows. Each band's title names the doc that owns it.
+
+![The trust chain: roots published out of band, founding, the manifest's pins,
+the summit chain block by block, and the three parties that rely on it — a
+client, an operator admitting an image, and a node joining at
+boot](diagrams/trust-chain.svg)
 
 ## Assumptions
 
@@ -267,6 +287,54 @@ So the design gives the responder the live anchor and the joiner the frozen
 one, and the joiner's protection is shaped accordingly — it holds no secrets
 yet, so a dishonest responder can at worst deliver a wrong key, and the check
 against the pin catches exactly that.
+
+## In standard terms
+
+If you know confidential computing and protocol design, three standard
+vocabularies cover the system.
+
+**Identity: a self-certifying name.** `network_id` is the hash of the manifest,
+in the sense of Mazières's SFS: the name is the commitment. A verifier that
+holds the name can check every founding artifact without trusting whoever
+served it. Each later state is a finalized head reached from that name.
+
+**Attestation: IETF RATS ([RFC 9334](https://www.rfc-editor.org/rfc/rfc9334)).**
+Admission follows the background-check model: the joiner sends evidence, and
+the member it asks verifies that evidence and acts on the result.
+
+| RATS role | In Seismic |
+| --- | --- |
+| Attester | The TDX guest. The attestation service mints every quote. |
+| Endorser | Intel (DCAP) and Azure (vTPM), through their root certificates. |
+| Reference value provider | A reviewed seismic-images build, whose `make measure` output is the accepted measurement set. |
+| Appraisal policy for evidence | `MeasurementRegistry`, read at a fresh finalized block. |
+| Verifier and relying party | The responder in the root-key handshake: one process, both roles. |
+| Relying party | A client that appraises the quote over `tx_io_pk`. |
+
+**Key exchange: Noise patterns ([the Noise spec](https://noiseprotocol.org/noise.html)).**
+Both encrypted flows use one primitive stack: secp256k1 ECDH, HKDF-SHA256, and
+AES-256-GCM.
+
+- **Client to network: Noise N.** The client knows `tx_io_pk` from its attested
+  evidence (`<- s`) and encrypts to it (`-> e, es`). Its `e` is the SDK
+  provider's keypair, minted once per provider. Signed reads come back under
+  the same key.
+- **Root-key handshake: Noise NN, with `network_id` as the prologue.** The
+  joiner sends `-> e`. The member answers `<- e, ee`, with `root_key` as the
+  encrypted payload. Each side's TDX quote carries a hash over the transcript
+  fields in its `report_data`. This is Noise's channel binding, which makes the
+  handshake SIGMA-style: an ephemeral DH, authenticated by signatures over the
+  transcript.
+  The member appraises the joiner against live policy. The joiner checks that
+  the member is a genuine TDX guest bound to this transcript, and its custodian
+  checks the delivered key against [the root-key
+  pin](network-manifest.md#the-root-key-pin).
+
+These names describe the protocol's shape, not its wire format. The handshake
+derives its keys with its own KDF schedule and labels, not Noise's chaining
+key. [architecture.md](architecture.md#the-root-key-handshake) has the
+construction, and [network-manifest.md](network-manifest.md) has the exact
+transcript bindings.
 
 ## Residuals
 
