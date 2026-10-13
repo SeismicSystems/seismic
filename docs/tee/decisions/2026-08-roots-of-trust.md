@@ -30,7 +30,7 @@ The difficult part is step 5, actual network trust. A valid quote with accepted 
 
 ## Why chain state cannot be the joiner's bootstrap source
 
-In networks where consensus state is public and independently syncable, a new node syncs the chain, reads enclave policy, verifies peers against it, then requests the secret. Seismic's execution state is coupled to `root_key`: reth's DB is on the [root-key-derived LUKS volume](../architecture.md#persistent-the-luks-volume), and historical TxSeismic replay requires `root_key`-derived keys ([why a node cannot sync its way in](../architecture.md#client-traffic-encrypting-to-tx_io_pk)) — so a contract is not a sufficient bootstrap source for a node that cannot first obtain `root_key`: reading the policy would require the very secret the policy gates.
+In networks where consensus state is public and independently syncable, a new node syncs the chain, reads enclave policy, verifies peers against it, then requests the secret. Seismic's execution state is coupled to `root_key`: reth's DB is on the [root-key-derived LUKS volume](../node.md#persistent-the-luks-volume), and historical TxSeismic replay requires `root_key`-derived keys ([why a node cannot sync its way in](../key-custody.md#root_key-is-membership)) — so a contract is not a sufficient bootstrap source for a node that cannot first obtain `root_key`: reading the policy would require the very secret the policy gates.
 
 That circularity binds only one side. Any node in a position to release `root_key` already holds it and has a readable local chain — including the genesis node at t=0 — so a genesis-pinned contract IS a sufficient admission-policy source from block 0: the responder's anchor is live chain state, with no cycle anywhere. Only the joiner needs a root-key-free anchor, and its question — "is this the canonical network?" — never needed chain state: the manifest answers it. The price is two anchors instead of one, which the [trust model](../trust-model.md#the-trust-anchor-per-action) states as a structural asymmetry: the responder gets the live anchor, the joiner the frozen one.
 
@@ -54,11 +54,11 @@ Two patterns are worth naming. The "lives in" families tell the outcome in one l
 
 # The joiner's anchor
 
-The joiner's question: is this the canonical network, and is the delivered key its key? A joiner holds nothing yet, so the anchor must be root-key-free ([why chain state cannot be it](#why-chain-state-cannot-be-the-joiners-bootstrap-source)). The adopted answer is two complementary halves — the manifest names the network, the commitment proves the delivered secret is that network's — carried by the mutually attested root-key handshake, whose transcript binds nonce, ephemeral pubkeys, and `network_id` on both sides ([the handshake](../architecture.md#the-root-key-handshake)).
+The joiner's question: is this the canonical network, and is the delivered key its key? A joiner holds nothing yet, so the anchor must be root-key-free ([why chain state cannot be it](#why-chain-state-cannot-be-the-joiners-bootstrap-source)). The adopted answer is two complementary halves — the manifest names the network, the commitment proves the delivered secret is that network's — carried by the mutually attested root-key handshake, whose transcript binds nonce, ephemeral pubkeys, and `network_id` on both sides ([the handshake](../key-custody.md#the-root-key-handshake)).
 
 ## Network manifest as bootstrap root ✅ adopted
 
-Deploy artifacts (`network-manifest.json`, `measurement-policy.json`) written by [tdx-init](../architecture.md#the-processes) to `/run/seismic/conf/`; peers verify against the local artifacts pre-chain; once live, on-chain policy is the live source.
+Deploy artifacts (`network-manifest.json`, `measurement-policy.json`) written by [tdx-init](../node.md#the-processes) to `/run/seismic/conf/`; peers verify against the local artifacts pre-chain; once live, on-chain policy is the live source.
 
 * Pros: the simplest root-key-free anchor for the joiner; matches the startup-config-as-trust-anchor of Microsoft's [Confidential Consortium Framework (CCF)](https://microsoft.github.io/CCF/); easy with existing deployment artifacts.
 * Cons: relies on deploy/operator distribution hygiene; does not by itself prove a responder holds the canonical `root_key`; stale manifests need care.
@@ -78,7 +78,7 @@ A CCF-like network identity keypair minted at genesis, public half pinned in the
 
 * Pros: compact membership proof; avoids fresh responder attestation per interaction; a stable cryptographic network name independent of per-node TLS certificates.
 * Cons: a second network-wide secret with large impersonation blast radius; needs generation/distribution/custody/recovery machinery; must live in the custodian.
-* **Do not reuse** `tx_io` **for this.** Three compounding reasons: (1) key reuse across purposes — one secp256k1 key doing ECDH-decrypt and signing breaks the [per-purpose HKDF domain separation](../architecture.md#per-purpose-keys) the custodian enforces; (2) `tx_io = f(root_key)` deterministically, so a `tx_io_sk` signature proves possession of `root_key` and nothing else — for a joiner, who receives `root_key` and runs the commitment check directly, that adds nothing — while a *dedicated* identity key's value is being independent of `root_key` (own rotation schedule, survives recovery, can endorse node certs); (3) it is the most-exposed network key — under pass-plaintext custody every node's reth holds `tx_io_sk` for its process lifetime, so making it the impersonation anchor inverts the "narrowly held" property the identity key exists for.
+* **Do not reuse** `tx_io` **for this.** Three compounding reasons: (1) key reuse across purposes — one secp256k1 key doing ECDH-decrypt and signing breaks the [per-purpose HKDF domain separation](../key-custody.md#per-purpose-keys) the custodian enforces; (2) `tx_io = f(root_key)` deterministically, so a `tx_io_sk` signature proves possession of `root_key` and nothing else — for a joiner, who receives `root_key` and runs the commitment check directly, that adds nothing — while a *dedicated* identity key's value is being independent of `root_key` (own rotation schedule, survives recovery, can endorse node certs); (3) it is the most-exposed network key — under pass-plaintext custody every node's reth holds `tx_io_sk` for its process lifetime, so making it the impersonation anchor inverts the "narrowly held" property the identity key exists for.
 * If ever adopted: lives in the custodian as a new method, not a redesign.
 
 # The responder's admission-policy source
@@ -112,7 +112,7 @@ The cross-cutting question: how does a guest know its chain view is current, whe
 Move CCF-style public control-plane state (policy hashes, commitments, admission identities) into Summit, verified via checkpoints/light-client proofs.
 
 * Pros: closest analogue to Secret/Oasis public consensus roots; supports permissionless economic admission cleanly.
-* Cons: requires Summit to boot/sync/serve proofs before `root_key`; needs finality/freshness semantics; summit's keys live behind root-key LUKS today, so the [storage cycle](../architecture.md#node-lifecycle-power-on-to-serving) must be broken or narrowed.
+* Cons: requires Summit to boot/sync/serve proofs before `root_key`; needs finality/freshness semantics; summit's keys live behind root-key LUKS today, so the [storage cycle](../node.md#node-lifecycle-power-on-to-serving) must be broken or narrowed.
 * Still relevant to: the rollback family's exit (verifying summit finality signatures against the manifest-pinned validator set), and post-open economic eligibility.
 
 # Disaster recovery
@@ -129,7 +129,7 @@ CCF-style: split a wrapping key for `root_key` into shares encrypted to recovery
 
 # Relationship to the custodian split
 
-None of the candidates invalidate the [custodian split](../architecture.md#key-custody-one-process-holds-root_key): the untrusted-evidence parser lives on the responder side of any peer bootstrap in every model, and the custodian receives a pre-verified authorization, never raw evidence — so which root of trust produced it is swappable. Two clarifications: (1) admission and secret-release are the same exchange for a first join — verifying this joiner's quote against policy IS the release decision; a responder signature (the identity key) or the delivered-key commitment check only removes the joiner-side parse of the responder's evidence ("mutual → one-directional") — the responder still parses the joiner's quote. (2) Only two-phase admission separates them: verify once → durable credential → cheap checks on later fetches. Attractive because `root_key` is RAM-only and re-fetched every reboot; trades measurement freshness for revocation/expiry machinery. Deferred.
+None of the candidates invalidate the [custodian split](../key-custody.md#the-custodian): the untrusted-evidence parser lives on the responder side of any peer bootstrap in every model, and the custodian receives a pre-verified authorization, never raw evidence — so which root of trust produced it is swappable. Two clarifications: (1) admission and secret-release are the same exchange for a first join — verifying this joiner's quote against policy IS the release decision; a responder signature (the identity key) or the delivered-key commitment check only removes the joiner-side parse of the responder's evidence ("mutual → one-directional") — the responder still parses the joiner's quote. (2) Only two-phase admission separates them: verify once → durable credential → cheap checks on later fetches. Attractive because `root_key` is RAM-only and re-fetched every reboot; trades measurement freshness for revocation/expiry machinery. Deferred.
 
 # References
 

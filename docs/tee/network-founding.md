@@ -1,10 +1,7 @@
 # Network Founding <!-- omit in toc -->
 
-**Status**: shipped. The one config POST per box and the harvest → assemble →
-configure flow are how the four-node devnet was founded. The candidate
-`root_key` and its pin are built in the enclave and the image; seismic-tee's
-side, harvesting the candidate and pinning it in assemble, is
-[SEI-643](https://linear.app/seismic-systems/issue/SEI-643)'s remaining work.
+**Status**: shipped: one config POST per box, the harvest → assemble →
+configure flow, and the candidate `root_key` with its pin.
 
 - [Summary](#summary)
 - [The founding flow](#the-founding-flow)
@@ -49,7 +46,7 @@ and verifying happen forever, and those check exactly one hash.
 
 ## The founding flow
 
-[The node lifecycle](architecture.md#node-lifecycle-power-on-to-serving)
+[The node lifecycle](node.md#node-lifecycle-power-on-to-serving)
 draws these steps against what runs inside each box, from power-on to
 serving.
 
@@ -105,7 +102,21 @@ its node table that pass their appraisal, or a live peer it names with
 manifest's pin picks one. No flag in the POST says who mints: each custodian
 reads the pin from the manifest it was POSTed, the pinned box keeps its
 candidate, and every other box discards its own and fetches the pinned key
-([the node lifecycle](architecture.md#node-lifecycle-power-on-to-serving)).
+([how a node obtains `root_key`](key-custody.md#how-a-node-obtains-root_key)).
+
+**Three roles get called "the leader".** They are different parties:
+
+- **The minting custodian** is the one whose candidate the manifest pins. It
+  keeps that candidate as `root_key` and serves it to the rest of the cohort,
+  and until the chain passes block 0 its node is the only one that may admit
+  anyone ([the founding
+  policy](chain-backed-admission.md#the-readiness-and-freshness-gate)).
+- **The founder** provisions the boxes, harvests their pubkeys, assembles the
+  manifest and POSTs every configuration. It holds no secrets: the founding
+  keys are TEE-born, and it only ever sees public halves and quotes.
+- **The genesis validator set** is every founding node, equally. The minting
+  custodian's node has no special consensus standing, and validators that
+  arrive later join through the deposit path.
 
 ## Why founding-time quote verification is load-bearing
 
@@ -137,11 +148,11 @@ from lives on the LUKS volume, which opens only after the config POST. Two
 oneshots carry the keys across that gap through tmpfs, both built on summit's
 own binary, and the attestation service serves their public halves. No
 process holds them in between ([design rationale](#design-rationale)).
-[The node lifecycle](architecture.md#node-lifecycle-power-on-to-serving)
+[The node lifecycle](node.md#node-lifecycle-power-on-to-serving)
 shows where each step falls.
 
 The three summit units form one group
-([unit groups](architecture.md#unit-groups)). Every member is
+([unit groups](node.md#unit-groups)). Every member is
 `PartOf=summit.target`, so restarting the target re-runs the setup units,
 while a restart of `summit.service` alone does not.
 
@@ -174,7 +185,7 @@ while a restart of `summit.service` alone does not.
   writes when it mints, and a quote whose `report_data` is a domain-separated
   binding over the deploy-supplied nonce, both pubkeys and that key, which the
   attestation service builds itself, as it builds every binding it quotes ([one
-  process opens the TPM](architecture.md#one-process-opens-the-tpm)). The nonce
+  process opens the TPM](node.md#one-process-opens-the-tpm)). The nonce
   prevents replay of quotes from earlier harvests. The binding cannot include
   `network_id`, which does not exist yet; the pin itself provides the intent
   binding, and [founding-window security](#founding-window-security) says what
@@ -273,7 +284,7 @@ configure stops when the pinned box fails. Guards:
 - **Network-level**: the cloud firewall restricts the config port (`:8080`)
   and the harvest port (`:7879`) to the operator's source CIDR, permanently,
   since both come back on every boot
-  ([what the outside can reach](architecture.md#what-the-outside-can-reach)).
+  ([what the outside can reach](node.md#what-the-outside-can-reach)).
 - **Burned-key rule**: a harvested key is trustworthy only if the same box
   later accepts the real configure cleanly. Any anomaly — a quote window
   already closed, a failed verification, a POST rejected, an unexpected
@@ -292,10 +303,17 @@ Alternatives weighed and set aside, with the reasons that decided them. Each
 names the section whose rule it settles.
 
 **Every box mints a candidate `root_key`, rather than one designated minter**
-([the founding flow](#the-founding-flow)). The key must exist before the
-manifest for `network_id` to commit to it, and before the POST no box knows its
-role; the reasoning is in [the architecture's design
-rationale](architecture.md#design-rationale) and [the root-key commitment
+([the founding flow](#the-founding-flow)). `network_id` can commit only to a
+key that exists before the manifest, and before the POST a box knows nothing of
+its role. A designated minter would need its own pre-manifest signal, outside
+`network_id` and protected only by the firewall, and a per-box mode in the
+boot. Minting everywhere keeps every boot identical, rides the harvest quote
+every box already gives, and leaves one founding decision, which candidate the
+manifest pins, under `network_id`. A losing candidate costs 32 random bytes,
+discarded. The price is that the pinned box holds the future `root_key` from
+boot, so a first-POST attacker on that box ([founding-window
+security](#founding-window-security)) reaches the network's key rather than
+one box's summit keys. The options pass is [the root-key commitment
 decision record](decisions/2026-09-root-key-commitment.md).
 
 **Keys born before the manifest, rather than a ceremony after it**
@@ -317,12 +335,9 @@ home from boot until LUKS opens, and their public halves need a quote. The
 shapes set aside:
 
 - **A daemon that holds the keys and quotes them itself.** It must run as the
-  summit user to write summit's keystore, so the TPM group would land on that
-  user, and `summit.service` runs as it too: the consensus daemon, network-facing
-  for the node's whole life, could quote any `report_data`. That includes a
-  root-key request for an ephemeral key of its own, which any responder would
-  answer with `root_key`. Quoting belongs to the one process that opens the
-  TPM ([one process opens the TPM](architecture.md#one-process-opens-the-tpm)).
+  summit user to write summit's keystore, so the TPM group would land on the
+  user `summit.service` runs as, and the consensus daemon could then quote a
+  root-key request of its own ([one TPM user](node.md#design-rationale)).
 - **A daemon that holds the keys and serves them on a local socket**, with the
   quote left to the attestation service. Its only job would be carrying state
   across the gap, which costs a process for the node's life, an IPC protocol
@@ -334,7 +349,7 @@ shapes set aside:
   waits for its genesis, but it would also have to know the founding window,
   serve public keys before LUKS opens, and order itself against the disk.
   That is orchestration the image's units express, moved into the
-  application ([unit groups](architecture.md#unit-groups)). Running summit's
+  application ([unit groups](node.md#unit-groups)). Running summit's
   *binary* in a setup unit is a different thing: the daemon still knows
   nothing of the founding window or the disk, and the setup units only borrow
   two of its CLI commands.

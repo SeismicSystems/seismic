@@ -260,7 +260,7 @@
   <!-- ================= band: a client ================= -->
   <g class="band">
     <rect x="480" y="1460" width="460" height="240" rx="14"/>
-    <text x="920" y="1486">a client — architecture.md</text>
+    <text x="920" y="1486">a client — network-manifest.md</text>
   </g>
   <g transform="translate(500,1500)">
     <rect class="planned" width="420" height="180" rx="12"/>
@@ -290,7 +290,7 @@
   <!-- ================= band: a node joining ================= -->
   <g class="band">
     <rect x="480" y="1720" width="1480" height="330" rx="14"/>
-    <text x="1940" y="2034">a node joining, every boot — architecture.md · chain-backed-admission.md</text>
+    <text x="1940" y="2034">a node joining, every boot — key-custody.md · chain-backed-admission.md</text>
   </g>
   <g transform="translate(500,1770)">
     <rect class="shipped" width="240" height="110" rx="12"/>

@@ -435,10 +435,9 @@ is the only place `tx_io_pk@0` is pinned
   There is no genesis flag.
 - **A joiner's custodian checks what it installs.** After unwrapping a fetched
   key, the custodian re-derives `tx_io_pk@0`, compares it with the pin in the
-  manifest bytes tdx-init wrote to tmpfs, and refuses a mismatch. The joiner
-  holds no secrets yet, so a dishonest responder can at worst deliver a wrong
-  key, and this check catches exactly that. The responder's quote then carries
-  no weight for the joiner.
+  manifest bytes tdx-init wrote to tmpfs, and refuses a mismatch, so the
+  responder's quote carries no weight for the joiner
+  ([why that is enough](trust-model.md#the-trust-anchor-per-action)).
 - **A client compares a hash.** It pins `network_id`, hashes the manifest it is
   given, and compares `tx_io_pk@0`. No quote verification is needed.
 

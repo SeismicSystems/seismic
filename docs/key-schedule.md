@@ -5,8 +5,8 @@ of domain separation start here: within each layer, no two rows may share an
 HKDF info label unless a compatibility reason is documented.
 
 This file owns how each key's bytes are derived. Which process holds a key on
-a TEE node, where it lives at rest, and how it moves between nodes is
-[tee/architecture.md](tee/architecture.md).
+a TEE node, where it lives, and how `root_key` moves between nodes is
+[tee/key-custody.md](tee/key-custody.md).
 
 Two derived keys are independent unless **both** the input keying material
 (IKM) and the label match. Labels therefore only need to be unique within a
@@ -17,9 +17,10 @@ property of the protocol rather than an assumption about which keypairs are
 
 ## Layer 1 — Root key
 
-The network root key (32 bytes, generated from the OS CSPRNG on the genesis
-node, distributed to joining nodes via the root-key-wrap handshake) is the IKM
-for every long-lived node secret.
+The network root key (32 bytes from the OS CSPRNG, minted as a candidate by
+every founding box's custodian, kept by the box the network manifest pins, and
+distributed to every other node via the root-key-wrap handshake) is the IKM for
+every long-lived node secret.
 
 - **Code**: `enclave/crates/custodian/src/custodian.rs` (`KeyPurpose`)
 - **KDF**: HKDF-SHA256, salt `"seismic-purpose-derive-salt"`,

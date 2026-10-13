@@ -8,9 +8,10 @@ sibling doc.
 What the TEE design trusts, how every check reaches back to `network_id`,
 what an attestation quote does and does not prove, and which risks are
 accepted. The mechanisms themselves live in the
-sibling docs — [the node](architecture.md), [the
-manifest](network-manifest.md), [founding](network-founding.md), and
-[admission](chain-backed-admission.md) — and nothing here is normative. This
+sibling docs — [the node](node.md), [key custody](key-custody.md),
+[the manifest](network-manifest.md),
+[founding](network-founding.md), and [admission](chain-backed-admission.md) —
+and nothing here is normative. This
 doc states the assumptions behind those mechanisms in one place, so the
 accepted risk can be reviewed as one list rather than reassembled from a
 caveat per mechanism.
@@ -244,7 +245,7 @@ itself:
 | Checkpoint + light client | `network_id` and a recent finalized header | the certificates since the checkpoint, the key records | the validators, and the checkpoint's source | its own clock |
 | Attested head (proposed) | `network_id` and the accepted measurement set | one quote binding a finalized head and `tx_io_pk`, and the head's timestamp | the platform and the image, the measurement set's source, the validators for the time | the head the quote binds |
 | Pinned key | `tx_io_pk@(root_version, epoch)` | nothing | the side channel | the side channel |
-| Today | nothing | nothing | the RPC it asks, on first use | none |
+| Today | nothing | nothing | the RPC it asks for `tx_io_pk` (`seismic_getTeePublicKey`), on first use | none |
 
 At epoch 0 the first model is the pin check alone: hash the manifest and compare
 `tx_io_pk@0`. Mixes exist: a client can follow the registry with a light client
@@ -263,7 +264,7 @@ in a single validator's lifecycle:
 | --- | --- | --- | --- | --- |
 | Genesis deployer | assemble the founding artifacts | which founding artifacts are canonical, before any chain exists | its own verification at assemble: recomputed genesis hashes, DCAP-verified harvest quotes, registry storage recompiled from the policy document — all committed into `network_id` | shipped |
 | Validator | release `root_key` — the responder | may this requester join the trust domain | the requester's verified quote, then `MeasurementRegistry.isAccepted` at fresh finalized state of the manifest-pinned chain | shipped |
-|  | fetch `root_key` at every boot — the joiner | is this the network's key | the POSTed manifest: its custodian re-derives `tx_io_pk@0` from the delivered key and compares it with the pin `network_id` commits to, so the responder's quote carries no weight | built in the enclave and the image ([SEI-643](https://linear.app/seismic-systems/issue/SEI-643)) |
+|  | fetch `root_key` at every boot — the joiner | is this the network's key | the POSTed manifest: its custodian re-derives `tx_io_pk@0` from the delivered key and compares it with the pin `network_id` commits to, so the responder's quote carries no weight | shipped |
 |  | stake for a seat | does a validator seat imply TEE custody of its keys | at founding, the harvest quote binds both pubkeys to the measured guest; post-genesis, the deposit path registers keys with no hardware binding | open |
 |  | receive a snapshot at a resync | is this state the canonical network's | `K_snap` is derivable only from `root_key`, so a snapshot that decrypts came from inside the trust domain | designed; the purpose is ungranted and no process serves it |
 | Client | submit a TxSeismic | is this `tx_io_pk` this network's recipient key | epoch 0: the pin — hash the manifest against a pinned `network_id` and compare `tx_io_pk@0`, with no quote verification; later epochs: a record signed by the validator set, checked by a light client | epoch 0: the pin is built, the SDK check is [SEI-646](https://linear.app/seismic-systems/issue/SEI-646); later epochs open — today the SDKs trust whichever RPC they ask |
@@ -332,7 +333,7 @@ AES-256-GCM.
 
 These names describe the protocol's shape, not its wire format. The handshake
 derives its keys with its own KDF schedule and labels, not Noise's chaining
-key. [architecture.md](architecture.md#the-root-key-handshake) has the
+key. [key-custody.md](key-custody.md#the-root-key-handshake) has the
 construction, and [network-manifest.md](network-manifest.md) has the exact
 transcript bindings.
 
@@ -353,7 +354,7 @@ can become the network: a platform seal unlocks for whoever holds the
 platform, and threshold shares make the share-holders a recovery quorum with
 the power to reconstitute the secret. The operational rule is that at least
 one node stays live through maintenance, outages, and fleet-wide changes
-([why no on-disk backup](architecture.md#design-rationale)). Whether this
+([why no on-disk backup](key-custody.md#design-rationale)). Whether this
 holds for mainnet is [the disaster-recovery decision](#open-decisions).
 
 **Eclipse plus clock control.** The responder's freshness check measures a
@@ -441,7 +442,7 @@ open design work.
   without ever staking, and what pre-root identity staking should register.
   The second half is one live copy per key, and it applies to founding
   validators too. TEE custody does not keep a key to one signer: the LUKS key
-  is network-shared ([the keys](architecture.md#the-keys)), so any admitted
+  is network-shared ([the keys](key-custody.md#every-key-on-a-node)), so any admitted
   guest can open any node's volume. A host that copies a validator's disk to
   a second VM on an accepted image, and boots both, has two summits signing
   with one validator's keys; each runs reviewed code, and together they can

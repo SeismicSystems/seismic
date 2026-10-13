@@ -109,21 +109,20 @@ What each step establishes:
   denied. Verification and admission are one operation — no API hands back
   verified measurements without a predicate verdict, so there is no
   "verified but unappraised" path to reach by mistake ([SPEC §11](https://github.com/SeismicSystems/enclave/blob/seismic/crates/measurement-admission/SPEC.md#11-consumer-obligations)).
-- **Wrapping** happens in the custodian, a separate local process with no
-  network listener. Calling `WrapRootKey` *is* the authorization assertion;
-  the AEAD's AAD is the verified request binding, so the ciphertext belongs
-  to this handshake and no other. A request admitted on the founding policy
-  says so, and the custodian wraps it only while it still honors that policy
+- **Wrapping** happens in the custodian, for which the call itself is the
+  authorization ([an authorization in, never
+  evidence](key-custody.md#an-authorization-in-never-evidence)). A request
+  admitted on the founding policy says so, and the custodian wraps it only
+  while it still honors that policy
   ([the founding policy](#the-readiness-and-freshness-gate)).
-- **Installing** is the symmetric call on the joiner's own custodian. Raw
-  evidence never crosses into it: `InstallRootKeyFromVerifiedBootstrapResponse`
-  takes only the already-verified request binding, the responder's ephemeral
-  key, and the wrapped ciphertext, and unwraps using that same binding as AEAD
-  AAD — so a wrapped key from any other handshake fails to unwrap here.
+- **Installing** is the symmetric call on the joiner's own custodian, which
+  installs the key only if it derives [the
+  pin](network-manifest.md#the-root-key-pin). How both calls tie the
+  ciphertext to this one handshake is [the handshake's
+  construction](key-custody.md#the-root-key-handshake).
 
-Consensus membership — a seat in the validator set — is gated separately, by
-whose pubkeys are in the summit genesis and by the deposit path. See
-[network founding](network-founding.md).
+A seat in the validator set is a separate membership, with its own gate
+([`root_key` is membership](key-custody.md#root_key-is-membership)).
 
 ## The readiness and freshness gate
 

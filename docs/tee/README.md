@@ -27,12 +27,18 @@ chain](trust-model.md#the-trust-chain).
 
 ## The docs
 
-- [architecture.md](architecture.md) — **what a TEE node is.** The processes
-  and how their units are grouped, the one TPM user, what the outside can
-  reach, key custody and the custodian's socket boundary, the keys by family,
-  the root-key handshake cryptography, the LUKS volume, and the boot chain
-  from power-on to serving.
-  Read it when you touch a service, a key, a port, or the boot order.
+- [node.md](node.md) — **what one TEE node is.** What it
+  assumes of its host and how it is provisioned, the boot chain from power-on
+  to serving, the processes and how their units are grouped, the one TPM user,
+  every IPC edge, what the outside can reach, and what survives a reboot on
+  the LUKS volume. Read it when you touch a service, a port, the boot order, or
+  the disk.
+- [key-custody.md](key-custody.md) — **who holds which key, and how
+  `root_key` moves.** Why holding `root_key` is membership, the custodian and
+  its socket boundary, `root_key` from candidate to present, how every node
+  obtains it at every boot, the root-key handshake cryptography, the
+  per-purpose keys handed to reth, and every key on a node by family. Read it
+  when you touch the custodian, a grant, the handshake, or a key's lifetime.
 - [networking.md](networking.md) — **how nodes find each other.** The three
   planes and each one's identity, discovery and trust posture; the names a node
   carries, in RFC 1498's terms; where every address comes from, who binds it
@@ -49,8 +55,8 @@ chain](trust-model.md#the-trust-chain).
   manifest pins of summit's genesis. Read it before changing the boot chain or
   the founding flow.
 - [chain-backed-admission.md](chain-backed-admission.md) — **how a node gets
-  in.** The root-key handshake, the admission predicate, the readiness and
-  freshness gate, and which repo owns each stage of an image release. Read it
+  in.** Where admission sits in the root-key handshake, the admission
+  predicate, the readiness and freshness gate, and which repo owns each stage of an image release. Read it
   when working on admission, the registry, or the measurement pipeline.
 - [trust-model.md](trust-model.md) — **what is trusted, and what is
   accepted.** The trust chain from the out-of-band roots to every check, what a

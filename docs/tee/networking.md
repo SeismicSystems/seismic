@@ -2,7 +2,7 @@
 
 How a Seismic node finds the others, and how an operator finds the nodes.
 Which ports a node exposes, and to whom, is in
-[architecture.md](architecture.md#what-the-outside-can-reach).
+[node.md](node.md#what-the-outside-can-reach).
 
 The wire formats are normative elsewhere: the config POST's `[network]` and
 `[node]` sections in
@@ -134,7 +134,7 @@ Two more parties reach a node, neither of them a peer:
 - **Clients of the public HTTPS port** reach `:443` by the node's FQDN: RPC
   clients on `/rpc` and `/ws`, and on the same name, `/summit`,
   `/attestation` and the `/metrics` routes
-  ([the port table](architecture.md#what-the-outside-can-reach)). The TLS
+  ([the port table](node.md#what-the-outside-can-reach)). The TLS
   certificate authenticates that name, not the node: the operator controls the
   name's DNS ([DNS](#dns)) and can get a certificate for it at will. It
   protects against third parties on the path. Everything a client relies on
@@ -247,7 +247,7 @@ so an address can change without changing the network.
   key against the validator set.
 - **The root-key handshake:** nothing about the address. Both ends attest on
   every exchange
-  ([the handshake](architecture.md#the-root-key-handshake)).
+  ([the handshake](key-custody.md#the-root-key-handshake)).
 - **devp2p:** nothing. Its payloads are ciphertext and sync never follows it.
 - **The operator's CLI** binds its decisions to an attachment point:
   - **Deploy verification** appraises whatever answers at `public_ip:7878`: a

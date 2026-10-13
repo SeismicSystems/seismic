@@ -17,7 +17,7 @@ parties that ask: a node joining, and a client encrypting. Key epochs above 0
 are not settled here; the direction is a record signed by the validator set,
 with the epoch-0 pin as its base case. The mechanisms are in
 [network-manifest.md](../network-manifest.md),
-[architecture.md](../architecture.md), and
+[node.md](../node.md), and
 [trust-model.md](../trust-model.md). As of this record they are decided, not
 built.
 

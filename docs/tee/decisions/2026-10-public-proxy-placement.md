@@ -64,7 +64,7 @@ three layers:
 ## What TLS on the public port protects
 
 - **Not shielded data.** Confidentiality comes from attested
-  application-layer keys ([architecture.md](../architecture.md)). The manifest
+  application-layer keys ([node.md](../node.md)). The manifest
   pins `tx_io_pk@0`. Later epochs' keys are to be recorded in summit's
   consensus state and checked by clients with a light client
   ([the root-key commitment record](2026-09-root-key-commitment.md),
