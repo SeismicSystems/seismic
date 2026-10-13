@@ -40,6 +40,13 @@ description = "Remove local cargo patches symlink"
 dir = "{{config_root}}/.."
 run = "rm -f .cargo/config.toml && echo 'Local patches OFF: .cargo/config.toml removed'"
 
+# seismic-tee tasks
+
+[tasks."seismic-tee::install-local"]
+description = "Install seismic-tee from this checkout over ~/.local/bin/seismic-tee (`seismic-tee --upgrade` restores a release)"
+dir = "{{config_root}}/tee/cli"
+run = "cargo install --locked --path seismic-tee --root \"$HOME/.local\""
+
 # sreth tasks
 
 [tasks."sreth::start-local"]
