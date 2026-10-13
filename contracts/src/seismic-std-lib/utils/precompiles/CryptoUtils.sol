@@ -9,6 +9,7 @@ library CryptoUtils {
     ////////////////////////////////////////////////////////////////////////
 
     error RNGPrecompileCallFailed();
+    error InvalidRNGOutputLength(uint256 returnedLength);
     error AESPrecompileCallFailed();
     error EncryptionReturnedNoOutput();
     error CiphertextCannotBeEmpty();
@@ -40,6 +41,7 @@ library CryptoUtils {
     function generateRandomNonce() internal view returns (uint96) {
         (bool success, bytes memory output) = RNG_PRECOMPILE.staticcall(abi.encodePacked(uint32(32)));
         if (!success) revert RNGPrecompileCallFailed();
+        if (output.length != 32) revert InvalidRNGOutputLength(output.length);
 
         bytes32 randomBytes;
         assembly {
@@ -57,6 +59,7 @@ library CryptoUtils {
 
         (bool success, bytes memory output) = RNG_PRECOMPILE.staticcall(input);
         if (!success) revert RNGPrecompileCallFailed();
+        if (output.length != 32) revert InvalidRNGOutputLength(output.length);
 
         bytes32 randomBytes;
         assembly {
