@@ -18,14 +18,14 @@
 //!
 //! Commands, in the order a founding meets them: [`harvest`] collects and
 //! DCAP-verifies a founding cohort's keys into the network directory;
-//! [`configure`] delivers a node's config on first boot and waits for it to
-//! come up — one node joining a live network, or a whole founding cohort at
-//! once ([`cohort`]), whose launch it then asserts against what the manifest
-//! pins; [`verify`] appraises a running node's attestation; and [`status`]
-//! shows the live state of every node and of the network, read by
-//! [`probe`]. The cohort flow does to each node what the single-node flows do
-//! to one, so building the config, POSTing it, the status poller, the probe
-//! and the appraisal are shared library surface.
+//! [`configure`] delivers nodes their config on first boot and waits for
+//! them to come up — founding the network or joining it, as its live state
+//! decides ([`plan`]), on one path ([`cohort`]) — and asserts the launch of
+//! every founding node against what the manifest pins; [`verify`] appraises a
+//! running node's attestation; and [`status`] shows the live state of every
+//! node and of the network, read by [`probe`]. Building the config, POSTing
+//! it, the status poller, the probe and the appraisal are shared library
+//! surface.
 //!
 //! This crate and the network crate depend on neither each other, only on
 //! [`seismic_tee_common`] and [`seismic_tee_context`]: the network-directory
@@ -38,6 +38,7 @@ pub mod configure;
 pub mod dashboard;
 pub mod harvest;
 pub mod launch;
+pub mod plan;
 pub mod probe;
 pub mod status;
 pub mod verify;
@@ -61,9 +62,8 @@ pub enum NodeCommand {
     /// Harvest + DCAP-verify a founding cohort's summit keys into the network
     /// directory's inputs/.
     Harvest(harvest::HarvestArgs),
-    /// Configure nodes on first boot: join one to a live network, or found a
-    /// cohort (--genesis-node [--join …]); --check re-asserts a founded
-    /// cohort's launch.
+    /// Configure nodes on first boot: found the network, or join it, as its
+    /// live state decides; --check re-asserts a founded cohort's launch.
     Configure(configure::ConfigureArgs),
     /// Deploy-verify a node's TDX attestation against the intended image.
     Verify(verify::VerifyArgs),

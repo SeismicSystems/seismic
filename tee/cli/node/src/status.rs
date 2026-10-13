@@ -1,6 +1,6 @@
 //! `status`: the live state of every node in the node table, and what it
 //! says about the network; and the first-boot disk-wipe watch `configure`
-//! waits on after its POST.
+//! waits on after each POST.
 //!
 //! The command reads each node through [`crate::probe`] — reachable, awaiting
 //! or past its config, its candidate against the manifest's pin, key holder,
@@ -10,8 +10,8 @@
 //! The watch: the attestation service serves `getLuksProvisioningStatus` on
 //! `:7878` (JSON-RPC) through the first-boot disk wipe — the one long (1h+),
 //! otherwise opaque phase. [`poll_provisioning`] polls it to completion, and
-//! is the shared poller behind `configure`'s post-POST wait and the founding
-//! cohort's dashboard, which is why the state machine renders nothing itself.
+//! is the poller behind `configure`'s dashboard, which is why the state
+//! machine renders nothing itself.
 //!
 //! States, as the attestation service's `LuksProvisioningStatus` serializes
 //! them:
@@ -30,7 +30,6 @@
 //! later).
 
 use std::collections::BTreeMap;
-use std::io::{IsTerminal as _, Write as _};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
@@ -72,13 +71,6 @@ pub const IDLE_GRACE: Duration = Duration::from_secs(60);
 /// NOT terminal — only an error that sticks, with no recovering attempt within
 /// the grace, is. Any non-error reading resets the clock.
 pub const ERROR_GRACE: Duration = Duration::from_secs(120);
-
-/// One-time context printed when the wipe is first seen: the bar alone
-/// doesn't say what's happening, and this phase is long enough to look like a
-/// hang.
-const FIRST_BOOT_NOTE: &str = "First-boot: initializing the encrypted /persistent disk — a one-time \
-                               full-disk wipe (LUKS + dm-integrity) that can take 1h+ on large \
-                               disks. The node must finish this before it can boot further.";
 
 /// `getLuksProvisioningStatus`'s result, as this build reads it.
 ///
@@ -384,10 +376,9 @@ impl ProvisioningWatch {
 /// Poll `getLuksProvisioningStatus` on `client` every `interval`, handing each
 /// [`Update`] to `on_update`, until a terminal one. Returns its `ok`.
 ///
-/// Renders nothing: this is the shared driver behind the single-node
-/// [`watch_luks_provisioning`] and a cohort dashboard. Cancellation is the
-/// caller's: dropping the future (a `select!` against ctrl-C) ends the watch
-/// within one request.
+/// Renders nothing: this is the driver behind `configure`'s dashboard.
+/// Cancellation is the caller's: dropping the future (a `select!` against
+/// ctrl-C) ends the watch within one request.
 pub async fn poll_provisioning(
     client: &rpc::Client,
     mut watch: ProvisioningWatch,
@@ -407,44 +398,6 @@ pub async fn poll_provisioning(
         }
         tokio::time::sleep(interval).await;
     }
-}
-
-/// Poll and render progress until the wipe finishes, errors, or the watch
-/// concludes none is in progress. Returns whether it ended well (wipe done, or
-/// no wipe) — the `status` command's exit status.
-///
-/// Renders an in-place bar on a TTY; plain lines otherwise (so CI logs stay
-/// readable).
-pub async fn watch_luks_provisioning(client: &rpc::Client, interval: Duration) -> bool {
-    let isatty = std::io::stdout().is_terminal();
-    let mut seen_provisioning = false;
-    // A TTY bar (no trailing newline) is currently shown.
-    let mut on_bar_line = false;
-
-    let mut emit = |line: &str, transient: bool| {
-        let mut stdout = std::io::stdout().lock();
-        if isatty && transient {
-            let _ = write!(stdout, "\r\x1b[K{line}");
-            on_bar_line = true;
-        } else {
-            if on_bar_line {
-                // Close the in-place bar before a permanent line.
-                let _ = writeln!(stdout);
-                on_bar_line = false;
-            }
-            let _ = writeln!(stdout, "{line}");
-        }
-        let _ = stdout.flush();
-    };
-
-    poll_provisioning(client, ProvisioningWatch::default(), interval, |update| {
-        if update.phase == Phase::Provisioning && !seen_provisioning {
-            seen_provisioning = true;
-            emit(FIRST_BOOT_NOTE, false);
-        }
-        emit(&update.line, update.transient);
-    })
-    .await
 }
 
 #[derive(Debug, Args)]
@@ -486,18 +439,6 @@ pub struct StatusArgs {
 }
 
 impl StatusArgs {
-    /// The flags that name this node table and manifest, for a suggested
-    /// command acting on the same nodes. `--name` is left to the caller.
-    fn table_flags(&self) -> String {
-        let mut flags = String::new();
-        if let Some(node) = &self.node.node {
-            flags.push_str(&format!(" --node {}", node.display()));
-        } else if let Some(context) = &self.node.context.context {
-            flags.push_str(&format!(" --context {context}"));
-        }
-        flags
-    }
-
     fn manifest_flag(&self) -> String {
         self.manifest
             .as_ref()
@@ -726,32 +667,29 @@ impl<'a> Report<'a> {
 
     /// The command to run next, with its lead.
     fn next_step(&self, args: &StatusArgs) -> Option<(String, Vec<String>)> {
-        let table = args.table_flags();
+        let table = args.node.table_flags();
         let manifest = args.manifest_flag();
         // `bootnode` is what the join names as its peer: nothing when the
         // table holds a key holder, which configure finds and appraises.
         let join = |lead: &str, bootnode: &str| {
-            let awaiting = self.awaiting();
+            let awaiting: String = self
+                .awaiting()
+                .iter()
+                .map(|name| format!(" {name}"))
+                .collect();
             (!awaiting.is_empty()).then(|| {
                 (
                     lead.to_string(),
-                    awaiting
-                        .iter()
-                        .map(|name| {
-                            format!(
-                                "seismic-tee node configure{table} --name {name}{bootnode}{manifest}"
-                            )
-                        })
-                        .collect(),
+                    vec![format!(
+                        "seismic-tee node configure{table}{awaiting}{bootnode}{manifest}"
+                    )],
                 )
             })
         };
         match &self.network {
-            NetworkState::Unfounded { pinned_box } => Some((
+            NetworkState::Unfounded { .. } => Some((
                 "found it:".to_string(),
-                vec![format!(
-                    "seismic-tee node configure{table} --genesis-node {pinned_box}{manifest}"
-                )],
+                vec![format!("seismic-tee node configure{table}{manifest}")],
             )),
             NetworkState::Live { key_holders } => join(
                 &format!(
@@ -969,6 +907,65 @@ mod tests {
         assert_eq!(
             commands,
             ["seismic-tee node harvest --node nodes.json --force"]
+        );
+    }
+
+    /// Each network state names its configure run: a bare one founds, a
+    /// join names the nodes awaiting their config, and a table without a key
+    /// holder names a peer.
+    #[test]
+    fn the_next_step_is_the_configure_run_the_state_calls_for() {
+        let awaiting = |candidate: &str| NodeState {
+            config: ConfigState::Awaiting {
+                node_public_key: "ab".repeat(32),
+                candidate_tx_io_public_key: candidate.to_string(),
+            },
+            key_holder: None,
+        };
+        let holder = NodeState {
+            config: ConfigState::Configured,
+            key_holder: Some(Disk::Status(json!({"state": "idle"}))),
+        };
+        let founding = lost_founding().1;
+        let args = status_args(&["--node", "nodes.json", "--manifest", "m.json"]);
+        let step = |states: &BTreeMap<String, NodeState>, founding: Option<&Founding>| {
+            Report::new(states, founding).next_step(&args).unwrap().1
+        };
+
+        let unfounded = BTreeMap::from([
+            ("alpha".to_string(), awaiting(FIXTURE_FOUNDING_TX_IO_PK)),
+            (
+                "beta".to_string(),
+                awaiting(&candidate_tx_io_public_key("bb")),
+            ),
+        ]);
+        assert_eq!(
+            step(&unfounded, Some(&founding)),
+            ["seismic-tee node configure --node nodes.json --manifest m.json"]
+        );
+
+        let live = BTreeMap::from([
+            ("alpha".to_string(), holder),
+            (
+                "beta".to_string(),
+                awaiting(&candidate_tx_io_public_key("bb")),
+            ),
+        ]);
+        assert_eq!(
+            step(&live, Some(&founding)),
+            ["seismic-tee node configure --node nodes.json beta --manifest m.json"]
+        );
+
+        let own = BTreeMap::from([(
+            "operator-1".to_string(),
+            awaiting(&candidate_tx_io_public_key("cc")),
+        )]);
+        assert_eq!(
+            step(&own, None),
+            [
+                "seismic-tee node configure --node nodes.json operator-1 --bootnode <ENODE> \
+                 --manifest m.json"
+            ]
         );
     }
 

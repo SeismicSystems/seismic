@@ -2,18 +2,18 @@
 //!
 //! tdx-init derives a node's `root_key` fetch peers from its bootnodes
 //! (`http://<host>:7878`), and reth dials them, so a bootnode is a box the
-//! node is about to trust with its key. Two sources:
+//! node is about to trust with its key. Two sources, as [`crate::plan`]
+//! decides:
 //!
 //! - **Founding.** A freshly-configured reth node's enode (its devp2p node
 //!   record) isn't known until reth is up, so a greenfield cohort can't be
-//!   handed a static bootnode list up front: the genesis node comes up first,
-//!   then its enode seeds the joiners (the two-stage bootstrap in
+//!   handed a static bootnode list up front: the pinned box comes up first,
+//!   then its enode seeds the rest (the two-stage bootstrap in
 //!   [`crate::cohort`]), polled with [`collect_enodes`].
-//! - **Joining.** Every other config POST — a node joining after the
-//!   founding, a founding node rebooted — goes to a live network, whose key
-//!   holders (nodes serving `:7878`) are found by the [`crate::probe`] of the
-//!   node table ([`from_key_holders`]). Nothing is remembered between runs,
-//!   so each run re-applies the founding's rule that a node's enode reaches
+//! - **Joining.** Every other config POST goes to a live network, whose key
+//!   holders (nodes serving `:7878`) the [`crate::probe`] of the node table
+//!   found ([`from_key_holders`]). Nothing is remembered between runs, so
+//!   each run re-applies the founding's rule that a node's enode reaches
 //!   others only after it passes its appraisal: every key holder is
 //!   deploy-verified, and only those that pass are handed out. With none,
 //!   the run refuses before anything is sent.
@@ -35,12 +35,11 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context as _, bail};
 use jsonrpsee::rpc_params;
-use seismic_tee_common::{Descriptors, Manifest, NodeDescriptor, rpc};
+use seismic_tee_common::{Manifest, NodeDescriptor, rpc};
 use tokio::task::JoinSet;
 
 use crate::cohort::Appraisal;
-use crate::probe::{self, Asked, Founding, NetworkState, NodeState, assess, probe_all};
-use crate::status::network_line;
+use crate::plan::Remedy;
 use crate::verify::challenge_node;
 
 /// Enode-readiness polling. reth serves `seismic_nodeInfo` only once it is up
@@ -245,37 +244,7 @@ pub async fn collect_enodes(
     }
 }
 
-/// What a refusal suggests instead, spelled with this run's flags so it
-/// pastes. Each field is empty or leading-space-prefixed.
-#[derive(Debug, Clone, Default)]
-pub struct Remedy {
-    /// The flags naming the node table, without `--name`.
-    pub table: String,
-    /// ` --manifest <FILE>`, when one was given.
-    pub manifest: String,
-    /// The network directory, for the re-found harvest, when `--manifest`
-    /// named one; the context supplies it otherwise.
-    pub dir: String,
-}
-
-impl Remedy {
-    pub(crate) fn bootnode(&self, joining: &str) -> String {
-        format!(
-            "seismic-tee node configure{} --name {joining} --bootnode <ENODE>{}",
-            self.table, self.manifest
-        )
-    }
-
-    fn re_found(&self) -> String {
-        format!(
-            "re-found: `pulumi destroy`, a fresh `pulumi up`, then `seismic-tee node harvest{}{} \
-             --force`",
-            self.dir, self.table
-        )
-    }
-}
-
-/// A key holder as the joining run vets it: where its attestation service
+/// A key holder as a joining run vets it: where its attestation service
 /// is appraised, and where its enode is read.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyHolder {
@@ -298,38 +267,29 @@ impl KeyHolder {
     }
 }
 
-/// The bootnodes for `joining`, a node in `table` about to take its config:
-/// the enodes of the table's other key holders that pass their appraisal.
+/// The bootnodes of a run joining a live network: the enodes of the
+/// `key_holders` that pass their appraisal.
 ///
-/// Every node in the table is probed, `joining` among them: the network's
-/// state is read from all of them, as `node status` reads it, and a refusal
-/// is worded by it. Every key holder is appraised, `--no-verify` or not: that
-/// flag is about `joining`. Refuses — nothing has been sent — when `joining`
-/// already holds `root_key`, when no other node does, or when none that does
-/// passes.
+/// Every key holder is appraised, `--no-verify` or not: that flag is about
+/// the nodes configured. Refuses — nothing has been sent — when none passes.
 pub async fn from_key_holders(
-    client: &reqwest::Client,
-    table: &Descriptors,
-    joining: &str,
-    founding: Option<&Founding>,
+    key_holders: &[KeyHolder],
     manifest: &Manifest,
     appraisal: &Appraisal,
     remedy: &Remedy,
 ) -> anyhow::Result<Vec<String>> {
-    eprintln!(
-        "Finding bootnodes: reading the {} node(s) in the node table...",
-        table.len()
-    );
-    let states = probe_all(client, &probe::targets(table)).await;
-    let holders = key_holders(&states, joining, founding, remedy)?;
+    let names: Vec<&str> = key_holders
+        .iter()
+        .map(|holder| holder.name.as_str())
+        .collect();
     eprintln!(
         "{} key holder(s): {}; deploy-verifying each before handing out an enode...",
-        holders.len(),
-        holders.join(", ")
+        key_holders.len(),
+        names.join(", ")
     );
     let mut tasks = JoinSet::new();
-    for name in holders {
-        let holder = KeyHolder::new(&name, &table[&name]);
+    for holder in key_holders {
+        let holder = holder.clone();
         let manifest = manifest.clone();
         let appraisal = appraisal.clone();
         tasks.spawn(async move {
@@ -348,71 +308,31 @@ pub async fn from_key_holders(
             Err(reason) => eprintln!("  ✗ {name}: {reason}"),
         }
     }
-    handed_out(&vetted, joining, remedy)
+    handed_out(&vetted, remedy)
 }
 
-/// The key holders among `states` other than `joining`, in name order, or the
-/// refusal that there are none.
-pub fn key_holders(
-    states: &BTreeMap<String, NodeState>,
-    joining: &str,
-    founding: Option<&Founding>,
-    remedy: &Remedy,
-) -> anyhow::Result<Vec<String>> {
-    if states
-        .get(joining)
-        .is_some_and(|state| state.key_holder.is_some())
-    {
-        bail!(
-            "{joining} already holds root_key: it took its config this boot, and tdx-init takes \
-             one per boot. Nothing was sent. To appraise it:\n    seismic-tee node verify{} \
-             --name {joining}{}",
-            remedy.table,
-            remedy.manifest
-        );
+/// Why a key holder's enode is not handed out. Each calls for its own
+/// remedy: re-founding, waiting, or a peer named by hand.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Unvetted {
+    /// Its quote did not pass against the manifest's policy: it must not
+    /// serve root_key to anyone.
+    FailedAppraisal(String),
+    /// It passed, but serves no enode yet: reth is not up (its disk wipe, or
+    /// its start).
+    NoEnodeYet(String),
+    /// It passed, but its enode cannot be handed out — malformed, or at
+    /// another host than the one appraised — and a re-run reads the same.
+    UnusableEnode(String),
+}
+
+impl std::fmt::Display for Unvetted {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::FailedAppraisal(error) => write!(f, "deploy verification FAILED: {error}"),
+            Self::NoEnodeYet(reason) | Self::UnusableEnode(reason) => f.write_str(reason),
+        }
     }
-    let holders: Vec<String> = states
-        .iter()
-        .filter(|(name, state)| *name != joining && state.key_holder.is_some())
-        .map(|(name, _)| name.clone())
-        .collect();
-    if !holders.is_empty() {
-        return Ok(holders);
-    }
-    let network = assess(states, founding);
-    let instead = match &network {
-        NetworkState::Unfounded { pinned_box } => format!(
-            "found it first:\n    seismic-tee node configure{} --genesis-node {pinned_box}{}",
-            remedy.table, remedy.manifest
-        ),
-        NetworkState::NoReachableKeyHolder(Asked::EveryFounder {
-            pinned_box_answered: true,
-            ..
-        }) => format!(
-            "{}; or name a live peer:\n    {}",
-            remedy.re_found(),
-            remedy.bootnode(joining)
-        ),
-        NetworkState::NoReachableKeyHolder(Asked::EveryFounder {
-            pinned_box_answered: false,
-            ..
-        }) => format!(
-            "watch for it to come up (`seismic-tee node status --watch{}{}`), or name a live \
-             peer:\n    {}",
-            remedy.table,
-            remedy.manifest,
-            remedy.bootnode(joining)
-        ),
-        NetworkState::NoReachableKeyHolder(Asked::Some) | NetworkState::Live { .. } => format!(
-            "name a live peer by its enode (its `seismic_nodeInfo`):\n    {}",
-            remedy.bootnode(joining)
-        ),
-    };
-    bail!(
-        "{}\nNothing was sent: {joining} would have no peer to fetch root_key from. Instead, \
-         {instead}",
-        network_line(&network)
-    )
 }
 
 /// Appraise one key holder, then read its enode. The verdict is the enode to
@@ -421,7 +341,7 @@ pub async fn vet(
     holder: &KeyHolder,
     manifest: &Manifest,
     appraisal: &Appraisal,
-) -> Result<String, String> {
+) -> Result<String, Unvetted> {
     challenge_node(
         &holder.attestation_rpc_url,
         manifest,
@@ -429,7 +349,7 @@ pub async fn vet(
         appraisal.pccs_url.as_deref(),
     )
     .await
-    .map_err(|error| format!("deploy verification FAILED: {error:#}"))?;
+    .map_err(|error| Unvetted::FailedAppraisal(format!("{error:#}")))?;
     read_enode(holder).await
 }
 
@@ -438,27 +358,31 @@ pub async fn vet(
 /// The enode's host must be the IP whose attestation service was appraised:
 /// tdx-init fetches `root_key` from the enode's host, so an enode elsewhere
 /// would send the joiner to a box nobody appraised.
-pub async fn read_enode(holder: &KeyHolder) -> Result<String, String> {
-    let client = rpc::Client::new(&holder.eth_rpc_url).map_err(|error| format!("{error:#}"))?;
+pub async fn read_enode(holder: &KeyHolder) -> Result<String, Unvetted> {
+    let client = rpc::Client::new(&holder.eth_rpc_url)
+        .map_err(|error| Unvetted::UnusableEnode(format!("{error:#}")))?;
     let raw = fetch_enode(&client)
         .await
-        .map_err(|error| format!("no enode: {error:#}"))?;
-    let enode = normalize_enode(&raw).map_err(|error| format!("{error:#}"))?;
+        .map_err(|error| Unvetted::NoEnodeYet(format!("no enode: {error:#}")))?;
+    let enode =
+        normalize_enode(&raw).map_err(|error| Unvetted::UnusableEnode(format!("{error:#}")))?;
     if enode_host(&enode).as_deref() != Some(holder.public_ip.as_str()) {
-        return Err(format!(
+        return Err(Unvetted::UnusableEnode(format!(
             "its enode {enode} is not at its public_ip {}: the joining node would fetch root_key \
              from a box other than the one appraised",
             holder.public_ip
-        ));
+        )));
     }
     Ok(enode)
 }
 
 /// The enodes that passed, or the refusal that none did, naming each key
-/// holder's reason.
+/// holder's reason. One that passed but serves no enode yet is waited for;
+/// re-founding is the way on only when every key holder failed its
+/// appraisal; otherwise a re-run reads the same enodes, and only a peer named
+/// by hand is left.
 pub fn handed_out(
-    vetted: &BTreeMap<String, Result<String, String>>,
-    joining: &str,
+    vetted: &BTreeMap<String, Result<String, Unvetted>>,
     remedy: &Remedy,
 ) -> anyhow::Result<Vec<String>> {
     let enodes: Vec<String> = vetted.values().filter_map(|v| v.clone().ok()).collect();
@@ -467,33 +391,43 @@ pub fn handed_out(
     }
     let reasons: Vec<String> = vetted
         .iter()
-        .map(|(name, verdict)| {
-            format!(
-                "  ✗ {name}: {}",
-                verdict.as_ref().err().map_or("", String::as_str)
-            )
-        })
+        .filter_map(|(name, verdict)| Some(format!("  ✗ {name}: {}", verdict.as_ref().err()?)))
         .collect();
+    let starting = vetted
+        .values()
+        .any(|verdict| matches!(verdict, Err(Unvetted::NoEnodeYet(_))));
+    let failed_appraisal = vetted
+        .values()
+        .all(|verdict| matches!(verdict, Err(Unvetted::FailedAppraisal(_))));
+    let instead = if starting {
+        format!(
+            "A key holder that passed its appraisal but serves no enode yet is still starting: \
+             watch it (`{}`) and re-run once it serves one; or name a live peer",
+            remedy.watch()
+        )
+    } else if failed_appraisal {
+        format!(
+            "A key holder that fails its appraisal must not serve root_key to anyone: {}; or name \
+             a live peer",
+            remedy.re_found()
+        )
+    } else {
+        "A re-run reads the same enodes: name a live peer instead".to_string()
+    };
     bail!(
-        "no key holder in the node table can be handed to {joining} as a bootnode:\n{}\nNothing \
-         was sent. A key holder that fails its appraisal must not serve root_key to anyone: \
-         {}; or name a live peer:\n    {}",
+        "no key holder in the node table can be handed out as a bootnode:\n{}\nNothing was \
+         sent. {instead}:\n    {}",
         reasons.join("\n"),
-        remedy.re_found(),
-        remedy.bootnode(joining)
+        remedy.bootnode()
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use seismic_tee_common::test_support::{
-        FIXTURE_FOUNDING_TX_IO_PK, FIXTURE_MANIFEST, FakeServer, candidate_tx_io_public_key,
-        refused_url, rpc_result,
-    };
+    use seismic_tee_common::test_support::{FIXTURE_MANIFEST, FakeServer, refused_url, rpc_result};
     use serde_json::json;
 
     use super::*;
-    use crate::probe::{ConfigState, Disk};
 
     fn id() -> String {
         "ab".repeat(64)
@@ -650,132 +584,11 @@ mod tests {
     fn remedy() -> Remedy {
         Remedy {
             table: " --node nodes.json".to_string(),
+            names: " gamma".to_string(),
             manifest: " --manifest net/network-manifest.json".to_string(),
             dir: " net".to_string(),
+            appraisal: String::new(),
         }
-    }
-
-    fn holder() -> NodeState {
-        NodeState {
-            config: ConfigState::Configured,
-            key_holder: Some(Disk::Status(json!({"state": "idle"}))),
-        }
-    }
-
-    fn awaiting(candidate: &str) -> NodeState {
-        NodeState {
-            config: ConfigState::Awaiting {
-                node_public_key: "ab".repeat(32),
-                candidate_tx_io_public_key: candidate.to_string(),
-            },
-            key_holder: None,
-        }
-    }
-
-    fn states(entries: &[(&str, NodeState)]) -> BTreeMap<String, NodeState> {
-        entries
-            .iter()
-            .map(|(name, state)| (name.to_string(), state.clone()))
-            .collect()
-    }
-
-    /// alpha harvested the pin; beta is the other founder.
-    fn founding() -> Founding {
-        Founding {
-            pin: FIXTURE_FOUNDING_TX_IO_PK.to_string(),
-            pinned_box: Some("alpha".to_string()),
-            founders: ["alpha", "beta"].map(String::from).into(),
-        }
-    }
-
-    /// Every other key holder is a candidate, in name order; the joining
-    /// node is never its own bootnode.
-    #[test]
-    fn the_other_key_holders_are_the_candidates() {
-        let table = states(&[
-            ("gamma", holder()),
-            ("alpha", holder()),
-            ("beta", awaiting(&candidate_tx_io_public_key("bb"))),
-        ]);
-        assert_eq!(
-            key_holders(&table, "beta", Some(&founding()), &remedy()).unwrap(),
-            ["alpha", "gamma"]
-        );
-    }
-
-    /// A joining node that serves :7878 took its config this boot: there is
-    /// nothing to send it.
-    #[test]
-    fn a_joining_node_that_holds_the_key_is_refused() {
-        let table = states(&[("alpha", holder()), ("beta", holder())]);
-        let err = key_holders(&table, "beta", None, &remedy())
-            .unwrap_err()
-            .to_string();
-        assert!(err.contains("beta already holds root_key"), "{err}");
-        assert!(
-            err.contains(
-                "seismic-tee node verify --node nodes.json --name beta --manifest \
-                 net/network-manifest.json"
-            ),
-            "{err}"
-        );
-    }
-
-    /// No key holder: the refusal reads the network as `node status` does,
-    /// and names the command for that state.
-    #[test]
-    fn no_key_holder_is_refused_by_the_network_state() {
-        let unfounded = states(&[
-            ("alpha", awaiting(FIXTURE_FOUNDING_TX_IO_PK)),
-            ("beta", awaiting(&candidate_tx_io_public_key("bb"))),
-        ]);
-        let err = key_holders(&unfounded, "beta", Some(&founding()), &remedy())
-            .unwrap_err()
-            .to_string();
-        assert!(err.contains("network: unfounded"), "{err}");
-        assert!(
-            err.contains(
-                "seismic-tee node configure --node nodes.json --genesis-node alpha --manifest \
-                 net/network-manifest.json"
-            ),
-            "{err}"
-        );
-
-        // The pinned box re-minted: the founding root_key is gone.
-        let lost = states(&[
-            ("alpha", awaiting(&candidate_tx_io_public_key("aa"))),
-            ("beta", awaiting(&candidate_tx_io_public_key("bb"))),
-        ]);
-        let err = key_holders(&lost, "beta", Some(&founding()), &remedy())
-            .unwrap_err()
-            .to_string();
-        assert!(err.contains("the founding root_key is gone"), "{err}");
-        assert!(
-            err.contains("seismic-tee node harvest net --node nodes.json --force"),
-            "{err}"
-        );
-        assert!(
-            err.contains(
-                "seismic-tee node configure --node nodes.json --name beta --bootnode <ENODE> \
-                 --manifest net/network-manifest.json"
-            ),
-            "{err}"
-        );
-
-        // An operator's own table says nothing about the network.
-        let own = states(&[("operator-1", awaiting(&candidate_tx_io_public_key("cc")))]);
-        let err = key_holders(&own, "operator-1", Some(&founding()), &remedy())
-            .unwrap_err()
-            .to_string();
-        assert!(
-            err.contains("no reachable key holder among these nodes"),
-            "{err}"
-        );
-        assert!(
-            err.contains("--name operator-1 --bootnode <ENODE>"),
-            "{err}"
-        );
-        assert!(!err.contains("re-found"), "{err}");
     }
 
     fn key_holder(public_ip: &str, eth_rpc_url: &str) -> KeyHolder {
@@ -803,19 +616,33 @@ mod tests {
             Ok(format!("enode://{}@1.1.1.1:30303", id()))
         );
 
+        // Elsewhere, or malformed: a re-run reads the same.
         let server = FakeServer::serve(vec![(200, rpc_result(enode("10.0.0.4")))]);
         let reason = read_enode(&key_holder("1.1.1.1", &server.url))
             .await
             .unwrap_err();
+        assert!(matches!(reason, Unvetted::UnusableEnode(_)), "{reason:?}");
         assert!(
-            reason.contains("is not at its public_ip 1.1.1.1"),
+            reason
+                .to_string()
+                .contains("is not at its public_ip 1.1.1.1"),
             "{reason}"
         );
+        let server = FakeServer::serve(vec![(
+            200,
+            rpc_result(json!({"enode": "enode://short@1.1.1.1:30303"})),
+        )]);
+        let reason = read_enode(&key_holder("1.1.1.1", &server.url))
+            .await
+            .unwrap_err();
+        assert!(matches!(reason, Unvetted::UnusableEnode(_)), "{reason:?}");
 
+        // No answer yet: reth is still starting.
         let reason = read_enode(&key_holder("1.1.1.1", &refused_url()))
             .await
             .unwrap_err();
-        assert!(reason.starts_with("no enode: "), "{reason}");
+        assert!(matches!(reason, Unvetted::NoEnodeYet(_)), "{reason:?}");
+        assert!(reason.to_string().starts_with("no enode: "), "{reason}");
     }
 
     /// The appraisal comes first: a key holder that does not pass is never
@@ -833,7 +660,11 @@ mod tests {
         let reason = vet(&key_holder("1.1.1.1", &server.url), &manifest(), &appraisal)
             .await
             .unwrap_err();
-        assert!(reason.starts_with("deploy verification FAILED"), "{reason}");
+        assert!(matches!(reason, Unvetted::FailedAppraisal(_)), "{reason:?}");
+        assert!(
+            reason.to_string().starts_with("deploy verification FAILED"),
+            "{reason}"
+        );
         assert!(server.requests().is_empty());
     }
 
@@ -842,22 +673,15 @@ mod tests {
     #[test]
     fn only_the_passing_key_holders_are_handed_out() {
         let enode = format!("enode://{}@2.2.2.2:30303", id());
+        let failed = || Err(Unvetted::FailedAppraisal("x".to_string()));
         let vetted = BTreeMap::from([
-            (
-                "alpha".to_string(),
-                Err("deploy verification FAILED: x".to_string()),
-            ),
+            ("alpha".to_string(), failed()),
             ("beta".to_string(), Ok(enode.clone())),
         ]);
-        assert_eq!(handed_out(&vetted, "gamma", &remedy()).unwrap(), [enode]);
+        assert_eq!(handed_out(&vetted, &remedy()).unwrap(), [enode]);
 
-        let vetted = BTreeMap::from([(
-            "alpha".to_string(),
-            Err("deploy verification FAILED: x".to_string()),
-        )]);
-        let err = handed_out(&vetted, "gamma", &remedy())
-            .unwrap_err()
-            .to_string();
+        let vetted = BTreeMap::from([("alpha".to_string(), failed())]);
+        let err = handed_out(&vetted, &remedy()).unwrap_err().to_string();
         assert!(
             err.contains("  ✗ alpha: deploy verification FAILED: x"),
             "{err}"
@@ -867,6 +691,70 @@ mod tests {
             err.contains("seismic-tee node harvest net --node nodes.json --force"),
             "{err}"
         );
-        assert!(err.contains("--name gamma --bootnode <ENODE>"), "{err}");
+        assert!(
+            err.contains("seismic-tee node configure --node nodes.json gamma --bootnode <ENODE>"),
+            "{err}"
+        );
+    }
+
+    /// A key holder that passed but serves no enode yet — reth still behind
+    /// its disk wipe — is waited for, not a reason to re-found.
+    #[test]
+    fn a_key_holder_still_starting_is_waited_for() {
+        let vetted = BTreeMap::from([
+            (
+                "alpha".to_string(),
+                Err(Unvetted::FailedAppraisal("x".to_string())),
+            ),
+            (
+                "beta".to_string(),
+                Err(Unvetted::NoEnodeYet(
+                    "no enode: connection refused".to_string(),
+                )),
+            ),
+        ]);
+        let err = handed_out(&vetted, &remedy()).unwrap_err().to_string();
+        assert!(
+            err.contains("  ✗ beta: no enode: connection refused"),
+            "{err}"
+        );
+        assert!(err.contains("still starting"), "{err}");
+        assert!(
+            err.contains(
+                "seismic-tee node status --watch --node nodes.json --manifest \
+                 net/network-manifest.json"
+            ),
+            "{err}"
+        );
+        assert!(!err.contains("re-found"), "{err}");
+        assert!(err.contains("--bootnode <ENODE>"), "{err}");
+    }
+
+    /// A key holder that passed but advertises an enode that cannot be
+    /// handed out is neither waited for nor a reason to re-found: a re-run
+    /// reads the same, so only a named peer is left.
+    #[test]
+    fn an_unusable_enode_leaves_only_a_named_peer() {
+        let vetted = BTreeMap::from([
+            (
+                "alpha".to_string(),
+                Err(Unvetted::FailedAppraisal("x".to_string())),
+            ),
+            (
+                "beta".to_string(),
+                Err(Unvetted::UnusableEnode(
+                    "its enode enode://… is not at its public_ip 2.2.2.2".to_string(),
+                )),
+            ),
+        ]);
+        let err = handed_out(&vetted, &remedy()).unwrap_err().to_string();
+        assert!(err.contains("  ✗ beta: its enode"), "{err}");
+        assert!(err.contains("A re-run reads the same enodes"), "{err}");
+        assert!(!err.contains("still starting"), "{err}");
+        assert!(!err.contains("re-found"), "{err}");
+        assert!(
+            err.contains("seismic-tee node configure --node nodes.json gamma --bootnode <ENODE>"),
+            "{err}"
+        );
     }
 }

@@ -1,62 +1,42 @@
-//! `configure`: deliver a provisioned node's config on first boot — one node
-//! joining a live network, or a whole founding cohort.
-//!
-//! Assemble a node's tdx-init config from flags + a descriptor + the network
-//! manifest, and POST it to the node's tdx-init HTTP receiver:
+//! `configure`: deliver provisioned nodes their config on first boot.
 //!
 //! ```text
-//! seismic-tee node configure --node nodes.json --name n2 --manifest m.json
+//! seismic-tee node configure
 //! ```
 //!
-//! By default the node *joins* a live network: it fetches `root_key` via
-//! `getWrappedRootKey` from a peer tdx-init derives from its bootnodes
-//! (`http://<host>:7878` per bootnode). The bootnodes are the node table's
-//! key holders that pass their appraisal ([`crate::bootnodes`]), or the
-//! peers `--bootnode` names. With `--genesis-node`, the same command founds a
-//! cohort instead — starting from the box whose candidate `root_key` the
-//! manifest pins, which keeps it — and with `--check` it re-asserts a founded
-//! cohort's launch; both are [`crate::cohort`]'s. [`build_config`] and
-//! [`post_config`] are the primitives every shape shares. The rest of this
-//! page is the joining shape's.
-//!
-//! A founding box that rebooted joins the same way: its fresh candidate is
-//! not the pin, so it fetches `root_key` like any joiner. It has a harvest
-//! record, though, so once it is up it is also held to the founding's launch
-//! assertions ([`crate::launch`]): block 0, and the summit keys harvested
-//! from it.
-//!
-//! The node is deploy-verified once it reaches a ready state — the `verify`
-//! step, run inline here so a node is appraised in the same breath it is
-//! configured. The configured summary is printed only after it passes, so it
-//! never reads as success over a failed verification. Delivery is once per
-//! boot (tdx-init accepts one config POST) while the check is re-runnable, so
-//! anything that interrupts the check points at `verify` rather than at
-//! another configure run. Verification is the default because the artifact
-//! set already carries everything it needs: the policy sits beside
-//! `--manifest`, pinned by it. An operator who wants delivery alone asks for
-//! it with `--no-verify`.
+//! One command, no mode flag: the network's live state decides what it does
+//! ([`crate::plan`]). Every node in the node table is probed; a network whose
+//! pinned box awaits its config still holding the pinned candidate is
+//! unfounded, and the run founds it — the pinned box first and alone, then
+//! the rest through it. A network with a key holder is live, and every node
+//! named joins it through the key holders that pass their appraisal
+//! ([`crate::bootnodes`]), or through the peers `--bootnode` names. A node
+//! that took its config this boot is skipped; one not up yet is waited for.
+//! Both runs are [`crate::cohort`]'s: one dashboard, each node appraised as
+//! it comes up, and the founding's launch assertions over every node with a
+//! harvest record. `--check` runs those assertions alone.
 //!
 //! There is no per-node `node.toml`: `[node]` (external_ip) comes from the
-//! descriptor, `[node.domain]` from the descriptor
-//! fqdn and `--email`, and `[network]` from `--manifest`, `--reth-genesis`,
-//! `--summit-genesis` and the bootnodes. Those network-wide artifacts stay
-//! standalone files, merged only at POST time. The config is built as the
-//! [`InitConfig`] type tdx-init deserializes it with (`deny_unknown_fields`
-//! at the far end), so this CLI and the node image cannot disagree on the
-//! shape without failing to compile.
+//! descriptor, `[node.domain]` from the descriptor fqdn and `--email`, and
+//! `[network]` from `--manifest`, `--reth-genesis`, `--summit-genesis` and the
+//! bootnodes. Those network-wide artifacts stay standalone files, merged only
+//! at POST time. The config is built as the [`InitConfig`] type tdx-init
+//! deserializes it with (`deny_unknown_fields` at the far end), so this CLI
+//! and the node image cannot disagree on the shape without failing to
+//! compile. [`build_config`] and [`post_config_within`] are the primitives
+//! every node goes through.
 //!
 //! The POST is the one irreversible step an operator takes (tdx-init accepts
-//! one per boot), so it is gated: the rendered TOML is written to disk first
-//! — `nodes/<name>.init-config.toml` beside `--manifest`, the network
-//! directory's per-deploy tier, or `--dump-config` — then a decoded preview
-//! of it is shown and the terminal is asked. The TOML itself is three base64
-//! blobs, so the preview says what they are: which manifest (name, chain,
-//! network id), which genesis files (by hash), which bootnodes, which policy
-//! will appraise the node. `--yes` sends unattended; with no terminal and no
-//! `--yes` nothing is sent. The record stays as what the node booted with,
-//! and as a body `curl` can replay.
+//! one per boot), so the run is gated: a decoded preview of what it is about
+//! to do is shown and the terminal is asked, once per run. The TOML itself is
+//! three base64 blobs, so the preview says what they are: which manifest
+//! (name, chain, network id), which genesis files (by hash), which bootnodes,
+//! which policy will appraise the nodes. `--yes` sends unattended; with no
+//! terminal and no `--yes` nothing is sent. Each node's rendered TOML is
+//! written to `nodes/<name>.init-config.toml` beside `--manifest` before its
+//! POST, as the record of what it booted with and a body `curl` can replay.
 
-use std::io::{BufRead, IsTerminal as _};
+use std::io::BufRead;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
@@ -65,19 +45,16 @@ use anyhow::{Context as _, bail};
 use base64::Engine as _;
 use clap::Args;
 use clap_complete::ArgValueCandidates;
-use seismic_tee_common::http::ATTESTATION_RPC_PORT;
-use seismic_tee_common::{Artifact, Manifest, NetworkDir, NodeDescriptor, http, next_step, rpc};
+use seismic_tee_common::{Artifact, Manifest, NetworkDir};
 use seismic_tee_context::complete;
 use sha2::{Digest as _, Sha256};
 use tdx_init_config::{DomainConfig, InitConfig, NetworkConfig, NodeConfig};
 
-use crate::args::NodeArgs;
-use crate::bootnodes::{self, Remedy};
-use crate::cohort::{self, Appraisal};
-use crate::launch::{self, LaunchTarget};
-use crate::probe::{self, Founding};
-use crate::status;
-use crate::verify::{self, PolicySourceArgs, VerifierArgs};
+use crate::args::CohortArgs;
+use crate::cohort;
+use crate::launch;
+use crate::plan::{Remedy, Run, Through};
+use crate::verify::{PolicySourceArgs, VerifierArgs, retry_flags};
 
 /// How long to wait for tdx-init's HTTP listener to come up. tdx-init starts
 /// after persistent-luks-setup, which can take ~20-40s on first boot (LUKS
@@ -148,12 +125,12 @@ pub struct ConfigInputs<'a> {
     pub manifest: &'a Manifest,
     /// The reth genesis, as the file it came from: named on a failed check.
     pub reth_genesis: &'a Artifact,
-    /// The summit genesis, likewise. A founder delivers it with current
+    /// The summit genesis, likewise. A founding delivers it with current
     /// validator IPs spliced in, which is why it is bytes-with-a-path rather
     /// than a path.
     pub summit_genesis: &'a Artifact,
     /// The enode set → `[network].bootnodes`. Empty is valid only on the
-    /// greenfield genesis node: the box whose candidate the manifest pins.
+    /// pinned box of a founding.
     pub bootnodes: &'a [String],
     /// The node's own public IP → `[node].external_ip` (reth's `--nat extip`).
     pub external_ip: &'a str,
@@ -161,9 +138,9 @@ pub struct ConfigInputs<'a> {
     pub fqdn: &'a str,
     /// → `[node.domain].email`, the Let's Encrypt registration.
     pub email: &'a str,
-    /// Only ever `true` when founding (`--genesis-node`); the joining shape
-    /// never. Not sent: tdx-init tells the pinned box from the manifest.
-    pub genesis_node: bool,
+    /// Only ever `true` for the pinned box of a founding. Not sent: tdx-init
+    /// tells the pinned box from the manifest.
+    pub pinned_box: bool,
 }
 
 /// Assemble the config POSTed to tdx-init, mutating no source.
@@ -186,7 +163,7 @@ pub fn build_config(inputs: &ConfigInputs<'_>) -> anyhow::Result<InitConfig> {
     if inputs.external_ip.is_empty() {
         bail!("build_config: external_ip is required and must be non-empty");
     }
-    if !inputs.genesis_node && inputs.bootnodes.is_empty() {
+    if !inputs.pinned_box && inputs.bootnodes.is_empty() {
         bail!(
             "build_config: a joining node needs at least one bootnode (tdx-init derives its \
              root_key fetch peers from them)"
@@ -229,19 +206,9 @@ pub fn render_config(config: &InitConfig) -> anyhow::Result<String> {
     toml::to_string(config).context("rendering the tdx-init config as TOML")
 }
 
-/// Where the rendered config is recorded: `--dump-config`, or the network
-/// directory's `nodes/<name>.init-config.toml` beside `--manifest` — its
-/// per-deploy tier.
-pub fn resolve_record_path(flag: Option<&Path>, manifest_path: &Path, name: &str) -> PathBuf {
-    flag.map_or_else(
-        || NetworkDir::of_manifest(manifest_path).init_config(name),
-        Path::to_path_buf,
-    )
-}
-
 /// Write the rendered config to `path`, creating its directory. Done before
-/// the POST, so the record exists whatever comes of it — confirmed, declined,
-/// or rejected by tdx-init.
+/// the POST, so the record exists whatever comes of it — accepted, or
+/// rejected by tdx-init.
 pub fn write_record(path: &Path, rendered: &str) -> anyhow::Result<()> {
     if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
         std::fs::create_dir_all(parent)
@@ -251,134 +218,159 @@ pub fn write_record(path: &Path, rendered: &str) -> anyhow::Result<()> {
         .with_context(|| format!("writing the config record {}", path.display()))
 }
 
-/// What `configure` is about to do, decoded for a human.
+/// What a `configure` run is about to do, decoded for a human.
 pub struct Preview<'a> {
-    /// The node's key in the descriptor map.
-    pub name: &'a str,
+    /// Where the node table came from ([`CohortArgs::source`]): named on the
+    /// first line, beside the network, so a stale context shows.
+    pub table: &'a str,
     pub manifest_path: &'a Path,
-    pub inputs: &'a ConfigInputs<'a>,
+    pub manifest: &'a Manifest,
+    pub reth_genesis: &'a Artifact,
+    /// As delivered: spliced, in a founding.
+    pub summit_genesis: &'a Artifact,
+    pub email: &'a str,
     /// The policy's provenance, or `None` under `--no-verify`.
     pub policy: Option<&'a str>,
-    /// Where the rendered TOML was written.
+    pub run: &'a Run,
+    /// The nodes named that took their config this boot.
+    pub skipped: &'a [String],
+    /// What a joining run hands every node; empty in a founding, whose
+    /// joiners get the pinned box's enode once it is up.
+    pub bootnodes: &'a [String],
+    /// Where the rendered TOML of a node `<name>` is written.
     pub record: &'a Path,
-    pub post_url: &'a str,
 }
 
 /// The preview as text. The rendered TOML carries the manifest and both
 /// genesis files as base64, so the review names them by path and hash and
-/// spells out the fields a wrong flag would change.
+/// spells out what a wrong flag would change.
 pub fn render_preview(preview: &Preview<'_>) -> String {
     let Preview {
-        name,
+        table,
         manifest_path,
-        inputs,
+        manifest,
+        reth_genesis,
+        summit_genesis,
+        email,
         policy,
+        run,
+        skipped,
+        bootnodes,
         record,
-        post_url,
     } = preview;
-    let manifest = inputs.manifest;
     let sha256 = |bytes: &[u8]| hex::encode(Sha256::digest(bytes));
-    let mut out = String::new();
-    out.push_str(&format!(
-        "About to configure node {name}
-"
-    ));
-    out.push_str(&format!(
-        "  POST to:          {post_url}
-"
-    ));
-    out.push_str(&format!(
-        "  Node:             {} ({}), role: {}
-",
-        inputs.fqdn,
-        inputs.external_ip,
-        if inputs.genesis_node {
-            "genesis"
-        } else {
-            "join"
-        },
-    ));
-    out.push_str(&format!(
-        "  Cert email:       {}
-",
-        inputs.email
-    ));
-    out.push_str(&format!(
-        "  Manifest:         {}
-",
-        manifest_path.display()
-    ));
-    out.push_str(&format!(
-        "                    name {:?}, chain_id {}, network_id {}
-",
-        manifest.name,
-        manifest.eth.chain_id,
-        manifest.network_id(),
-    ));
-    out.push_str(&format!(
-        "  reth genesis:     {}  sha256 {}
-",
-        inputs.reth_genesis.path().display(),
-        sha256(inputs.reth_genesis.bytes()),
-    ));
-    out.push_str(&format!(
-        "  summit genesis:   {}  sha256 {}
-",
-        inputs.summit_genesis.path().display(),
-        sha256(inputs.summit_genesis.bytes()),
-    ));
-    out.push_str(&format!(
-        "  Bootnodes:        {}
-",
-        inputs.bootnodes.len()
-    ));
-    for bootnode in inputs.bootnodes {
-        out.push_str(&format!(
-            "                    {bootnode}
-"
-        ));
+    let mut lines = vec![match run {
+        Run::Found { pinned, .. } => format!(
+            "This founds network {:?} (node table: {table}); pinned box {}.",
+            manifest.name, pinned.name
+        ),
+        run => format!(
+            "This joins {} node(s) to network {:?} (node table: {table}).",
+            run.names().len(),
+            manifest.name
+        ),
+    }];
+    let mut field = |label: &str, value: String| lines.push(format!("  {label:<18}{value}"));
+    field("Manifest:", manifest_path.display().to_string());
+    field(
+        "",
+        format!(
+            "chain_id {}, network_id {}",
+            manifest.eth.chain_id,
+            manifest.network_id()
+        ),
+    );
+    field(
+        "reth genesis:",
+        format!(
+            "{}  sha256 {}",
+            reth_genesis.path().display(),
+            sha256(reth_genesis.bytes())
+        ),
+    );
+    field(
+        "summit genesis:",
+        format!(
+            "{}  sha256 {}",
+            summit_genesis.path().display(),
+            sha256(summit_genesis.bytes())
+        ),
+    );
+    field(
+        "Appraise against:",
+        policy.unwrap_or("nothing (--no-verify)").to_string(),
+    );
+    field("Cert email:", email.to_string());
+    match run {
+        Run::Found { pinned, rest } => {
+            field(
+                "Nodes:",
+                format!(
+                    "{}, first and alone: keeps its candidate root_key",
+                    pinned.name
+                ),
+            );
+            if !rest.is_empty() {
+                let rest: Vec<&str> = rest.iter().map(|node| node.name.as_str()).collect();
+                field(
+                    "",
+                    format!(
+                        "then {}: fetch root_key from {}",
+                        rest.join(", "),
+                        pinned.name
+                    ),
+                );
+            }
+        }
+        Run::Join { nodes, through } => {
+            let names: Vec<&str> = nodes.iter().map(|node| node.name.as_str()).collect();
+            field("Nodes:", names.join(", "));
+            let source = match through {
+                Through::NamedPeers => "named by --bootnode",
+                Through::KeyHolders(_) => "key holder(s) that passed their appraisal",
+            };
+            field("Bootnodes:", format!("{}, {source}", bootnodes.len()));
+            for bootnode in *bootnodes {
+                field("", bootnode.clone());
+            }
+        }
     }
-    out.push_str(&format!(
-        "  Appraise against: {}
-",
-        policy.unwrap_or("nothing (--no-verify)")
-    ));
-    out.push_str(&format!(
-        "  Rendered config:  {}
-",
-        record.display()
-    ));
-    out
+    let not_up = run.not_up();
+    if !not_up.is_empty() {
+        field(
+            "Not up yet:",
+            format!(
+                "{} (waited for, up to {}s)",
+                not_up.join(", "),
+                TDX_INIT_LISTENER_TIMEOUT.as_secs()
+            ),
+        );
+    }
+    if !skipped.is_empty() {
+        field(
+            "Skipped:",
+            format!("{} (took its config this boot)", skipped.join(", ")),
+        );
+    }
+    field("Records:", record.display().to_string());
+    lines.join("\n") + "\n"
 }
 
-/// The gate before the one irreversible step. `yes` is `--yes <NAME>`, and
-/// sends without asking only when `NAME` names the node this run resolved to
-/// — a mismatch is refused rather than silently redirected at the wrong box,
-/// which is what makes `--yes` safe to leave in a script alongside an
-/// implicit (context-resolved) target. Otherwise a terminal is asked and
-/// anything but `y`/`yes` declines, and no terminal is an error — a script
-/// that means it says so with the flag, rather than a redirected stdin
-/// deciding silently.
-pub fn confirm_post(
-    yes: Option<&str>,
-    node: &str,
-    interactive: bool,
-    input: &mut impl BufRead,
-) -> anyhow::Result<bool> {
-    match yes {
-        Some(named) if named == node => return Ok(true),
-        Some(named) => bail!(
-            "--yes {named} does not name the node this resolved to ({node}); nothing was sent"
-        ),
-        None => {}
+/// The gate before the one irreversible step. `yes` (`--yes`) sends without
+/// asking. Otherwise a terminal is asked and anything but `y`/`yes` declines,
+/// and no terminal is an error — a script that means it says so with the
+/// flag, rather than a redirected stdin deciding silently.
+pub fn confirm_run(yes: bool, interactive: bool, input: &mut impl BufRead) -> anyhow::Result<bool> {
+    if yes {
+        return Ok(true);
     }
     if !interactive {
         bail!(
-            "stdin is not a terminal, so nobody is here to confirm the POST; pass --yes <NAME> \
-             naming the node to send it unattended"
+            "stdin is not a terminal, so nobody is here to confirm; pass --yes to send unattended. \
+             Nothing was sent."
         );
     }
-    eprint!("POST this config? [y/N] ");
+    eprint!("Continue? [y/N] ");
     let mut answer = String::new();
     input
         .read_line(&mut answer)
@@ -388,29 +380,12 @@ pub fn confirm_post(
 }
 
 /// Wait for tdx-init's HTTP listener at `url` to come up, then POST the
-/// config. tdx-init validates the schema server-side and 4xx-rejects a
-/// malformed payload, so any non-200 is an error — 4xx = a config it rejects,
-/// 5xx = a tdx-init bug; neither benefits from retry. `url` is the node's
-/// receiver ([`NodeDescriptor::tdx_init_url`]).
-pub async fn post_config(
-    client: &reqwest::Client,
-    url: &str,
-    config: &InitConfig,
-) -> anyhow::Result<()> {
-    post_config_within(
-        client,
-        url,
-        config,
-        TDX_INIT_LISTENER_TIMEOUT,
-        TDX_INIT_RETRY_INTERVAL,
-        |line| eprintln!("{line}"),
-    )
-    .await
-}
-
-/// [`post_config`] with its own patience for the listener, reporting progress
-/// through `report` — a line at a time, so a cohort dashboard can show it as
-/// the node's status instead of it landing on stderr mid-repaint.
+/// config, reporting progress through `report` — a line at a time, so the
+/// dashboard can show it as the node's status. tdx-init validates the schema
+/// server-side and 4xx-rejects a malformed payload, so any non-200 is an
+/// error — 4xx = a config it rejects, 5xx = a tdx-init bug; neither benefits
+/// from retry. `url` is the node's receiver
+/// ([`seismic_tee_common::NodeDescriptor::tdx_init_url`]).
 pub async fn post_config_within(
     client: &reqwest::Client,
     url: &str,
@@ -465,78 +440,27 @@ pub async fn post_config_within(
     )
 }
 
-/// The flags that point `node status` at the node just configured: its node
-/// table, narrowed to it by name — `status` reads the whole table otherwise,
-/// even when the context names one node.
-fn status_flags(node: &NodeArgs, name: &str) -> String {
-    NodeArgs {
-        name: Some(name.to_string()),
-        ..node.clone()
-    }
-    .as_flags()
-}
-
-/// The success banner. Nothing prints it before the last gate. `record` is
-/// where the POSTed config was written.
-pub fn print_summary(fqdn: &str, public_ip: &str, record: &Path) {
-    let rule = "=".repeat(80);
-    println!("\n{rule}");
-    println!("NODE CONFIGURED");
-    println!("{rule}");
-    println!("\nNode:       {fqdn}");
-    println!("IP Address: {public_ip}");
-    println!("Config:     {} (as POSTed)", record.display());
-    println!("\nThe node takes its TLS certificate itself after initialization.");
-    println!("Endpoints (once the node settles):");
-    println!("  https://{fqdn}/rpc");
-    println!("  https://{fqdn}/ws");
-    println!("  https://{fqdn}/summit");
-    println!("\n{rule}\n");
-}
-
-/// One command, three shapes, told apart by the flags that name the target:
-/// by default it joins one node to a live network (`--name`, `--node` or the
-/// context say which), `--genesis-node` founds a cohort (every other node in
-/// the table joins it, or the `--join` subset), and `--check` re-asserts a
-/// founded cohort's launch. Joining names one node and asks before it sends;
-/// founding mints `root_key`, so it names its genesis node.
 #[derive(Debug, Args)]
+#[command(after_help = "Examples:\n  \
+    seismic-tee node configure                  every node in the selected network: found it, or join it\n  \
+    seismic-tee node configure beta gamma       only these nodes\n  \
+    seismic-tee node configure --yes            without asking, for a script or CI\n  \
+    seismic-tee node configure --check          re-assert a founded cohort's launch\n  \
+    seismic-tee node configure op-1 --bootnode \"$(scast rpc seismic_nodeInfo --rpc-url https://peer.example.com/rpc | jq -r .enode)\"\n  \
+    seismic-tee node configure --node nodes.json --manifest network-manifest.json")]
 pub struct ConfigureArgs {
+    /// The nodes to configure, by name in the node table. Default: every
+    /// node in it. A node that took its config this boot is skipped, and one
+    /// not up yet is waited for.
+    #[arg(value_name = "NAME", add = ArgValueCandidates::new(complete::nodes))]
+    pub names: Vec<String>,
+
     #[command(flatten)]
-    pub node: NodeArgs,
-
-    /// Found a cohort, with this node as its genesis — the box whose
-    /// candidate root_key the manifest pins, which keeps it and which the
-    /// joiners fetch it from — as keyed in the cohort's node table. `network
-    /// assemble` pins the first harvested box by name and names it in its
-    /// next step; any other node is refused. Every node must have a founding
-    /// harvest record.
-    #[arg(
-        long,
-        value_name = "NAME",
-        conflicts_with_all = ["name", "yes", "dump_config"],
-        add = ArgValueCandidates::new(complete::nodes)
-    )]
-    pub genesis_node: Option<String>,
-
-    /// With --genesis-node: a joining node of the founding cohort (discards
-    /// its own candidate and fetches root_key from genesis via
-    /// getWrappedRootKey). Repeatable. Default:
-    /// every other node in the cohort's node table; name a subset to
-    /// configure only those.
-    #[arg(
-        long,
-        value_name = "NAME",
-        requires = "genesis_node",
-        conflicts_with = "bootnode",
-        add = ArgValueCandidates::new(complete::nodes)
-    )]
-    pub join: Option<Vec<String>>,
+    pub cohort: CohortArgs,
 
     /// Network manifest JSON (from `seismic-tee network assemble`). Merged
     /// into the POSTed config as [network].manifest_base64; shared across
-    /// every node, so it lives outside the per-node flags. Omit it to use
-    /// the current context's network.
+    /// every node. Omit it to use the current context's network.
     #[arg(long, value_name = "FILE")]
     pub manifest: Option<PathBuf>,
 
@@ -561,41 +485,33 @@ pub struct ConfigureArgs {
     /// Join through this peer's enode URL (enode://<pubkey>@<host>:<port>)
     /// → [network].bootnodes. reth dials it on startup, and tdx-init derives
     /// the root_key fetch peer from it (http://<host>:7878). Repeatable.
-    /// Default: the enode of every other node in the node table that holds
-    /// root_key (serves :7878) and passes its deploy verification, under
-    /// --no-verify too; with none, nothing is sent. Name a peer when the
-    /// table holds no key holder — your own nodes joining someone else's
-    /// network — from its seismic_nodeInfo RPC.
-    #[arg(long, value_name = "ENODE", conflicts_with = "genesis_node")]
+    /// Default: the enode of every node in the node table that holds root_key
+    /// (serves :7878) and passes its deploy verification, under --no-verify
+    /// too; with none, nothing is sent. Name a peer when the table holds no
+    /// key holder — your own nodes joining someone else's network — from its
+    /// seismic_nodeInfo RPC. Refused while the network is unfounded.
+    #[arg(long, value_name = "ENODE")]
     pub bootnode: Vec<String>,
 
     /// Contact email for the node's Let's Encrypt registration; goes
-    /// into [node.domain].email of the POSTed config. Same across a cohort.
+    /// into [node.domain].email of the POSTed config. Same across a run.
     #[arg(long, default_value = DEFAULT_EMAIL)]
     pub email: String,
 
-    /// Configure without deploy-verifying the node(s) configured. By default
+    /// Configure without deploy-verifying the nodes configured. By default
     /// each node is appraised once it is up — the same check as `seismic-tee
     /// node verify`, against the policy --manifest pins — and a node that
-    /// fails counts as failed. The key holders a joining node fetches root_key
-    /// from are appraised either way.
+    /// fails counts as failed. What the run itself relies on is checked
+    /// either way: the pinned box's quote before a founding, the key holders
+    /// before a join.
     #[arg(long)]
     pub no_verify: bool,
 
-    /// Joining: send the config without asking. Takes the node's name: you
-    /// name the box you meant, so a stale context fails loudly instead of
-    /// configuring the wrong one. Without it, configure shows what it is
-    /// about to POST and waits for a `y` on the terminal; with no terminal (a
-    /// script, CI) it refuses to send unless this is passed.
-    #[arg(long, short = 'y', value_name = "NAME")]
-    pub yes: Option<String>,
-
-    /// Joining: where to write the rendered TOML, byte-exact as POSTed. Default:
-    /// nodes/<name>.init-config.toml beside --manifest (the network
-    /// directory's per-deploy tier). Written before the POST, so it records
-    /// the attempt whatever comes of it, and is a body `curl` can replay.
-    #[arg(long, value_name = "FILE")]
-    pub dump_config: Option<PathBuf>,
+    /// Send without asking. Without it, configure shows what it is about to
+    /// do and waits for a `y` on the terminal; with no terminal (a script,
+    /// CI) it refuses to send unless this is passed.
+    #[arg(long, short = 'y')]
+    pub yes: bool,
 
     #[command(flatten)]
     pub policy_source: PolicySourceArgs,
@@ -609,17 +525,14 @@ pub struct ConfigureArgs {
     /// Configures nothing, writes nothing; for after a launch whose holders
     /// had not settled, a reboot, a re-image, or whenever the cohort may have
     /// drifted from its pins. Takes only --manifest and --node (or the
-    /// context): roles, genesis files and the appraisal are delivery's, so
-    /// their flags are refused.
+    /// context): the nodes, genesis files and the appraisal are delivery's,
+    /// so their arguments are refused.
     #[arg(
         long,
         conflicts_with_all = [
-            "genesis_node",
-            "join",
+            "names",
             "bootnode",
-            "name",
             "yes",
-            "dump_config",
             "reth_genesis",
             "summit_genesis",
             "no_verify",
@@ -635,21 +548,15 @@ pub async fn run(args: ConfigureArgs, config: Option<&Path>) -> anyhow::Result<E
     if args.check {
         return cohort::check(&args, config, launch::CHECK_TIMEOUT).await;
     }
-    if let Some(genesis_node) = &args.genesis_node {
-        return cohort::found(&args, config, genesis_node).await;
-    }
-    join(args, config).await
+    cohort::configure(&args, config).await
 }
 
-/// What a refusal before the POST suggests instead, with this run's flags.
-fn remedy(args: &ConfigureArgs) -> Remedy {
+/// What a refusal suggests instead, with this run's arguments.
+pub(crate) fn remedy(args: &ConfigureArgs) -> Remedy {
     let manifest = args.manifest.as_deref();
     Remedy {
-        table: NodeArgs {
-            name: None,
-            ..args.node.clone()
-        }
-        .as_flags(),
+        table: args.cohort.as_flags(),
+        names: args.names.iter().map(|name| format!(" {name}")).collect(),
         manifest: manifest
             .map(|path| format!(" --manifest {}", path.display()))
             .unwrap_or_default(),
@@ -658,271 +565,23 @@ fn remedy(args: &ConfigureArgs) -> Remedy {
             .filter(|dir| !dir.root().as_os_str().is_empty())
             .map(|dir| format!(" {}", dir.root().display()))
             .unwrap_or_default(),
+        appraisal: retry_flags(&args.policy_source, &args.verifier),
     }
-}
-
-/// The policy the key holders are appraised against under `--no-verify`,
-/// which skips appraising the joining node only: the network's own, beside
-/// --manifest (`--no-verify` refuses --policy and --measurements).
-fn key_holder_policy(
-    args: &ConfigureArgs,
-    name: &str,
-    manifest_path: &Path,
-    manifest: &Manifest,
-) -> anyhow::Result<verify::ResolvedPolicy> {
-    let path = NetworkDir::of_manifest(manifest_path).policy();
-    if !path.is_file() {
-        bail!(
-            "measurement policy not found: {}
-The key holders' enodes are handed out only once              they pass their appraisal, against the network's policy beside --manifest;              --no-verify skips appraising {name} only. Nothing was sent. Instead, fetch the              network directory (`seismic-tee ctx set-network`), or name a peer yourself:
-    {}",
-            path.display(),
-            remedy(args).bootnode(name)
-        );
-    }
-    verify::resolve_policy(&args.policy_source, manifest_path, manifest, false)
-}
-
-/// Join one node to a live network: find its bootnodes, preview, confirm,
-/// POST, watch, appraise, and — for a founding box — assert its launch.
-async fn join(args: ConfigureArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
-    let (name, descriptor) = args.node.load(config)?;
-    verify::check_policy_source_files(&args.policy_source, args.no_verify)?;
-    let manifest_path =
-        crate::resolve_manifest(args.manifest.as_deref(), &args.node.context, config)?;
-    let manifest = crate::load_manifest(&manifest_path)?;
-    let NodeDescriptor { fqdn, public_ip } = &descriptor;
-
-    // Resolve the policy before the node is touched: a policy the manifest
-    // doesn't commit to, or a rejected measurements file, must fail while the
-    // fix still costs nothing, not after the config POST landed.
-    let policy = if args.no_verify {
-        eprintln!(
-            "warning: --no-verify: this node will not be appraised. Run `seismic-tee node \
-             verify` before relying on an unappraised node."
-        );
-        None
-    } else {
-        Some(verify::resolve_policy(
-            &args.policy_source,
-            &manifest_path,
-            &manifest,
-            true,
-        )?)
-    };
-
-    // Read the local inputs before contacting any node, so a missing one
-    // fails fast.
-    let reth_genesis = Artifact::read(&resolve_reth_genesis(
-        args.reth_genesis.as_deref(),
-        &manifest_path,
-    )?)?;
-    let summit_genesis = Artifact::read(&resolve_summit_genesis(
-        args.summit_genesis.as_deref(),
-        &manifest_path,
-    )?)?;
-    let dir = NetworkDir::of_manifest(&manifest_path);
-    let records = probe::harvest_records(&dir);
-    let bootnodes = if args.bootnode.is_empty() {
-        let policy = match &policy {
-            Some(policy) => policy.bytes.clone(),
-            None => key_holder_policy(&args, &name, &manifest_path, &manifest)?.bytes,
-        };
-        let appraisal = Appraisal {
-            policy,
-            pccs_url: args.verifier.pccs_url.clone(),
-        };
-        bootnodes::from_key_holders(
-            &http::client()?,
-            &args.node.table(config)?,
-            &name,
-            Some(&Founding::new(&manifest, records.as_ref())),
-            &manifest,
-            &appraisal,
-            &remedy(&args),
-        )
-        .await?
-    } else {
-        args.bootnode.clone()
-    };
-    let inputs = ConfigInputs {
-        manifest: &manifest,
-        reth_genesis: &reth_genesis,
-        summit_genesis: &summit_genesis,
-        bootnodes: &bootnodes,
-        external_ip: public_ip,
-        fqdn,
-        email: &args.email,
-        genesis_node: false,
-    };
-    let config = build_config(&inputs)?;
-
-    // The record first: what is about to be sent exists on disk before
-    // anything is sent, and the preview names it so it can be opened while
-    // deciding.
-    let record = resolve_record_path(args.dump_config.as_deref(), &manifest_path, &name);
-    write_record(&record, &render_config(&config)?)?;
-
-    let post_url = descriptor.tdx_init_url();
-    eprint!(
-        "{}",
-        render_preview(&Preview {
-            name: &name,
-            manifest_path: &manifest_path,
-            inputs: &inputs,
-            policy: policy.as_ref().map(|p| p.source.as_str()),
-            record: &record,
-            post_url: &post_url,
-        })
-    );
-    // Blocking read on the runtime's main task: nothing else is in flight
-    // until the operator answers.
-    let stdin = std::io::stdin();
-    if !confirm_post(
-        args.yes.as_deref(),
-        &name,
-        stdin.is_terminal(),
-        &mut stdin.lock(),
-    )? {
-        eprintln!(
-            "Nothing was sent. The rendered config is at {}.",
-            record.display()
-        );
-        return Ok(ExitCode::FAILURE);
-    }
-
-    let client = http::client()?;
-    // Built before the POST so an unusable endpoint fails while nothing has
-    // been delivered.
-    let rpc_url = descriptor.attestation_rpc_url();
-    let rpc_client = rpc::Client::new(&rpc_url)?;
-    eprintln!("Configuring node {fqdn} ({public_ip}) as join...");
-    post_config(&client, &post_url, &config).await?;
-    eprintln!("config delivered to tdx-init.");
-
-    // Watch the first-boot LUKS wipe — the long, otherwise-opaque phase.
-    // Purely local observability: the POST already landed, so ctrl-C here
-    // only stops watching; the node keeps provisioning in the background.
-    let ready = tokio::select! {
-        ok = status::watch_luks_provisioning(&rpc_client, status::POLL_INTERVAL) => Some(ok),
-        _ = tokio::signal::ctrl_c() => None,
-    };
-
-    let Some(ready) = ready else {
-        println!("\nStopped watching — node still provisioning in the background.");
-        let Some(_) = policy else {
-            print_summary(fqdn, public_ip, &record);
-            // No appraisal was asked for, so nothing is owed but the watch
-            // the operator left; re-watch to see it settle.
-            next_step::print(
-                "",
-                &[format!(
-                    "seismic-tee node status --watch{}",
-                    status_flags(&args.node, &name)
-                )],
-            );
-            return Ok(ExitCode::SUCCESS);
-        };
-        // The operator stopped watching before the attestation service came
-        // up, so there is nothing to challenge yet. Exit nonzero — the
-        // requested verification did not happen — and point at the standalone
-        // command: the config this boot needs is already delivered.
-        bail!(
-            "deploy verification skipped: the node was not confirmed ready. Once it is up, \
-             run:\n    seismic-tee node verify{} --manifest {}{}",
-            args.node.as_flags(),
-            manifest_path.display(),
-            verify::retry_flags(&args.policy_source, &args.verifier),
-        );
-    };
-
-    if !ready {
-        // The POST succeeded, but the node never reached a ready state within
-        // the watch window: the attestation service's :7878 didn't come up (it
-        // only starts serving once it has root_key) or the LUKS wipe errored.
-        // Don't print a success summary — that's the misleading case. It may
-        // still be mid-bootstrap (e.g. fetching root_key from a slow peer), so
-        // point at a re-watch rather than declaring the node dead; exit
-        // non-zero either way.
-        bail!(
-            "config delivered to {fqdn} ({public_ip}), but the node did not reach a ready state \
-             within the watch window (attestation service :{ATTESTATION_RPC_PORT} never came \
-             up, or the LUKS wipe errored). It may still be bootstrapping, or stuck — check \
-             attestation-service logs on the node, then re-watch with:\n    seismic-tee node \
-             status --watch{}",
-            status_flags(&args.node, &name),
-        );
-    }
-
-    if let Some(policy) = &policy {
-        // Interruptible like the watch: the config is delivered either way, and
-        // the appraisal has its own command.
-        tokio::select! {
-            result = verify::verify_deployment(
-                &descriptor,
-                &rpc_url,
-                &manifest,
-                &policy.bytes,
-                args.verifier.pccs_url.as_deref(),
-            ) => result?,
-            _ = tokio::signal::ctrl_c() => {
-                println!(
-                    "\nInterrupted during deploy verification — the config is delivered. \
-                     Appraise the node with:\n    seismic-tee node verify{} --manifest {}{}",
-                    args.node.as_flags(),
-                    manifest_path.display(),
-                    verify::retry_flags(&args.policy_source, &args.verifier),
-                );
-                return Ok(ExitCode::from(130));
-            }
-        }
-    }
-    // A founding box, rejoining: held to what was harvested from it, as the
-    // founding held it.
-    if let Some(harvested) = records.as_ref().and_then(|records| records.get(&name)) {
-        let target = LaunchTarget::new(&name, &descriptor, harvested);
-        tokio::select! {
-            result = cohort::assert_launch(
-                &client,
-                manifest.eth.genesis_hash,
-                std::slice::from_ref(&target),
-                launch::READY_TIMEOUT,
-            ) => result?,
-            _ = tokio::signal::ctrl_c() => {
-                println!(
-                    "\nInterrupted during the launch assertions — the config is delivered. \
-                     Re-run them with:\n    seismic-tee node configure --check{}{}",
-                    remedy(&args).table,
-                    remedy(&args).manifest,
-                );
-                return Ok(ExitCode::from(130));
-            }
-        }
-    }
-    print_summary(fqdn, public_ip, &record);
-    if policy.is_none() {
-        // --no-verify: the node is up but unappraised, and the appraisal has
-        // its own command.
-        next_step::print(
-            "appraise it before relying on it:",
-            &[format!(
-                "seismic-tee node verify{} --manifest {}{}",
-                args.node.as_flags(),
-                manifest_path.display(),
-                verify::retry_flags(&args.policy_source, &args.verifier),
-            )],
-        );
-    }
-    Ok(ExitCode::SUCCESS)
 }
 
 #[cfg(test)]
 mod tests {
     use clap::Parser;
-    use seismic_tee_common::network_dir::MANIFEST_FILENAME;
+    use seismic_tee_common::http;
+
+    use seismic_tee_common::NodeDescriptor;
+    use seismic_tee_common::founding::FoundingRecord;
 
     use super::*;
+    use crate::bootnodes::KeyHolder;
+    use crate::plan::{Pinned, Planned, Up};
     use crate::test_support::{FIXTURE_MANIFEST, FakeServer, refused_url, write_file};
+    use crate::verify;
 
     const FQDN: &str = "node1.example.com";
     const EMAIL: &str = "ops@example.com";
@@ -944,7 +603,7 @@ mod tests {
         manifest: &Manifest,
         reth_genesis: &[u8],
         summit_genesis: &[u8],
-        genesis_node: bool,
+        pinned_box: bool,
         bootnodes: &[String],
     ) -> anyhow::Result<InitConfig> {
         build_config(&ConfigInputs {
@@ -955,7 +614,7 @@ mod tests {
             external_ip: EXTERNAL_IP,
             fqdn: FQDN,
             email: EMAIL,
-            genesis_node,
+            pinned_box,
         })
     }
 
@@ -965,13 +624,13 @@ mod tests {
             .unwrap()
     }
 
-    /// genesis: the pinned box keeps its candidate root_key, so (in the
-    /// greenfield case) no bootnodes — the key is present and empty. No role
-    /// flag is sent: tdx-init tells the pinned box from the manifest. The
-    /// rendered document is exactly `[node]` + `[network]`, and the artifacts
-    /// round-trip byte-exact through the base64 hop.
+    /// The pinned box keeps its candidate root_key, so no bootnodes — the key
+    /// is present and empty. No role flag is sent: tdx-init tells the pinned
+    /// box from the manifest. The rendered document is exactly `[node]` +
+    /// `[network]`, and the artifacts round-trip byte-exact through the
+    /// base64 hop.
     #[test]
-    fn genesis_mode_renders_exactly_the_two_sections() {
+    fn the_pinned_box_renders_exactly_the_two_sections() {
         let manifest = manifest();
         let config = build(&manifest, RETH_GENESIS, SUMMIT_GENESIS, true, &[]).unwrap();
         let rendered = render_config(&config).unwrap();
@@ -1034,7 +693,7 @@ mod tests {
             external_ip: "",
             fqdn: FQDN,
             email: EMAIL,
-            genesis_node: true,
+            pinned_box: true,
         })
         .unwrap_err()
         .to_string();
@@ -1097,7 +756,9 @@ mod tests {
     #[test]
     fn the_genesis_files_default_to_the_manifests_siblings() {
         let dir = tempfile::tempdir().unwrap();
-        let manifest_path = dir.path().join(MANIFEST_FILENAME);
+        let manifest_path = dir
+            .path()
+            .join(seismic_tee_common::network_dir::MANIFEST_FILENAME);
 
         let custom = write_file(&dir, "custom.json", b"{}");
         assert_eq!(
@@ -1147,9 +808,16 @@ mod tests {
         let server = FakeServer::serve(vec![(200, "ok".to_string())]);
         let client = http::client().unwrap();
 
-        post_config(&client, &format!("{}/", server.url), &config)
-            .await
-            .unwrap();
+        post_config_within(
+            &client,
+            &format!("{}/", server.url),
+            &config,
+            Duration::from_secs(10),
+            Duration::from_millis(20),
+            |_| {},
+        )
+        .await
+        .unwrap();
 
         let requests = server.requests();
         assert_eq!(requests.len(), 1);
@@ -1176,10 +844,17 @@ mod tests {
         ]);
         let client = http::client().unwrap();
 
-        let error = post_config(&client, &format!("{}/", server.url), &config)
-            .await
-            .unwrap_err()
-            .to_string();
+        let error = post_config_within(
+            &client,
+            &format!("{}/", server.url),
+            &config,
+            Duration::from_secs(10),
+            Duration::from_millis(20),
+            |_| {},
+        )
+        .await
+        .unwrap_err()
+        .to_string();
         assert!(
             error.contains("tdx-init rejected config: 400 unknown field `bogus`"),
             "{error}"
@@ -1229,110 +904,154 @@ mod tests {
         args: ConfigureArgs,
     }
 
-    /// The runbook's invocation, and the flags it leaves at their defaults.
-    #[test]
-    fn the_runbooks_argv_parses_with_the_documented_defaults() {
-        let probe = Probe::try_parse_from([
-            "configure",
-            "--node",
-            "nodes/nodes.json",
-            "--name",
-            "tmp-devnet-1-2",
-            "--bootnode",
-            "enode://ab@1.2.3.4:30303",
-            "--bootnode",
-            "enode://cd@5.6.7.8:30303",
-            "--manifest",
-            "network-manifest.json",
-        ])
-        .unwrap()
-        .args;
+    fn parse(argv: &[&str]) -> Result<ConfigureArgs, clap::Error> {
+        Probe::try_parse_from(std::iter::once(&"configure").chain(argv)).map(|probe| probe.args)
+    }
 
-        assert_eq!(probe.bootnode.len(), 2);
-        assert_eq!(probe.email, DEFAULT_EMAIL);
-        assert!(!probe.no_verify);
-        assert_eq!(probe.yes, None, "the gate is on unless asked off");
-        assert_eq!(probe.dump_config, None);
-        assert_eq!(probe.reth_genesis, None);
+    /// A bare `configure` is the whole node table, asking first; names
+    /// narrow it.
+    #[test]
+    fn bare_configure_is_the_whole_table_with_the_documented_defaults() {
+        let args = parse(&[]).unwrap();
+        assert!(args.names.is_empty());
+        assert!(args.bootnode.is_empty());
+        assert_eq!(args.email, DEFAULT_EMAIL);
+        assert!(!args.no_verify);
+        assert!(!args.yes, "the gate is on unless asked off");
+        assert!(!args.check);
         assert_eq!(
-            probe.policy_source.attestation_type,
+            args.policy_source.attestation_type,
             verify::DEFAULT_ATTESTATION_TYPE
         );
 
-        // Without --bootnode, the joiner's bootnodes are found when it runs.
-        let probe =
-            Probe::try_parse_from(["configure", "--node", "n.json", "--manifest", "m.json"])
-                .unwrap()
-                .args;
-        assert!(probe.bootnode.is_empty());
+        let args = parse(&["beta", "gamma", "--yes"]).unwrap();
+        assert_eq!(args.names, ["beta", "gamma"]);
+        assert!(args.yes);
     }
 
-    /// --no-verify skips appraising the joining node, not the key holders it
-    /// joins through: without the network's policy, nothing is sent, and the
-    /// refusal names the way on.
+    /// The mode flags are gone: the network's state decides.
     #[test]
-    fn no_verify_still_appraises_the_key_holders() {
-        let dir = tempfile::tempdir().unwrap();
-        let manifest_path = dir.path().join(MANIFEST_FILENAME);
-        let args = Probe::try_parse_from([
-            "configure",
-            "--name",
-            "dev-2",
-            "--manifest",
-            manifest_path.to_str().unwrap(),
-            "--no-verify",
-        ])
-        .unwrap()
-        .args;
-
-        let error = format!(
-            "{:#}",
-            key_holder_policy(&args, "dev-2", &manifest_path, &manifest()).unwrap_err()
-        );
-        for expected in [
-            "measurement policy not found",
-            "--no-verify skips appraising dev-2 only",
-            "Nothing was sent",
-            "--name dev-2 --bootnode <ENODE>",
+    fn the_retired_flags_do_not_parse() {
+        for argv in [
+            &["--genesis-node", "a"][..],
+            &["--join", "b"],
+            &["--name", "a"],
+            &["--dump-config", "c.toml"],
         ] {
-            assert!(
-                error.contains(expected),
-                "missing {expected:?} in:\n{error}"
-            );
+            assert!(parse(argv).is_err(), "{argv:?}");
         }
     }
 
-    /// The preview names what the base64 hides: the manifest by identity,
-    /// the genesis files by hash, the bootnodes, the policy, the record.
+    /// `--check` delivers nothing, so every argument that only delivery reads
+    /// is refused rather than silently ignored.
     #[test]
-    fn the_preview_decodes_what_the_toml_hides() {
-        let manifest = manifest();
-        let bootnodes = [bootnode()];
-        let inputs = ConfigInputs {
-            manifest: &manifest,
-            reth_genesis: &Artifact::new("/nets/devnet/reth-genesis.json", RETH_GENESIS),
-            summit_genesis: &Artifact::new("/nets/devnet/summit-genesis.toml", SUMMIT_GENESIS),
-            bootnodes: &bootnodes,
-            external_ip: EXTERNAL_IP,
-            fqdn: FQDN,
-            email: EMAIL,
-            genesis_node: false,
-        };
-        let preview = Preview {
-            name: "dev-2",
-            manifest_path: Path::new("/nets/devnet/network-manifest.json"),
-            inputs: &inputs,
-            policy: Some("/nets/devnet/measurement-policy-bootstrap.json (pinned by --manifest)"),
-            record: Path::new("/nets/devnet/nodes/dev-2.init-config.toml"),
-            post_url: "http://203.0.113.7:8080/",
-        };
+    fn check_refuses_the_delivery_arguments() {
+        assert!(parse(&["--check"]).unwrap().check);
+        for excluded in [
+            &["alpha"][..],
+            &["--bootnode", "enode://ab@1.2.3.4:30303"],
+            &["--yes"],
+            &["--reth-genesis", "r.json"],
+            &["--summit-genesis", "s.toml"],
+            &["--no-verify"],
+            &["--policy", "p.json"],
+            &["--measurements", "m.json"],
+            &["--pccs-url", "https://pccs"],
+        ] {
+            let argv: Vec<&str> = std::iter::once("--check")
+                .chain(excluded.iter().copied())
+                .collect();
+            assert!(parse(&argv).is_err(), "{excluded:?}");
+        }
+    }
 
-        let text = render_preview(&preview);
+    /// A refusal's remedy repeats the run's table, names and manifest.
+    #[test]
+    fn the_remedy_repeats_the_runs_arguments() {
+        let args = parse(&[
+            "beta",
+            "--node",
+            "nodes.json",
+            "--manifest",
+            "net/network-manifest.json",
+        ])
+        .unwrap();
+        let remedy = remedy(&args);
+        assert_eq!(
+            remedy.bootnode(),
+            "seismic-tee node configure --node nodes.json beta --bootnode <ENODE> --manifest \
+             net/network-manifest.json"
+        );
+        assert!(
+            remedy
+                .re_found()
+                .contains("seismic-tee node harvest net --node nodes.json --force"),
+            "{}",
+            remedy.re_found()
+        );
+    }
+
+    fn descriptor(name: &str) -> NodeDescriptor {
+        NodeDescriptor {
+            public_ip: "203.0.113.9".to_string(),
+            fqdn: format!("{name}.example.com"),
+        }
+    }
+
+    fn planned(name: &str, up: Up) -> Planned {
+        Planned {
+            name: name.to_string(),
+            descriptor: descriptor(name),
+            up,
+            harvested_node_key: None,
+            record: None,
+        }
+    }
+
+    fn preview_inputs() -> (Manifest, Artifact, Artifact) {
+        (
+            manifest(),
+            Artifact::new("/nets/devnet/reth-genesis.json", RETH_GENESIS),
+            Artifact::new("/nets/devnet/summit-genesis.toml", SUMMIT_GENESIS),
+        )
+    }
+
+    /// A founding's preview names the network and its pinned box, which goes
+    /// first and alone; what the base64 hides is decoded.
+    #[test]
+    fn a_foundings_preview_names_the_pinned_box_first() {
+        let (manifest, reth_genesis, summit_genesis) = preview_inputs();
+        let run = Run::Found {
+            pinned: Pinned {
+                name: "alpha".to_string(),
+                descriptor: descriptor("alpha"),
+                record: FoundingRecord {
+                    node_public_key: "aa".repeat(32),
+                    consensus_public_key: "cc".repeat(48),
+                    candidate_tx_io_public_key: "02".repeat(33),
+                    document: serde_json::json!({}),
+                },
+            },
+            rest: vec![planned("beta", Up::Awaiting), planned("gamma", Up::NotUp)],
+        };
+        let text = render_preview(&Preview {
+            table: "context devnet-1",
+            manifest_path: Path::new("/nets/devnet/network-manifest.json"),
+            manifest: &manifest,
+            reth_genesis: &reth_genesis,
+            summit_genesis: &summit_genesis,
+            email: EMAIL,
+            policy: Some("/nets/devnet/measurement-policy-bootstrap.json (pinned by --manifest)"),
+            run: &run,
+            skipped: &[],
+            bootnodes: &[],
+            record: Path::new("/nets/devnet/nodes/<name>.init-config.toml"),
+        });
         for expected in [
-            "node dev-2",
-            "http://203.0.113.7:8080/",
-            "node1.example.com (203.0.113.7), role: join",
-            EMAIL,
+            &format!(
+                "This founds network {:?} (node table: context devnet-1); pinned box alpha.",
+                manifest.name
+            ),
             "/nets/devnet/network-manifest.json",
             "chain_id 5124",
             &format!("network_id {}", manifest.network_id()),
@@ -1344,41 +1063,69 @@ mod tests {
                 "summit-genesis.toml  sha256 {}",
                 hex::encode(Sha256::digest(SUMMIT_GENESIS))
             ),
-            "Bootnodes:        1",
-            &bootnode(),
             "measurement-policy-bootstrap.json (pinned by",
-            "/nets/devnet/nodes/dev-2.init-config.toml",
+            EMAIL,
+            "Nodes:            alpha, first and alone: keeps its candidate root_key",
+            "then beta, gamma: fetch root_key from alpha",
+            "Not up yet:       gamma (waited for, up to 180s)",
+            "/nets/devnet/nodes/<name>.init-config.toml",
         ] {
             assert!(text.contains(expected), "missing {expected:?} in:\n{text}");
         }
-
-        let unappraised = render_preview(&Preview {
-            policy: None,
-            ..preview
-        });
-        assert!(unappraised.contains("--no-verify"), "{unappraised}");
+        assert!(!text.contains("Bootnodes:"), "{text}");
+        assert!(!text.contains("Skipped:"), "{text}");
     }
 
-    /// A `--yes` naming the resolved node sends without reading; one naming
-    /// something else is refused, naming both; a terminal is asked and only
-    /// y/yes sends; no terminal and no `--yes` is a refusal that names the
-    /// flag's new shape.
+    /// A join's preview lists the nodes, the bootnodes they fetch from, and
+    /// the nodes skipped.
     #[test]
-    fn confirm_post_gates_the_post() {
+    fn a_joins_preview_lists_the_bootnodes_and_the_skipped() {
+        let (manifest, reth_genesis, summit_genesis) = preview_inputs();
+        let run = Run::Join {
+            nodes: vec![planned("beta", Up::Awaiting)],
+            through: Through::KeyHolders(vec![KeyHolder::new("alpha", &descriptor("alpha"))]),
+        };
+        let skipped = ["alpha".to_string()];
+        let bootnodes = [bootnode()];
+        let text = render_preview(&Preview {
+            table: "context devnet-1",
+            manifest_path: Path::new("/nets/devnet/network-manifest.json"),
+            manifest: &manifest,
+            reth_genesis: &reth_genesis,
+            summit_genesis: &summit_genesis,
+            email: EMAIL,
+            policy: None,
+            run: &run,
+            skipped: &skipped,
+            bootnodes: &bootnodes,
+            record: Path::new("/nets/devnet/nodes/<name>.init-config.toml"),
+        });
+        for expected in [
+            &format!(
+                "This joins 1 node(s) to network {:?} (node table: context devnet-1).",
+                manifest.name
+            ),
+            "Nodes:            beta",
+            "Bootnodes:        1, key holder(s) that passed their appraisal",
+            &bootnode(),
+            "Skipped:          alpha (took its config this boot)",
+            "nothing (--no-verify)",
+        ] {
+            assert!(text.contains(expected), "missing {expected:?} in:\n{text}");
+        }
+    }
+
+    /// `--yes` sends without reading; a terminal is asked and only y/yes
+    /// sends; no terminal and no `--yes` is a refusal naming the flag.
+    #[test]
+    fn confirm_run_gates_the_run() {
         let mut empty = std::io::Cursor::new(b"".to_vec());
-        assert!(confirm_post(Some("dev-2"), "dev-2", false, &mut empty).unwrap());
-        assert!(confirm_post(Some("dev-2"), "dev-2", true, &mut empty).unwrap());
+        assert!(confirm_run(true, false, &mut empty).unwrap());
 
-        let error = confirm_post(Some("wrong-name"), "dev-2", false, &mut empty)
+        let error = confirm_run(false, false, &mut empty)
             .unwrap_err()
             .to_string();
-        assert!(error.contains("--yes wrong-name"), "{error}");
-        assert!(error.contains("dev-2"), "{error}");
-
-        let error = confirm_post(None, "dev-2", false, &mut empty)
-            .unwrap_err()
-            .to_string();
-        assert!(error.contains("--yes <NAME>"), "{error}");
+        assert!(error.contains("pass --yes"), "{error}");
         assert!(error.contains("not a terminal"), "{error}");
 
         for (answer, sends) in [
@@ -1393,29 +1140,22 @@ mod tests {
         ] {
             let mut input = std::io::Cursor::new(answer.as_bytes().to_vec());
             assert_eq!(
-                confirm_post(None, "dev-2", true, &mut input).unwrap(),
+                confirm_run(false, true, &mut input).unwrap(),
                 sends,
                 "{answer:?}"
             );
         }
     }
 
-    /// The record lands in the network directory's `nodes/` tier by default,
-    /// `--dump-config` puts it anywhere, and writing creates the tier.
+    /// The record lands in the network directory's `nodes/` tier, and
+    /// writing creates the tier.
     #[test]
-    fn the_record_defaults_to_nodes_beside_the_manifest_and_is_written() {
+    fn the_record_is_written_under_nodes_beside_the_manifest() {
         let dir = tempfile::tempdir().unwrap();
-        let manifest_path = dir.path().join(MANIFEST_FILENAME);
-
-        let default = resolve_record_path(None, &manifest_path, "dev-2");
+        let record = NetworkDir::new(dir.path()).init_config("dev-2");
         assert_eq!(
-            default,
+            record,
             dir.path().join("nodes").join("dev-2.init-config.toml")
-        );
-        let explicit = Path::new("/elsewhere/dev-2.toml");
-        assert_eq!(
-            resolve_record_path(Some(explicit), &manifest_path, "dev-2"),
-            explicit
         );
 
         let config = build(
@@ -1427,8 +1167,8 @@ mod tests {
         )
         .unwrap();
         let rendered = render_config(&config).unwrap();
-        write_record(&default, &rendered).unwrap();
-        assert_eq!(std::fs::read_to_string(&default).unwrap(), rendered);
+        write_record(&record, &rendered).unwrap();
+        assert_eq!(std::fs::read_to_string(&record).unwrap(), rendered);
         // And it is the document tdx-init would take.
         let reparsed: InitConfig = toml::from_str(&rendered).unwrap();
         assert_eq!(reparsed.network.bootnodes, [bootnode()]);

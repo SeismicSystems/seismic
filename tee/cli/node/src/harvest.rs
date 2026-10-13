@@ -125,6 +125,18 @@ pub enum FetchError {
     NotReady(String),
 }
 
+impl std::fmt::Display for FetchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::WindowClosed(url) => write!(f, "HTTP 410 from {url}: it took a config POST"),
+            Self::Rejected(status, url) => write!(f, "HTTP {status} from {url}"),
+            Self::Malformed(message) | Self::Unreachable(message) | Self::NotReady(message) => {
+                f.write_str(message)
+            }
+        }
+    }
+}
+
 /// Fetch one box's `{pubkeys, evidence}` from its harvest endpoint.
 pub async fn fetch_quote(
     client: &reqwest::Client,
@@ -343,22 +355,28 @@ pub async fn verify_record(
     policy: &SeismicMeasurementPolicy,
     pccs_url: Option<&str>,
 ) -> anyhow::Result<String> {
-    let verdict = async {
-        let record: HarvestRecord =
-            serde_json::from_value(record.clone()).context("the harvest record does not parse")?;
-        let verified = verify_harvest(record, policy.clone(), pccs_url.map(str::to_string)).await?;
-        // The verifier is the only component that knows which bundle it used;
-        // it renders the archive document and reads it back before handing it
-        // over, so a document that cannot be replayed fails the harvest here.
-        verified.archive_document()
-    }
-    .await;
-    verdict.map_err(|error| {
+    verify_quote(record, policy, pccs_url).await.map_err(|error| {
         anyhow::anyhow!(
             "{name}: quote verification failed:\n{error:?}\nThe harvest is burned: re-found rather \
              than retrying around it."
         )
     })
+}
+
+/// [`verify_record`]'s check, with the verifier's own error: `configure`
+/// re-runs it on the pinned box before founding from it.
+pub async fn verify_quote(
+    record: &Value,
+    policy: &SeismicMeasurementPolicy,
+    pccs_url: Option<&str>,
+) -> anyhow::Result<String> {
+    let record: HarvestRecord =
+        serde_json::from_value(record.clone()).context("the harvest record does not parse")?;
+    let verified = verify_harvest(record, policy.clone(), pccs_url.map(str::to_string)).await?;
+    // The verifier is the only component that knows which bundle it used; it
+    // renders the archive document and reads it back before handing it over,
+    // so a document that cannot be replayed fails here.
+    verified.archive_document()
 }
 
 /// Refuse to clobber an existing harvest unless `--force`.

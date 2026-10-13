@@ -87,7 +87,7 @@ one line: **`network` never contacts a node, and `node` always does**.
 derived from them, and its removal. `node` is the cohort, one node or many:
 every command in it reaches a running machine. A founding therefore alternates
 between the two — `network init` → provision → `node harvest` → `network
-assemble` → `node configure --genesis-node` — which makes plain that `assemble` touches nothing but
+assemble` → `node configure` — which makes plain that `assemble` touches nothing but
 local files. An operator joining a network uses only `node` and never sees
 `init` or `assemble`.
 
@@ -106,7 +106,7 @@ on, kubeconfig-style, holding pointers and never a credential.
 | `network assemble` | founder, once per network | Derive the artifact set from a network directory's inputs: pins the harvested founding set and mints `network_id`. `--check` re-derives and compares with what is on disk. |
 | `network rm` | founder, once the stack is destroyed | Delete a network directory and its context entry, by name — the counterpart of `init`. Asks for the name to be typed back (`--yes` skips it), warning when nodes are still registered. `ctx rm <network>[/<node>]` forgets an entry, or one node, and keeps the files. |
 | `node harvest` | founder, once per network | Collect and DCAP-verify the founding cohort's summit keys into `inputs/harvest/` — the provenance `assemble` pins the validator set from. |
-| `node configure` | any operator, on first boot; the founder, once per network | POST each node's TOML to tdx-init, recording the exact body under `nodes/`, and `verify` each node once it is up. By default it joins one node to a live network, through the node table's key holders that pass their appraisal (or the peers `--bootnode` names); `--genesis-node` founds a cohort (the box the manifest pins, then N joiners in parallel) and then runs the launch assertions against the manifest's pins; `--check` re-runs those assertions alone on a live cohort. |
+| `node configure` | any operator, on first boot; the founder, once per network | POST each node's TOML to tdx-init, recording the exact body under `nodes/`, and `verify` each node once it is up. The network's live state decides the run: an unfounded network is founded (the pinned box first and alone, then the rest in parallel), and nodes of a live one join through the node table's key holders that pass their appraisal (or the peers `--bootnode` names). Nodes that took their config this boot are skipped. Every founding node configured is then held to the manifest's pins by the launch assertions; `--check` re-runs those alone on a live cohort. |
 | `node verify` | any operator, whenever they rely on a node | Deploy-verify one node's TDX attestation against the network manifest and the measurement policy it pins. Read-only and re-runnable. |
 | `node status` | any operator | Show the live state of every node in the node table — reachable, awaiting its config, its candidate against the manifest's pin, key holder, disk wipe — and what it says about the network: live, unfounded, or no reachable key holder. `--watch` repaints it. Informational: nothing is DCAP-verified. |
 | `admission promote` | whoever proposes an image | Promote raw `make measure` output into the policy document. |

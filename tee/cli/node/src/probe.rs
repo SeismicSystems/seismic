@@ -116,10 +116,9 @@ pub async fn probe_node(client: &reqwest::Client, target: &ProbeTarget) -> NodeS
         },
         Err(FetchError::WindowClosed(_)) => ConfigState::Configured,
         Err(FetchError::NotReady(message)) => ConfigState::NotReady(message),
-        Err(FetchError::Rejected(status, url)) => {
-            ConfigState::Refused(format!("HTTP {status} from {url}"))
+        Err(error @ (FetchError::Rejected(..) | FetchError::Malformed(_))) => {
+            ConfigState::Refused(error.to_string())
         }
-        Err(FetchError::Malformed(message)) => ConfigState::Refused(message),
         Err(FetchError::Unreachable(message)) => ConfigState::NoAnswer(message),
     };
     NodeState { config, key_holder }

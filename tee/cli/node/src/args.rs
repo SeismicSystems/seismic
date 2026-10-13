@@ -1,13 +1,15 @@
-//! `--node <file> [--name <name>]`, or the current context: how a
-//! single-node command names its node.
+//! How a command names its nodes. Every command reads the same cohort, the
+//! operator's nodes as a node table: the descriptor map `--node <file>` names
+//! (see [`seismic_tee_common::descriptor`]), else the current context's
+//! network (`seismic-tee ctx use <network>[/<node>]`), so a command line that
+//! names neither still has a definite target.
 //!
-//! Shared by `configure`, `verify` and `status`, so an operator who learns
-//! one command's way of pointing at a node has learned all three — and
-//! `harvest` spells its cohort's file the same way. The file is
-//! the descriptor map (see [`seismic_tee_common::descriptor`]); `--name`
-//! picks the entry when the map holds several. Omitting `--node` falls back
-//! to `seismic-tee`'s context (`seismic-tee ctx use <network>/<node>`), so a
-//! command line that names neither still has a definite target.
+//! - [`NodeArgs`] picks one node of the cohort: `--name`, else the node the
+//!   context names, else the cohort's only node. Shared by `verify` and
+//!   `status`, so an operator who learns one command's way of pointing at a
+//!   node has learned both.
+//! - [`CohortArgs`] takes the whole cohort, for `configure`; `harvest` spells
+//!   its cohort the same way.
 
 use std::path::{Path, PathBuf};
 
@@ -15,15 +17,14 @@ use anyhow::bail;
 use clap::Args;
 use clap_complete::ArgValueCandidates;
 use seismic_tee_common::{Descriptors, NodeDescriptor, load_descriptors, select_descriptor};
-use seismic_tee_context::{Context, ContextArgs, Selection, complete, echo};
+use seismic_tee_context::{Context, ContextArgs, Selection, complete, echo, load_nodes};
 
 #[derive(Debug, Clone, Args)]
 pub struct NodeArgs {
     /// Descriptor map JSON: `pulumi stack output nodes --json`, i.e.
     /// {<name>: {public_ip, fqdn}, …}. Provides the node's public_ip/fqdn.
-    /// With one entry it is the node; with several, --name says which (for
-    /// `configure --genesis-node` and `--check`, it is the whole cohort).
-    /// Omit it to use the current context (`seismic-tee ctx use`).
+    /// With one entry it is the node; with several, --name says which. Omit
+    /// it to use the current context (`seismic-tee ctx use`).
     #[arg(long, value_name = "FILE")]
     pub node: Option<PathBuf>,
 
@@ -69,18 +70,6 @@ impl NodeArgs {
         Ok((name.to_string(), descriptor.clone()))
     }
 
-    /// The whole node table these flags name the node in: `--node FILE`,
-    /// else the context's network. Not echoed — [`Self::load`] already said
-    /// what resolved.
-    pub fn table(&self, config: Option<&Path>) -> anyhow::Result<Descriptors> {
-        if let Some(path) = self.node.as_deref() {
-            return Ok(load_descriptors(path)?);
-        }
-        let context = Context::load(config)?;
-        let selected = context.select(self.context.context.as_deref())?;
-        Ok(selected.nodes()?.clone())
-    }
-
     /// `--node FILE [--name NAME]`, resolved without the context: every
     /// failure names the file, absent, malformed, or not singling out a
     /// node.
@@ -100,16 +89,66 @@ impl NodeArgs {
     /// anywhere, so it is repeated like `--node` is. Leading space included,
     /// so it splices into a command line.
     pub fn as_flags(&self) -> String {
-        let mut flags = String::new();
-        if let Some(node) = &self.node {
-            flags.push_str(&format!(" --node {}", node.display()));
-        } else if let Some(context) = &self.context.context {
-            flags.push_str(&format!(" --context {context}"));
-        }
+        let mut flags = self.table_flags();
         if let Some(name) = &self.name {
             flags.push_str(&format!(" --name {name}"));
         }
         flags
+    }
+
+    /// [`Self::as_flags`] without `--name`: the node table alone.
+    pub fn table_flags(&self) -> String {
+        table_flags(self.node.as_deref(), &self.context)
+    }
+}
+
+/// `--node <file>`, or the current context's network: the whole cohort.
+#[derive(Debug, Clone, Default, Args)]
+pub struct CohortArgs {
+    /// Cohort's node table: `pulumi stack output nodes --json`, i.e.
+    /// {<name>: {public_ip, fqdn}, …}. Omit it to use the current context's
+    /// network (`seismic-tee ctx use`).
+    #[arg(long, value_name = "FILE")]
+    pub node: Option<PathBuf>,
+
+    #[command(flatten)]
+    pub context: ContextArgs,
+}
+
+impl CohortArgs {
+    /// The cohort's node table: `--node FILE`, else the context's network,
+    /// echoed.
+    pub fn load(&self, config: Option<&Path>) -> anyhow::Result<Descriptors> {
+        load_nodes(self.node.as_deref(), &self.context, config, "--node")
+    }
+
+    /// Where the node table came from, for a human: `--node FILE`, or the context
+    /// network that supplied it.
+    pub fn source(&self, config: Option<&Path>) -> anyhow::Result<String> {
+        if let Some(node) = &self.node {
+            return Ok(format!("--node {}", node.display()));
+        }
+        let context = Context::load(config)?;
+        let selected = context.select(self.context.context.as_deref())?;
+        Ok(format!("context {}", selected.selection.network))
+    }
+
+    /// These flags as they were given, for a suggested follow-up command on
+    /// the same cohort, as [`NodeArgs::as_flags`] spells them.
+    pub fn as_flags(&self) -> String {
+        table_flags(self.node.as_deref(), &self.context)
+    }
+}
+
+/// `--node FILE`, else an explicit `--context`, as a suggested command
+/// repeats them; empty when the persisted selection supplied the table.
+fn table_flags(node: Option<&Path>, context: &ContextArgs) -> String {
+    if let Some(node) = node {
+        format!(" --node {}", node.display())
+    } else if let Some(context) = &context.context {
+        format!(" --context {context}")
+    } else {
+        String::new()
     }
 }
 
@@ -290,6 +329,29 @@ beta = { public_ip = "203.0.113.8", fqdn = "beta.example.com" }
             .to_string();
         assert!(err.contains("--node"), "{err}");
         assert!(err.contains("ctx use"), "{err}");
+    }
+
+    /// The node table's source, as the configure preview names it: the file, or
+    /// the context network.
+    #[test]
+    fn a_cohorts_source_names_the_file_or_the_context_network() {
+        clear_context_env();
+        let cohort = |node: Option<&str>| CohortArgs {
+            node: node.map(PathBuf::from),
+            ..CohortArgs::default()
+        };
+        assert_eq!(
+            cohort(Some("nodes.json")).source(None).unwrap(),
+            "--node nodes.json"
+        );
+
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config.toml");
+        std::fs::write(&config_path, TWO_NODE_CONFIG).unwrap();
+        assert_eq!(
+            cohort(None).source(Some(&config_path)).unwrap(),
+            "context devnet-1"
+        );
     }
 
     #[test]

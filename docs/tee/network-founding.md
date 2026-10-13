@@ -69,16 +69,23 @@ Each step is one command, run by the founder:
    `founding_tx_io_pk`, and write the manifest. `network_id` is the SHA-256
    of the manifest bytes. The validators' IPs come from the cohort's node
    descriptors, not from the harvest.
-4. **Configure** (`seismic-tee node configure --genesis-node <name>`, which
-   must name the pinned box). POST each box its configuration: the manifest,
-   the reth genesis, and the summit genesis with each box's current IP spliced
-   in, which leaves `network_id` unchanged
+4. **Configure** (`seismic-tee node configure`). The CLI probes every box
+   and reads the network as unfounded: the pinned box awaits its config,
+   still serving the pinned candidate, and its quote DCAP-verifies again. A
+   box serving node keys other than its harvest record's rebooted since the
+   harvest, so the run refuses before any POST. Each box is checked the same
+   way again right before its own POST: a box not up at the probe once it
+   answers, the joiners after the pinned box's wipe. POST each box
+   its configuration: the manifest, the reth genesis, and the summit genesis
+   with each box's current IP spliced in, which leaves `network_id` unchanged
    ([what summit's digest covers](network-manifest.md#what-summitgenesis_config_digest-covers)).
    The pinned box goes first and alone: it is the only box that will hold
    `root_key`, and its reth enode is the joiners' bootnode. If it fails, the
    run stops and the founding is redone
    ([founding-window security](#founding-window-security)). The joiners follow.
-   Each node is deploy-verified as soon as it is ready.
+   Each node is deploy-verified as soon as it is ready. A re-run after a
+   joiner failed finds the network live: it skips the boxes that took their
+   config and joins the rest through the key holders.
 5. **Launch checks**, at the end of configure and again on demand with
    `seismic-tee node configure --check`. Every box must serve exactly the
    pubkeys harvested from it, and every reth must serve the manifest's

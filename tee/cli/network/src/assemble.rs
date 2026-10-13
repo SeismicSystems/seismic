@@ -563,24 +563,24 @@ pub async fn run(args: AssembleArgs, config: Option<&Path>) -> anyhow::Result<Ex
     }
     println!("network_id: {}", assembled.manifest.network_id());
     // Straight to the founding: every gate and the replay `verify-founding`
-    // runs both already ran above, over this very set. The genesis node is
-    // the box whose candidate was just pinned: configure refuses any other.
-    next_step::print("", &[configure_invocation(pinned_name, &args.dir, &dir)]);
+    // runs both already ran above, over this very set. configure finds the
+    // pinned box itself: the harvested box whose candidate is the manifest's
+    // founding_tx_io_pk.
+    next_step::print("", &[configure_invocation(&args.dir, &dir)]);
     Ok(ExitCode::SUCCESS)
 }
 
-/// `node configure --genesis-node`, spelled as the next step after `assemble`
-/// (written or `--check`ed), with `genesis` as the genesis node: the pinned
-/// box. `configure` takes the manifest, not `DIR`, so an explicit `DIR`
-/// becomes `--manifest`; an explicit `--context` is repeated as
+/// `node configure`, spelled as the next step after `assemble` (written or
+/// `--check`ed). `configure` takes the manifest, not `DIR`, so an explicit
+/// `DIR` becomes `--manifest`; an explicit `--context` is repeated as
 /// [`DirArgs::as_args`] would.
-fn configure_invocation(genesis: &str, args: &DirArgs, dir: &NetworkDir) -> String {
+fn configure_invocation(args: &DirArgs, dir: &NetworkDir) -> String {
     let scope = match (&args.dir, &args.context.context) {
         (Some(_), _) => format!(" --manifest {}", dir.manifest().display()),
         (None, Some(context)) => format!(" --context {context}"),
         (None, None) => String::new(),
     };
-    format!("seismic-tee node configure --genesis-node {genesis}{scope}")
+    format!("seismic-tee node configure{scope}")
 }
 
 #[cfg(test)]
@@ -1233,21 +1233,16 @@ pub(crate) mod tests {
             },
         };
         assert_eq!(
-            configure_invocation("alpha", &args(None, None), &dir),
-            "seismic-tee node configure --genesis-node alpha"
+            configure_invocation(&args(None, None), &dir),
+            "seismic-tee node configure"
         );
         assert_eq!(
-            configure_invocation("alpha", &args(None, Some("devnet-1")), &dir),
-            "seismic-tee node configure --genesis-node alpha --context devnet-1"
+            configure_invocation(&args(None, Some("devnet-1")), &dir),
+            "seismic-tee node configure --context devnet-1"
         );
         assert_eq!(
-            configure_invocation(
-                "alpha",
-                &args(Some("/nets/devnet-1"), Some("devnet-1")),
-                &dir
-            ),
-            "seismic-tee node configure --genesis-node alpha --manifest \
-             /nets/devnet-1/network-manifest.json"
+            configure_invocation(&args(Some("/nets/devnet-1"), Some("devnet-1")), &dir),
+            "seismic-tee node configure --manifest /nets/devnet-1/network-manifest.json"
         );
     }
 }

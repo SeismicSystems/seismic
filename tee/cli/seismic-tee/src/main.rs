@@ -139,8 +139,8 @@ struct Cli {
                      Completes flags and command names, and the values an operator types \
                      most: every <network> and <network>/<node> in the context file for \
                      `ctx use` and `--context`, the registered networks for `ctx set-nodes` \
-                     and `ctx set-network`, and the selected network's nodes for `--name`, \
-                     `--genesis-node` and `--join`. Names come from the context file alone — no \
+                     and `ctx set-network`, and the selected network's nodes for `--name` and \
+                     `configure`'s NAME. Names come from the context file alone — no \
                      RPC, no Pulumi — so a tab press never waits on the network.\n\n\
                      Add the line for your shell to its rc file:\n  \
                      bash:   source <(seismic-tee --completions bash)\n  \
@@ -206,7 +206,7 @@ enum Command {
                       Harvesting a cohort's founding keys and configuring it reach the \
                       machines, so they are the node group's.",
         after_help = "A founding alternates between the two groups: network init → provision → \
-                      node harvest → network assemble → node configure --genesis-node. \
+                      node harvest → network assemble → node configure. \
                       Provision the cohort with the seismic_node Pulumi program \
                       (tee/pulumi/seismic_node); pulumi destroy tears it down, and rm then \
                       deletes the network directory and its context entry.\n\n\
@@ -231,11 +231,11 @@ enum Command {
                       each command consumes the descriptors of already-running nodes and \
                       reaches them over HTTP. An operator joining a network needs only this \
                       group.",
-        after_help = "configure takes one of three shapes: by default it joins one node to a live \
-                      network, through the node table's key holders or the peers --bootnode \
-                      names; --genesis-node founds a cohort, after network assemble; \
-                      --check re-asserts a founded cohort's launch — after a reboot or a \
-                      re-image, or when some of its boxes had not settled at launch — with nothing \
+        after_help = "configure reads what to do from the network's live state: an unfounded \
+                      network is founded, its pinned box first; nodes of a live one join through \
+                      the node table's key holders, or the peers --bootnode names. --check \
+                      re-asserts a founded cohort's launch — after a reboot or a re-image, or \
+                      when some of its boxes had not settled at launch — with nothing \
                       configured."
     )]
     Node {
@@ -594,12 +594,12 @@ mod tests {
         assert!(arg(&["ctx", "use"], "selection"));
         assert!(arg(&["ctx", "set-nodes"], "name"));
         assert!(arg(&["ctx", "set-network"], "name"));
-        for verb in ["configure", "verify", "status"] {
+        for verb in ["verify", "status"] {
             assert!(arg(&["node", verb], "name"), "{verb}");
             assert!(arg(&["node", verb], "context"), "{verb}");
         }
-        assert!(arg(&["node", "configure"], "genesis_node"));
-        assert!(arg(&["node", "configure"], "join"));
+        assert!(arg(&["node", "configure"], "names"));
+        assert!(arg(&["node", "configure"], "context"));
         assert!(arg(&["node", "harvest"], "context"));
         assert!(arg(&["network", "rm"], "name"));
         assert!(arg(&["verify-founding"], "context"));
@@ -629,6 +629,16 @@ mod tests {
                 "n.json",
             ],
             vec!["node", "configure", "--check", "--nodes", "n.json"],
+            // the network's state decides, not a mode flag
+            vec!["node", "configure", "--genesis-node", "a"],
+            vec!["node", "configure", "--genesis-node", "a", "--join", "b"],
+            vec!["node", "configure", "--name", "dev-2"],
+            vec![
+                "node",
+                "configure",
+                "--dump-config",
+                "/tmp/n.init-config.toml",
+            ],
             vec!["verify-harvest", "n"],
             vec!["network", "verify-founding", "n"],
             // re-deriving and comparing is `assemble --check`
@@ -901,33 +911,39 @@ mod tests {
                 "http://pccs",
                 "--force",
             ],
-            // founding
+            // `node configure --help`'s examples
+            vec!["node", "configure"],
+            vec!["node", "configure", "beta", "gamma"],
+            vec!["node", "configure", "--yes"],
+            vec!["node", "configure", "--check"],
             vec![
                 "node",
                 "configure",
-                "--genesis-node",
-                "devnet-3-1",
-                "--manifest",
-                "tee/networks/devnet-3/network-manifest.json",
+                "op-1",
+                "--bootnode",
+                "$(scast rpc seismic_nodeInfo --rpc-url https://peer.example.com/rpc | jq -r .enode)",
             ],
             vec![
                 "node",
                 "configure",
-                "--genesis-node",
-                "a",
-                "--join",
-                "b",
+                "--node",
+                "nodes.json",
                 "--manifest",
-                "m.json",
+                "network-manifest.json",
+            ],
+            vec![
+                "node",
+                "configure",
+                "--manifest",
+                "tee/networks/devnet-3/network-manifest.json",
                 "--no-verify",
                 "--email",
                 "x@y",
+                "-y",
             ],
             vec![
                 "node",
                 "configure",
-                "--genesis-node",
-                "a",
                 "--manifest",
                 "m.json",
                 "--measurements",
@@ -935,59 +951,23 @@ mod tests {
                 "--pccs-url",
                 "http://pccs",
             ],
-            // founding, resolved from the context
-            vec!["node", "configure", "--genesis-node", "a"],
-            vec![
-                "node",
-                "configure",
-                "--genesis-node",
-                "a",
-                "--context",
-                "devnet-1",
-            ],
+            vec!["node", "configure", "--context", "devnet-1"],
             // re-asserting a founded cohort's launch
-            vec!["node", "configure", "--check"],
             vec!["node", "configure", "--check", "--node", "nodes.json"],
             vec!["node", "configure", "--check", "--manifest", "m.json"],
-            // joining
-            vec![
-                "node",
-                "configure",
-                "--node",
-                "/tmp/nodes.json",
-                "--bootnode",
-                "enode://ab@1.2.3.4:30303",
-                "--manifest",
-                "./network-manifest.json",
-            ],
+            // joining through a peer outside the node table
             vec![
                 "node",
                 "configure",
                 "--node",
                 "nodes/nodes.json",
-                "--name",
                 "tmp-devnet-1-2",
                 "--bootnode",
                 "enode://ab@1.2.3.4:30303",
+                "--bootnode",
+                "enode://cd@5.6.7.8:30303",
                 "--manifest",
                 "network-manifest.json",
-                "--no-verify",
-                "--yes",
-                "tmp-devnet-1-2",
-            ],
-            vec![
-                "node",
-                "configure",
-                "-y",
-                "dev-2",
-                "--node",
-                "n.json",
-                "--bootnode",
-                "enode://ab@1.2.3.4:30303",
-                "--manifest",
-                "m.json",
-                "--dump-config",
-                "/tmp/n.init-config.toml",
             ],
             vec![
                 "node",
@@ -1039,40 +1019,6 @@ mod tests {
             vec!["node", "verify", "--context", "devnet-1/alpha"],
             vec!["node", "verify", "--name", "dev-2", "--manifest", "m.json"],
             vec!["node", "status", "--context", "devnet-1/alpha"],
-            vec![
-                "node",
-                "configure",
-                "--bootnode",
-                "enode://ab@1.2.3.4:30303",
-                "--yes",
-                "alpha",
-            ],
-            vec![
-                "node",
-                "configure",
-                "--bootnode",
-                "enode://ab@1.2.3.4:30303",
-            ],
-            vec![
-                "node",
-                "configure",
-                "--name",
-                "dev-2",
-                "--bootnode",
-                "enode://ab@1.2.3.4:30303",
-            ],
-            // joining through the node table's key holders
-            vec!["node", "configure", "--name", "dev-2"],
-            vec![
-                "node",
-                "configure",
-                "--node",
-                "nodes.json",
-                "--name",
-                "dev-2",
-                "--manifest",
-                "network-manifest.json",
-            ],
             // admission
             vec![
                 "admission",

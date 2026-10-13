@@ -206,7 +206,7 @@ written by someone, at some time, and checked by someone or by no one.
 | `[node].external_ip` | The CLI, from the node table's `public_ip` | Every config POST, so every boot | tdx-init, which renders reth's `--nat extip` and summit's `--ip` |
 | `[network].bootnodes` | The CLI. Founding: the genesis node's enode. Later: the enodes of the node table's key holders that pass their appraisal, or `--bootnode`. | Every config POST | tdx-init, which renders reth's `--bootnodes` and `--trusted-peers` and the `root_key` fetch peers |
 | Summit genesis `ip_address` | `network assemble`, from the node table's `public_ip` for each founding validator | Assembly | summit, as its initial dial set |
-| The same, delivered | `node configure --genesis-node` splices in the node table's current IPs; a joining `node configure` sends the committed file as it is | Every config POST | summit |
+| The same, delivered | `node configure` founding the network splices in the node table's current IPs; joining a live one, it sends the file `assemble` wrote as it is | Every config POST | summit |
 | A validator's live address | The node itself, signed with its node key | summit's start, then gossip | Every summit peer |
 | A gossip peer's address | discv5 | Runtime | reth |
 
@@ -305,10 +305,11 @@ against the appraised `public_ip`: a mismatch only warns.
 ### After founding
 
 - **A node of the operator's own cohort** — added later, or a founding box that
-  rebooted and lost its tmpfs config — gets `seismic-tee node configure --name
-  <node>`. The CLI probes the node table, deploy-verifies every other key
-  holder, and hands out the enodes of those that pass and whose host is the IP
-  it appraised. With none that passes, it sends nothing.
+  rebooted and lost its tmpfs config — gets `seismic-tee node configure`, which
+  skips the nodes that already took their config this boot. The CLI probes the
+  node table, deploy-verifies every key holder, and hands out the enodes of
+  those that pass and whose host is the IP it appraised. With none that
+  passes, it sends nothing.
 - **A node of another operator** has none of the network's key holders in its
   node table. It names a live peer with `--bootnode`, got from the network's
   operators or a live node's `seismic_nodeInfo`. Nothing publishes the network's
@@ -321,8 +322,8 @@ against the appraised `public_ip`: a mismatch only warns.
   - **DNS:** the provisioner rewrites the A record.
   - **Bootnodes:** fresh on every run, because the CLI reads enodes live.
   - **Advertised address:** fresh on the next config POST.
-  - **Summit genesis `ip_address`:** spliced only by a founding configure. A
-    joining configure delivers the founding-era IPs, and summit dials the
+  - **Summit genesis `ip_address`:** spliced only when configure founds the
+    network. Joining, it delivers the founding-era IPs, and summit dials the
     genesis IPs on every start, so a node's initial dial set can name
     addresses that have moved. Gossip corrects it once the node reaches any
     validator. Taking topology out of the genesis is

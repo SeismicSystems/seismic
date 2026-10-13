@@ -510,8 +510,9 @@ fn tab_completes_context_network_and_node_names_from_the_config_file() {
         names(&sandbox, &["node", "status", "--name", ""], &[]),
         ["alpha", "beta"]
     );
+    // `configure <TAB>`: the same, the nodes to configure.
     assert_eq!(
-        names(&sandbox, &["node", "configure", "--genesis-node", ""], &[]),
+        names(&sandbox, &["node", "configure", ""], &[]),
         ["alpha", "beta"]
     );
     // The shell's pinned selection scopes `--name` the way it scopes the
