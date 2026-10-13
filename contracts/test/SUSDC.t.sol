@@ -22,7 +22,7 @@ interface IERC20 {
     function totalSupply() external view returns (uint256);
 }
 
-/// @dev xERC20 (ERC-7281) as seen by a bridge router (e.g. Hyperlane HypXERC20) and
+/// @dev xERC20 (draft ERC-7281, defi-wonderland reference) as seen by a bridge router (e.g. Hyperlane HypXERC20) and
 ///      by the Hyperlane SDK, which reads the limit getters before every transfer.
 ///      Exercises selectors mint(address,uint256) 0x40c10f19, burn(address,uint256) 0x9dc29fac,
 ///      mintingCurrentLimitOf(address) 0x651fd268 and friends.
@@ -273,7 +273,7 @@ contract SUSDCTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
-                      xERC20 (ERC-7281) BRIDGE LIMITS
+                      xERC20 BRIDGE LIMITS
     //////////////////////////////////////////////////////////////*/
 
     IXERC20MintBurn xerc20;

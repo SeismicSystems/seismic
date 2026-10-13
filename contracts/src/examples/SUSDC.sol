@@ -18,7 +18,9 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 ///   constructor calls `_disableInitializers()`, locking the implementation
 ///   itself against initialization.
 ///
-/// The bridge is rate limited per ERC-7281 (xERC20): `setLimits` gives it a
+/// The bridge is rate limited per the xERC20 interface (draft ERC-7281, never
+/// finalized; the de-facto spec is defi-wonderland/xERC20, which Hyperlane's
+/// IXERC20 and SDK are written against): `setLimits` gives it a
 /// daily minting and burning allowance that replenishes linearly over 24h.
 /// Limits default to zero, so a freshly set bridge cannot mint or burn until
 /// the admin calls `setLimits`. The admin itself is never limited.
@@ -32,7 +34,7 @@ contract SUSDC is SRC20, Initializable {
     /// @notice Address allowed to mint and burn besides `admin` (zero = none).
     address public bridge;
 
-    /// @dev ERC-7281 limit state for one direction (minting or burning).
+    /// @dev xERC20 limit state for one direction (minting or burning).
     struct BridgeParameters {
         uint256 timestamp;
         uint256 ratePerSecond;
@@ -45,7 +47,7 @@ contract SUSDC is SRC20, Initializable {
         BridgeParameters burner;
     }
 
-    /// @dev Per-bridge limits, keyed by bridge address like ERC-7281 so the
+    /// @dev Per-bridge limits, keyed by bridge address like xERC20 so the
     /// standard getters work for any address. Only `bridge` can mint/burn.
     /// Appended after `bridge` for upgrade safety.
     mapping(address => BridgeLimits) internal bridgeLimits;
@@ -55,10 +57,10 @@ contract SUSDC is SRC20, Initializable {
 
     event AdminTransferred(address indexed oldAdmin, address indexed newAdmin);
     event BridgeUpdated(address indexed oldBridge, address indexed newBridge);
-    /// @dev ERC-7281 event; argument order follows the reference implementation.
+    /// @dev xERC20 event; argument order follows the reference implementation.
     event BridgeLimitsSet(uint256 mintingLimit, uint256 burningLimit, address indexed bridge);
 
-    /// @dev ERC-7281 errors.
+    /// @dev xERC20 errors (names from the reference implementation).
     error IXERC20_NotHighEnoughLimits();
     error IXERC20_LimitsTooHigh();
 
@@ -123,16 +125,16 @@ contract SUSDC is SRC20, Initializable {
     }
 
     /*//////////////////////////////////////////////////////////////
-                      xERC20 (ERC-7281) BRIDGE LIMITS
+                      xERC20 BRIDGE LIMITS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice ERC-7281 `owner()`: the admin controls bridge limits.
+    /// @notice xERC20 `owner()`: the admin controls bridge limits.
     function owner() external view returns (address) {
         return admin;
     }
 
     /// @notice Set the daily minting and burning allowance of a bridge.
-    /// @dev Follows the ERC-7281 reference: the current allowance is adjusted
+    /// @dev Follows the xERC20 reference: the current allowance is adjusted
     /// by the change in the max limit, and replenishes at `max / 1 day`.
     function setLimits(address bridgeAddr, uint256 mintingLimit, uint256 burningLimit) external onlyAdmin {
         if (mintingLimit > type(uint256).max / 2 || burningLimit > type(uint256).max / 2) {
