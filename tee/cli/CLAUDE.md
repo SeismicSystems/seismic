@@ -24,10 +24,25 @@ anything they don't cover, follow clig.dev.
   Through `seismic_tee_common::prompt::Prompt`: the clap argument is
   optional, and its help says it is required.
 - **Colour carries meaning.** Through `anstream`/`anstyle` only, which decide
-  once whether to render (`NO_COLOR`, a non-terminal stream, `TERM=dumb`):
-  red for what is dangerous or failed (`confirm::danger`), dimmed for
-  narration beside the command's own report (`seismic_tee_common::NOTE`).
-  Never the only signal; the text reads the same without it.
+  once whether to render (`NO_COLOR`, a non-terminal stream, `TERM=dumb`);
+  `install.sh` makes the same decision by hand. Never the only signal; the
+  text reads the same without it. One role per style, after cargo's
+  green/yellow/red, which the people running this CLI already read:
+  - bold: the headline, the one line saying what a multi-step command is
+    doing (the installer's `installing …`).
+  - plain: the command's own report and its outcome.
+  - dimmed: narration beside the report (`seismic_tee_common::NOTE`),
+    reference for later (the installer's closing `Upgrade:` block), and an
+    example's `#` comment in help.
+  - dimmed green: a check that passed on the way (`checksum matches`,
+    `build provenance verified`); present, not to be read twice.
+  - bold yellow: the `warning:` prefix, for a step skipped or degraded
+    while the command carried on (provenance unverified, a directory not
+    on `PATH`).
+  - red: what is dangerous or failed (`confirm::danger`, `error:`).
+  - blue: a value to type back (`confirm`'s name prompt).
+  - help text: clap's own styles, bold underlined headings and bold
+    literals; the installer's `--help` copies them.
 - **Derive what can be derived.** A value that follows from another input is
   optional and defaults to it, rather than asked for twice. When that input
   was itself asked for, the derived value may be offered pre-filled, to

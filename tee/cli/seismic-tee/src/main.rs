@@ -162,8 +162,8 @@ struct Cli {
         conflicts_with = "completions",
         long_help = "Replace this binary with a fresh download from the repository's releases.\n\n\
                      VERSION takes the release spellings: X.Y.Z or vX.Y.Z for a release, \
-                     main-<sha> for one prerelease build, main for the tip of main. With no \
-                     VERSION, the newest release. Downgrading is naming an older one.\n\n\
+                     main-<sha> for one release of main, main for the newest release of main. \
+                     With no VERSION, the newest release. Downgrading is naming an older one.\n\n\
                      The new binary lands beside this one, not at the installer's default, so \
                      a copy installed outside ~/.local/bin is the copy replaced. Re-source \
                      your completion line afterwards if it names a path rather than the \

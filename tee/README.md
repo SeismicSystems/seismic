@@ -18,7 +18,7 @@ reference, and how a network is founded.
 
 ```bash
 # The newest release, into ~/.local/bin. `sh -s -- --version main` for the
-# tip of main, `--help` for every option; afterwards `seismic-tee --upgrade`.
+# newest release of main, `--help` for every option; afterwards `seismic-tee --upgrade`.
 curl -fsSL https://raw.githubusercontent.com/SeismicSystems/seismic/main/tee/cli/install.sh | sh
 seismic-tee --version
 seismic-tee --help
@@ -41,7 +41,7 @@ cargo install --git https://github.com/SeismicSystems/seismic seismic-tee
 ```
 
 To upgrade, `seismic-tee --upgrade` — the newest release, or a version in the
-same spellings (`--upgrade main` for the tip of main). It fetches and runs
+same spellings (`--upgrade main` for the newest release of main). It fetches and runs
 this installer, so the download is checked the same way, and the new binary
 lands where the running one is rather than at the installer's default.
 
@@ -65,8 +65,9 @@ source <(seismic-tee --completions bash)   # zsh: --completions zsh; fish: --com
 
 Releases are GitHub releases of this repo, tagged by component because the
 repo hosts others: `seismic-tee/vX.Y.Z` is a version, and every merge to
-`main` that touches `tee/cli` or the release workflow publishes a `seismic-tee/main-<sha>` prerelease, so the tip of main is always
-installable and every build has a permanent download URL. Each release ships
+`main` that touches `tee/cli` or the release workflow publishes a
+`seismic-tee/main-<sha>` prerelease, so a merged CLI change is installable
+before it is in a version, and every build has a permanent download URL. Each release ships
 one tarball per platform, one `SHA256SUMS` over all of them, and a build
 provenance attestation per binary. `seismic-tee --version` names the crate
 version and the commit the binary was built from.
