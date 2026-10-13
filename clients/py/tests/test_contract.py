@@ -2,6 +2,9 @@
 
 from unittest.mock import MagicMock
 
+from eth_hash.auto import keccak
+from hexbytes import HexBytes
+
 from seismic_web3._types import (
     CompressedPublicKey,
     PrivateKey,
@@ -140,3 +143,41 @@ class TestAsyncShieldedContract:
         contract = AsyncShieldedContract(w3, encryption, pk, addr, COUNTER_ABI)
         fn = contract.write.increment
         assert callable(fn)
+
+
+OVERLOADED_ROUTING_ABI = [
+    {
+        "type": "function",
+        "name": "set",
+        "inputs": [{"name": "v", "type": "suint256"}],
+        "outputs": [],
+        "stateMutability": "nonpayable",
+    },
+    {
+        "type": "function",
+        "name": "set",
+        "inputs": [{"name": "who", "type": "address"}],
+        "outputs": [],
+        "stateMutability": "nonpayable",
+    },
+]
+
+
+class TestOverloadedRouting:
+    def test_address_argument_routes_to_the_transparent_overload(self):
+        """The shielded `set(suint256)` overload is declared first, so an
+        address argument must still select `set(address)` and take the
+        transparent branch instead of the signed one."""
+        w3 = MagicMock()
+        w3.eth.call.return_value = HexBytes("0x")
+        encryption = _make_encryption()
+        pk = PrivateKey(b"\x01" * 32)
+        addr = "0xd3e8763675e4c425df46cc3b5c0f6cbdac396046"
+
+        contract = ShieldedContract(w3, encryption, pk, addr, OVERLOADED_ROUTING_ABI)
+
+        assert contract.read.set(addr) is None
+
+        assert w3.eth.call.called
+        tx = w3.eth.call.call_args[0][0]
+        assert bytes(tx["data"][:4]) == keccak(b"set(address)")[:4]
