@@ -62,7 +62,7 @@ unwatch();
 **Returns:** `Promise<() => void>` -- call the returned function to stop watching.
 
 {% hint style="warning" %}
-Throws if no AES key is registered in the Directory contract for the connected address. Register a viewing key first (typically during wallet setup) before watching.
+Throws if no AES key is registered in the Directory contract for the connected address. Register a viewing key first (typically during wallet setup) before watching — see [Viewing Keys](viewing-keys.md).
 {% endhint %}
 
 ## Public Action: `watchSRC20EventsWithKey`
@@ -115,4 +115,5 @@ type DecryptedApprovalLog = {
 
 - [Shielded Public Client](shielded-public-client.md) -- base client that includes `watchSRC20EventsWithKey`
 - [Shielded Wallet Client](shielded-wallet-client.md) -- base client that includes `watchSRC20Events`
+- [Viewing Keys](viewing-keys.md) -- registering and looking up the keys these actions decrypt with
 - [Encrypted Events tutorial](../../../tutorials/src20/encrypted-events.md) -- end-to-end SRC20 event walkthrough
