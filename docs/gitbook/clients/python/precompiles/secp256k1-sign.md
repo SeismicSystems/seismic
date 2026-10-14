@@ -101,13 +101,15 @@ v = sig[64] if len(sig) > 64 else None
 
 ## Hashing Behavior
 
-The SDK hashes with:
+The SDK UTF-8 encodes the message and uses its byte length in the EIP-191
+prefix, including for non-ASCII text:
 
 ```python
 from eth_hash.auto import keccak
 
-prefix = f"\x19Ethereum Signed Message:\n{len(message)}".encode()
-message_hash = keccak(prefix + message.encode())
+message_bytes = message.encode("utf-8")
+prefix = f"\x19Ethereum Signed Message:\n{len(message_bytes)}".encode()
+message_hash = keccak(prefix + message_bytes)
 ```
 
 ## Gas Cost
