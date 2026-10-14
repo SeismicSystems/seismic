@@ -305,6 +305,16 @@ impl ImageRecord {
         format!("{}.vhd", self.image)
     }
 
+    /// The artifact `attestation_type`'s measurements are stamped with: the
+    /// VHD for `azure-tdx`, the tarball for `gcp-tdx`.
+    pub fn artifact(&self, attestation_type: &str) -> anyhow::Result<String> {
+        match attestation_type {
+            "azure-tdx" => Ok(self.vhd()),
+            "gcp-tdx" => Ok(format!("{}.tar.gz", self.image)),
+            other => bail!("attestation type {other:?} is not azure-tdx or gcp-tdx"),
+        }
+    }
+
     /// The measurements asset for `target` (an attestation type, `azure-tdx`).
     pub fn measurements_asset(&self, target: &str) -> anyhow::Result<&str> {
         match self.targets.get(target) {
@@ -699,6 +709,35 @@ pub(crate) mod tests {
             .chain(std::iter::once(format!("{}  {tag}.efi\n", "ab".repeat(32))))
             .collect();
         files.insert(SHA256SUMS_ASSET.to_string(), sums.into_bytes());
+    }
+
+    /// `files` published for GCP too: a `gcp-tdx` target in image.json and
+    /// the measurements stamped for the tarball beside it.
+    pub(crate) fn with_gcp_target(
+        mut files: BTreeMap<String, Vec<u8>>,
+        tag: &str,
+    ) -> BTreeMap<String, Vec<u8>> {
+        let mut image_json: serde_json::Value =
+            serde_json::from_slice(&files[IMAGE_JSON_ASSET]).unwrap();
+        image_json["targets"]["gcp-tdx"] = serde_json::json!({
+            "gce_image": format!("projects/testnet/global/images/{}", tag.replace(['_', '.'], "-")),
+            "tarball_url": format!("https://storage.googleapis.com/seismic-tee-gcp-images/{tag}.tar.gz"),
+            "measurements": "measurements.gcp-tdx.json",
+            "efi_sha256": "aa".repeat(32),
+        });
+        files.insert(
+            IMAGE_JSON_ASSET.to_string(),
+            serde_json::to_vec_pretty(&image_json).unwrap(),
+        );
+        files.insert(
+            "measurements.gcp-tdx.json".to_string(),
+            format!(
+                r#"{{"attestation_type": "gcp-tdx", "measurement_id": "{tag}.tar.gz", "measurements": {{"rtmr1": {{"expected": "ab"}}, "rtmr2": {{"expected": "cd"}}}}}}"#
+            )
+            .into_bytes(),
+        );
+        resum(&mut files, tag);
+        files
     }
 
     /// Serve `files` as release `tag`, at the paths GitHub would.

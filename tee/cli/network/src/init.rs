@@ -201,31 +201,33 @@ pub fn fill_summit_namespace(raw: &[u8], name: &str, source: &str) -> anyhow::Re
 
 /// Gate a measurements input on carrying the id of the image it measures.
 ///
-/// The measurements file is the only binding between a network's PCR
-/// allowlist and an image: seismic-images' `make measure` stamps the versioned
-/// VHD filename into it, and promotion reads the id from there. `init` gates
-/// on the stamp so a missing one surfaces while the operator still holds loose
-/// files, not after the cohort has been provisioned and harvested. A promoted
-/// policy is a record list, each record carrying its own id.
+/// The measurements file is the only binding between a network's register
+/// allowlist and an image: seismic-images' `make measure` and `make
+/// measure-gcp` stamp the versioned artifact filename into it, and promotion
+/// reads the id from there. `init` gates on the stamp so a missing one
+/// surfaces while the operator still holds loose files, not after the cohort
+/// has been provisioned and harvested. A promoted policy is a record list,
+/// each record carrying its own id.
 pub fn require_measurement_id(raw: &[u8], source: &str) -> anyhow::Result<()> {
     let value: serde_json::Value = serde_json::from_slice(raw)
         .map_err(|e| anyhow::anyhow!("{source} is not valid JSON: {e}{}", raw_url_hint(source)))?;
     if value.is_object() && value.get("measurement_id").is_none() {
         bail!(
             "{source} carries no measurement_id — re-export the measurements with seismic-images' \
-             `make measure`, which stamps the versioned image filename these PCRs measure into \
-             the file"
+             `make measure` or `make measure-gcp`, which stamp the versioned image filename these \
+             registers measure into the file"
         );
     }
     Ok(())
 }
 
-/// Gate a measurements input on being the given image's: stamped
-/// `<image>.vhd` (or, for a promoted policy, carrying a record so stamped).
-/// The whole point of `--image-json` is that the directory names one image;
-/// measurements for some other image would leave `image.json` and the PCRs
-/// disagreeing about which.
-pub fn require_measurement_of(raw: &[u8], vhd: &str, source: &str) -> anyhow::Result<()> {
+/// Gate a measurements input on being the given image's: stamped with its
+/// artifact, `<image>.vhd` for azure-tdx or `<image>.tar.gz` for gcp-tdx (or,
+/// for a promoted policy, carrying a record so stamped). The whole point of
+/// `--image-json` is that the directory names one image; measurements for
+/// some other image would leave `image.json` and the registers disagreeing
+/// about which.
+pub fn require_measurement_of(raw: &[u8], artifact: &str, source: &str) -> anyhow::Result<()> {
     let value: serde_json::Value = serde_json::from_slice(raw)
         .map_err(|e| anyhow::anyhow!("{source} is not valid JSON: {e}{}", raw_url_hint(source)))?;
     let ids: Vec<&str> = match &value {
@@ -239,9 +241,9 @@ pub fn require_measurement_of(raw: &[u8], vhd: &str, source: &str) -> anyhow::Re
             .into_iter()
             .collect(),
     };
-    if !ids.contains(&vhd) {
+    if !ids.contains(&artifact) {
         bail!(
-            "{source} measures {}, not {vhd} — the image --image-json names; pass the \
+            "{source} measures {}, not {artifact} — the image --image-json names; pass the \
              measurements of that image, or name the image these measure",
             if ids.is_empty() {
                 "no named image".to_string()
@@ -260,6 +262,8 @@ pub fn require_measurement_of(raw: &[u8], vhd: &str, source: &str) -> anyhow::Re
 pub struct InitInputs<'a> {
     pub name: &'a str,
     pub image: ImageRelease,
+    /// Which of the image's measurements assets is copied in, `azure-tdx` or `gcp-tdx`.
+    pub attestation_type: &'a str,
     pub measurements: Option<&'a str>,
     pub reth_genesis: Option<&'a str>,
     pub summit_genesis: Option<&'a str>,
@@ -372,11 +376,15 @@ pub async fn init_network_dir(
     }
     let opened = OpenedRelease::open(inputs.image.clone()).await?;
 
-    let measurements_asset = opened.record.measurements_asset(DEFAULT_ATTESTATION_TYPE)?;
+    let measurements_asset = opened.record.measurements_asset(inputs.attestation_type)?;
     let (measurements, measurements_source) =
         input_from(client, &opened, inputs.measurements, measurements_asset).await?;
     require_measurement_id(&measurements, &measurements_source)?;
-    require_measurement_of(&measurements, &opened.record.vhd(), &measurements_source)?;
+    require_measurement_of(
+        &measurements,
+        &opened.record.artifact(inputs.attestation_type)?,
+        &measurements_source,
+    )?;
     let (reth_genesis, reth_source) = input_from(
         client,
         &opened,
@@ -488,11 +496,17 @@ pub struct InitArgs {
     pub reth_genesis: Option<String>,
 
     /// The image's measurements (or a promoted policy; local path or https://
-    /// URL), copied in as inputs/measurements.json — the PCRs of a real
+    /// URL), copied in as inputs/measurements.json — the registers of a real
     /// image, never generated, and stamped for the image --image-json names.
-    /// Default: the image's measurements asset.
+    /// Default: the image's measurements asset for --attestation-type.
     #[arg(long, value_name = "PATH_OR_URL")]
     pub measurements: Option<String>,
+
+    /// Platform the nodes attest on, azure-tdx or gcp-tdx: which of the
+    /// image's measurements assets is copied in, and whether they must be
+    /// stamped for its VHD or its tarball.
+    #[arg(long, value_name = "TYPE", default_value = DEFAULT_ATTESTATION_TYPE)]
+    pub attestation_type: String,
 
     /// Authored summit genesis (local path or https:// URL), copied in
     /// verbatim except that an empty namespace is filled with <name>. Every
@@ -608,6 +622,7 @@ async fn run_with(
         &InitInputs {
             name: &name,
             image,
+            attestation_type: &args.attestation_type,
             measurements: args.measurements.as_deref(),
             reth_genesis: args.reth_genesis.as_deref(),
             summit_genesis: args.summit_genesis.as_deref(),
@@ -799,6 +814,7 @@ mod tests {
             &fetch_client().unwrap(),
             &loose.out,
             &InitInputs {
+                attestation_type: DEFAULT_ATTESTATION_TYPE,
                 name: "testnet-1",
                 image: loose.image.clone(),
                 measurements: None,
@@ -817,11 +833,22 @@ mod tests {
         out: &NetworkDir,
         overrides: (Option<&str>, Option<&str>, Option<&str>),
     ) -> anyhow::Result<Vec<PathBuf>> {
+        init_as(DEFAULT_ATTESTATION_TYPE, release, out, overrides).await
+    }
+
+    /// `init --image-json --attestation-type`, against `release` and with `overrides`.
+    async fn init_as(
+        attestation_type: &str,
+        release: ImageRelease,
+        out: &NetworkDir,
+        overrides: (Option<&str>, Option<&str>, Option<&str>),
+    ) -> anyhow::Result<Vec<PathBuf>> {
         let (reth_genesis, measurements, summit_genesis) = overrides;
         init_network_dir(
             &fetch_client().unwrap(),
             out,
             &InitInputs {
+                attestation_type,
                 name: "testnet-1",
                 image: release,
                 measurements,
@@ -832,6 +859,80 @@ mod tests {
             false,
         )
         .await
+    }
+
+    /// `--attestation-type gcp-tdx` copies in the image's gcp-tdx measurements,
+    /// stamped for its tarball; the default still takes the Azure ones.
+    #[tokio::test]
+    async fn gcp_tdx_takes_the_measurements_stamped_for_the_tarball() {
+        use crate::image::tests::{TAG, release_files, serve_release, with_gcp_target};
+
+        let dir = tempfile::tempdir().unwrap();
+        let files = with_gcp_target(release_files(TAG), TAG);
+        let (_server, release) = serve_release(TAG, files.clone());
+        let gcp = NetworkDir::new(dir.path().join("gcp"));
+        init_as("gcp-tdx", release.clone(), &gcp, (None, None, None))
+            .await
+            .unwrap();
+        assert_eq!(
+            std::fs::read(gcp.input_measurements()).unwrap(),
+            files["measurements.gcp-tdx.json"]
+        );
+        let azure = NetworkDir::new(dir.path().join("azure"));
+        init_as(
+            DEFAULT_ATTESTATION_TYPE,
+            release,
+            &azure,
+            (None, None, None),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            std::fs::read(azure.input_measurements()).unwrap(),
+            files["measurements.azure-tdx.json"]
+        );
+    }
+
+    /// Under gcp-tdx a measurements override must be stamped for the
+    /// tarball, so the image's own VHD measurements are refused by name.
+    #[tokio::test]
+    async fn gcp_tdx_refuses_measurements_stamped_for_the_vhd() {
+        use crate::image::tests::{TAG, local_release, release_files, with_gcp_target};
+
+        let dir = tempfile::tempdir().unwrap();
+        let build = dir.path().join("build");
+        let (_image_json, release) =
+            local_release(&build, &with_gcp_target(release_files(TAG), TAG));
+        let vhd_measurements = build.join("measurements.azure-tdx.json");
+        let out = NetworkDir::new(dir.path().join("gcp"));
+        let err = init_as(
+            "gcp-tdx",
+            release,
+            &out,
+            (None, Some(s(&vhd_measurements)), None),
+        )
+        .await
+        .unwrap_err()
+        .to_string();
+        assert!(
+            err.contains(&format!("measures {TAG}.vhd, not {TAG}.tar.gz")),
+            "{err}"
+        );
+    }
+
+    /// An image published for Azure alone cannot found a gcp-tdx network.
+    #[tokio::test]
+    async fn gcp_tdx_needs_the_image_published_for_gcp() {
+        use crate::image::tests::{TAG, release_files, serve_release};
+
+        let dir = tempfile::tempdir().unwrap();
+        let (_server, release) = serve_release(TAG, release_files(TAG));
+        let out = NetworkDir::new(dir.path().join("gcp"));
+        let err = init_as("gcp-tdx", release, &out, (None, None, None))
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("not published for gcp-tdx"), "{err}");
     }
 
     /// One release supplies every input, and image.json is copied in as the
@@ -949,7 +1050,7 @@ mod tests {
 
         // Another image's measurements beside this image's record, both
         // hashed: the stamp keeps the directory from recording one image and
-        // carrying another's PCRs.
+        // carrying another's registers.
         let mut files = release_files(TAG);
         let other = release_files("seismic_other");
         files.insert(
@@ -1160,6 +1261,7 @@ mod tests {
         // reached.
         let unreadable = InitInputs {
             name: "testnet-1",
+            attestation_type: DEFAULT_ATTESTATION_TYPE,
             image: ImageRelease::beside("/nonexistent/image.json").unwrap(),
             measurements: None,
             reth_genesis: None,

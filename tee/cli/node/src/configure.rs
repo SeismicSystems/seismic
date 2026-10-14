@@ -49,7 +49,9 @@ use clap_complete::ArgValueCandidates;
 use seismic_tee_common::{Artifact, Descriptors, Manifest, NetworkDir};
 use seismic_tee_context::{Context, Selected, complete, echo, read_nodes};
 use sha2::{Digest as _, Sha256};
-use tdx_init_config::{DomainConfig, InitConfig, NetworkConfig, NodeConfig};
+use tdx_init_config::{
+    Bootnode, DomainConfig, Hostname, InitConfig, NetworkConfig, NodeConfig, PlainEmail,
+};
 
 use crate::args::CohortArgs;
 use crate::cohort;
@@ -184,19 +186,26 @@ pub fn build_config(inputs: &ConfigInputs<'_>) -> anyhow::Result<InitConfig> {
             )
         })?;
 
+    let mut bootnodes = Vec::with_capacity(inputs.bootnodes.len());
+    for url in inputs.bootnodes {
+        bootnodes.push(Bootnode::try_from(url.clone())?);
+    }
     let base64 = base64::engine::general_purpose::STANDARD;
     Ok(InitConfig {
         network: NetworkConfig {
             manifest_base64: base64.encode(inputs.manifest.bytes()),
             reth_genesis_base64: base64.encode(inputs.reth_genesis.bytes()),
             summit_genesis_base64: base64.encode(inputs.summit_genesis.bytes()),
-            bootnodes: inputs.bootnodes.to_vec(),
+            bootnodes,
         },
         node: NodeConfig {
-            external_ip: inputs.external_ip.to_string(),
+            external_ip: inputs
+                .external_ip
+                .parse()
+                .with_context(|| format!("external IP {:?}", inputs.external_ip))?,
             domain: DomainConfig {
-                email: inputs.email.to_string(),
-                name: inputs.fqdn.to_string(),
+                email: PlainEmail::try_from(inputs.email.to_string())?,
+                name: Hostname::try_from(inputs.fqdn.to_string())?,
             },
         },
     })
@@ -678,6 +687,12 @@ mod tests {
         format!("enode://{}@198.51.100.1:30303", "ab".repeat(64))
     }
 
+    fn as_bootnodes(urls: &[String]) -> Vec<Bootnode> {
+        urls.iter()
+            .map(|url| Bootnode::try_from(url.clone()).unwrap())
+            .collect()
+    }
+
     fn manifest() -> Manifest {
         Manifest::from_json_bytes(FIXTURE_MANIFEST).unwrap()
     }
@@ -742,7 +757,7 @@ mod tests {
 
         // And it is the document tdx-init deserializes.
         let reparsed: InitConfig = toml::from_str(&rendered).unwrap();
-        assert_eq!(reparsed.node.external_ip, EXTERNAL_IP);
+        assert_eq!(reparsed.node.external_ip.to_string(), EXTERNAL_IP);
     }
 
     /// join: the bootnode set (root_key fetch peers are derived from it by
@@ -756,11 +771,11 @@ mod tests {
         ];
         let config = build(&manifest(), RETH_GENESIS, SUMMIT_GENESIS, false, &bootnodes).unwrap();
 
-        assert_eq!(config.node.external_ip, EXTERNAL_IP);
-        assert_eq!(config.network.bootnodes, bootnodes);
+        assert_eq!(config.node.external_ip.to_string(), EXTERNAL_IP);
+        assert_eq!(config.network.bootnodes, as_bootnodes(&bootnodes));
 
         let reparsed: InitConfig = toml::from_str(&render_config(&config).unwrap()).unwrap();
-        assert_eq!(reparsed.network.bootnodes, bootnodes);
+        assert_eq!(reparsed.network.bootnodes, as_bootnodes(&bootnodes));
     }
 
     /// tdx-init requires [node].external_ip and parses it as an IpAddr, so an
@@ -912,8 +927,11 @@ mod tests {
         );
         let received: InitConfig =
             toml::from_str(std::str::from_utf8(&requests[0].body).unwrap()).unwrap();
-        assert_eq!(received.network.bootnodes, [bootnode()]);
-        assert_eq!(received.node.domain.name, FQDN);
+        assert_eq!(received.network.bootnodes, as_bootnodes(&[bootnode()]));
+        assert_eq!(
+            received.node.domain.name,
+            Hostname::try_from(FQDN.to_string()).unwrap()
+        );
     }
 
     /// A rejection is propagated at once, status and body: neither a 4xx
@@ -1254,7 +1272,7 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&record).unwrap(), rendered);
         // And it is the document tdx-init would take.
         let reparsed: InitConfig = toml::from_str(&rendered).unwrap();
-        assert_eq!(reparsed.network.bootnodes, [bootnode()]);
+        assert_eq!(reparsed.network.bootnodes, as_bootnodes(&[bootnode()]));
     }
 
     const CONTEXT: &str = r#"
