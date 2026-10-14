@@ -29,9 +29,11 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Display;
+use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Deserializer, Serialize};
+use tdx_init_config::Hostname;
 
 use crate::error::{Error, Result};
 
@@ -42,13 +44,17 @@ use crate::error::{Error, Result};
 /// `[networks.<name>.nodes]` entry in the context file, so the context crate
 /// stores and re-reads a node table with no second definition of what a node
 /// is.
+///
+/// Both fields reach the node as its tdx-init config (`[node].external_ip`
+/// and `[node.domain].name`), typed as tdx-init types them, so a node table
+/// holding a value tdx-init would refuse fails to load.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NodeDescriptor {
     /// The address the operator-only ports are reached on.
-    pub public_ip: String,
+    pub public_ip: IpAddr,
     /// The node's DNS name — the cert domain, and where clients reach its RPC.
-    pub fqdn: String,
+    pub fqdn: Hostname,
 }
 
 /// The cohort, keyed by node name.
@@ -115,7 +121,7 @@ impl DescriptorEntry {
         keys
     }
 
-    /// Validate into a descriptor, naming the label and the node on failure.
+    /// Parse into a descriptor, naming the label and the node on failure.
     fn into_descriptor(self, label: &dyn Display, name: &str) -> Result<NodeDescriptor> {
         // An absent key, an explicit `null`, and an empty string all fail the
         // same way — a descriptor that can't reach a node — and all three are
@@ -140,20 +146,32 @@ impl DescriptorEntry {
             ))),
         };
 
+        let public_ip = require("public_ip", &self.public_ip)?;
+        let fqdn = require("fqdn", &self.fqdn)?;
         Ok(NodeDescriptor {
-            public_ip: require("public_ip", &self.public_ip)?,
-            fqdn: require("fqdn", &self.fqdn)?,
+            public_ip: public_ip.parse().map_err(|_| {
+                Error::gate(format!(
+                    "descriptor file {label}: node `{name}` has a `public_ip` {public_ip:?} that \
+                     is not an IP address",
+                ))
+            })?,
+            fqdn: fqdn.parse().map_err(|error| {
+                Error::gate(format!(
+                    "descriptor file {label}: node `{name}` has an `fqdn` that is not a \
+                     hostname: {error}",
+                ))
+            })?,
         })
     }
 }
 
-/// Read and validate a descriptor map.
+/// Read and parse a descriptor map.
 ///
 /// Reading is the only way to build one from JSON: every failure names the
 /// offending file (and the entry), which is the whole point of a hand-writable
 /// format. Refused: a top level that isn't an object, an empty map, an entry
 /// that isn't an object, and an entry whose `public_ip`/`fqdn` is absent,
-/// `null`, or empty.
+/// `null`, empty, or not an IP address and a hostname.
 pub fn load_descriptors(path: &Path) -> Result<Descriptors> {
     let bytes = std::fs::read(path).map_err(|e| Error::read(path, e))?;
     parse_descriptors(&path.display(), &bytes)
@@ -270,8 +288,8 @@ mod tests {
 
     fn n1() -> NodeDescriptor {
         NodeDescriptor {
-            public_ip: "203.0.113.7".into(),
-            fqdn: "n1.seismicdev.net".into(),
+            public_ip: "203.0.113.7".parse().unwrap(),
+            fqdn: "n1.seismicdev.net".parse().unwrap(),
         }
     }
 
@@ -292,7 +310,7 @@ mod tests {
 
         assert_eq!(map.len(), 2);
         assert_eq!(map["dev-1"], n1());
-        assert_eq!(map["dev-2"].fqdn, "n2.seismicdev.net");
+        assert_eq!(map["dev-2"].fqdn.as_ref(), "n2.seismicdev.net");
     }
 
     /// The order the authored withdrawal credentials pair against, whatever
@@ -379,6 +397,39 @@ mod tests {
             assert!(err.contains(expected), "{err}");
             assert!(err.contains("node `dev-1`"), "{err}");
         }
+    }
+
+    /// Both values reach a root-run consumer on the node as tdx-init config,
+    /// so the table refuses what tdx-init would: a `public_ip` that is not an
+    /// IP address, and an `fqdn` carrying shell or config syntax.
+    #[test]
+    fn a_value_tdx_init_would_refuse_fails_to_load() {
+        for (json, expected) in [
+            (
+                r#"{"dev-1": {"public_ip": "n1.seismicdev.net", "fqdn": "n1.seismicdev.net"}}"#,
+                "`public_ip` \"n1.seismicdev.net\" that is not an IP address",
+            ),
+            (
+                r#"{"dev-1": {"public_ip": "203.0.113.7", "fqdn": "n1.seismicdev.net;reboot"}}"#,
+                "has an `fqdn` that is not a hostname",
+            ),
+            (
+                r#"{"dev-1": {"public_ip": "203.0.113.7", "fqdn": "n1.seismicdev.net\nX=1"}}"#,
+                "has an `fqdn` that is not a hostname",
+            ),
+        ] {
+            let err = fails(json);
+            assert!(err.contains(expected), "{err}");
+            assert!(err.contains("node `dev-1`"), "{err}");
+        }
+
+        // The context file's TOML form refuses them too.
+        let err = toml::from_str::<NodeDescriptor>(
+            "public_ip = \"203.0.113.7\"\nfqdn = \"n1.seismicdev.net;reboot\"\n",
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(err.contains("domain name"), "{err}");
     }
 
     /// A key that is present but unusable is never called "missing", and the
@@ -468,9 +519,11 @@ fqdn = "n1.seismicdev.net"
         assert_eq!(parsed, n1());
         assert_eq!(toml::to_string(&parsed).unwrap(), toml);
 
-        let err = toml::from_str::<NodeDescriptor>("public_ip = \"1\"\nbogus = 1")
-            .unwrap_err()
-            .to_string();
+        let err = toml::from_str::<NodeDescriptor>(
+            "public_ip = \"203.0.113.7\"\nfqdn = \"n1.seismicdev.net\"\nbogus = 1",
+        )
+        .unwrap_err()
+        .to_string();
         assert!(err.contains("bogus"), "{err}");
     }
 

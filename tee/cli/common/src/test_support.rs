@@ -424,8 +424,8 @@ pub fn descriptors_of(nodes: &[(&str, &str, &str)]) -> Descriptors {
             (
                 name.to_string(),
                 NodeDescriptor {
-                    public_ip: ip.to_string(),
-                    fqdn: fqdn.to_string(),
+                    public_ip: ip.parse().unwrap(),
+                    fqdn: fqdn.parse().unwrap(),
                 },
             )
         })

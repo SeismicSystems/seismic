@@ -234,7 +234,7 @@ fn resolving(nodes: &Descriptors) -> Vec<String> {
         let lookups: Vec<_> = nodes
             .values()
             .map(|node| {
-                let fqdn = node.fqdn.as_str();
+                let fqdn: &str = node.fqdn.as_ref();
                 scope.spawn(move || {
                     (fqdn, 443)
                         .to_socket_addrs()

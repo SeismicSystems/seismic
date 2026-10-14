@@ -6,6 +6,7 @@
 //! (`operator_ip_cidr`); the RPC is public, behind the node's HTTPS proxy and a
 //! real cert.
 
+use std::net::SocketAddr;
 use std::time::Duration;
 
 use crate::descriptor::NodeDescriptor;
@@ -66,18 +67,21 @@ pub fn client() -> Result<reqwest::Client> {
 impl NodeDescriptor {
     /// tdx-init's config receiver, on the operator-only port.
     pub fn tdx_init_url(&self) -> String {
-        format!("http://{}:{TDX_INIT_PORT}/", self.public_ip)
+        format!("http://{}/", SocketAddr::new(self.public_ip, TDX_INIT_PORT))
     }
 
     /// The attestation service's JSON-RPC endpoint.
     pub fn attestation_rpc_url(&self) -> String {
-        format!("http://{}:{ATTESTATION_RPC_PORT}", self.public_ip)
+        format!(
+            "http://{}",
+            SocketAddr::new(self.public_ip, ATTESTATION_RPC_PORT)
+        )
     }
 
     /// The attestation service's founding-harvest endpoint, which `harvest`
     /// and the launch checks poll.
     pub fn harvest_url(&self) -> String {
-        format!("http://{}:{HARVEST_PORT}", self.public_ip)
+        format!("http://{}", SocketAddr::new(self.public_ip, HARVEST_PORT))
     }
 
     /// The node's public Ethereum JSON-RPC: its HTTPS proxy sends `/rpc` to reth,
@@ -93,8 +97,8 @@ mod tests {
 
     fn descriptor() -> NodeDescriptor {
         NodeDescriptor {
-            public_ip: "203.0.113.7".into(),
-            fqdn: "az-1.seismicdev.net".into(),
+            public_ip: "203.0.113.7".parse().unwrap(),
+            fqdn: "az-1.seismicdev.net".parse().unwrap(),
         }
     }
 
@@ -108,6 +112,18 @@ mod tests {
         assert_eq!(d.attestation_rpc_url(), "http://203.0.113.7:7878");
         assert_eq!(d.harvest_url(), "http://203.0.113.7:7879");
         assert_eq!(d.eth_rpc_url(), "https://az-1.seismicdev.net/rpc");
+    }
+
+    /// An IPv6 address is bracketed in a URL, or its colons read as a port.
+    #[test]
+    fn an_ipv6_address_is_bracketed() {
+        let d = NodeDescriptor {
+            public_ip: "2001:db8::1".parse().unwrap(),
+            ..descriptor()
+        };
+        assert_eq!(d.tdx_init_url(), "http://[2001:db8::1]:8080/");
+        assert_eq!(d.attestation_rpc_url(), "http://[2001:db8::1]:7878");
+        assert_eq!(d.harvest_url(), "http://[2001:db8::1]:7879");
     }
 
     #[test]

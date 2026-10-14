@@ -38,6 +38,7 @@
 //! the manifest's pin, whatever the CLI concluded.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::net::IpAddr;
 
 use anyhow::bail;
 use seismic_tee_common::founding::{FoundingRecord, FoundingRecords};
@@ -224,12 +225,9 @@ fn named<'a>(
         .filter(|(name, _)| wanted.is_empty() || wanted.contains(name.as_str()))
         .map(|(name, descriptor)| (name.as_str(), descriptor))
         .collect();
-    let mut by_ip: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    let mut by_ip: BTreeMap<IpAddr, Vec<&str>> = BTreeMap::new();
     for (name, descriptor) in &named {
-        by_ip
-            .entry(descriptor.public_ip.as_str())
-            .or_default()
-            .push(name);
+        by_ip.entry(descriptor.public_ip).or_default().push(name);
     }
     let shared: Vec<String> = by_ip
         .iter()
@@ -560,8 +558,8 @@ mod tests {
 
     fn descriptor(ip: &str, name: &str) -> NodeDescriptor {
         NodeDescriptor {
-            public_ip: ip.to_string(),
-            fqdn: format!("{name}.example.com"),
+            public_ip: ip.parse().unwrap(),
+            fqdn: format!("{name}.example.com").parse().unwrap(),
         }
     }
 

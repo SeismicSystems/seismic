@@ -31,11 +31,13 @@
 //! dropped, bracketed IPv6 preserved — before it is delivered.
 
 use std::collections::BTreeMap;
+use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context as _, bail};
 use jsonrpsee::rpc_params;
 use seismic_tee_common::{Manifest, NodeDescriptor, rpc};
+use tdx_init_config::{Bootnode, BootnodeHost};
 use tokio::task::JoinSet;
 
 use crate::cohort::Appraisal;
@@ -49,83 +51,32 @@ pub const POLL_INTERVAL: Duration = Duration::from_secs(5);
 pub const ENODE_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 pub const WAIT_LOG_INTERVAL: Duration = Duration::from_secs(30);
 
-/// The pieces of an enode URL, as tdx-init's grammar reads them.
-struct Enode<'a> {
-    id: &'a str,
-    /// Unbracketed.
-    host: &'a str,
-    port: u16,
-    query: Option<&'a str>,
-}
-
-fn parse_enode(enode: &str) -> anyhow::Result<Enode<'_>> {
-    let Some(rest) = enode.strip_prefix("enode://") else {
-        bail!("not an enode URL: {enode:?}");
-    };
-    let Some((id, rest)) = rest.split_once('@') else {
-        bail!("enode has no host: {enode:?}");
-    };
-    if id.len() != 128 || !id.bytes().all(|b| b.is_ascii_hexdigit()) {
-        bail!("enode node id is not 128 hex chars: {enode:?}");
-    }
-    let (hostport, query) = match rest.split_once('?') {
-        Some((hostport, query)) => (hostport, Some(query)),
-        None => (rest, None),
-    };
-    let (host, port) = if let Some(after_bracket) = hostport.strip_prefix('[') {
-        let Some((host, port)) = after_bracket.split_once(']') else {
-            bail!("enode has no host: {enode:?}");
-        };
-        let Some(port) = port.strip_prefix(':') else {
-            bail!("enode has no port: {enode:?}");
-        };
-        (host, port)
-    } else {
-        let Some((host, port)) = hostport.rsplit_once(':') else {
-            bail!("enode has no port: {enode:?}");
-        };
-        (host, port)
-    };
-    if host.is_empty() {
-        bail!("enode has no host: {enode:?}");
-    }
-    let port: u16 = port
-        .parse()
-        .map_err(|_| anyhow::anyhow!("enode port is not a valid u16: {enode:?}"))?;
-    Ok(Enode {
-        id,
-        host,
-        port,
-        query,
-    })
-}
-
 /// Coerce a NodeRecord enode into the strict `enode://<128 hex>@host:port` form
 /// tdx-init accepts, dropping any `?discport=` query reth appends when its
 /// devp2p TCP and UDP ports differ (seismic nodes run them equal, so this is
-/// normally a no-op). Bracketed IPv6 is preserved. Fails if the record isn't a
-/// well-formed enode — a founding node advertising a malformed record is a
-/// hard error, not something to deliver verbatim.
-pub fn normalize_enode(enode: &str) -> anyhow::Result<String> {
-    let parsed = parse_enode(enode)?;
-    if let Some(query) = parsed.query {
+/// normally a no-op). Fails if the record isn't a well-formed enode — a
+/// founding node advertising a malformed record is a hard error, not something
+/// to deliver verbatim.
+pub fn normalize_enode(enode: &str) -> anyhow::Result<Bootnode> {
+    let (url, query) = match enode.split_once('?') {
+        Some((url, query)) => (url, Some(query)),
+        None => (enode, None),
+    };
+    let bootnode: Bootnode = url.parse()?;
+    if let Some(query) = query {
         eprintln!(
             "warning: enode {enode} carries a query string ({query}); dropping it — tdx-init \
              accepts only enode://<id>@host:port. seismic nodes run matched devp2p TCP/UDP ports, \
              so this is normally absent."
         );
     }
-    let host = if parsed.host.contains(':') {
-        format!("[{}]", parsed.host)
-    } else {
-        parsed.host.to_string()
-    };
-    Ok(format!("enode://{}@{host}:{}", parsed.id, parsed.port))
+    Ok(bootnode)
 }
 
-/// Host part of an enode URL (unbracketed), or `None` if it can't be parsed.
-pub fn enode_host(enode: &str) -> Option<String> {
-    parse_enode(enode).ok().map(|e| e.host.to_string())
+/// Whether an enode's host is the IP address `ip`, by value: an IPv6
+/// address matches however either side spells it.
+pub fn is_at_ip(enode: &Bootnode, ip: IpAddr) -> bool {
+    *enode.host() == BootnodeHost::Ip(ip)
 }
 
 /// Warn (never fail) if an enode's host isn't the node's public IP.
@@ -135,14 +86,13 @@ pub fn enode_host(enode: &str) -> Option<String> {
 /// usually means extip wasn't applied, so reth advertised a private or
 /// auto-detected address peers can't dial — worth surfacing loudly, but not
 /// fatal to configuration.
-pub fn warn_on_ip_mismatch(enode: &str, expected_ip: &str, label: &str) {
-    let host = enode_host(enode);
-    if host.as_deref() != Some(expected_ip) {
+pub fn warn_on_ip_mismatch(enode: &Bootnode, expected_ip: IpAddr, label: &str) {
+    if !is_at_ip(enode, expected_ip) {
         eprintln!(
             "warning: {label}: enode host {} does not match descriptor public_ip {expected_ip} — \
              is reth's --nat extip set to the public IP? peers may be unable to reach this node's \
              enode.",
-            host.unwrap_or_else(|| "?".to_string())
+            enode.host()
         );
     }
 }
@@ -174,7 +124,7 @@ pub async fn collect_enodes(
     targets: &[(String, String)],
     timeout: Duration,
     interval: Duration,
-) -> anyhow::Result<BTreeMap<String, String>> {
+) -> anyhow::Result<BTreeMap<String, Bootnode>> {
     // Built up front: an unusable URL is a descriptor problem, reported before
     // anything is polled.
     let clients: Vec<(&str, rpc::Client)> = targets
@@ -249,7 +199,7 @@ pub async fn collect_enodes(
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyHolder {
     pub name: String,
-    pub public_ip: String,
+    pub public_ip: IpAddr,
     /// `http://<ip>:7878`, the endpoint appraised.
     pub attestation_rpc_url: String,
     /// `https://<fqdn>/rpc`, where `seismic_nodeInfo` is read.
@@ -260,7 +210,7 @@ impl KeyHolder {
     pub fn new(name: &str, descriptor: &NodeDescriptor) -> Self {
         Self {
             name: name.to_string(),
-            public_ip: descriptor.public_ip.clone(),
+            public_ip: descriptor.public_ip,
             attestation_rpc_url: descriptor.attestation_rpc_url(),
             eth_rpc_url: descriptor.eth_rpc_url(),
         }
@@ -277,7 +227,7 @@ pub async fn from_key_holders(
     manifest: &Manifest,
     appraisal: &Appraisal,
     remedy: &Remedy,
-) -> anyhow::Result<Vec<String>> {
+) -> anyhow::Result<Vec<Bootnode>> {
     let names: Vec<&str> = key_holders
         .iter()
         .map(|holder| holder.name.as_str())
@@ -341,7 +291,7 @@ pub async fn vet(
     holder: &KeyHolder,
     manifest: &Manifest,
     appraisal: &Appraisal,
-) -> Result<String, Unvetted> {
+) -> Result<Bootnode, Unvetted> {
     challenge_node(
         &holder.attestation_rpc_url,
         manifest,
@@ -358,7 +308,7 @@ pub async fn vet(
 /// The enode's host must be the IP whose attestation service was appraised:
 /// tdx-init fetches `root_key` from the enode's host, so an enode elsewhere
 /// would send the joiner to a box nobody appraised.
-pub async fn read_enode(holder: &KeyHolder) -> Result<String, Unvetted> {
+pub async fn read_enode(holder: &KeyHolder) -> Result<Bootnode, Unvetted> {
     let client = rpc::Client::new(&holder.eth_rpc_url)
         .map_err(|error| Unvetted::UnusableEnode(format!("{error:#}")))?;
     let raw = fetch_enode(&client)
@@ -366,7 +316,7 @@ pub async fn read_enode(holder: &KeyHolder) -> Result<String, Unvetted> {
         .map_err(|error| Unvetted::NoEnodeYet(format!("no enode: {error:#}")))?;
     let enode =
         normalize_enode(&raw).map_err(|error| Unvetted::UnusableEnode(format!("{error:#}")))?;
-    if enode_host(&enode).as_deref() != Some(holder.public_ip.as_str()) {
+    if !is_at_ip(&enode, holder.public_ip) {
         return Err(Unvetted::UnusableEnode(format!(
             "its enode {enode} is not at its public_ip {}: the joining node would fetch root_key \
              from a box other than the one appraised",
@@ -382,10 +332,10 @@ pub async fn read_enode(holder: &KeyHolder) -> Result<String, Unvetted> {
 /// appraisal; otherwise a re-run reads the same enodes, and only a peer named
 /// by hand is left.
 pub fn handed_out(
-    vetted: &BTreeMap<String, Result<String, Unvetted>>,
+    vetted: &BTreeMap<String, Result<Bootnode, Unvetted>>,
     remedy: &Remedy,
-) -> anyhow::Result<Vec<String>> {
-    let enodes: Vec<String> = vetted.values().filter_map(|v| v.clone().ok()).collect();
+) -> anyhow::Result<Vec<Bootnode>> {
+    let enodes: Vec<Bootnode> = vetted.values().filter_map(|v| v.clone().ok()).collect();
     if !enodes.is_empty() {
         return Ok(enodes);
     }
@@ -435,17 +385,27 @@ mod tests {
 
     #[test]
     fn normalize_keeps_canonical_drops_discport_and_keeps_ipv6_brackets() {
+        let normalized = |enode: &str| normalize_enode(enode).unwrap().to_string();
         let canonical = format!("enode://{}@1.2.3.4:30303", id());
-        assert_eq!(normalize_enode(&canonical).unwrap(), canonical);
+        assert_eq!(normalized(&canonical), canonical);
         assert_eq!(
-            normalize_enode(&format!("{canonical}?discport=30304")).unwrap(),
+            normalized(&format!("{canonical}?discport=30304")),
             canonical
         );
         let ipv6 = format!("enode://{}@[2001:db8::1]:30303", id());
-        assert_eq!(normalize_enode(&ipv6).unwrap(), ipv6);
-        assert_eq!(enode_host(&ipv6).unwrap(), "2001:db8::1");
-        assert_eq!(enode_host(&canonical).unwrap(), "1.2.3.4");
-        assert_eq!(enode_host("nonsense"), None);
+        assert_eq!(normalized(&ipv6), ipv6);
+    }
+
+    #[test]
+    fn an_enode_is_at_its_ip_by_value() {
+        let ip = |ip: &str| ip.parse().unwrap();
+        let ipv6 = normalize_enode(&format!("enode://{}@[2001:0db8::1]:30303", id())).unwrap();
+        assert!(is_at_ip(&ipv6, ip("2001:db8:0:0:0:0:0:1")));
+        let ipv4 = normalize_enode(&format!("enode://{}@1.2.3.4:30303", id())).unwrap();
+        assert!(is_at_ip(&ipv4, ip("1.2.3.4")));
+        assert!(!is_at_ip(&ipv4, ip("1.2.3.5")));
+        let named = normalize_enode(&format!("enode://{}@node1.example.com:30303", id())).unwrap();
+        assert!(!is_at_ip(&named, ip("1.2.3.4")));
     }
 
     #[test]
@@ -455,11 +415,18 @@ mod tests {
                 format!("enode://{}@1.2.3.4:30303", "ab".repeat(8)),
                 "128 hex",
             ),
-            (format!("http://{}@1.2.3.4:30303", id()), "not an enode"),
-            (format!("enode://{}@1.2.3.4", id()), "no port"),
-            (format!("enode://{}@1.2.3.4:99999", id()), "valid u16"),
-            (format!("enode://{}@:30303", id()), "no host"),
-            (format!("enode://{}", id()), "no host"),
+            (format!("http://{}@1.2.3.4:30303", id()), "enode://"),
+            (format!("enode://{}@1.2.3.4", id()), ":port"),
+            (
+                format!("enode://{}@1.2.3.4:99999", id()),
+                "non-numeric port",
+            ),
+            (format!("enode://{}@:30303", id()), "empty host"),
+            (format!("enode://{}", id()), "'@'"),
+            (
+                format!("enode://{}@1.2.3.4 --http.api admin:30303", id()),
+                "bracketed IPv6",
+            ),
         ] {
             let err = normalize_enode(&enode).unwrap_err().to_string();
             assert!(err.contains(reason), "{enode}: {err}");
@@ -486,9 +453,12 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(enodes["node-1"], format!("enode://{}@1.1.1.1:30303", id()));
         assert_eq!(
-            enodes["node-2"],
+            enodes["node-1"].to_string(),
+            format!("enode://{}@1.1.1.1:30303", id())
+        );
+        assert_eq!(
+            enodes["node-2"].to_string(),
             format!("enode://{}@2.2.2.2:30303", "cd".repeat(64))
         );
         // The request is the JSON-RPC call, through the shared client.
@@ -594,7 +564,7 @@ mod tests {
     fn key_holder(public_ip: &str, eth_rpc_url: &str) -> KeyHolder {
         KeyHolder {
             name: "alpha".to_string(),
-            public_ip: public_ip.to_string(),
+            public_ip: public_ip.parse().unwrap(),
             attestation_rpc_url: refused_url(),
             eth_rpc_url: eth_rpc_url.to_string(),
         }
@@ -612,8 +582,11 @@ mod tests {
             |host: &str| json!({"enode": format!("enode://{}@{host}:30303?discport=30304", id())});
         let server = FakeServer::serve(vec![(200, rpc_result(enode("1.1.1.1")))]);
         assert_eq!(
-            read_enode(&key_holder("1.1.1.1", &server.url)).await,
-            Ok(format!("enode://{}@1.1.1.1:30303", id()))
+            read_enode(&key_holder("1.1.1.1", &server.url))
+                .await
+                .unwrap()
+                .to_string(),
+            format!("enode://{}@1.1.1.1:30303", id())
         );
 
         // Elsewhere, or malformed: a re-run reads the same.
@@ -672,7 +645,7 @@ mod tests {
     /// refusal names each one's reason and the way on.
     #[test]
     fn only_the_passing_key_holders_are_handed_out() {
-        let enode = format!("enode://{}@2.2.2.2:30303", id());
+        let enode: Bootnode = format!("enode://{}@2.2.2.2:30303", id()).parse().unwrap();
         let failed = || Err(Unvetted::FailedAppraisal("x".to_string()));
         let vetted = BTreeMap::from([
             ("alpha".to_string(), failed()),

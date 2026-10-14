@@ -753,6 +753,18 @@ mod tests {
     /// from the command it names.
     #[test]
     fn the_documented_invocations_parse() {
+        const PEER_ENODE: &str = concat!(
+            "enode://",
+            "abababababababababababababababababababababababababababababababab",
+            "abababababababababababababababababababababababababababababababab",
+            "@198.51.100.1:30303",
+        );
+        const OTHER_PEER_ENODE: &str = concat!(
+            "enode://",
+            "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+            "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+            "@198.51.100.2:30303",
+        );
         for argv in [
             // ctx
             vec!["ctx", "list"],
@@ -921,7 +933,9 @@ mod tests {
                 "configure",
                 "op-1",
                 "--bootnode",
-                "$(scast rpc seismic_nodeInfo --rpc-url https://peer.example.com/rpc | jq -r .enode)",
+                // What the example's `$(scast rpc seismic_nodeInfo … | jq -r
+                // .enode)` expands to: the flag parses the enode itself.
+                PEER_ENODE,
             ],
             vec![
                 "node",
@@ -963,9 +977,9 @@ mod tests {
                 "nodes/nodes.json",
                 "tmp-devnet-1-2",
                 "--bootnode",
-                "enode://ab@1.2.3.4:30303",
+                PEER_ENODE,
                 "--bootnode",
-                "enode://cd@5.6.7.8:30303",
+                OTHER_PEER_ENODE,
                 "--manifest",
                 "network-manifest.json",
             ],

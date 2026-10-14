@@ -63,6 +63,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::IsTerminal as _;
+use std::net::SocketAddr;
 use std::path::Path;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -78,6 +79,7 @@ use seismic_tee_common::{
     Artifact, Descriptors, Manifest, NetworkDir, NodeDescriptor, hex_0x, http, next_step, rpc,
 };
 use seismic_verify_quote::SeismicMeasurementPolicy;
+use tdx_init_config::{Bootnode, PlainEmail};
 use tokio::sync::mpsc;
 use tokio::task::JoinSet;
 
@@ -130,7 +132,7 @@ pub struct Node {
     pub descriptor: NodeDescriptor,
     /// The pinned box of a founding.
     pub pinned: bool,
-    pub bootnodes: Vec<String>,
+    pub bootnodes: Vec<Bootnode>,
     pub up: Up,
     /// In a founding, the node key harvested from it, checked again right
     /// before its POST.
@@ -155,7 +157,7 @@ impl Node {
     }
 
     /// Any other node, fetching root_key through `bootnodes`.
-    fn through(planned: Planned, bootnodes: Vec<String>) -> Self {
+    fn through(planned: Planned, bootnodes: Vec<Bootnode>) -> Self {
         Self {
             name: planned.name,
             descriptor: planned.descriptor,
@@ -190,7 +192,7 @@ pub fn current_ips(
         };
         ip_by_node_pubkey.insert(
             record.node_public_key.clone(),
-            format!("{}:{SUMMIT_CONSENSUS_PORT}", descriptor.public_ip),
+            SocketAddr::new(descriptor.public_ip, SUMMIT_CONSENSUS_PORT).to_string(),
         );
     }
     Ok(ip_by_node_pubkey)
@@ -334,7 +336,7 @@ pub struct Shared {
     /// The delivered summit genesis: in a founding, the artifact-set copy
     /// with current IPs spliced in.
     pub summit_genesis: Artifact,
-    pub email: String,
+    pub email: PlainEmail,
     /// `None` under `--no-verify`.
     pub appraisal: Option<Appraisal>,
     pub dir: NetworkDir,
@@ -471,7 +473,7 @@ async fn configure_node(node: Node, shared: Arc<Shared>, status: StatusTx) -> (S
             reth_genesis: &shared.reth_genesis,
             summit_genesis: &shared.summit_genesis,
             bootnodes: &node.bootnodes,
-            external_ip: &node.descriptor.public_ip,
+            external_ip: node.descriptor.public_ip,
             fqdn: &node.descriptor.fqdn,
             email: &shared.email,
             pinned_box: node.pinned,
@@ -667,7 +669,7 @@ pub async fn bootstrap_founding(
         }
     };
     let pinned_enode = enodes[&pinned.name].clone();
-    bootnodes::warn_on_ip_mismatch(&pinned_enode, &pinned.descriptor.public_ip, &pinned.name);
+    bootnodes::warn_on_ip_mismatch(&pinned_enode, pinned.descriptor.public_ip, &pinned.name);
 
     println!(
         "Stage 2/2: configuring {} node(s) off the pinned box's enode...",
@@ -1299,8 +1301,8 @@ mod tests {
                 (
                     name.to_string(),
                     NodeDescriptor {
-                        public_ip: ip.to_string(),
-                        fqdn: fqdn.to_string(),
+                        public_ip: ip.parse().unwrap(),
+                        fqdn: fqdn.parse().unwrap(),
                     },
                 )
             })
@@ -1319,8 +1321,8 @@ mod tests {
         Node {
             name: name.into(),
             descriptor: NodeDescriptor {
-                public_ip: "127.0.0.1".into(),
-                fqdn: format!("{name}.example.com"),
+                public_ip: "127.0.0.1".parse().unwrap(),
+                fqdn: format!("{name}.example.com").parse().unwrap(),
             },
             pinned,
             bootnodes: Vec::new(),
@@ -1464,7 +1466,7 @@ mod tests {
                 "summit-genesis.toml",
                 b"namespace = \"seismic-devnet-3\"\n".to_vec(),
             ),
-            email: "ops@example.com".into(),
+            email: "ops@example.com".parse().unwrap(),
             appraisal: None,
             dir: dir.clone(),
             client: http::client().unwrap(),
@@ -1513,7 +1515,8 @@ mod tests {
     /// network directory, and a node the harvest does not know is skipped
     /// rather than held to a pin it never had. The nodes here are
     /// unreachable — the descriptor fixes the ports the assertions dial, so
-    /// a fake server cannot stand in — and the check says so, per node.
+    /// a fake server cannot stand in, and an `.invalid` name never resolves —
+    /// and the check says so, per node.
     #[tokio::test]
     async fn check_asserts_the_founding_cohort_and_writes_nothing() {
         use seismic_tee_common::test_support::{NODE_KEY_1, descriptors_of, network_dir, record};
@@ -1522,8 +1525,8 @@ mod tests {
         std::fs::write(dir.manifest(), FIXTURE_MANIFEST).unwrap();
         write_harvest(&dir, "node-1", &record(NODE_KEY_1, "cc"));
         let descriptors = descriptors_of(&[
-            ("node-1", "127.0.0.1", "127.0.0.1:1"),
-            ("node-2", "127.0.0.1", "127.0.0.1:2"),
+            ("node-1", "127.0.0.1", "node-1.invalid"),
+            ("node-2", "127.0.0.1", "node-2.invalid"),
         ]);
         let nodes = dir.root().join("nodes.json");
         std::fs::write(&nodes, serde_json::to_vec(&descriptors).unwrap()).unwrap();
@@ -1541,7 +1544,7 @@ mod tests {
             .to_string();
         assert!(err.contains("Cohort disagrees"), "{err}");
         assert!(
-            err.contains("✗ node-1: unreachable via https://127.0.0.1:1/rpc"),
+            err.contains("✗ node-1: unreachable via https://node-1.invalid/rpc"),
             "{err}"
         );
         assert!(!err.contains("node-2"), "{err}");
@@ -1830,20 +1833,23 @@ mod tests {
     /// run: its named peers and its appraisal.
     #[test]
     fn a_rerun_repeats_the_runs_peers_and_appraisal() {
+        let peer = format!("enode://{}@198.51.100.1:30303", "ab".repeat(64));
         let args = parse(&[
             "beta",
             "gamma",
             "--context",
             "devnet-1",
             "--bootnode",
-            "enode://peer",
+            &peer,
             "--pccs-url",
             "http://pccs",
         ]);
         assert_eq!(
             rerun(&args, &remedy(&args), &["gamma"]),
-            "seismic-tee node configure --context devnet-1 gamma --bootnode enode://peer \
-             --pccs-url http://pccs"
+            format!(
+                "seismic-tee node configure --context devnet-1 gamma --bootnode {peer} \
+                 --pccs-url http://pccs"
+            )
         );
         let args = parse(&["--node", "nodes.json", "--no-verify"]);
         assert_eq!(

@@ -17,6 +17,7 @@
 //! commands.
 
 use std::collections::BTreeMap;
+use std::net::SocketAddr;
 use std::path::Path;
 
 use crate::{Descriptors, NetworkDir};
@@ -354,7 +355,7 @@ pub fn load_founding_set(dir: &NetworkDir, ips: &ValidatorIps<'_>) -> anyhow::Re
                          means it changed under the harvest: re-found rather than assembling",
                     );
                 };
-                format!("{}:{SUMMIT_CONSENSUS_PORT}", descriptor.public_ip)
+                SocketAddr::new(descriptor.public_ip, SUMMIT_CONSENSUS_PORT).to_string()
             }
             ValidatorIps::Seated(seated) => {
                 let Some(ip_address) = seated.get(&record.node_public_key) else {

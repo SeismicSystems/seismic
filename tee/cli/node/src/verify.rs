@@ -591,8 +591,8 @@ mod tests {
     async fn a_failed_verification_names_the_node_and_the_reason() {
         let set = artifact_set();
         let descriptor = NodeDescriptor {
-            public_ip: "203.0.113.7".into(),
-            fqdn: "node1.example.com".into(),
+            public_ip: "203.0.113.7".parse().unwrap(),
+            fqdn: "node1.example.com".parse().unwrap(),
         };
         // A policy the verifier parses, so the failure is the challenge's: the
         // endpoint refuses the connection.

@@ -896,8 +896,8 @@ mod tests {
             (
                 name,
                 NodeDescriptor {
-                    public_ip: entry["public_ip"].as_str().unwrap().to_string(),
-                    fqdn: entry["fqdn"].as_str().unwrap().to_string(),
+                    public_ip: entry["public_ip"].as_str().unwrap().parse().unwrap(),
+                    fqdn: entry["fqdn"].as_str().unwrap().parse().unwrap(),
                 },
             )
         })

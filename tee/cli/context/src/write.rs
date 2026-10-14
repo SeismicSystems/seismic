@@ -177,8 +177,8 @@ fn nodes_table(nodes: &Descriptors) -> Table {
 
 fn descriptor_inline_table(descriptor: &NodeDescriptor) -> InlineTable {
     let mut table = InlineTable::new();
-    table.insert("public_ip", descriptor.public_ip.clone().into());
-    table.insert("fqdn", descriptor.fqdn.clone().into());
+    table.insert("public_ip", descriptor.public_ip.to_string().into());
+    table.insert("fqdn", descriptor.fqdn.to_string().into());
     table
 }
 
@@ -222,8 +222,8 @@ mod tests {
 
     fn descriptor(public_ip: &str, fqdn: &str) -> NodeDescriptor {
         NodeDescriptor {
-            public_ip: public_ip.to_string(),
-            fqdn: fqdn.to_string(),
+            public_ip: public_ip.parse().unwrap(),
+            fqdn: fqdn.parse().unwrap(),
         }
     }
 
@@ -401,7 +401,9 @@ mod tests {
         let config: Config = toml::from_str(&text).unwrap();
         assert_eq!(config.networks["devnet-1"].nodes.len(), 2);
         assert_eq!(
-            config.networks["devnet-1"].nodes["devnet-1-1"].fqdn,
+            config.networks["devnet-1"].nodes["devnet-1-1"]
+                .fqdn
+                .as_ref(),
             "devnet-1-1.seismicdev.net"
         );
     }

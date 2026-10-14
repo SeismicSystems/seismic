@@ -195,8 +195,8 @@ beta = { public_ip = "203.0.113.8", fqdn = "beta.example.com" }
             .load()
             .unwrap();
         assert_eq!(name, "node-2");
-        assert_eq!(descriptor.fqdn, "other.example");
-        assert_eq!(descriptor.public_ip, "203.0.113.99");
+        assert_eq!(descriptor.fqdn.as_ref(), "other.example");
+        assert_eq!(descriptor.public_ip.to_string(), "203.0.113.99");
     }
 
     #[test]
@@ -244,7 +244,7 @@ beta = { public_ip = "203.0.113.8", fqdn = "beta.example.com" }
         .load()
         .unwrap();
         assert_eq!(name, "node-1");
-        assert_eq!(descriptor.fqdn, "node1.example.com");
+        assert_eq!(descriptor.fqdn.as_ref(), "node1.example.com");
     }
 
     /// Neither flag: the context's `current` supplies the node.
@@ -259,7 +259,7 @@ beta = { public_ip = "203.0.113.8", fqdn = "beta.example.com" }
             .load()
             .unwrap();
         assert_eq!(name, "alpha");
-        assert_eq!(descriptor.fqdn, "alpha.example.com");
+        assert_eq!(descriptor.fqdn.as_ref(), "alpha.example.com");
     }
 
     /// `--name` composes with a network-only context: the network supplies
@@ -276,7 +276,7 @@ beta = { public_ip = "203.0.113.8", fqdn = "beta.example.com" }
                 .load()
                 .unwrap();
         assert_eq!(name, "beta");
-        assert_eq!(descriptor.fqdn, "beta.example.com");
+        assert_eq!(descriptor.fqdn.as_ref(), "beta.example.com");
     }
 
     /// Neither flag and no context selected anywhere: the error names both

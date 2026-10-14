@@ -38,6 +38,7 @@
 
 use std::cell::OnceCell;
 use std::io::BufRead;
+use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
@@ -49,7 +50,9 @@ use clap_complete::ArgValueCandidates;
 use seismic_tee_common::{Artifact, Descriptors, Manifest, NetworkDir};
 use seismic_tee_context::{Context, Selected, complete, echo, read_nodes};
 use sha2::{Digest as _, Sha256};
-use tdx_init_config::{DomainConfig, InitConfig, NetworkConfig, NodeConfig};
+use tdx_init_config::{
+    Bootnode, DomainConfig, Hostname, InitConfig, NetworkConfig, NodeConfig, PlainEmail,
+};
 
 use crate::args::CohortArgs;
 use crate::cohort;
@@ -132,13 +135,13 @@ pub struct ConfigInputs<'a> {
     pub summit_genesis: &'a Artifact,
     /// The enode set → `[network].bootnodes`. Empty is valid only on the
     /// pinned box of a founding.
-    pub bootnodes: &'a [String],
+    pub bootnodes: &'a [Bootnode],
     /// The node's own public IP → `[node].external_ip` (reth's `--nat extip`).
-    pub external_ip: &'a str,
+    pub external_ip: IpAddr,
     /// The node's DNS name → `[node.domain].name`, the cert domain.
-    pub fqdn: &'a str,
+    pub fqdn: &'a Hostname,
     /// → `[node.domain].email`, the Let's Encrypt registration.
-    pub email: &'a str,
+    pub email: &'a PlainEmail,
     /// Only ever `true` for the pinned box of a founding. Not sent: tdx-init
     /// tells the pinned box from the manifest.
     pub pinned_box: bool,
@@ -147,23 +150,19 @@ pub struct ConfigInputs<'a> {
 /// Assemble the config POSTed to tdx-init, mutating no source.
 ///
 /// Written fresh from its inputs, so there is no operator-supplied TOML that
-/// could carry a conflicting `[node]`/`[network]` and fork the network. The
-/// two checks tdx-init would fail the POST on are run here first, so a bad
-/// input fails while the fix still costs nothing:
+/// could carry a conflicting `[node]`/`[network]` and fork the network. Each
+/// field arrives parsed, so what is left are the cross-field checks tdx-init
+/// would fail the POST on, run here first so a bad input fails while the fix
+/// still costs nothing:
 ///
-/// - `external_ip` must be non-empty: tdx-init parses it as an `IpAddr`, and
-///   every caller sources it from the descriptor's required `public_ip`, so
-///   this should be unreachable.
 /// - A joiner needs at least one bootnode: tdx-init derives its root_key
 ///   fetch peers from them, so none means no way to bootstrap.
+/// - The manifest's gates over the two genesis files, naming the file that
+///   fails.
 ///
-/// Then the manifest's gates over the two genesis files, naming the file that
-/// fails. The artifacts travel base64-encoded so they stay opaque through the
-/// TOML hop: tdx-init decodes and writes these exact bytes verbatim.
+/// The artifacts travel base64-encoded so they stay opaque through the TOML
+/// hop: tdx-init decodes and writes these exact bytes verbatim.
 pub fn build_config(inputs: &ConfigInputs<'_>) -> anyhow::Result<InitConfig> {
-    if inputs.external_ip.is_empty() {
-        bail!("build_config: external_ip is required and must be non-empty");
-    }
     if !inputs.pinned_box && inputs.bootnodes.is_empty() {
         bail!(
             "build_config: a joining node needs at least one bootnode (tdx-init derives its \
@@ -193,10 +192,10 @@ pub fn build_config(inputs: &ConfigInputs<'_>) -> anyhow::Result<InitConfig> {
             bootnodes: inputs.bootnodes.to_vec(),
         },
         node: NodeConfig {
-            external_ip: inputs.external_ip.to_string(),
+            external_ip: inputs.external_ip,
             domain: DomainConfig {
-                email: inputs.email.to_string(),
-                name: inputs.fqdn.to_string(),
+                email: inputs.email.clone(),
+                name: inputs.fqdn.clone(),
             },
         },
     })
@@ -227,7 +226,7 @@ pub struct Preview<'a> {
     pub reth_genesis: &'a Artifact,
     /// As delivered: spliced, in a founding.
     pub summit_genesis: &'a Artifact,
-    pub email: &'a str,
+    pub email: &'a PlainEmail,
     /// The policy's provenance, or `None` under `--no-verify`.
     pub policy: Option<&'a str>,
     pub run: &'a Run,
@@ -235,7 +234,7 @@ pub struct Preview<'a> {
     pub skipped: &'a [String],
     /// What a joining run hands every node; empty in a founding, whose
     /// joiners get the pinned box's enode once it is up.
-    pub bootnodes: &'a [String],
+    pub bootnodes: &'a [Bootnode],
     /// Where the rendered TOML of a node `<name>` is written.
     pub record: &'a Path,
 }
@@ -330,7 +329,7 @@ pub fn render_preview(preview: &Preview<'_>) -> String {
             };
             field("Bootnodes:", format!("{}, {source}", bootnodes.len()));
             for bootnode in *bootnodes {
-                field("", bootnode.clone());
+                field("", bootnode.to_string());
             }
         }
     }
@@ -490,12 +489,12 @@ pub struct ConfigureArgs {
     /// key holder — your own nodes joining someone else's network — from its
     /// seismic_nodeInfo RPC. Refused while the network is unfounded.
     #[arg(long, value_name = "ENODE")]
-    pub bootnode: Vec<String>,
+    pub bootnode: Vec<Bootnode>,
 
     /// Contact email for the node's Let's Encrypt registration; goes
     /// into [node.domain].email of the POSTed config. Same across a run.
     #[arg(long, default_value = DEFAULT_EMAIL)]
-    pub email: String,
+    pub email: PlainEmail,
 
     /// Configure without deploy-verifying the nodes configured. By default
     /// each node is appraised once it is up — the same check as `seismic-tee
@@ -674,8 +673,14 @@ mod tests {
     /// namespace matches the fixture manifest's summit.namespace.
     const SUMMIT_GENESIS: &[u8] = b"namespace = \"seismic-devnet-3\"\nvalidators = []\n";
 
-    fn bootnode() -> String {
+    fn bootnode() -> Bootnode {
         format!("enode://{}@198.51.100.1:30303", "ab".repeat(64))
+            .parse()
+            .unwrap()
+    }
+
+    fn email() -> PlainEmail {
+        EMAIL.parse().unwrap()
     }
 
     fn manifest() -> Manifest {
@@ -687,16 +692,16 @@ mod tests {
         reth_genesis: &[u8],
         summit_genesis: &[u8],
         pinned_box: bool,
-        bootnodes: &[String],
+        bootnodes: &[Bootnode],
     ) -> anyhow::Result<InitConfig> {
         build_config(&ConfigInputs {
             manifest,
             reth_genesis: &Artifact::new("/nets/devnet/reth-genesis.json", reth_genesis),
             summit_genesis: &Artifact::new("/nets/devnet/summit-genesis.toml", summit_genesis),
             bootnodes,
-            external_ip: EXTERNAL_IP,
-            fqdn: FQDN,
-            email: EMAIL,
+            external_ip: EXTERNAL_IP.parse().unwrap(),
+            fqdn: &FQDN.parse().unwrap(),
+            email: &email(),
             pinned_box,
         })
     }
@@ -742,7 +747,7 @@ mod tests {
 
         // And it is the document tdx-init deserializes.
         let reparsed: InitConfig = toml::from_str(&rendered).unwrap();
-        assert_eq!(reparsed.node.external_ip, EXTERNAL_IP);
+        assert_eq!(reparsed.node.external_ip.to_string(), EXTERNAL_IP);
     }
 
     /// join: the bootnode set (root_key fetch peers are derived from it by
@@ -752,35 +757,17 @@ mod tests {
     fn join_mode_carries_the_bootnodes_verbatim() {
         let bootnodes = [
             bootnode(),
-            format!("enode://{}@203.0.113.7:30303", "cd".repeat(64)),
+            format!("enode://{}@203.0.113.7:30303", "cd".repeat(64))
+                .parse()
+                .unwrap(),
         ];
         let config = build(&manifest(), RETH_GENESIS, SUMMIT_GENESIS, false, &bootnodes).unwrap();
 
-        assert_eq!(config.node.external_ip, EXTERNAL_IP);
+        assert_eq!(config.node.external_ip.to_string(), EXTERNAL_IP);
         assert_eq!(config.network.bootnodes, bootnodes);
 
         let reparsed: InitConfig = toml::from_str(&render_config(&config).unwrap()).unwrap();
         assert_eq!(reparsed.network.bootnodes, bootnodes);
-    }
-
-    /// tdx-init requires [node].external_ip and parses it as an IpAddr, so an
-    /// empty value is a far-end 400 — fail fast client-side instead.
-    #[test]
-    fn an_empty_external_ip_is_rejected() {
-        let manifest = manifest();
-        let error = build_config(&ConfigInputs {
-            manifest: &manifest,
-            reth_genesis: &Artifact::new("reth-genesis.json", RETH_GENESIS),
-            summit_genesis: &Artifact::new("summit-genesis.toml", SUMMIT_GENESIS),
-            bootnodes: &[],
-            external_ip: "",
-            fqdn: FQDN,
-            email: EMAIL,
-            pinned_box: true,
-        })
-        .unwrap_err()
-        .to_string();
-        assert!(error.contains("external_ip"), "{error}");
     }
 
     /// tdx-init derives a joiner's root_key fetch peers from the bootnodes, so
@@ -913,7 +900,7 @@ mod tests {
         let received: InitConfig =
             toml::from_str(std::str::from_utf8(&requests[0].body).unwrap()).unwrap();
         assert_eq!(received.network.bootnodes, [bootnode()]);
-        assert_eq!(received.node.domain.name, FQDN);
+        assert_eq!(received.node.domain.name.as_ref(), FQDN);
     }
 
     /// A rejection is propagated at once, status and body: neither a 4xx
@@ -998,7 +985,7 @@ mod tests {
         let args = parse(&[]).unwrap();
         assert!(args.names.is_empty());
         assert!(args.bootnode.is_empty());
-        assert_eq!(args.email, DEFAULT_EMAIL);
+        assert_eq!(args.email.as_ref(), DEFAULT_EMAIL);
         assert!(!args.no_verify);
         assert!(!args.yes, "the gate is on unless asked off");
         assert!(!args.check);
@@ -1010,6 +997,23 @@ mod tests {
         let args = parse(&["beta", "gamma", "--yes"]).unwrap();
         assert_eq!(args.names, ["beta", "gamma"]);
         assert!(args.yes);
+    }
+
+    /// `--email` and `--bootnode` are parsed as the types tdx-init takes, so
+    /// a value it would refuse is refused before anything is probed or sent.
+    #[test]
+    fn a_flag_value_tdx_init_would_refuse_does_not_parse() {
+        assert!(parse(&["--email", "ops$(reboot)@example.com"]).is_err());
+        assert!(parse(&["--bootnode", "enode://ab@1.2.3.4:30303"]).is_err());
+        let args = parse(&[
+            "--email",
+            "ops@example.com",
+            "--bootnode",
+            bootnode().as_ref(),
+        ])
+        .unwrap();
+        assert_eq!(args.email, email());
+        assert_eq!(args.bootnode, [bootnode()]);
     }
 
     /// The mode flags are gone: the network's state decides.
@@ -1032,7 +1036,7 @@ mod tests {
         assert!(parse(&["--check"]).unwrap().check);
         for excluded in [
             &["alpha"][..],
-            &["--bootnode", "enode://ab@1.2.3.4:30303"],
+            &["--bootnode", bootnode().as_ref()],
             &["--yes"],
             &["--reth-genesis", "r.json"],
             &["--summit-genesis", "s.toml"],
@@ -1076,8 +1080,8 @@ mod tests {
 
     fn descriptor(name: &str) -> NodeDescriptor {
         NodeDescriptor {
-            public_ip: "203.0.113.9".to_string(),
-            fqdn: format!("{name}.example.com"),
+            public_ip: "203.0.113.9".parse().unwrap(),
+            fqdn: format!("{name}.example.com").parse().unwrap(),
         }
     }
 
@@ -1123,7 +1127,7 @@ mod tests {
             manifest: &manifest,
             reth_genesis: &reth_genesis,
             summit_genesis: &summit_genesis,
-            email: EMAIL,
+            email: &email(),
             policy: Some("/nets/devnet/measurement-policy-bootstrap.json (pinned by --manifest)"),
             run: &run,
             skipped: &[],
@@ -1176,7 +1180,7 @@ mod tests {
             manifest: &manifest,
             reth_genesis: &reth_genesis,
             summit_genesis: &summit_genesis,
-            email: EMAIL,
+            email: &email(),
             policy: None,
             run: &run,
             skipped: &skipped,
@@ -1190,7 +1194,7 @@ mod tests {
             ),
             "Nodes:            beta",
             "Bootnodes:        1, key holder(s) that passed their appraisal",
-            &bootnode(),
+            bootnode().as_ref(),
             "Skipped:          alpha (took its config this boot)",
             "nothing (--no-verify)",
         ] {

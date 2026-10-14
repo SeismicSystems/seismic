@@ -330,8 +330,8 @@ mod tests {
 
     fn descriptor(public_ip: &str, fqdn: &str) -> NodeDescriptor {
         NodeDescriptor {
-            public_ip: public_ip.to_string(),
-            fqdn: fqdn.to_string(),
+            public_ip: public_ip.parse().unwrap(),
+            fqdn: fqdn.parse().unwrap(),
         }
     }
 
@@ -448,7 +448,7 @@ mod tests {
 
         let (name, descriptor) = selected.node(Some("beta")).unwrap();
         assert_eq!(name, "beta");
-        assert_eq!(descriptor.fqdn, "beta.example.com");
+        assert_eq!(descriptor.fqdn.as_ref(), "beta.example.com");
     }
 
     #[test]

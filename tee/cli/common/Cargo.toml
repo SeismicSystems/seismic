@@ -15,6 +15,7 @@ test-support = ["dep:tempfile"]
 
 [dependencies]
 seismic-network-manifest.workspace = true
+tdx-init-config.workspace = true
 
 anstream.workspace = true
 anstyle.workspace = true
