@@ -18,7 +18,7 @@ import re
 from copy import deepcopy
 from typing import Any
 
-from eth_abi import decode, encode
+from eth_abi import decode, encode, is_encodable
 from eth_hash.auto import keccak
 from hexbytes import HexBytes
 
@@ -147,23 +147,48 @@ def _function_selector(abi_function: dict[str, Any]) -> bytes:
     return keccak(sig.encode())[:4]
 
 
-def _find_function(abi: list[dict[str, Any]], function_name: str) -> dict[str, Any]:
-    """Find a function entry in the ABI by name.
+def _find_function(
+    abi: list[dict[str, Any]],
+    function_name: str,
+    args: list[Any] | None = None,
+) -> dict[str, Any]:
+    """Find a function entry by name, resolving overloads when args are supplied.
 
     Args:
         abi: The full contract ABI (list of entries).
         function_name: Name of the function to find.
+        args: Optional positional arguments used to select an overload.
 
     Returns:
         The matching ABI function entry dict.
 
     Raises:
-        ValueError: If the function is not found in the ABI.
+        ValueError: If the function is missing, or no unique overload matches.
     """
-    for entry in abi:
-        if entry.get("type") == "function" and entry.get("name") == function_name:
-            return entry
-    raise ValueError(f"Function '{function_name}' not found in ABI")
+    entries = [
+        entry
+        for entry in abi
+        if entry.get("type") == "function" and entry.get("name") == function_name
+    ]
+    if not entries:
+        raise ValueError(f"Function '{function_name}' not found in ABI")
+    if args is None or len(entries) == 1:
+        return entries[0]
+
+    matches = []
+    for entry in entries:
+        inputs = remap_abi_inputs(entry)["inputs"]
+        if len(inputs) == len(args) and all(
+            is_encodable(_abi_type_string(param), arg)
+            for param, arg in zip(inputs, args, strict=True)
+        ):
+            matches.append(entry)
+
+    if not matches:
+        raise ValueError(f"No matching overload for function '{function_name}'")
+    if len(matches) > 1:
+        raise ValueError(f"Ambiguous overload for function '{function_name}'")
+    return matches[0]
 
 
 def has_shielded_params(abi: list[dict[str, Any]], function_name: str) -> bool:
@@ -194,6 +219,8 @@ def encode_shielded_calldata(
     The selector is computed from the **original** ABI (with shielded
     type names like ``suint256``), while the parameters are encoded
     using **remapped** standard types (``uint256``).
+    Overloads are selected by argument count and encodability using the
+    remapped input types; the arguments must match exactly one overload.
 
     Args:
         abi: The full contract ABI (list of function entries).
@@ -204,9 +231,9 @@ def encode_shielded_calldata(
         Encoded calldata (4-byte selector + ABI-encoded parameters).
 
     Raises:
-        ValueError: If the function is not found in the ABI.
+        ValueError: If the function is missing, or no unique overload matches.
     """
-    fn_entry = _find_function(abi, function_name)
+    fn_entry = _find_function(abi, function_name, args)
 
     # Selector from ORIGINAL types
     selector = _function_selector(fn_entry)
