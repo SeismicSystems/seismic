@@ -78,7 +78,7 @@
     },
     "packages/seismic-viem": {
       "name": "seismic-viem",
-      "version": "3.0.1",
+      "version": "4.0.0",
       "dependencies": {
         "@noble/ciphers": "^1.2.0",
         "@noble/curves": "^1.8.0",
