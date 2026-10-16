@@ -55,7 +55,7 @@ Seismic uses the same staking contract as Ethereum, which is hardcoded into our 
 
 We will often produce multiple blocks in the same second, yet Ethereum's block timestamps are expressed in terms of unix seconds. Our solution to this:
 
-- Block headers are stock Ethereum headers: `timestamp` is unix seconds, and the sub-second part (0–999 ms) is carried in the first two bytes of `extraData` as a big-endian `uint16`. Any Ethereum tool can parse Seismic headers and verify block hashes
+- Block headers are stock Ethereum headers: `timestamp` is unix seconds, with milliseconds (0-999) stored in the first two bytes of `extraData` as a big-endian `uint16`. Any Ethereum tool can parse Seismic headers and verify block hashes
 - The EVM combines both into a millisecond block time, exposed through the `TIMESTAMP_MS` opcode
 - In Seismic Solidity, `block.timestamp` returns unix seconds, just like in standard Solidity. We added `block.timestamp_ms` which returns unix milliseconds. `block.timestamp_seconds` is an alias for `block.timestamp`
 
