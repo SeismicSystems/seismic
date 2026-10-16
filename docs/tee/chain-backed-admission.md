@@ -194,8 +194,8 @@ The decisions behind it:
   true head, so no comparison of heights detects its own staleness. The
   finalized block's timestamp against the guest's wall clock is the one
   locally checkable witness that this view of the allowlist is current. The
-  bound is 60 seconds; the header's `timestamp` is unix seconds, with the
-  sub-second part in the first two bytes of `extraData`.
+  bound is 60 seconds; the header's `timestamp` is unix seconds, with
+  milliseconds available in the first two bytes of `extraData`.
 - **The read is pinned to the block that passed the check.** `isAccepted` is
   answered at exactly the finalized block hash, not at whatever `latest`
   became a moment later, so the freshness proof and the policy answer
