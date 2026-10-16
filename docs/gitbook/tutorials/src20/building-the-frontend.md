@@ -71,16 +71,16 @@ import { src20Abi } from "./abi";
 const SRC20_ADDRESS = "0x1234..."; // Your deployed contract address
 
 function useToken() {
-  const contract = useShieldedContract({
+  const { contract, error } = useShieldedContract({
     address: SRC20_ADDRESS,
     abi: src20Abi,
   });
 
-  return contract;
+  return { contract, error };
 }
 ```
 
-This hook returns a contract instance bound to the currently connected shielded wallet. All reads are signed reads and all writes are shielded writes.
+The hook returns `{ contract, abi, address, error }`. The `contract` instance is bound to the currently connected shielded wallet and is `null` until the wallet client is initialized. All reads are signed reads and all writes are shielded writes.
 
 ## Reading balance (signed read)
 
@@ -125,7 +125,7 @@ The `useSignedReadContract` hook handles the full signed-read flow: signing the 
 
 ## Transferring tokens (shielded write)
 
-Use the `useShieldedWriteContract` hook to send a shielded transfer. The calldata is encrypted before leaving the user's machine:
+Use the `useShieldedWriteContract` hook to send a shielded transfer. The calldata is encrypted before leaving the user's machine. Unlike wagmi's `useWriteContract`, the write configuration (`address`, `abi`, `functionName`, `args`) is passed to the hook itself, and `writeContract()` is then called with no arguments:
 
 ```typescript
 import { useShieldedWriteContract } from 'seismic-react';
@@ -136,15 +136,15 @@ function TransferForm() {
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
 
-  const { writeContract, isLoading, error, hash } = useShieldedWriteContract();
+  const { writeContract, isLoading, error, hash } = useShieldedWriteContract({
+    address: SRC20_ADDRESS,
+    abi: src20Abi,
+    functionName: 'transfer',
+    args: [recipient as `0x${string}`, parseEther(amount || '0')],
+  });
 
-  const handleTransfer = () => {
-    writeContract({
-      address: SRC20_ADDRESS,
-      abi: src20Abi,
-      functionName: 'transfer',
-      args: [recipient, parseEther(amount)],
-    });
+  const handleTransfer = async () => {
+    await writeContract();
   };
 
   return (
