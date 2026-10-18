@@ -22,7 +22,7 @@ Seismic is an EVM-compatible L1 with on-chain privacy. Nodes run inside TEEs (In
 
 - **Shielded types**: `suint256`, `saddress`, `sbool` — on-chain private state, only readable via signed reads
 - **TxSeismic (type 0x4A)**: Encrypts calldata before broadcast. The SDK handles this automatically.
-- **Signed reads**: `eth_call` zeroes `msg.sender` on Seismic. Hooks like `useShieldedRead` handle this.
+- **Signed reads**: `eth_call` zeroes `msg.sender` on Seismic. Hooks like `useSignedReadContract` handle this.
 - **Encryption pubkeys**: 33-byte compressed secp256k1 keys. The provider fetches and manages these.
 - **Legacy gas**: Seismic transactions use `gas_price` + `gas_limit`, NOT EIP-1559.
 
@@ -43,8 +43,8 @@ import {
   ShieldedWalletProvider,
   useShieldedWallet,
   useShieldedContract,
-  useShieldedRead,
-  useShieldedWrite,
+  useSignedReadContract,
+  useShieldedWriteContract,
 } from "seismic-react";
 ```
 
@@ -54,16 +54,29 @@ import {
 
 ```tsx
 import { ShieldedWalletProvider } from "seismic-react";
+import { WagmiProvider, createConfig, http } from "wagmi";
+import { seismicTestnet } from "seismic-viem";
+
+const config = createConfig({
+  chains: [seismicTestnet],
+  transports: {
+    [seismicTestnet.id]: http(),
+  },
+});
 
 function App() {
   return (
-    <ShieldedWalletProvider>
-      {/* Your app components */}
-      <MyDapp />
-    </ShieldedWalletProvider>
+    <WagmiProvider config={config}>
+      <ShieldedWalletProvider config={config}>
+        {/* Your app components */}
+        <MyDapp />
+      </ShieldedWalletProvider>
+    </WagmiProvider>
   );
 }
 ```
+
+`ShieldedWalletProvider` requires a wagmi `config` prop — it cannot be used without one.
 
 ### Access the shielded wallet
 
@@ -71,9 +84,10 @@ function App() {
 import { useShieldedWallet } from "seismic-react";
 
 function MyComponent() {
-  const { walletClient, isConnected, address } = useShieldedWallet();
+  const { walletClient, address, loaded } = useShieldedWallet();
 
-  if (!isConnected) return <p>Connect your wallet</p>;
+  if (!loaded) return <p>Loading...</p>;
+  if (!walletClient) return <p>Connect your wallet</p>;
   return <p>Connected: {address}</p>;
 }
 ```
@@ -84,10 +98,13 @@ function MyComponent() {
 import { useShieldedContract } from "seismic-react";
 
 function MyComponent() {
-  const contract = useShieldedContract({
+  const { contract, error } = useShieldedContract({
     abi: myContractAbi,
     address: "0xCONTRACT_ADDRESS",
   });
+
+  if (error) return <p>Error: {error.message}</p>;
+  if (!contract) return <p>Loading...</p>;
 
   // contract.read.* for signed reads
   // contract.write.* for shielded writes
@@ -97,43 +114,65 @@ function MyComponent() {
 ### Read shielded data (signed read)
 
 ```tsx
-import { useShieldedRead } from "seismic-react";
+import { useSignedReadContract } from "seismic-react";
+import { useEffect, useState } from "react";
 
 function BalanceDisplay({ userAddress }: { userAddress: `0x${string}` }) {
-  const { data: balance, isLoading } = useShieldedRead({
+  const [balance, setBalance] = useState<bigint | null>(null);
+
+  const { signedRead, isLoading, error } = useSignedReadContract({
     abi: myContractAbi,
     address: "0xCONTRACT_ADDRESS",
-    functionName: "getBalance",
+    functionName: "balanceOf",
     args: [userAddress],
   });
 
+  useEffect(() => {
+    signedRead().then((result) => {
+      if (result !== undefined) setBalance(result as bigint);
+    });
+  }, [signedRead]);
+
   if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
   return <p>Balance: {balance?.toString()}</p>;
 }
 ```
 
+Unlike wagmi's `useReadContract`, `useSignedReadContract` does not auto-fetch — it returns a `signedRead` function you call imperatively.
+
 ### Write shielded data (encrypted transaction)
 
 ```tsx
-import { useShieldedWrite } from "seismic-react";
+import { useShieldedWriteContract } from "seismic-react";
 
-function TransferButton() {
-  const { write, isLoading } = useShieldedWrite({
+function TransferButton({
+  recipientAddress,
+  amount,
+}: {
+  recipientAddress: `0x${string}`;
+  amount: bigint;
+}) {
+  const { writeContract, isLoading, error, hash } = useShieldedWriteContract({
     abi: myContractAbi,
     address: "0xCONTRACT_ADDRESS",
     functionName: "transfer",
+    args: [recipientAddress, amount],
   });
 
   return (
-    <button
-      onClick={() => write({ args: [recipientAddress, amount] })}
-      disabled={isLoading}
-    >
-      Transfer
-    </button>
+    <div>
+      <button onClick={() => writeContract()} disabled={isLoading}>
+        Transfer
+      </button>
+      {hash && <p>Transaction: {hash}</p>}
+      {error && <p>Error: {error.message}</p>}
+    </div>
   );
 }
 ```
+
+The write configuration — including `args` — goes into the hook itself; `writeContract()` is then called with no arguments.
 
 ### Wallet integration: RainbowKit
 
@@ -146,7 +185,7 @@ function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
       <RainbowKitProvider>
-        <ShieldedWalletProvider>
+        <ShieldedWalletProvider config={wagmiConfig}>
           <MyDapp />
         </ShieldedWalletProvider>
       </RainbowKitProvider>
@@ -159,14 +198,17 @@ function App() {
 
 ```tsx
 import { PrivyProvider } from "@privy-io/react-auth";
+import { WagmiProvider } from "@privy-io/wagmi";
 import { ShieldedWalletProvider } from "seismic-react";
 
 function App() {
   return (
     <PrivyProvider appId="YOUR_PRIVY_APP_ID">
-      <ShieldedWalletProvider>
-        <MyDapp />
-      </ShieldedWalletProvider>
+      <WagmiProvider config={wagmiConfig}>
+        <ShieldedWalletProvider config={wagmiConfig}>
+          <MyDapp />
+        </ShieldedWalletProvider>
+      </WagmiProvider>
     </PrivyProvider>
   );
 }
@@ -174,8 +216,8 @@ function App() {
 
 ## Common Mistakes
 
-1. **Using standard wagmi hooks** — `useContractRead`/`useContractWrite` from wagmi won't encrypt calldata or sign reads. Use `useShieldedRead`/`useShieldedWrite` from `seismic-react`.
-2. **Forgetting the ShieldedWalletProvider** — All `useShielded*` hooks require `ShieldedWalletProvider` in the component tree. Wrap it around your app.
+1. **Using standard wagmi hooks** — `useContractRead`/`useContractWrite` from wagmi won't encrypt calldata or sign reads. Use `useSignedReadContract`/`useShieldedWriteContract` (or `useShieldedContract`) from `seismic-react`. There are no hooks named `useShieldedRead` or `useShieldedWrite`.
+2. **Forgetting the ShieldedWalletProvider** — All shielded hooks require `ShieldedWalletProvider` (with its required `config` prop) in the component tree. Wrap it around your app.
 3. **Using EIP-1559 gas params** — Seismic uses legacy gas. Do NOT pass `maxFeePerGas`/`maxPriorityFeePerGas` to write hooks.
 4. **Wrong import path** — The package is `seismic-react`, not `@seismic/react` or `seismic-viem/react`.
 5. **Reading shielded data without wallet connection** — Signed reads require a connected wallet (they need the user's private key to sign). Show a "connect wallet" prompt first.
@@ -192,17 +234,17 @@ Faucet: https://faucet.seismictest.net/
 
 ## Links
 
-- [seismic-react Installation](https://docs.seismic.systems/client-libraries/seismic-react/installation)
-- [ShieldedWalletProvider](https://docs.seismic.systems/client-libraries/seismic-react/shielded-wallet-provider)
-- [Hooks Reference](https://docs.seismic.systems/client-libraries/seismic-react/hooks/)
-- [RainbowKit Guide](https://docs.seismic.systems/client-libraries/seismic-react/wallet-guides/rainbowkit)
-- [Privy Guide](https://docs.seismic.systems/client-libraries/seismic-react/wallet-guides/privy)
-- [GitHub: seismic-client](https://github.com/SeismicSystems/seismic-client)
+- [seismic-react Installation](https://docs.seismic.systems/clients/typescript/react/installation)
+- [ShieldedWalletProvider](https://docs.seismic.systems/clients/typescript/react/shielded-wallet-provider)
+- [Hooks Reference](https://docs.seismic.systems/clients/typescript/react/hooks/)
+- [RainbowKit Guide](https://docs.seismic.systems/clients/typescript/react/wallet-guides/rainbowkit)
+- [Privy Guide](https://docs.seismic.systems/clients/typescript/react/wallet-guides/privy)
+- [GitHub: seismic (monorepo)](https://github.com/SeismicSystems/seismic)
 ````
 
 ## What this teaches Claude
 
-- **Correct hook names and import paths** — Claude will use `useShieldedRead`/`useShieldedWrite` instead of standard wagmi hooks
+- **Correct hook names and import paths** — Claude will use `useSignedReadContract`/`useShieldedWriteContract` instead of standard wagmi hooks
 - **Provider hierarchy** — Claude will wrap the app with `ShieldedWalletProvider` in the correct order relative to wallet connectors
 - **Signed reads in components** — Claude will use shielded hooks that handle identity-proving reads
 - **Wallet integration patterns** — Claude knows how to combine RainbowKit/Privy with Seismic's provider
