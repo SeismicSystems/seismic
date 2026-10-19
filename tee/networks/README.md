@@ -77,15 +77,18 @@ set-nodes <network>` imports them straight from the Pulumi stack's
 file"). `nodes/` keeps only the records `configure` writes as it runs,
 which is why it stays gitignored.
 
-Throwaway foundings go in a `tmp-*` directory instead — those are
-gitignored wholesale, so a scratch cohort can be founded, torn down, and
-deleted with `seismic-tee network rm <name>` without touching git (the copy-pasteable recipe is
-[the devnet runbook](https://github.com/SeismicSystems/deploy/blob/main/tee/runbook-devnet.md)). If a throwaway
-turns out to matter, renaming the directory is enough to commit it —
-`network_id` is minted from the manifest bytes, not the path — but the
-manifest keeps the `tmp-*` name it was assembled under (the name is part
-of those bytes), so a network you already suspect will matter deserves a
-real directory name from the start.
+Throwaway foundings live outside every checkout:
+[deploy's `tee/devnet.sh`](https://github.com/SeismicSystems/deploy/blob/main/tee/devnet.sh)
+founds one under `~/seismic-networks/<name>` and deletes it on `down`
+(the step-by-step recipe is
+[the devnet runbook](https://github.com/SeismicSystems/deploy/blob/main/tee/runbook-devnet.md)).
+One founded in this checkout goes in a `tmp-*` directory, gitignored
+wholesale. The directory's name is the network's: `assemble` writes it
+into the manifest as `name`, and `init` into the summit genesis as
+`namespace`, so moving a directory in under another name commits a
+manifest that names something else, and `assemble --check` refuses it.
+A network that may be committed is founded under its final name —
+`tee/devnet.sh up --name <name>`.
 
 ## fixture-devnet
 

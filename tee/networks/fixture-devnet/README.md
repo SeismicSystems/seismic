@@ -23,8 +23,8 @@ change in the pinned enclave crates before the next real founding does.
 
 The cohort was founded under this directory's own name, so the
 manifest's `name` and `namespace` are `fixture-devnet`. Both are part of
-the manifest bytes: a refresh founded under another name keeps that name
-as assembled ([../README.md](../README.md) on renaming a throwaway).
+the manifest bytes, so a refresh is founded under this name too
+([../README.md](../README.md) on a directory's name).
 The cohort's descriptor (`nodes/`) is not here — a dead cohort's IPs,
 gitignored like every network's.
 
@@ -45,18 +45,20 @@ signal this exists for. Then, or when a cohort on a released image is
 to hand, refresh it as a PR of its own that says which image the new
 cohort pinned:
 
-1. Take a clean `Found a devnet` run's `founding-<stack>` artifact
-   (`.github/workflows/found-devnet.yml` uploads the whole network
-   directory), or found a two-node throwaway with the runbook's steps
-   1–4 and 8 — `init`, `up`, `ctx set-nodes`, `harvest`, `assemble`,
-   `destroy`; no `configure`.
-2. Replace this directory's contents with it, dropping `nodes/`.
-3. Update the table above — the release tag the cohort booted
+1. From a [deploy](https://github.com/SeismicSystems/deploy) checkout,
+   found a cohort under this name: `tee/devnet.sh up --name
+   fixture-devnet` (`--nodes 2` for a cheaper one). It writes
+   `~/seismic-networks/fixture-devnet`.
+2. Replace this directory's contents with that directory's, dropping
+   `nodes/`.
+3. Tear the cohort down: `tee/devnet.sh down --name fixture-devnet`. It
+   deletes `~/seismic-networks/fixture-devnet` too, so step 2 comes first.
+4. Update the table above — the release tag the cohort booted
    (`inputs/image.json`'s `image`, which is also the release whose
    binaries the `drift` job in `.github/workflows/seismic-tee.yml` runs),
-   the `measurement_id`, the manifest's name and the `network_id` — and
-   the unit tests that embed this directory's files:
-   `tee/cli/common/src/manifest.rs` asserts the manifest's name and pins
-   its SHA-256 on purpose (that pin is what catches the enclave crate
-   changing how `network_id` is derived), so both move with the fixture.
-4. `make -C tee/cli check`.
+   the `measurement_id` and the `network_id` — and the unit tests that
+   embed this directory's files: `tee/cli/common/src/manifest.rs` pins
+   the manifest's SHA-256 on purpose (that pin is what catches the
+   enclave crate changing how `network_id` is derived), so it moves with
+   the fixture.
+5. `make -C tee/cli check`.
