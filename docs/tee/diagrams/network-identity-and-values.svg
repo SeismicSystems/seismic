@@ -94,7 +94,7 @@
   <g transform="translate(90,345)">
     <rect class="shipped" width="280" height="80" rx="10"/>
     <text class="b" x="14" y="28">reth genesis</text>
-    <text x="14" y="50">P0: registry storage</text>
+    <text x="14" y="50">M0: registry storage</text>
     <text class="sub" x="14" y="70">(+ a direct manifest pin)</text>
   </g>
   <g transform="translate(90,475)">
@@ -119,17 +119,17 @@
   <rect class="cert" x="851" y="246" width="18" height="18"/>
   <rect class="cert" x="1531" y="246" width="18" height="18"/>
 
-  <!-- ================= lane P: accepted images ================= -->
+  <!-- ================= lane M: accepted images ================= -->
   <g class="band">
     <rect x="400" y="320" width="1490" height="110" rx="12"/>
-    <text x="420" y="344">P · accepted images — MeasurementRegistry, reth state</text>
+    <text x="420" y="344">M · accepted images — MeasurementRegistry, reth state</text>
   </g>
   <rect class="shipped" x="520" y="360" width="480" height="50"/>
-  <text x="536" y="390">P0 = {A}</text>
+  <text x="536" y="390">M0 = {A}</text>
   <rect class="shipped" x="1000" y="360" width="380" height="50"/>
-  <text x="1016" y="390">P1 = {A, B}: B admitted</text>
+  <text x="1016" y="390">M1 = {A, B}: B admitted</text>
   <rect class="shipped" x="1380" y="360" width="510" height="50"/>
-  <text x="1396" y="390">P2 = {B}: A deprecated</text>
+  <text x="1396" y="390">M2 = {B}: A deprecated</text>
   <rect class="cert" x="991" y="376" width="18" height="18"/>
   <rect class="cert" x="1371" y="376" width="18" height="18"/>
 
@@ -156,26 +156,26 @@
   <!-- ================= machines ================= -->
   <g class="band">
     <rect x="40" y="580" width="1850" height="210" rx="12"/>
-    <text x="60" y="606">machines — a box is a member while its image ∈ P and it holds the root_key K commits to</text>
+    <text x="60" y="606">machines — a box is a member while its image ∈ M and it holds the root_key K commits to</text>
   </g>
   <text x="60" y="645">box 1 · image A</text>
   <text x="60" y="695">box 2 · A, then B</text>
   <text x="60" y="745">box 3 · image B</text>
 
   <rect class="shipped" x="520" y="622" width="860" height="36" rx="6"/>
-  <text x="536" y="645">A ∈ P: member</text>
+  <text x="536" y="645">A ∈ M: member</text>
   <rect class="out" x="1380" y="622" width="510" height="36" rx="6"/>
-  <text class="out-text" x="1396" y="645">A ∉ P2: no longer admitted</text>
+  <text class="out-text" x="1396" y="645">A ∉ M2: no longer admitted</text>
 
   <rect class="shipped" x="520" y="672" width="620" height="36" rx="6"/>
-  <text x="536" y="695">A ∈ P: member</text>
+  <text x="536" y="695">A ∈ M: member</text>
   <rect class="shipped" x="1150" y="672" width="740" height="36" rx="6"/>
   <text x="1166" y="695">re-imaged to B, rejoins: fetches root_key</text>
 
   <rect class="out" x="520" y="722" width="520" height="36" rx="6"/>
   <text class="out-text" x="536" y="745">not yet booted</text>
   <rect class="shipped" x="1050" y="722" width="840" height="36" rx="6"/>
-  <text x="1066" y="745">joins once B ∈ P1: fetches root_key</text>
+  <text x="1066" y="745">joins once B ∈ M1: fetches root_key</text>
 
   <!-- ================= clients ================= -->
   <g class="band">

@@ -177,14 +177,14 @@ which network it wants; knowing the network's value now takes a finalized head.
 | --- | --- | --- | --- |
 | `network_id` | the network | identity, fixed for its lifetime | SHA-256 of the manifest |
 | head digest | the network's value at h | value, a new one every block | the finality certificate, against V at h |
-| measurement → admission ID | the code a box runs | value, one per image build | a quote, against P at h |
+| measurement → admission ID | the code a box runs | value, one per image build | a quote, against M at h |
 | PCK / vTPM AK | the platform that signed a quote | identity, one per machine | Intel and Azure collateral |
 | Ed25519 + BLS pubkeys | a validator | identity, one per validator | V at h |
 | `tx_io_pk@(root_version, epoch)` | where clients encrypt | value of the key series, per rotation or epoch bump | the pin, then later key records |
 
 The control plane at h is three parts of the network's value at h: the
-validator set V_h, the accepted measurement set P_h, and the service key K_h. A
-box is a member at h while its measurement is in P_h and it holds the
+validator set V_h, the accepted measurement set M_h, and the service key K_h. A
+box is a member at h while its measurement is in M_h and it holds the
 `root_key` K_h commits to; a validator's keys are also in V_h.
 
 ![One identity, a succession of values: network_id commits to each lane's
@@ -195,7 +195,7 @@ point](diagrams/network-identity-and-values.svg)
 
 **Each lane starts in the genesis of the component that holds it in its state,
 or in the manifest alone when none does.** V_0 is the summit genesis validator
-set, moved on by summit's finalized epoch transitions. P_0 is the registry's
+set, moved on by summit's finalized epoch transitions. M_0 is the registry's
 storage in the reth genesis, moved on by authority transactions, and the
 manifest also pins it directly, as the bootstrap policy. K_0 is `tx_io_pk@0`,
 which no component holds in its state, since every node derives it from
@@ -231,7 +231,7 @@ thirds of the validators, so a client that checks the bound timestamp against
 its own clock learns the signer's view is recent: the TEE vouches for the
 finality check, the validators for the time. It does not tell the client which
 images to accept. A deprecated image is the one that cannot be trusted to
-report its own standing, so P_h still has to reach the client from outside the
+report its own standing, so M_h still has to reach the client from outside the
 TEE.
 
 ### Client trust models
@@ -249,7 +249,7 @@ itself:
 
 At epoch 0 the first model is the pin check alone: hash the manifest and compare
 `tx_io_pk@0`. Mixes exist: a client can follow the registry with a light client
-to learn P_h, then verify one attested head.
+to learn M_h, then verify one attested head.
 
 ## The trust anchor, per action
 
