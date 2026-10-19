@@ -258,6 +258,34 @@ Summit's group is spelled out in
 units carry its keys from boot to the keystore, and `summit.service` only
 reads them.
 
+The custodian and the attestation service are the key-plane group, tied by
+`Requires=` rather than a target. `root_key` lives only in the custodian's
+memory, so a custodian restart loses it, and the only thing that fetches it
+back is the attestation service's startup
+([how a node obtains `root_key`](key-custody.md#how-a-node-obtains-root_key)).
+
+- **A custodian restart restarts the attestation service**, whether systemd
+  restarts the custodian after a crash or an operator does. The attestation
+  service comes back as a joiner and fetches the same `root_key` from a key
+  holder.
+- **Until then, the node fails closed.** `:7878` goes down with the old
+  process and binds again only once the custodian holds `root_key`. A key epoch
+  that activates in the meantime reaches reth only once the fetch completes;
+  reth keeps retrying.
+- **Nothing outside the group depends on its units.** `persistent-luks-setup`
+  waits on the keyfile and reth on the socket, so a restart stays inside the
+  group. That matters because `persistent-luks-setup` cannot run twice in one
+  boot. The volume stays open, and the keys reth holds stay valid, because
+  `root_key` comes back the same.
+- **Two cases have no key to come back to.** Before founding, the restarted
+  custodian mints a fresh candidate, the pin matches no box, and the founding
+  is redone. With no live key holder, as on a single-node network, the fetch
+  has no responder and the network is lost
+  ([accepted risks](trust-model.md#accepted-risks)).
+
+The unit edges, and what each restart reaches, are in
+[`custodian.service`](https://github.com/SeismicSystems/seismic-images/blob/seismic/modules/seismic/mkosi.extra/etc/systemd/system/custodian.service).
+
 The same rule says which secrets need a process. **A secret that is only ever
 handed over needs a file with the right owner; a secret that is never handed
 over needs a process.** Summit's keys and the LUKS keys are handed over, so a
@@ -417,6 +445,14 @@ shares the service's privileges, while a oneshot setup unit runs once per boot
 under its own sandbox, and systemd already expresses the ordering. A
 long-running process kept only to carry state between phases costs a
 lifecycle, an IPC surface and a crash mode for something a tmpfs file does.
+
+**The key-plane group restarts together, rather than the custodian never
+restarting or the attestation service re-joining in-process**
+([unit groups](#unit-groups)). With no `Restart=` on the custodian, a crash
+would leave the node down until a reboot, although its peers still hold
+`root_key`. An attestation service that notices the lost key and re-joins on
+its own would move lifecycle logic into the application, which systemd
+already expresses.
 
 **One TPM user, building every binding itself, rather than a quote per
 service** ([one process opens the TPM](#one-process-opens-the-tpm)). Letting
