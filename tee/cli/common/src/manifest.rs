@@ -158,7 +158,7 @@ mod tests {
     use super::*;
 
     /// Verbatim `tee/networks/fixture-devnet/network-manifest.json`, a real
-    /// founding's manifest (see the fixture's README).
+    /// founding's manifest (see tee/networks/README.md).
     const FIXTURE_DEVNET: &[u8] =
         include_bytes!("../../../networks/fixture-devnet/network-manifest.json");
 
@@ -184,7 +184,7 @@ mod tests {
         assert_eq!(manifest.bytes(), FIXTURE_DEVNET);
         assert_eq!(
             manifest.network_id().to_string(),
-            "0x499876c363592028a6f42efbfed65e3bde740b58aaccc91aab106d356f0be01e"
+            "0x474cda948c71c7976aeb29fbfd6c32bab4bf7c14b0718048157691c7e5c615ab"
         );
     }
 

@@ -1,17 +1,18 @@
 {
-  "image": "seismic_2026-10-08.dbab6a",
-  "commit": "dbab6a508464f6576a240f8678a0e0d411d020c0",
+  "image": "seismic_2026-10-19.6aed44",
+  "commit": "6aed4462774b67507077cbc572d18f48fe304c36",
   "sources": {
-    "seismic_reth": "39d04d158da383324b12c2e3397b0b28f3c3ee36",
-    "summit": "532ad6fa5bf07f03faf349664000f13f36d6517a",
-    "enclave": "56d2a917cf4f5635651f229f59d958f64b1a7b73"
+    "seismic_reth": "bc40907d43b9bdc4f3fa74dd98a54980b8659957",
+    "summit": "69ca74de005f695c7f6f070655d481fb6473425a",
+    "enclave": "a87993eb5bc9ad2157c8ea25b9b989f37ba93d1d",
+    "caddy": "72dd0fb067f6d7826c7f79907670ba4a713bfe37"
   },
   "targets": {
     "azure-tdx": {
-      "vhd_blob_url": "https://seismicimages.blob.core.windows.net/dev/seismic_2026-10-08.dbab6a.vhd",
+      "vhd_blob_url": "https://seismicimages.blob.core.windows.net/dev/seismic_2026-10-19.6aed44.vhd",
       "storage_account_id": "/subscriptions/214887ea-51a7-4ca7-9cec-29b3cf3d311c/resourceGroups/seismic-images/providers/Microsoft.Storage/storageAccounts/seismicimages",
       "measurements": "measurements.azure-tdx.json",
-      "efi_sha256": "8099f08da22ed43425a858a3e8903ab39eaf90e56122fd4c49fd52fbc8113a23"
+      "efi_sha256": "7138b7e0829d85d5da12fe5cf5bd0d29120cfb81ee1189dbbbb9cc063020982b"
     }
   }
 }

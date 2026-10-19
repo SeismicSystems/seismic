@@ -5,7 +5,7 @@
 # a genesis-hash or config-digest change the next image bump will bring — and
 # no commit in this repo caused it, so it never runs on a PR. It stays red
 # until the image moves past the change and the directory is refreshed
-# (tee/networks/fixture-devnet/README.md).
+# (tee/networks/README.md, "Refreshing fixture-devnet").
 #
 # Failures go out as GitHub's default Actions email, to whoever created this
 # workflow or, after that, whoever last edited its cron.

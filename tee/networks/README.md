@@ -93,10 +93,10 @@ A network that may be committed is founded under its final name —
 ## fixture-devnet
 
 [fixture-devnet/](fixture-devnet/) is the one committed directory: a real
-founding — a four-node Azure TDX cohort's archive, each box's founding
-quote with the collateral and trust anchors it was verified against, and
-the artifact set assembled from it — committed whole (minus the
-gitignored `nodes/`). It is two things at once.
+founding — an Azure TDX cohort's archive, each box's founding quote with
+the collateral and trust anchors it was verified against, and the
+artifact set assembled from it — committed whole as `devnet.sh` left it
+(minus the gitignored `nodes/`). It is two things at once.
 
 The documented shape: every file the tree above names, as `init`,
 `harvest` and `assemble` actually wrote them. The unit tests embed a few
@@ -113,9 +113,62 @@ drift` adds the gates that need `seismic-reth` and `summit`.
 
 **Not a network anyone runs.** The cohort was torn down the day it was
 founded, and nothing can be brought up from its identity: the keys the
-archive vouches for existed only in those boxes' RAM. Its
-[README](fixture-devnet/README.md) records the image it booted and how
-to refresh it from a fresh founding.
+archive vouches for existed only in those boxes' RAM.
+
+| | |
+|---|---|
+| Founded | 2026-10-19, with [deploy's `tee/devnet.sh`](https://github.com/SeismicSystems/deploy/blob/main/tee/devnet.sh) `up --name fixture-devnet --nodes 2` |
+| Image | [`seismic_2026-10-19.6aed44`](https://github.com/SeismicSystems/seismic-images/releases/tag/seismic_2026-10-19.6aed44) (`inputs/image.json`): summit `69ca74d`, enclave `a87993e`, seismic-reth `bc40907` |
+| `measurement_id` | `seismic_2026-10-19.6aed44.vhd` (`inputs/measurements.json`) |
+| Records | 2, `inputs/harvest/samlaf-fixture-devnet-tee-devnet-{1,2}.json` (named after the nodes, operator prefix included; the stem is only a label), record `version` 1 |
+| `founding_tx_io_pk` | `samlaf-fixture-devnet-tee-devnet-1`'s candidate, the first record by name |
+| Verifier at founding | dcap-qvl 0.5.2 (`trust_anchors.dcap_qvl_version`) |
+| `network_id` | `0x474cda948c71c7976aeb29fbfd6c32bab4bf7c14b0718048157691c7e5c615ab` |
+
+The cohort was founded under the directory's own name, so the
+manifest's `name` and `namespace` are `fixture-devnet`, and a refresh is
+founded under that name too.
+
+Replay it by hand:
+
+```bash
+seismic-tee verify-founding tee/networks/fixture-devnet
+```
+
+### Refreshing fixture-devnet
+
+The archive is what keeps the fixture verifiable: `verify-founding`
+holds every freshness check to each record's own `verified_at`, so
+Intel's TCB info aging past its `nextUpdate` never breaks it. What does
+break it is a change to the record schema, the policy or manifest
+schema, or a verifier that judges these quotes differently — the drift
+signal this exists for. Then, or when a cohort on a released image is
+to hand, refresh it as a PR of its own that says which image the new
+cohort pinned:
+
+1. From a [deploy](https://github.com/SeismicSystems/deploy) checkout,
+   found a cohort under this name: `tee/devnet.sh up --name
+   fixture-devnet` (`--nodes 2` for a cheaper one). It writes
+   `~/seismic-networks/fixture-devnet`.
+2. Replace the committed directory with it (its `nodes/` stays
+   gitignored):
+
+   ```bash
+   rm -rf tee/networks/fixture-devnet
+   cp -r ~/seismic-networks/fixture-devnet tee/networks/
+   ```
+
+3. Tear the cohort down: `tee/devnet.sh down --name fixture-devnet`. It
+   deletes `~/seismic-networks/fixture-devnet` too, so step 2 comes first.
+4. Update the table above — the release tag the cohort booted
+   (`inputs/image.json`'s `image`, which is also the release whose
+   binaries the `drift` job in `.github/workflows/seismic-tee.yml` runs),
+   the `measurement_id`, the records and the `network_id` — and the unit
+   tests that embed the directory's files:
+   `tee/cli/common/src/manifest.rs` pins the manifest's SHA-256 on
+   purpose (that pin is what catches the enclave crate changing how
+   `network_id` is derived), so it moves with the fixture.
+5. `make -C tee/cli check`.
 
 To found any network, throwaway or real, don't reuse or copy this
 directory: run `init <new-dir>`, author fresh inputs, and follow

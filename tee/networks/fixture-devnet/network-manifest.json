@@ -1,12 +1,12 @@
 {
   "eth": {
     "chain_id": 5124,
-    "genesis_hash": "0xc49fea4100a53f2d5073c2b9bd9067913b5d9ecf03412cd5539313b68dfab33a"
+    "genesis_hash": "0x9bb15f315471726587048c40539fddd7c1a049410510631856549579925ec693"
   },
-  "founding_tx_io_pk": "0x036515c6062359ae3e47d31e53ad9f5e966f9e5910203ac086817acbeb34a3c0f8",
+  "founding_tx_io_pk": "0x038f51417427e0e378bda10a8fdabbdd7516ccb13b4195c7e2d437d0480cad29df",
   "manifest_version": 1,
   "measurements": {
-    "bootstrap_policy_hash": "0x659e08d4a2d8d44a0053fdc3d6db8eb6cf00fb535dec6b48a5b614721fe31e92",
+    "bootstrap_policy_hash": "0xa8e6238f93aaa017f9e1d7a6c1518cee985fd6537ef136952c9fe852e8c7c9f2",
     "contracts": {
       "authority": "0x1000000000000000000000000000000000000002",
       "registry": "0x1000000000000000000000000000000000000001"
@@ -14,7 +14,7 @@
   },
   "name": "fixture-devnet",
   "summit": {
-    "genesis_config_digest": "0x950a193e4620f9a0ba05c8f7414c3addb1d32c5d8c978f4c1b858ded9b2f08dd",
+    "genesis_config_digest": "0xa5630bc46c5842eede6deda626f98db2170a08e7d93d1c69f3882233fd50a095",
     "namespace": "fixture-devnet"
   }
 }

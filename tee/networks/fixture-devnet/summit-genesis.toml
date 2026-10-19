@@ -1,4 +1,4 @@
-eth_genesis_hash = "0xc49fea4100a53f2d5073c2b9bd9067913b5d9ecf03412cd5539313b68dfab33a"
+eth_genesis_hash = "0x9bb15f315471726587048c40539fddd7c1a049410510631856549579925ec693"
 leader_timeout_ms = 2000
 notarization_timeout_ms = 4000
 nullify_timeout_ms = 4000
@@ -18,25 +18,13 @@ invalid_deposit_tax = 0
 max_pending_withdrawals_per_validator = 3
 
 [[validators]]
-node_public_key = "22ed664636604a0ae111f68b80c8f76611248f0f93671101da538351cf5d7440"
-consensus_public_key = "89e3acfa1b6bfaba1cc4ac81c1b3d1c04c2738770d78342650c2097ed6bd06505e92753f21467e5536a8196cd1b8b903"
-ip_address = "20.185.0.52:18551"
-withdrawal_credentials = "0x0000000000000000000000000000000000000003"
-
-[[validators]]
-node_public_key = "5888d15fdd8703a80e8b1b60bfa550ac8f91527ad9f83ee0892361be1dea674d"
-consensus_public_key = "acb9ec23840136297f16cf73424b3e432eaec8a956a1a83a1bfdcb3c2513ce8598b60f5cb56d8d0032d9efc65c5bbaf8"
-ip_address = "20.231.217.119:18551"
+node_public_key = "c9dcc88c2c474e28594cc915fdc6e22bc3eee4a08774ea8a3f200ebe6aa1b99a"
+consensus_public_key = "95804d1d0ebdfcd42cee900e5140220288ec7c833aa27e7206fa9ba0d49e3e87e57e4d649f897f76b6988afc5678ff6d"
+ip_address = "20.106.244.87:18551"
 withdrawal_credentials = "0x0000000000000000000000000000000000000002"
 
 [[validators]]
-node_public_key = "ad7b25e8d5144dcf93ca2328c9e570eb08e8c40939bcb4d7615984744acbc3de"
-consensus_public_key = "b2a95c9a744bc208aecf4499da5b4b3cbc74a3c4f80440e4101b437244db21e5a1e689c2ed2c15a8fe5448f2568b7af9"
-ip_address = "137.135.115.205:18551"
+node_public_key = "cf8f263e1ccf28a2bda0853e29eefafab94d0ba68cb219010500fe3730c18706"
+consensus_public_key = "ae978ada03f3932c53ca8701fb298a38a2cd535b4cdbabf8f0c188c872f5ca77a7b21573bb7739b53439c616dacad54c"
+ip_address = "20.51.241.214:18551"
 withdrawal_credentials = "0x0000000000000000000000000000000000000001"
-
-[[validators]]
-node_public_key = "d68aecd96ad9e6027eaabe9d65a7ad769ef7f2bee699a832531ceb4b638d91d3"
-consensus_public_key = "aaf5ebcf5198f90c7f12e8de492c4d1f7405816c842fc27f543ccace5f24939c825b38547e8f2b5f1c33e24fd08acf94"
-ip_address = "20.163.134.76:18551"
-withdrawal_credentials = "0x0000000000000000000000000000000000000004"
