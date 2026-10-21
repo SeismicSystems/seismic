@@ -246,7 +246,7 @@ enum Command {
     /// which images a network accepts.
     #[command(
         long_about = "Measurement admission from the human side: the pipeline from an \
-                      image's `make measure` output to the policy record a network accepts. \
+                      image's raw measurements to the policy record a network accepts. \
                       promote authors the record; compile reports what it admits — the \
                       admission IDs and the registry genesis storage seeding them — for \
                       review before it is pinned at founding or proposed to a live network.\n\n\

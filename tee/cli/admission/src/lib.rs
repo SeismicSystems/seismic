@@ -12,7 +12,7 @@
 //! have one implementation, the enclave's `seismic-measurement-admission`
 //! crate, and every command here is that crate at the command line:
 //!
-//! - `promote` turns raw `make measure` output into the policy document: the
+//! - `promote` turns an image's raw measurements into the policy document: the
 //!   record a network's `measurement-policy-bootstrap.json` carries at
 //!   founding, and the record a later image is proposed to the accepted set
 //!   as. An already-promoted document passes through byte-verbatim, since
@@ -43,12 +43,12 @@ use seismic_measurement_admission::{CompileReport, compile_policy, promote_measu
 /// to policy record to review — which is the order `--help` lists them in.
 #[derive(Debug, Subcommand)]
 pub enum AdmissionCommand {
-    /// Promote raw `make measure` output into a measurement-policy document
+    /// Promote an image's raw measurements into a measurement-policy document
     /// (JSON on stdout): one record binding exactly the schema registers,
     /// compiled before it is emitted. An input that already is a record
     /// list is compiled and passed through byte-verbatim.
     Promote {
-        /// The make-measure measurements file.
+        /// The image's raw measurements file, as a seismic-images release carries it.
         #[arg(value_name = "MEASUREMENTS")]
         measurements: PathBuf,
         /// Policy record id, conventionally the registered image artifact
@@ -134,7 +134,7 @@ mod tests {
             .command
     }
 
-    /// `make measure` output as its wrapper: every populated register, the
+    /// Raw measurements as seismic-images emits them: every populated register, the
     /// stamped artifact id, extra fields the policy must not carry.
     fn raw_measurements() -> String {
         serde_json::json!({

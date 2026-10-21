@@ -14,7 +14,7 @@
 //!                                              `image.json`): which image, where its bytes are
 //! inputs/reth-genesis.json                     policy-free genesis
 //! inputs/summit-genesis.toml                   summit parameter choices
-//! inputs/measurements.json                     raw PCR map from `make measure`
+//! inputs/measurements.json                     the image's raw PCR map
 //! inputs/founder-withdrawal-credentials.json   one address per founder
 //! inputs/harvest/<node>.json                   the founding archive: harvested pubkeys +
 //!                                              quote, and the bundle that quote verified against

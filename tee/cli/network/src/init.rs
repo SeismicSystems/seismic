@@ -202,8 +202,8 @@ pub fn fill_summit_namespace(raw: &[u8], name: &str, source: &str) -> anyhow::Re
 /// Gate a measurements input on carrying the id of the image it measures.
 ///
 /// The measurements file is the only binding between a network's PCR
-/// allowlist and an image: seismic-images' `make measure` stamps the versioned
-/// VHD filename into it, and promotion reads the id from there. `init` gates
+/// allowlist and an image: seismic-images stamps the versioned VHD filename
+/// into it, and promotion reads the id from there. `init` gates
 /// on the stamp so a missing one surfaces while the operator still holds loose
 /// files, not after the cohort has been provisioned and harvested. A promoted
 /// policy is a record list, each record carrying its own id.
@@ -212,9 +212,8 @@ pub fn require_measurement_id(raw: &[u8], source: &str) -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("{source} is not valid JSON: {e}{}", raw_url_hint(source)))?;
     if value.is_object() && value.get("measurement_id").is_none() {
         bail!(
-            "{source} carries no measurement_id — re-export the measurements with seismic-images' \
-             `make measure`, which stamps the versioned image filename these PCRs measure into \
-             the file"
+            "{source} carries no measurement_id — use the measurements a seismic-images release \
+             carries, which are stamped with the versioned image filename these PCRs measure"
         );
     }
     Ok(())
@@ -1126,7 +1125,7 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.contains("carries no measurement_id"), "{err}");
-        assert!(err.contains("make measure"), "{err}");
+        assert!(err.contains("seismic-images release"), "{err}");
 
         let err = require_measurement_id(b"{not json", "https://x/m.json")
             .unwrap_err()

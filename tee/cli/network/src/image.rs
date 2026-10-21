@@ -112,9 +112,8 @@ pub const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(600);
 
 /// One image's release files: the directory its `image.json` sits in, every
 /// other asset beside it under the name seismic-images gives it. A GitHub
-/// release's download directory is one; so is a local build's `build/`
-/// once seismic-images' `make founding-inputs` and `make image-json` have
-/// run in it.
+/// release's download directory is one; so is a local build's `build/`,
+/// once seismic-images has made its release assets there.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImageRelease {
     base: Base,
@@ -371,8 +370,8 @@ async fn get(
 
 /// What a missing asset means, since the fix is to name another image.
 const MISSING_HINT: &str = " — a seismic-images release carries every founding input beside its \
-                            image.json, and so does a build's build/ once `make founding-inputs` \
-                            and `make image-json` have run";
+                            image.json, and so does a local build's build/ once its release assets \
+                            are made";
 
 /// One small asset's bytes, from wherever the release is.
 async fn read(
@@ -1015,7 +1014,7 @@ pub(crate) mod tests {
             err.contains(&format!("no SHA256SUMS at {}", absent.url("SHA256SUMS"))),
             "{err}"
         );
-        assert!(err.contains("make image-json"), "{err}");
+        assert!(err.contains(MISSING_HINT), "{err}");
 
         let empty = tempfile::tempdir().unwrap();
         let image_json = empty.path().join("image.json");

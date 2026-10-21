@@ -348,7 +348,7 @@ mod tests {
     /// that parses it.
     const POLICY_BYTES: &[u8] = b"[{\"measurement_id\": \"seismic-node.vhd\"}]\n";
 
-    /// A raw `make measure` wrapper as seismic-images emits it: numeric keys,
+    /// Raw measurements as seismic-images emits them: numeric keys,
     /// `expected` (not `expected_any`), a zero register the schema drops, and
     /// the stamped artifact id.
     fn raw_measurements() -> String {
