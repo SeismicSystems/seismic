@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="845" viewBox="0 0 1500 845" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .bg { fill: #ffffff; }
+    .title { font-size: 17px; font-weight: bold; fill: #222; }
+    .subtitle { font-size: 12px; fill: #555; }
+    .axis-head { font-size: 14px; font-weight: bold; fill: #222; text-anchor: middle; }
+    .axis-sub { font-size: 12px; fill: #555; text-anchor: middle; }
+    .row-head { font-size: 14px; font-weight: bold; fill: #222; }
+    .row-sub { font-size: 12px; fill: #555; }
+    .cell { fill: #fafafa; stroke: #c8c8c8; stroke-width: 1.2; }
+    .cell.analysed { fill: #f3f6fc; stroke: #3b6fd8; stroke-width: 1.5; }
+    .cell-title { font-size: 14px; font-weight: bold; fill: #222; }
+    .dns { fill: #ffffff; stroke: #777; stroke-width: 1.5; }
+    .dns-head { font-size: 12px; font-weight: bold; fill: #222; }
+    .record { font-size: 11.5px; fill: #222; font-family: Menlo, Consolas, monospace; }
+    .cvm { fill: #ffffff; stroke: #555; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .cvm-label { font-size: 10px; fill: #555; font-style: italic; }
+    .box { fill: #f6f6f6; stroke: #9a9a9a; stroke-width: 1.5; }
+    .box.ends { fill: #ffe6cc; stroke: #e07b00; stroke-width: 2.5; }
+    .box-title { font-size: 12px; font-weight: bold; fill: #222; text-anchor: middle; }
+    .box-text { font-size: 11px; fill: #444; text-anchor: middle; }
+    .key { font-size: 11px; fill: #a35400; font-weight: bold; text-anchor: middle; }
+    .resolves { stroke: #888; stroke-width: 1.8; stroke-dasharray: 5 3; fill: none; }
+    .tls { stroke: #3b6fd8; stroke-width: 2.5; fill: none; }
+    .same-key { stroke: #e07b00; stroke-width: 2.5; stroke-dasharray: 2 4; fill: none; }
+    .gap-label { font-size: 11px; font-style: italic; fill: #a35400; text-anchor: middle; }
+    .gap-label.distinct { fill: #888; }
+    .gap-label.side { text-anchor: end; }
+    .note { font-size: 12px; fill: #333; }
+    .note-key { font-weight: bold; fill: #222; }
+    .legend { font-size: 12px; fill: #333; }
+  </style>
+  <defs>
+    <marker id="arrow-tls" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b6fd8"/>
+    </marker>
+    <marker id="arrow-dns" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1500" height="845"/>
+  <text class="title" x="40" y="32">Attesting the transport key, a future decision: which key, under which name</text>
+  <text class="subtitle" x="40" y="52">Two nodes in each cell. Every cell ends TLS in the guest, in a terminator whose key is attested: an L7 proxy, a TLS-only proxy, or the backends themselves.</text>
+
+  <!-- column heads: the name -->
+  <text class="axis-head" x="515" y="88">Per-node names, no front</text>
+  <text class="axis-sub" x="515" y="106">one DNS record per node · ACME in the guest</text>
+  <text class="axis-head" x="1165" y="88">One shared name, behind an L4 front</text>
+  <text class="axis-sub" x="1165" y="106">one DNS record, for the front · ACME outside, by CSR</text>
+
+  <!-- row heads: the key -->
+  <text class="row-head" x="20" y="235">Per-node key,</text>
+  <text class="row-head" x="20" y="253">quoted</text>
+  <text class="row-sub" x="20" y="275">anchor: a quote,</text>
+  <text class="row-sub" x="20" y="291">plus the registry</text>
+  <text class="row-sub" x="20" y="307">a leak: one node</text>
+  <text class="row-head" x="20" y="560">One key, derived</text>
+  <text class="row-head" x="20" y="578">from root_key</text>
+  <text class="row-sub" x="20" y="600">anchor: pinnable,</text>
+  <text class="row-sub" x="20" y="616">like tx_io_pk</text>
+  <text class="row-sub" x="20" y="632">a leak: every node</text>
+
+  <!-- ===== C: per-node key, per-node names ===== -->
+  <g class="cell-c" transform="translate(200,120)">
+    <rect class="cell analysed" x="0" y="0" width="630" height="310" rx="8"/>
+    <text class="cell-title" x="16" y="26">C · per-node keys, per-node names</text>
+    <g class="dns-box"><rect class="dns" x="16" y="96" width="210" height="80" rx="6"/><text class="dns-head" x="28" y="114">DNS</text><text class="record" x="28" y="138">node-1.example.net</text><text class="record" x="28" y="162">node-2.example.net</text></g>
+    <path class="resolves" d="M226,130 L376,86" marker-end="url(#arrow-dns)"/>
+    <path class="resolves" d="M226,154 L376,200" marker-end="url(#arrow-dns)"/>
+    <g class="node-1"><rect class="cvm" x="380" y="46" width="235" height="80" rx="8"/><text class="cvm-label" x="390" y="59">node 1 · measured image</text><rect class="box ends" x="392" y="64" width="170" height="56" rx="6"/><text class="box-title" x="477" y="79">TLS terminator</text><text class="key" x="477" y="95">key k1, quoted</text><text class="box-text" x="477" y="111">cert: node-1</text></g>
+    <g class="node-2"><rect class="cvm" x="380" y="160" width="235" height="80" rx="8"/><text class="cvm-label" x="390" y="173">node 2 · measured image</text><rect class="box ends" x="392" y="178" width="170" height="56" rx="6"/><text class="box-title" x="477" y="193">TLS terminator</text><text class="key" x="477" y="209">key k2, quoted</text><text class="box-text" x="477" y="225">cert: node-2</text></g>
+    <text class="gap-label distinct" x="477" y="147">different keys</text>
+    <text class="note" x="16" y="256"><tspan class="note-key">ACME:</tspan> each node in its guest (TLS-ALPN-01), as today</text>
+    <text class="note" x="16" y="276"><tspan class="note-key">Clients pin:</tspan> each node's key, checked against its quote</text>
+    <text class="note" x="16" y="296"><tspan class="note-key">Is:</tspan> RA-WEBs as published</text>
+  </g>
+
+  <!-- ===== per-node keys, one shared name ===== -->
+  <g class="cell-pk-shared" transform="translate(850,120)">
+    <rect class="cell" x="0" y="0" width="630" height="310" rx="8"/>
+    <text class="cell-title" x="16" y="26">Per-node keys under one shared name</text>
+    <g class="dns-box"><rect class="dns" x="16" y="96" width="210" height="80" rx="6"/><text class="dns-head" x="28" y="114">DNS</text><text class="record" x="28" y="146">rpc.example.net</text></g>
+    <path class="resolves" d="M226,142 L246,142" marker-end="url(#arrow-dns)"/>
+    <g class="lb"><rect class="box" x="250" y="116" width="104" height="52" rx="6"/><text class="box-title" x="302" y="138">L4 load</text><text class="box-title" x="302" y="154">balancer</text></g>
+    <path class="tls" d="M354,132 L376,86" marker-end="url(#arrow-tls)"/>
+    <path class="tls" d="M354,152 L376,200" marker-end="url(#arrow-tls)"/>
+    <g class="node-1"><rect class="cvm" x="380" y="46" width="235" height="80" rx="8"/><text class="cvm-label" x="390" y="59">node 1 · measured image</text><rect class="box ends" x="392" y="64" width="170" height="56" rx="6"/><text class="box-title" x="477" y="79">TLS terminator</text><text class="key" x="477" y="95">key k1, quoted</text><text class="box-text" x="477" y="111">cert: rpc + node-1</text></g>
+    <g class="node-2"><rect class="cvm" x="380" y="160" width="235" height="80" rx="8"/><text class="cvm-label" x="390" y="173">node 2 · measured image</text><rect class="box ends" x="392" y="178" width="170" height="56" rx="6"/><text class="box-title" x="477" y="193">TLS terminator</text><text class="key" x="477" y="209">key k2, quoted</text><text class="box-text" x="477" y="225">cert: rpc + node-2</text></g>
+    <text class="gap-label distinct" x="477" y="147">different keys</text>
+    <text class="note" x="16" y="256"><tspan class="note-key">ACME:</tspan> outside, DNS-01 by deploy, one CSR per node</text>
+    <text class="note" x="16" y="276"><tspan class="note-key">Clients pin:</tspan> a set of keys for one name, one per node</text>
+    <text class="note" x="16" y="296"><tspan class="note-key">Certificates:</tspan> one per node, each also naming its node</text>
+  </g>
+
+  <!-- ===== one derived key, per-node names ===== -->
+  <g class="cell-dk-pernode" transform="translate(200,445)">
+    <rect class="cell" x="0" y="0" width="630" height="310" rx="8"/>
+    <text class="cell-title" x="16" y="26">One derived key under per-node names</text>
+    <g class="dns-box"><rect class="dns" x="16" y="96" width="210" height="80" rx="6"/><text class="dns-head" x="28" y="114">DNS</text><text class="record" x="28" y="138">node-1.example.net</text><text class="record" x="28" y="162">node-2.example.net</text></g>
+    <path class="resolves" d="M226,130 L376,86" marker-end="url(#arrow-dns)"/>
+    <path class="resolves" d="M226,154 L376,200" marker-end="url(#arrow-dns)"/>
+    <g class="node-1"><rect class="cvm" x="380" y="46" width="235" height="80" rx="8"/><text class="cvm-label" x="390" y="59">node 1 · measured image</text><rect class="box ends" x="392" y="64" width="170" height="56" rx="6"/><text class="box-title" x="477" y="79">TLS terminator</text><text class="key" x="477" y="95">key tls_sk</text><text class="box-text" x="477" y="111">cert: node-1</text></g>
+    <g class="node-2"><rect class="cvm" x="380" y="160" width="235" height="80" rx="8"/><text class="cvm-label" x="390" y="173">node 2 · measured image</text><rect class="box ends" x="392" y="178" width="170" height="56" rx="6"/><text class="box-title" x="477" y="193">TLS terminator</text><text class="key" x="477" y="209">key tls_sk</text><text class="box-text" x="477" y="225">cert: node-2</text></g>
+    <path class="same-key" d="M545,121 L545,177"/>
+    <text class="gap-label side" x="535" y="152">same key, from root_key</text>
+    <text class="note" x="16" y="256"><tspan class="note-key">ACME:</tspan> each node in its guest, under the derived key</text>
+    <text class="note" x="16" y="276"><tspan class="note-key">Clients pin:</tspan> one tls_pk, pinnable in the manifest like tx_io_pk</text>
+    <text class="note" x="16" y="296"><tspan class="note-key">Certificates:</tspan> one per node, all under the same key</text>
+  </g>
+
+  <!-- ===== D: one derived key, one shared name ===== -->
+  <g class="cell-d" transform="translate(850,445)">
+    <rect class="cell analysed" x="0" y="0" width="630" height="310" rx="8"/>
+    <text class="cell-title" x="16" y="26">D · one derived key, one shared name</text>
+    <g class="dns-box"><rect class="dns" x="16" y="96" width="210" height="80" rx="6"/><text class="dns-head" x="28" y="114">DNS</text><text class="record" x="28" y="146">rpc.example.net</text></g>
+    <path class="resolves" d="M226,142 L246,142" marker-end="url(#arrow-dns)"/>
+    <g class="lb"><rect class="box" x="250" y="116" width="104" height="52" rx="6"/><text class="box-title" x="302" y="138">L4 load</text><text class="box-title" x="302" y="154">balancer</text></g>
+    <path class="tls" d="M354,132 L376,86" marker-end="url(#arrow-tls)"/>
+    <path class="tls" d="M354,152 L376,200" marker-end="url(#arrow-tls)"/>
+    <g class="node-1"><rect class="cvm" x="380" y="46" width="235" height="80" rx="8"/><text class="cvm-label" x="390" y="59">node 1 · measured image</text><rect class="box ends" x="392" y="64" width="170" height="56" rx="6"/><text class="box-title" x="477" y="79">TLS terminator</text><text class="key" x="477" y="95">key tls_sk</text><text class="box-text" x="477" y="111">cert: rpc</text></g>
+    <g class="node-2"><rect class="cvm" x="380" y="160" width="235" height="80" rx="8"/><text class="cvm-label" x="390" y="173">node 2 · measured image</text><rect class="box ends" x="392" y="178" width="170" height="56" rx="6"/><text class="box-title" x="477" y="193">TLS terminator</text><text class="key" x="477" y="209">key tls_sk</text><text class="box-text" x="477" y="225">cert: rpc (the same one)</text></g>
+    <path class="same-key" d="M545,121 L545,177"/>
+    <text class="gap-label side" x="535" y="152">same key, from root_key</text>
+    <text class="note" x="16" y="256"><tspan class="note-key">ACME:</tspan> outside, DNS-01 by deploy, one CSR (the CSR dance)</text>
+    <text class="note" x="16" y="276"><tspan class="note-key">Clients pin:</tspan> one tls_pk, pinnable in the manifest like tx_io_pk</text>
+    <text class="note" x="16" y="296"><tspan class="note-key">Certificates:</tspan> one, on every node</text>
+  </g>
+
+  <!-- legend -->
+  <g class="legend-row" transform="translate(40,790)">
+    <path class="resolves" d="M0,0 L40,0" marker-end="url(#arrow-dns)"/>
+    <text class="legend" x="50" y="4">DNS resolves the name to</text>
+    <path class="tls" d="M220,0 L260,0" marker-end="url(#arrow-tls)"/>
+    <text class="legend" x="270" y="4">TCP passed through, TLS inside</text>
+    <path class="same-key" d="M480,-10 L480,10"/>
+    <text class="legend" x="492" y="4">the same key on both nodes</text>
+    <rect class="box ends" x="680" y="-10" width="36" height="20" rx="4"/>
+    <text class="legend" x="726" y="4">TLS ends here</text>
+    <rect class="cvm" x="840" y="-10" width="36" height="20" rx="4"/>
+    <text class="legend" x="886" y="4">a node's CVM</text>
+    <rect class="cell analysed" x="1000" y="-10" width="36" height="20" rx="4"/>
+    <text class="legend" x="1046" y="4">analysed in detail</text>
+  </g>
+  <text class="legend" x="40" y="825">A node can take more than one cell: one terminator picks the certificate by SNI, its own name resolving to its IP and the shared name to the L4 front.</text>
+</svg>

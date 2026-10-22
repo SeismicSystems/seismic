@@ -29,6 +29,8 @@ caveat per mechanism.
   - [Accepted risks](#accepted-risks)
   - [The rollback family](#the-rollback-family)
 - [Open decisions](#open-decisions)
+  - [By flow](#by-flow)
+  - [The four with deadlines](#the-four-with-deadlines)
 - [Design rationale](#design-rationale)
 
 ## Summary
@@ -48,7 +50,7 @@ caveat per mechanism.
 - **Each action has one anchor, matched to the actor's position.** The
   responder reads live chain state because it can; the joiner holds a frozen
   manifest because it must. [The table](#the-trust-anchor-per-action) names
-  all nine actions and the five parties that take them.
+  all eleven actions and the five parties that take them.
 - **The accepted risks are host influence.** A host owns its guest's disk,
   its POSTed config, its network, its clock, and its VM lifecycle, so the
   residuals cluster exactly where a locally checkable witness is the only
@@ -255,9 +257,9 @@ to learn M_h, then verify one attested head.
 
 Every trust-sensitive action in the network's life answers one question
 first, and each answers it against a different anchor, because each is taken
-from a different position. Only five parties take the nine actions — the
+from a different position. Only five parties take the eleven actions — the
 deployer, the validators, the clients, governance, and the security council
-that disaster recovery will one day need — and four of the nine are stations
+that disaster recovery will one day need — and four of the eleven are stations
 in a single validator's lifecycle:
 
 | Party | Action | Must answer | Anchor | Status |
@@ -268,6 +270,8 @@ in a single validator's lifecycle:
 |  | stake for a seat | does a validator seat imply TEE custody of its keys | at founding, the harvest quote binds both pubkeys to the measured guest; post-genesis, the deposit path registers keys with no hardware binding | open |
 |  | receive a snapshot at a resync | is this state the canonical network's | `K_snap` is derivable only from `root_key`, so a snapshot that decrypts came from inside the trust domain | designed; the purpose is ungranted and no process serves it |
 | Client | submit a TxSeismic | is this `tx_io_pk` this network's recipient key | epoch 0: the pin — hash the manifest against a pinned `network_id` and compare `tx_io_pk@0`, with no quote verification; later epochs: a record signed by the validator set, checked by a light client | epoch 0: the pin is built, the SDK check is [SEI-646](https://linear.app/seismic-systems/issue/SEI-646); later epochs open — today the SDKs trust whichever RPC they ask |
+|  | read shielded state — a signed read | did the response come from the network, unread on the way | `tx_io_pk`, as for a TxSeismic: the request is encrypted to it, and the response under a key from the same ECDH ([`TxResponse`](../key-schedule.md#layer-2--ecdh-shared-secrets)), so only a holder of `root_key` reads the one or produces the other. It says nothing about which head the node answered from | shipped; the anchor is the row above's, with its gaps |
+|  | read public state | is this response the chain's | today, the RPC it asks: TLS authenticates the name, which the operator controls ([clients of the public port](networking.md#clients-and-the-operator)); later, finalized heads checked by a light client | today the RPC is trusted; the light client is open ([Key records & light clients](https://linear.app/seismic-systems/project/key-records-and-light-clients-9a17291b5b1c)) |
 | Governance | change the accepted measurement set | is the change authorized | the manifest-pinned authority contract | a dev authority today; the mainnet authority is open |
 |  | rotate `root_key` to fresh entropy | is the rotation authorized, and does the successor chain to the key it replaces | undecided — the candidates are the manifest-pinned authority contract and a consensus event, and a post-recovery rotation is the security council's, authorized by the recovery ceremony itself; a published chain of wraps links each version to its predecessor, which is continuity, not authenticity: two holders can each wrap a different successor, and both chains verify. Authenticity needs an anchor `network_id` commits to; the direction is a record signed by the validator set, with the epoch-0 pin as its base case | open, and prerequisite to any nonzero purpose-key epoch |
 | Security Council | recover the network after a full-fleet loss | how does the network outlive losing every TEE at once | nothing — at least one node must stay live | open, pre-mainnet |
@@ -318,8 +322,10 @@ AES-256-GCM.
 
 - **Client to network: Noise N.** The client knows `tx_io_pk` from its attested
   evidence (`<- s`) and encrypts to it (`-> e, es`). Its `e` is the SDK
-  provider's keypair, minted once per provider. Signed reads come back under
-  the same key.
+  provider's keypair, minted once per provider. A signed read's response comes
+  back under a second key from the same ECDH, so a response that decrypts
+  came from a holder of `root_key`
+  ([the key schedule](../key-schedule.md#layer-2--ecdh-shared-secrets)).
 - **Root-key handshake: Noise NN, with `network_id` as the prologue.** The
   joiner sends `-> e`. The member answers `<- e, ee`, with `root_key` as the
   encrypted payload. Each side's TDX quote carries a hash over the transcript
@@ -373,6 +379,19 @@ two-thirds-of-validators bar consensus sets — and unlike a block, a granted
 `root_key` never reorgs away. Whether the joiner should require independent
 corroboration is open design work.
 
+**The operator reads and can forge public RPC.** Non-shielded requests and
+responses are protected by TLS only as far as where it ends, and the operator
+decides that by controlling the name's DNS: today it can get a certificate for
+its node's name at will, and once the image drops its proxy (decided, not
+built), TLS ends at a front the operator runs or rents. Either way the operator,
+and whoever runs its front, sees which public data a client asks for and can
+answer it falsely. Shielded state is unaffected: signed reads and transactions
+rest on `tx_io_pk` ([the trust anchor, per action](#the-trust-anchor-per-action)).
+Accepted because no guarantee about the transport reaches a browser without an
+anchor `network_id` does not commit to; the integrity of public reads is to
+come from the light client instead ([why not the
+transport](#design-rationale)).
+
 ### The rollback family
 
 A host owns its guest's disk, its POSTed configuration, its network, its
@@ -416,6 +435,72 @@ fabricate, rather than whatever the local reth tags as finalized. That is
 open design work.
 
 ## Open decisions
+
+The live list, grouped by the flow each one decides. The four with deadlines
+are described after it.
+
+### By flow
+
+- **The root-key handshake, node to node** — where `root_key` can be
+  released, so the highest stakes:
+  - [SEI-627](https://linear.app/seismic-systems/issue/SEI-627): whether the
+    wrap and install grants and the TPM move out of the network-facing
+    attestation service, and the typed interface every quote purpose goes
+    through, so a quote minted for one purpose is never accepted as another.
+  - [SEI-263](https://linear.app/seismic-systems/issue/SEI-263): whether one
+    responder's chain view may release `root_key` — corroborate, prove
+    freshness, or accept.
+  - [SEI-805](https://linear.app/seismic-systems/issue/SEI-805): whether a
+    joiner checks, after joining, that its responder ran an accepted image.
+  - [SEI-284](https://linear.app/seismic-systems/issue/SEI-284): two-phase
+    admission — a durable join credential, or verification on every fetch.
+  - [SEI-641](https://linear.app/seismic-systems/issue/SEI-641): one
+    orchestrator configures every founding box — the fake manifest and the
+    first-POST window.
+- **The application key, client to network** (`tx_io_pk`):
+  - [SEI-645](https://linear.app/seismic-systems/issue/SEI-645): how key
+    epochs above 0 are anchored.
+  - Root-key rotation ([SEI-176](https://linear.app/seismic-systems/issue/SEI-176)),
+    below.
+  - [SEI-382](https://linear.app/seismic-systems/issue/SEI-382): what happens
+    to non-derivable purpose-key epochs at the TEE cutover.
+- **The data, client to network:**
+  [SEI-941](https://linear.app/seismic-systems/issue/SEI-941): which public
+  reads a client verifies against verified headers.
+- **The transport, client to node:**
+  [SEI-994](https://linear.app/seismic-systems/issue/SEI-994), parked: whether
+  to attest the transport key — which key, under which name, and what
+  terminates TLS in the guest. The image ends no public TLS until a case
+  clears its bar
+  ([public reads trusted through the data](#design-rationale)).
+- **Validator keys:**
+  - Validator key custody ([SEI-399](https://linear.app/seismic-systems/issue/SEI-399)),
+    below.
+  - [SEI-381](https://linear.app/seismic-systems/issue/SEI-381): how a sealed
+    node's deposit signature binds its withdrawal address.
+- **The control plane**, who changes what the network trusts:
+  - Registry mutation authority
+    ([SEI-286](https://linear.app/seismic-systems/issue/SEI-286),
+    [SEI-660](https://linear.app/seismic-systems/issue/SEI-660)), below.
+  - [SEI-891](https://linear.app/seismic-systems/issue/SEI-891) and
+    [SEI-267](https://linear.app/seismic-systems/issue/SEI-267): what the
+    manifest's `bootstrap_policy_hash` is for, and whether a genesis contract
+    stores it.
+- **Resilience and hardening:**
+  - Disaster recovery ([SEI-202](https://linear.app/seismic-systems/issue/SEI-202)),
+    below.
+  - [SEI-640](https://linear.app/seismic-systems/issue/SEI-640): single points
+    of trust and failure.
+  - [SEI-952](https://linear.app/seismic-systems/issue/SEI-952): confining
+    in-guest root with an SELinux policy.
+  - [SEI-207](https://linear.app/seismic-systems/issue/SEI-207): summit's
+    database inside or outside LUKS.
+  - [SEI-285](https://linear.app/seismic-systems/issue/SEI-285): whether the
+    devp2p gossip identity is TEE-bound.
+  - [SEI-259](https://linear.app/seismic-systems/issue/SEI-259): whether
+    SecureBoot coverage (PCR 7) warrants an Azure v2 measurement schema.
+
+### The four with deadlines
 
 - **Disaster recovery** — must close before mainnet. The current default is
   permanent-brick risk on a full-fleet outage. The candidate shapes — a
@@ -516,6 +601,17 @@ per-purpose domain separation the key schedule enforces everywhere, and
 `tx_io_sk` is the most-exposed network key — every node's reth holds it for
 its process lifetime. If handshake ergonomics ever justify the identity key,
 it arrives as a new custodian method, not a redesign.
+
+**Public reads trusted through the data, not the transport** ([accepted
+risks](#accepted-risks)). A client can trust a public response by checking it
+against finalized heads, by receiving it under an application key only the
+network holds, or by attesting the TLS key or session its connection ends at.
+Attesting either needs TLS to end in the guest, and what a browser checks
+there is the WebPKI and CT, or a CAA record its DNS owner can rewrite, neither
+of which `network_id` commits to.
+So the image runs no public proxy, and a front outside the CVM terminates TLS.
+The options pass, and the bar a terminator must clear to return to the image,
+are in [the public RPC trust record](decisions/2026-10-public-rpc-trust.md).
 
 **One list rather than a caveat per mechanism** (the whole doc). A residual
 stated only where it bites is easy to accept twice and review never. The

@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="535" viewBox="0 0 1500 535" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .bg { fill: #ffffff; }
+    .title { font-size: 17px; font-weight: bold; fill: #222; }
+    .col-head { font-size: 13px; font-weight: bold; fill: #444; text-anchor: middle; }
+    .front-zone { fill: #f4f4f4; }
+    .chosen { fill: #2f8f2f; fill-opacity: 0.08; }
+    .divider { stroke: #d0d0d0; stroke-width: 1; }
+    .panel-label { font-size: 14px; font-weight: bold; fill: #222; }
+    .cvm { fill: #fbfbfb; stroke: #555; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .cvm-label { font-size: 11px; fill: #555; font-style: italic; }
+    .box { fill: #f6f6f6; stroke: #9a9a9a; stroke-width: 1.5; }
+    .box.ends { fill: #ffe6cc; stroke: #e07b00; stroke-width: 2.5; }
+    .box-title { font-size: 13px; font-weight: bold; fill: #222; text-anchor: middle; }
+    .box-text { font-size: 11px; fill: #444; text-anchor: middle; }
+    .backend { font-size: 12px; fill: #222; }
+    .side-label { font-size: 11px; fill: #444; }
+    .absent { font-size: 12px; fill: #999; font-style: italic; text-anchor: middle; }
+    .tls { stroke: #3b6fd8; stroke-width: 3; fill: none; }
+    .http { stroke: #888; stroke-width: 2; stroke-dasharray: 6 4; fill: none; }
+    .flow-label { font-size: 11px; fill: #333; text-anchor: middle; }
+    .note-head { font-size: 13px; font-weight: bold; fill: #222; }
+    .note { font-size: 12px; fill: #333; }
+    .legend { font-size: 12px; fill: #333; }
+  </style>
+  <defs>
+    <marker id="arrow-tls" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b6fd8"/>
+    </marker>
+    <marker id="arrow-http" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1500" height="535"/>
+  <text class="title" x="40" y="32">Where TLS ends for public RPC: today (A) and the decision (B)</text>
+
+  <!-- column backgrounds and headings -->
+  <rect class="front-zone" x="230" y="70" width="250" height="383"/>
+  <rect class="chosen" x="20" y="243" width="1460" height="210" rx="6"/>
+  <text class="col-head" x="115" y="60">client</text>
+  <text class="col-head" x="355" y="60">front, outside the CVM</text>
+  <text class="col-head" x="820" y="60">the node's CVM</text>
+  <text class="col-head" x="1300" y="60">what it means</text>
+  <line class="divider" x1="20" y1="243" x2="1480" y2="243"/>
+
+  <!-- ===== A: L7 proxy in the image — today (y0 = 70) ===== -->
+  <g class="panel-a" transform="translate(0,70)">
+    <text class="panel-label" x="40" y="22">A · L7 proxy in the image — today's node</text>
+    <g class="client"><rect class="box" x="40" y="50" width="150" height="60" rx="8"/><text class="box-title" x="115" y="76">client</text><text class="box-text" x="115" y="94">browser, SDK</text></g>
+    <text class="absent" x="355" y="112">no front</text>
+    <rect class="cvm" x="520" y="28" width="600" height="122" rx="10"/>
+    <text class="cvm-label" x="532" y="43">node · the measured image</text>
+    <g class="slot"><rect class="box ends" x="545" y="50" width="210" height="60" rx="8"/><text class="box-title" x="650" y="70">L7 proxy (e.g. Caddy)</text><text class="box-text" x="650" y="86">TLS, ACME, exact routes</text><text class="box-text" x="650" y="101">per-node key, bound to no quote</text></g>
+    <g class="backends"><rect class="box" x="850" y="47" width="250" height="66" rx="8"/><text class="backend" x="865" y="67">reth :8545, :8546</text><text class="backend" x="865" y="85">summit :3030</text><text class="backend" x="865" y="103">attestation :7878</text></g>
+    <path class="tls" d="M190,80 L541,80" marker-end="url(#arrow-tls)"/>
+    <text class="flow-label" x="355" y="72">TLS</text>
+    <path class="http" d="M755,80 L846,80" marker-end="url(#arrow-http)"/>
+    <text class="flow-label" x="802" y="72">loopback</text>
+    <g class="notes"><text class="note-head" x="1140" y="60">TLS ends in the guest</text><text class="note" x="1140" y="82">Guest: Caddy, ACME, domain config, a TLS key</text><text class="note" x="1140" y="102">Channel: unverifiable, the key is bound to no quote</text><text class="note" x="1140" y="122">One hostname per node</text></g>
+  </g>
+
+  <!-- ===== B: L7 front only — chosen (y0 = 245) ===== -->
+  <g class="panel-b" transform="translate(0,245)">
+    <text class="panel-label" x="40" y="22">B · L7 front only — chosen</text>
+    <g class="client"><rect class="box" x="40" y="40" width="150" height="50" rx="8"/><text class="box-title" x="115" y="62">client</text><text class="box-text" x="115" y="79">browser, SDK</text></g>
+    <g class="client-direct"><rect class="box" x="40" y="120" width="150" height="50" rx="8"/><text class="box-title" x="115" y="142">operator CLI, CI</text><text class="box-text" x="115" y="159">or any SDK</text></g>
+    <g class="front"><rect class="box ends" x="260" y="40" width="190" height="50" rx="8"/><text class="box-title" x="355" y="62">L7 front (e.g. Caddy)</text><text class="box-text" x="355" y="79">TLS, path map, WAF</text></g>
+    <path class="http" d="M355,90 L355,108" marker-end="url(#arrow-http)"/>
+    <text class="side-label" x="366" y="106">other nodes</text>
+    <rect class="cvm" x="520" y="28" width="600" height="152" rx="10"/>
+    <text class="cvm-label" x="532" y="43">node · the measured image</text>
+    <text class="absent" x="650" y="100">no proxy in the image</text>
+    <g class="backends"><rect class="box" x="850" y="50" width="250" height="110" rx="8"/><text class="backend" x="865" y="82">reth :8545, :8546</text><text class="backend" x="865" y="105">summit :3030</text><text class="backend" x="865" y="128">attestation :7878</text></g>
+    <path class="tls" d="M190,65 L256,65" marker-end="url(#arrow-tls)"/>
+    <text class="flow-label" x="225" y="57">TLS</text>
+    <path class="http" d="M450,65 L846,65" marker-end="url(#arrow-http)"/>
+    <text class="flow-label" x="650" y="57">HTTP over the operator's VNet</text>
+    <path class="http" d="M190,145 L846,145" marker-end="url(#arrow-http)"/>
+    <text class="flow-label" x="345" y="137">plain HTTP straight to the node's IP, past the front</text>
+    <g class="notes"><text class="note-head" x="1140" y="60">TLS ends at the front</text><text class="note" x="1140" y="82">Guest: no proxy; backends listen beyond loopback</text><text class="note" x="1140" y="102">Trust comes from the data and the key</text><text class="note" x="1140" y="122">One hostname over many nodes</text><text class="note" x="1140" y="145">CLI and CI reach nodes by IP, no TLS</text></g>
+  </g>
+
+  <!-- legend -->
+  <g class="legend-row" transform="translate(40,480)">
+    <path class="tls" d="M0,0 L40,0" marker-end="url(#arrow-tls)"/>
+    <text class="legend" x="50" y="4">TLS</text>
+    <path class="http" d="M110,0 L150,0" marker-end="url(#arrow-http)"/>
+    <text class="legend" x="160" y="4">plain HTTP</text>
+    <rect class="box ends" x="260" y="-10" width="36" height="20" rx="4"/>
+    <text class="legend" x="306" y="4">TLS ends here</text>
+    <rect class="cvm" x="430" y="-10" width="36" height="20" rx="4"/>
+    <text class="legend" x="476" y="4">the CVM: what the image measures</text>
+  </g>
+  <text class="legend" x="40" y="515">A's key is bound to no quote, so ending TLS in the guest gives no client anything to verify. B moves the L7 work to the front.</text>
+</svg>
