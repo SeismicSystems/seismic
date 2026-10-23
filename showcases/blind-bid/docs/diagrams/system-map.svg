@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 560" width="1180" height="560" font-family="IBM Plex Mono, ui-monospace, monospace">
+  <rect width="1180" height="560" fill="#0a0e0c"/>
+  <g stroke="#2b6b4a" stroke-width="1" opacity=".55">
+    <path d="M24 24 h34 M24 24 v34"/><path d="M1156 24 h-34 M1156 24 v34"/>
+    <path d="M24 536 h34 M24 536 v-34"/><path d="M1156 536 h-34 M1156 536 v-34"/>
+  </g>
+
+  <text x="60" y="66" fill="#7ef7c0" font-size="13" letter-spacing="3">BLINDBID · SYSTEM MAP</text>
+  <text x="60" y="104" fill="#e8fff4" font-size="30" font-weight="bold" letter-spacing="1">WHO TALKS TO WHOM</text>
+  <text x="60" y="132" fill="#5f8a78" font-size="13">every arrow is a real transaction on chain 5124 — nothing is simulated</text>
+
+  <!-- browser -->
+  <rect x="60" y="170" width="280" height="180" fill="#0e1412" stroke="#2b6b4a"/>
+  <text x="80" y="198" fill="#7ef7c0" font-size="12" letter-spacing="2">BROWSER (VITE + REACT)</text>
+  <text x="80" y="228" fill="#e8fff4" font-size="13">public sheet · buyer sheet</text>
+  <text x="80" y="252" fill="#e8fff4" font-size="13">supplier sheet · private slots</text>
+  <text x="80" y="284" fill="#5f8a78" font-size="11">embedded wallet (key in localStorage)</text>
+  <text x="80" y="306" fill="#5f8a78" font-size="11">reads the chain directly</text>
+  <text x="80" y="328" fill="#5f8a78" font-size="11">tx type 0x4A rejected by the node</text>
+
+  <!-- writer -->
+  <rect x="450" y="170" width="280" height="180" fill="#0e1412" stroke="#ff3ea5"/>
+  <text x="470" y="198" fill="#ff3ea5" font-size="12" letter-spacing="2">LOCAL SIGNER · 127.0.0.1:4181</text>
+  <text x="470" y="228" fill="#e8fff4" font-size="13">POST /bid  → sealed bid</text>
+  <text x="470" y="252" fill="#e8fff4" font-size="13">POST /award → close & award</text>
+  <text x="470" y="276" fill="#e8fff4" font-size="13">POST /read → signed read</text>
+  <text x="470" y="308" fill="#5f8a78" font-size="11">node signs the 0x4A envelope</text>
+  <text x="470" y="328" fill="#5f8a78" font-size="11">the key never leaves localhost</text>
+
+  <!-- contracts -->
+  <rect x="840" y="170" width="280" height="180" fill="#0e1412" stroke="#7ef7c0"/>
+  <text x="860" y="198" fill="#7ef7c0" font-size="12" letter-spacing="2">SEISMIC TESTNET 5124</text>
+  <text x="860" y="228" fill="#e8fff4" font-size="13">BlindBid  0xd919…7ec4</text>
+  <text x="860" y="252" fill="#e8fff4" font-size="13">SealStore 0x427b…1e85</text>
+  <text x="860" y="284" fill="#5f8a78" font-size="11">gas paid in sUSDC (6 decimals)</text>
+  <text x="860" y="306" fill="#5f8a78" font-size="11">sealed bid ≈ 0.07 sUSDC</text>
+  <text x="860" y="328" fill="#5f8a78" font-size="11">plain tx ≈ 0.003 sUSDC</text>
+
+  <!-- arrows -->
+  <path d="M340 240 H446" stroke="#ff3ea5" stroke-width="2"/><path d="M446 240 l-9 -6 v12 z" fill="#ff3ea5"/>
+  <text x="352" y="230" fill="#ff3ea5" font-size="11">key + args</text>
+  <path d="M730 240 H836" stroke="#7ef7c0" stroke-width="2"/><path d="M836 240 l-9 -6 v12 z" fill="#7ef7c0"/>
+  <text x="742" y="230" fill="#7ef7c0" font-size="11">signed tx</text>
+
+  <!-- direct read path -->
+  <path d="M200 350 V400 H980 V350" fill="none" stroke="#5f8a78" stroke-width="2" stroke-dasharray="6 5"/>
+  <path d="M200 350 l-6 9 h12 z" fill="#5f8a78"/><path d="M980 350 l-6 9 h12 z" fill="#5f8a78"/>
+  <text x="470" y="424" fill="#5f8a78" font-size="12" letter-spacing="1">DIRECT READS — eth_call / eth_getStorageAt (free, no key)</text>
+
+  <!-- legend -->
+  <rect x="60" y="452" width="1060" height="64" fill="#0e1412" stroke="#2b6b4a" stroke-dasharray="5 4"/>
+  <text x="84" y="480" fill="#7ef7c0" font-size="12" letter-spacing="2">WHAT AN OBSERVER CAN PROVE</text>
+  <text x="84" y="504" fill="#e8fff4" font-size="13">how many envelopes were filed · the deadline · the winner · the audit aggregate (sum) — and nothing else</text>
+</svg>
