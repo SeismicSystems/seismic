@@ -65,6 +65,7 @@ export {
 // internal helper rather than a root re-export.
 export { getPlaintextCalldata } from '@sviem/contract/calldata.ts'
 export {
+  getSeismicAbiItem,
   hasShieldedParams,
   remapSeismicAbiInputs,
 } from '@sviem/contract/abi.ts'
