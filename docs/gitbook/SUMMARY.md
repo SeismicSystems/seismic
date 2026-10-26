@@ -29,6 +29,7 @@
   * [Intelligence Contracts](tutorials/src20/intelligence-contracts.md)
   * [Building the Frontend](tutorials/src20/building-the-frontend.md)
 * [Clown Beatdown](tutorials/clown-beatdown/understanding-the-clown-beatdown-contract.md)
+* [Sealed-Bid Tender](tutorials/sealed-bid-tender/README.md)
   * [Setting Up Your Project](tutorials/clown-beatdown/setting-up-your-project/README.md)
     * [Verify devtool installation](tutorials/clown-beatdown/setting-up-your-project/verify-devtool-installation.md)
     * [Create project structure](tutorials/clown-beatdown/setting-up-your-project/create-project-structure.md)
