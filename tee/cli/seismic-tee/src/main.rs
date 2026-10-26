@@ -951,8 +951,6 @@ mod tests {
                 "--manifest",
                 "tee/networks/devnet-3/network-manifest.json",
                 "--no-verify",
-                "--email",
-                "x@y",
                 "-y",
             ],
             vec![

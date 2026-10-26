@@ -18,9 +18,9 @@
 //!   deploy-verified, and only those that pass are handed out. With none,
 //!   the run refuses before anything is sent.
 //!
-//! `seismic_nodeInfo` is read over the node's public JSON-RPC
-//! (`https://<fqdn>/rpc`, the HTTPS proxy in front of reth) with the same client the
-//! attestation service is read with ([`rpc::Client`]); the `seismic` namespace
+//! `seismic_nodeInfo` is read from reth's JSON-RPC on the node's IP
+//! (`http://<ip>:8545`), the IP the key holder's appraisal names, with the
+//! same client the attestation service is read with ([`rpc::Client`]); the `seismic` namespace
 //! deliberately keeps nodeInfo public (reth's `admin` namespace is disabled on
 //! these nodes).
 //!
@@ -202,7 +202,7 @@ pub struct KeyHolder {
     pub public_ip: IpAddr,
     /// `http://<ip>:7878`, the endpoint appraised.
     pub attestation_rpc_url: String,
-    /// `https://<fqdn>/rpc`, where `seismic_nodeInfo` is read.
+    /// `http://<ip>:8545`, where `seismic_nodeInfo` is read.
     pub eth_rpc_url: String,
 }
 

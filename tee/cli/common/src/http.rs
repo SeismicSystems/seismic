@@ -1,10 +1,12 @@
 //! Where a node listens, and the client both command groups reach it with.
 //!
 //! A deployed node is a sealed VM: there is no SSH, so every interaction is an
-//! HTTP or JSON-RPC call to one of the ports below. Two of them are
+//! HTTP or JSON-RPC call to one of the ports below, on the node's IP and in
+//! plain HTTP: nothing in the image terminates TLS. Two of them are
 //! operator-only and reachable only from the CIDR the node's NSG pins
-//! (`operator_ip_cidr`); the RPC is public, behind the node's HTTPS proxy and a
-//! real cert.
+//! (`operator_ip_cidr`). The RPC is reth's own listener, which public clients
+//! reach over HTTPS through the network's front and this tooling reaches
+//! directly.
 
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -13,18 +15,19 @@ use crate::descriptor::NodeDescriptor;
 use crate::error::Result;
 
 /// tdx-init's one-shot config receiver, up only until a boot's POST is
-/// consumed. Plain HTTP: it runs before the node has a certificate.
+/// consumed.
 pub const TDX_INIT_PORT: u16 = 8080;
 /// The attestation service's JSON-RPC: LUKS provisioning status, deploy
 /// verification evidence, the root-key handshake.
 pub const ATTESTATION_RPC_PORT: u16 = 7878;
 /// The attestation service's founding harvest: summit's pubkeys for the life of
 /// the boot, and a quote over them until the config POST delivers the network
-/// manifest. Plain HTTP for the same reason as tdx-init: pre-certificate.
-/// The same process as [`ATTESTATION_RPC_PORT`], on a port of its own because
+/// manifest. The same process as [`ATTESTATION_RPC_PORT`], on a port of its own because
 /// the NSG filters only by port: this one is operator-only, that one is open
 /// to anyone.
 pub const HARVEST_PORT: u16 = 7879;
+/// reth's Ethereum JSON-RPC.
+pub const ETH_RPC_PORT: u16 = 8545;
 
 /// How long any single request waits before it is treated as unreachable.
 ///
@@ -84,10 +87,11 @@ impl NodeDescriptor {
         format!("http://{}", SocketAddr::new(self.public_ip, HARVEST_PORT))
     }
 
-    /// The node's public Ethereum JSON-RPC: its HTTPS proxy sends `/rpc` to reth,
-    /// which is why this one goes to the FQDN over TLS rather than to the IP.
+    /// reth's Ethereum JSON-RPC, where `seismic_nodeInfo` and block 0 are
+    /// read. On the IP rather than the FQDN: the name belongs to the front,
+    /// and these reads check the node, by the IP its appraisal names.
     pub fn eth_rpc_url(&self) -> String {
-        format!("https://{}/rpc", self.fqdn)
+        format!("http://{}", SocketAddr::new(self.public_ip, ETH_RPC_PORT))
     }
 }
 
@@ -102,16 +106,16 @@ mod tests {
         }
     }
 
-    /// The operator-only ports address the node by IP; only the public RPC
-    /// uses the FQDN, because only it has a certificate to match.
+    /// Every port addresses the node by IP, the RPC included: the FQDN is
+    /// the front's.
     #[test]
-    fn operator_ports_use_the_ip_and_the_rpc_uses_the_fqdn() {
+    fn every_port_uses_the_ip() {
         let d = descriptor();
 
         assert_eq!(d.tdx_init_url(), "http://203.0.113.7:8080/");
         assert_eq!(d.attestation_rpc_url(), "http://203.0.113.7:7878");
         assert_eq!(d.harvest_url(), "http://203.0.113.7:7879");
-        assert_eq!(d.eth_rpc_url(), "https://az-1.seismicdev.net/rpc");
+        assert_eq!(d.eth_rpc_url(), "http://203.0.113.7:8545");
     }
 
     /// An IPv6 address is bracketed in a URL, or its colons read as a port.
@@ -124,6 +128,7 @@ mod tests {
         assert_eq!(d.tdx_init_url(), "http://[2001:db8::1]:8080/");
         assert_eq!(d.attestation_rpc_url(), "http://[2001:db8::1]:7878");
         assert_eq!(d.harvest_url(), "http://[2001:db8::1]:7879");
+        assert_eq!(d.eth_rpc_url(), "http://[2001:db8::1]:8545");
     }
 
     #[test]

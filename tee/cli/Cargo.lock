@@ -497,7 +497,7 @@ dependencies = [
 [[package]]
 name = "attestation"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/attested-tls?rev=4eaf3239b5cd4d078fb234e3364dbe0ab2827de3#4eaf3239b5cd4d078fb234e3364dbe0ab2827de3"
+source = "git+https://github.com/SeismicSystems/attested-tls?rev=1f7147c20ee7263420979c787b4946b15d50e14e#1f7147c20ee7263420979c787b4946b15d50e14e"
 dependencies = [
  "anyhow",
  "attest-measure",
@@ -513,11 +513,14 @@ dependencies = [
  "parity-scale-codec",
  "pccs",
  "pem-rfc7468",
+ "prost",
  "rand_core 0.6.4",
  "reqwest 0.13.4",
+ "rsa",
  "rustls-webpki",
  "serde",
  "serde_json",
+ "sha2",
  "tdx-attest",
  "thiserror 2.0.20",
  "time",
@@ -3405,7 +3408,7 @@ checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 [[package]]
 name = "pccs"
 version = "0.0.1"
-source = "git+https://github.com/SeismicSystems/attested-tls?rev=4eaf3239b5cd4d078fb234e3364dbe0ab2827de3#4eaf3239b5cd4d078fb234e3364dbe0ab2827de3"
+source = "git+https://github.com/SeismicSystems/attested-tls?rev=1f7147c20ee7263420979c787b4946b15d50e14e#1f7147c20ee7263420979c787b4946b15d50e14e"
 dependencies = [
  "anyhow",
  "dcap-qvl",
@@ -4365,7 +4368,7 @@ dependencies = [
 [[package]]
 name = "seismic-attestation"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=a3e6e6722eaab3e234c654058f2695c015b274c9#a3e6e6722eaab3e234c654058f2695c015b274c9"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d5525848961439ef57fac43f98f8a10fa6b95099#d5525848961439ef57fac43f98f8a10fa6b95099"
 dependencies = [
  "attestation",
  "hex",
@@ -4374,12 +4377,13 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror 2.0.20",
+ "tracing",
 ]
 
 [[package]]
 name = "seismic-attestation-rpc"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=a3e6e6722eaab3e234c654058f2695c015b274c9#a3e6e6722eaab3e234c654058f2695c015b274c9"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d5525848961439ef57fac43f98f8a10fa6b95099#d5525848961439ef57fac43f98f8a10fa6b95099"
 dependencies = [
  "jsonrpsee",
  "secp256k1 0.30.0",
@@ -4390,7 +4394,7 @@ dependencies = [
 [[package]]
 name = "seismic-manifest"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=a3e6e6722eaab3e234c654058f2695c015b274c9#a3e6e6722eaab3e234c654058f2695c015b274c9"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d5525848961439ef57fac43f98f8a10fa6b95099#d5525848961439ef57fac43f98f8a10fa6b95099"
 dependencies = [
  "hex",
  "seismic-network-manifest",
@@ -4400,7 +4404,7 @@ dependencies = [
 [[package]]
 name = "seismic-measurement-admission"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=a3e6e6722eaab3e234c654058f2695c015b274c9#a3e6e6722eaab3e234c654058f2695c015b274c9"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d5525848961439ef57fac43f98f8a10fa6b95099#d5525848961439ef57fac43f98f8a10fa6b95099"
 dependencies = [
  "alloy-primitives",
  "hex",
@@ -4413,7 +4417,7 @@ dependencies = [
 [[package]]
 name = "seismic-network-manifest"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=a3e6e6722eaab3e234c654058f2695c015b274c9#a3e6e6722eaab3e234c654058f2695c015b274c9"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d5525848961439ef57fac43f98f8a10fa6b95099#d5525848961439ef57fac43f98f8a10fa6b95099"
 dependencies = [
  "hex",
  "serde",
@@ -4546,7 +4550,7 @@ dependencies = [
 [[package]]
 name = "seismic-verify-quote"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=a3e6e6722eaab3e234c654058f2695c015b274c9#a3e6e6722eaab3e234c654058f2695c015b274c9"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d5525848961439ef57fac43f98f8a10fa6b95099#d5525848961439ef57fac43f98f8a10fa6b95099"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -5061,7 +5065,7 @@ dependencies = [
 [[package]]
 name = "tdx-init-config"
 version = "0.1.0"
-source = "git+https://github.com/SeismicSystems/enclave.git?rev=a3e6e6722eaab3e234c654058f2695c015b274c9#a3e6e6722eaab3e234c654058f2695c015b274c9"
+source = "git+https://github.com/SeismicSystems/enclave.git?rev=d5525848961439ef57fac43f98f8a10fa6b95099#d5525848961439ef57fac43f98f8a10fa6b95099"
 dependencies = [
  "serde",
 ]

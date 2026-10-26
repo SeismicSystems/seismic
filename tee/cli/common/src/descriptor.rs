@@ -45,15 +45,17 @@ use crate::error::{Error, Result};
 /// stores and re-reads a node table with no second definition of what a node
 /// is.
 ///
-/// Both fields reach the node as its tdx-init config (`[node].external_ip`
-/// and `[node.domain].name`), typed as tdx-init types them, so a node table
-/// holding a value tdx-init would refuse fails to load.
+/// Both fields are typed as tdx-init types an address and a name, so a node
+/// table holding a value tdx-init would refuse fails to load. `public_ip`
+/// reaches the node as its tdx-init config (`[node].external_ip`); `fqdn`
+/// never does.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NodeDescriptor {
-    /// The address the operator-only ports are reached on.
+    /// The address every port on the node is reached on.
     pub public_ip: IpAddr,
-    /// The node's DNS name — the cert domain, and where clients reach its RPC.
+    /// The node's DNS name, which the network's front answers on. The node
+    /// terminates no TLS, so it is never told its name.
     pub fqdn: Hostname,
 }
 
@@ -399,9 +401,8 @@ mod tests {
         }
     }
 
-    /// Both values reach a root-run consumer on the node as tdx-init config,
-    /// so the table refuses what tdx-init would: a `public_ip` that is not an
-    /// IP address, and an `fqdn` carrying shell or config syntax.
+    /// The table refuses what tdx-init would: a `public_ip` that is not an IP
+    /// address, and an `fqdn` carrying shell or config syntax.
     #[test]
     fn a_value_tdx_init_would_refuse_fails_to_load() {
         for (json, expected) in [
@@ -429,7 +430,7 @@ mod tests {
         )
         .unwrap_err()
         .to_string();
-        assert!(err.contains("domain name"), "{err}");
+        assert!(err.contains("hostname"), "{err}");
     }
 
     /// A key that is present but unusable is never called "missing", and the

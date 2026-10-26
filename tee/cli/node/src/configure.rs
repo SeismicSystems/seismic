@@ -17,8 +17,7 @@
 //! harvest record. `--check` runs those assertions alone.
 //!
 //! There is no per-node `node.toml`: `[node]` (external_ip) comes from the
-//! descriptor, `[node.domain]` from the descriptor fqdn and `--email`, and
-//! `[network]` from `--manifest`, `--reth-genesis`, `--summit-genesis` and the
+//! descriptor, and `[network]` from `--manifest`, `--reth-genesis`, `--summit-genesis` and the
 //! bootnodes. Those network-wide artifacts stay standalone files, merged only
 //! at POST time. The config is built as the [`InitConfig`] type tdx-init
 //! deserializes it with (`deny_unknown_fields` at the far end), so this CLI
@@ -50,9 +49,7 @@ use clap_complete::ArgValueCandidates;
 use seismic_tee_common::{Artifact, Descriptors, Manifest, NetworkDir};
 use seismic_tee_context::{Context, Selected, complete, echo, read_nodes};
 use sha2::{Digest as _, Sha256};
-use tdx_init_config::{
-    Bootnode, DomainConfig, Hostname, InitConfig, NetworkConfig, NodeConfig, PlainEmail,
-};
+use tdx_init_config::{Bootnode, InitConfig, NetworkConfig, NodeConfig};
 
 use crate::args::CohortArgs;
 use crate::cohort;
@@ -65,9 +62,6 @@ use crate::verify::{PolicySourceArgs, VerifierArgs, retry_flags};
 /// format + mkfs + TPM enroll).
 pub const TDX_INIT_LISTENER_TIMEOUT: Duration = Duration::from_secs(180);
 pub const TDX_INIT_RETRY_INTERVAL: Duration = Duration::from_secs(5);
-
-/// Where the node's Let's Encrypt registration goes, unless told otherwise.
-pub const DEFAULT_EMAIL: &str = "ops@seismic.systems";
 
 /// Resolve `--reth-genesis`, defaulting to the artifact-set convention:
 /// `reth-genesis.json` beside the manifest, exactly where `assemble` writes
@@ -138,10 +132,6 @@ pub struct ConfigInputs<'a> {
     pub bootnodes: &'a [Bootnode],
     /// The node's own public IP → `[node].external_ip` (reth's `--nat extip`).
     pub external_ip: IpAddr,
-    /// The node's DNS name → `[node.domain].name`, the cert domain.
-    pub fqdn: &'a Hostname,
-    /// → `[node.domain].email`, the Let's Encrypt registration.
-    pub email: &'a PlainEmail,
     /// Only ever `true` for the pinned box of a founding. Not sent: tdx-init
     /// tells the pinned box from the manifest.
     pub pinned_box: bool,
@@ -193,10 +183,6 @@ pub fn build_config(inputs: &ConfigInputs<'_>) -> anyhow::Result<InitConfig> {
         },
         node: NodeConfig {
             external_ip: inputs.external_ip,
-            domain: DomainConfig {
-                email: inputs.email.clone(),
-                name: inputs.fqdn.clone(),
-            },
         },
     })
 }
@@ -226,7 +212,6 @@ pub struct Preview<'a> {
     pub reth_genesis: &'a Artifact,
     /// As delivered: spliced, in a founding.
     pub summit_genesis: &'a Artifact,
-    pub email: &'a PlainEmail,
     /// The policy's provenance, or `None` under `--no-verify`.
     pub policy: Option<&'a str>,
     pub run: &'a Run,
@@ -249,7 +234,6 @@ pub fn render_preview(preview: &Preview<'_>) -> String {
         manifest,
         reth_genesis,
         summit_genesis,
-        email,
         policy,
         run,
         skipped,
@@ -298,7 +282,6 @@ pub fn render_preview(preview: &Preview<'_>) -> String {
         "Appraise against:",
         policy.unwrap_or("nothing (--no-verify)").to_string(),
     );
-    field("Cert email:", email.to_string());
     match run {
         Run::Found { pinned, rest } => {
             field(
@@ -491,11 +474,6 @@ pub struct ConfigureArgs {
     #[arg(long, value_name = "ENODE")]
     pub bootnode: Vec<Bootnode>,
 
-    /// Contact email for the node's Let's Encrypt registration; goes
-    /// into [node.domain].email of the POSTed config. Same across a run.
-    #[arg(long, default_value = DEFAULT_EMAIL)]
-    pub email: PlainEmail,
-
     /// Configure without deploy-verifying the nodes configured. By default
     /// each node is appraised once it is up — the same check as `seismic-tee
     /// node verify`, against the policy --manifest pins — and a node that
@@ -665,8 +643,6 @@ mod tests {
     use crate::test_support::{FIXTURE_MANIFEST, FakeServer, refused_url, write_file};
     use crate::verify;
 
-    const FQDN: &str = "node1.example.com";
-    const EMAIL: &str = "ops@example.com";
     const EXTERNAL_IP: &str = "203.0.113.7";
     /// chainId matches the fixture manifest's eth.chain_id.
     const RETH_GENESIS: &[u8] = br#"{"config": {"chainId": 5124}, "alloc": {}}"#;
@@ -677,10 +653,6 @@ mod tests {
         format!("enode://{}@198.51.100.1:30303", "ab".repeat(64))
             .parse()
             .unwrap()
-    }
-
-    fn email() -> PlainEmail {
-        EMAIL.parse().unwrap()
     }
 
     fn manifest() -> Manifest {
@@ -700,8 +672,6 @@ mod tests {
             summit_genesis: &Artifact::new("/nets/devnet/summit-genesis.toml", summit_genesis),
             bootnodes,
             external_ip: EXTERNAL_IP.parse().unwrap(),
-            fqdn: &FQDN.parse().unwrap(),
-            email: &email(),
             pinned_box,
         })
     }
@@ -729,8 +699,7 @@ mod tests {
         assert_eq!(sections, ["network", "node"]);
         assert_eq!(table["node"].get("genesis_node"), None);
         assert_eq!(table["node"]["external_ip"].as_str(), Some(EXTERNAL_IP));
-        assert_eq!(table["node"]["domain"]["name"].as_str(), Some(FQDN));
-        assert_eq!(table["node"]["domain"]["email"].as_str(), Some(EMAIL));
+        assert_eq!(table["node"].get("domain"), None);
         assert_eq!(
             decode(table["network"]["manifest_base64"].as_str().unwrap()),
             manifest.bytes()
@@ -900,7 +869,7 @@ mod tests {
         let received: InitConfig =
             toml::from_str(std::str::from_utf8(&requests[0].body).unwrap()).unwrap();
         assert_eq!(received.network.bootnodes, [bootnode()]);
-        assert_eq!(received.node.domain.name.as_ref(), FQDN);
+        assert_eq!(received.node.external_ip.to_string(), EXTERNAL_IP);
     }
 
     /// A rejection is propagated at once, status and body: neither a 4xx
@@ -985,7 +954,6 @@ mod tests {
         let args = parse(&[]).unwrap();
         assert!(args.names.is_empty());
         assert!(args.bootnode.is_empty());
-        assert_eq!(args.email.as_ref(), DEFAULT_EMAIL);
         assert!(!args.no_verify);
         assert!(!args.yes, "the gate is on unless asked off");
         assert!(!args.check);
@@ -999,21 +967,19 @@ mod tests {
         assert!(args.yes);
     }
 
-    /// `--email` and `--bootnode` are parsed as the types tdx-init takes, so
-    /// a value it would refuse is refused before anything is probed or sent.
+    /// `--bootnode` is parsed as the type tdx-init takes, so a value it would
+    /// refuse is refused before anything is probed or sent.
     #[test]
     fn a_flag_value_tdx_init_would_refuse_does_not_parse() {
-        assert!(parse(&["--email", "ops$(reboot)@example.com"]).is_err());
         assert!(parse(&["--bootnode", "enode://ab@1.2.3.4:30303"]).is_err());
-        let args = parse(&[
-            "--email",
-            "ops@example.com",
-            "--bootnode",
-            bootnode().as_ref(),
-        ])
-        .unwrap();
-        assert_eq!(args.email, email());
+        let args = parse(&["--bootnode", bootnode().as_ref()]).unwrap();
         assert_eq!(args.bootnode, [bootnode()]);
+    }
+
+    /// `--email` went with the node's certificate: the image takes none.
+    #[test]
+    fn the_removed_email_flag_does_not_parse() {
+        assert!(parse(&["--email", "ops@example.com"]).is_err());
     }
 
     /// The mode flags are gone: the network's state decides.
@@ -1127,7 +1093,6 @@ mod tests {
             manifest: &manifest,
             reth_genesis: &reth_genesis,
             summit_genesis: &summit_genesis,
-            email: &email(),
             policy: Some("/nets/devnet/measurement-policy-bootstrap.json (pinned by --manifest)"),
             run: &run,
             skipped: &[],
@@ -1151,7 +1116,6 @@ mod tests {
                 hex::encode(Sha256::digest(SUMMIT_GENESIS))
             ),
             "measurement-policy-bootstrap.json (pinned by",
-            EMAIL,
             "Nodes:            alpha, first and alone: keeps its candidate root_key",
             "then beta, gamma: fetch root_key from alpha",
             "Not up yet:       gamma (waited for, up to 180s)",
@@ -1180,7 +1144,6 @@ mod tests {
             manifest: &manifest,
             reth_genesis: &reth_genesis,
             summit_genesis: &summit_genesis,
-            email: &email(),
             policy: None,
             run: &run,
             skipped: &skipped,

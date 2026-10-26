@@ -61,11 +61,13 @@ runs on:
 - **A public IP, NATed to the NIC's private one.** The node cannot read its own
   public address, so the operator states it in every config POST
   ([networking](networking.md#where-each-address-comes-from)).
-- **Firewall rules in two tiers.** The peer ports and the public HTTPS port are
-  open to anyone, and the two operator ports only to the operator's address
-  range ([what the outside can reach](#what-the-outside-can-reach)).
-- **A DNS name for the public IP**, in place before the node can serve TLS
-  ([DNS](networking.md#dns)).
+- **Firewall rules per port and source.** The peer ports are open to anyone,
+  the RPC ports to the front, and the two operator ports only to the
+  operator's address range
+  ([what the outside can reach](#what-the-outside-can-reach)).
+- **A public HTTPS front**, outside the CVM, which terminates TLS and forwards
+  to the node's RPC ports.
+- **A DNS name for the public IP** ([DNS](networking.md#dns)).
 
 The release image has no SSH server and no swap. Nothing reaches the guest
 except through the ports below, and nothing in guest RAM is ever paged to the
@@ -117,7 +119,6 @@ sequenceDiagram
         participant SP as summit-persist<br/>(oneshot)
         participant SU as summit
         participant RE as reth
-        participant CA as caddy
     end
 
     Note over O: provision: pulumi up —<br/>the box boots the measured image
@@ -139,7 +140,6 @@ sequenceDiagram
     end
 
     O->>TI: node configure — POST manifest + reth genesis + summit genesis<br/>(founding: the pinned box first)
-    TI-)CA: domain.env
     destroy TI
     TI-)AS: /run/seismic/conf, then its done marker
     Note over AS: :7879 now serves only /v1/keys,<br/>/v1/quote answers 410
@@ -161,11 +161,6 @@ sequenceDiagram
     SP-)SU: keystore in<br/>/persistent/summit/keys
     Note over SU: systemd starts summit,<br/>which only reads the keystore
     SU->>RE: Engine API — drives forkchoice
-    Note over CA: systemd starts caddy<br/>once /persistent is mounted:<br/>first boot: takes the certificate<br/>then renews it in-process
-    CA->>RE: proxies /rpc, /ws, /metrics/reth
-    CA->>SU: proxies /summit, /metrics/summit
-    CA->>AS: proxies /attestation
-    Note over CA: nothing waits on it: a failed<br/>certificate costs public HTTPS only
 
     opt founding only
         O->>AS: launch checks — GET :7879/v1/keys
@@ -204,19 +199,18 @@ and the steps differ only in what they find:
 | `root_key` | kept if this box is pinned at founding; otherwise fetched | always fetched: the fresh candidate matches no pin |
 | `persistent-luks-setup` | formats the disk and wipes it to seed the integrity tags, an hour or more on a multi-TB disk | verifies the header MAC and opens the volume |
 | `summit-persist` | copies the tmpfs keys into the keystore | confirms the keystore, and passes over this boot's fresh tmpfs keys |
-| Caddy | takes a certificate | reuses the one in `/persistent/caddy` |
 
 ## The processes
 
-Five long-lived processes, and the oneshots that prepare them, all measured
+Four long-lived processes, and the oneshots that prepare them, all measured
 into the image:
 
-![the guest's processes and what reaches each one: clients through Caddy,
-the operator on tdx-init and on the attestation service's harvest and status
-endpoints, peers on summit, reth, and the attestation service; the custodian
-holds root_key behind a unix socket; the setup units hand state to the
-services through directories under /run, which is tmpfs; and only /persistent
-survives a reboot](diagrams/node-processes.svg)
+![the guest's processes and what reaches each one: clients on reth's, summit's
+and the attestation service's ports, the operator on tdx-init and on the
+attestation service's harvest and status endpoints, peers on summit, reth,
+and the attestation service; the custodian holds root_key behind a unix
+socket; the setup units hand state to the services through directories under
+/run, which is tmpfs; and only /persistent survives a reboot](diagrams/node-processes.svg)
 
 | Process | Its one job | Reachable from outside on | Holds |
 | --- | --- | --- | --- |
@@ -225,9 +219,8 @@ survives a reboot](diagrams/node-processes.svg)
 | `attestation-service` | every quote, both halves of the root-key handshake, the [admission decision](chain-backed-admission.md), node status | `:7878`; `:7879`, operator only | no key material |
 | `summit-keygen`, `summit-persist` (oneshots) | summit's keys from boot to its keystore ([network founding](network-founding.md#summits-keys-before-luks)) | nothing | summit's keys, in passing |
 | `persistent-luks-setup` (oneshot) | opening `/persistent` | nothing | the LUKS keys, in passing |
-| `reth` | execution: the EVM, Ethereum JSON-RPC, chain state, the gossip plane | `:30303` | the tx-io keypair, the RNG input, its devp2p key |
-| `summit` | consensus: BFT voting, checkpoints, reth's forkchoice | `:18551` | its BLS and Ed25519 keys |
-| `caddy` | the public HTTPS proxy, as an unprivileged user | `:443` | its TLS certificate key |
+| `reth` | execution: the EVM, Ethereum JSON-RPC, chain state, the gossip plane | `:8545`, `:8546`, `:9001`, `:30303` | the tx-io keypair, the RNG input, its devp2p key |
+| `summit` | consensus: BFT voting, checkpoints, reth's forkchoice | `:3030`, `:9002`, `:18551` | its BLS and Ed25519 keys |
 
 Each runs as its own system user. Users, groups, unit ordering and every
 service's flags are in the
@@ -316,7 +309,6 @@ other processes off it:
 | reth, the attestation service → the custodian | Unix socket, length-prefixed CBOR | one key operation per request | the `custodian-ipc` group, then a per-user grant per method ([the socket](key-custody.md#two-layers-gate-the-socket)) |
 | summit → reth | Engine API, Unix socket | forkchoice and payloads | the `engine-api` group |
 | the attestation service → reth | JSON-RPC, loopback TCP `:8545` | the chain reads behind each admission decision | nothing: a TCP port has no owner (below) |
-| Caddy → reth, summit, the attestation service | HTTP on loopback | the public routes | loopback binds |
 | tdx-init → every service | files in `/run/seismic/conf` | the manifest, both genesis files, per-service env | the `conf` group |
 | the custodian → `persistent-luks-setup` | a keyfile, shredded after use | the LUKS volume key and header MAC key | file mode: the custodian user and root |
 | the custodian → the attestation service, tdx-init | `candidate-tx-io-pk` | the candidate's `tx_io_pk@0` | the `custodian-ipc` group |
@@ -336,14 +328,22 @@ instead, which carry an owner and file modes. Closing this is
 
 ## What the outside can reach
 
-One port is the whole public API surface, and three are peer-facing. The rest
-is either loopback or restricted to the operator's own address range by the
-node's cloud firewall rules
+No process in the guest terminates TLS. Each service answers on its own port,
+in plain HTTP, and a front outside the CVM terminates public HTTPS and forwards
+to them ([why no terminator in the image](#design-rationale)). The front,
+and which sources the node's cloud firewall admits on each port, are deploy's
 ([the port table](https://github.com/SeismicSystems/deploy/blob/main/tee/pulumi/seismic_node/__main__.py)).
+Three ports are peer-facing, and two are restricted to the operator's own
+address range. Until the front exists
+([SEI-992](https://linear.app/seismic-systems/issue/SEI-992)), deploy opens
+`:8545` to the operator's address range alone, for the CLI, and the other RPC
+and metrics ports to no one.
 
 | Port | Source | What answers |
 | --- | --- | --- |
-| `:443` | anyone | Caddy, proxying to reth's RPC and WebSocket, summit's JSON-RPC, the attestation service, and both metrics endpoints ([the routes](https://github.com/SeismicSystems/seismic-images/blob/seismic/README.md#exposed-https-endpoints)) |
+| `:8545`, `:8546` | the front, and the operator's CLI | reth's JSON-RPC and WebSocket |
+| `:3030` | the front | summit's JSON-RPC |
+| `:9001`, `:9002` | per deploy's firewall | reth's and summit's metrics |
 | `:7878` | anyone | the attestation service directly: the root-key handshake, tx-io evidence, health, first-boot disk-provisioning progress, and admission-chain status |
 | `:18551` | anyone | summit's consensus plane |
 | `:30303` TCP+UDP | anyone | reth's devp2p plane |
@@ -363,15 +363,16 @@ node's cloud firewall rules
   until the manifest arrives. Whoever reaches `:8080` first configures the box,
   which is why the founding window is a supervised operation
   ([founding-window security](network-founding.md#founding-window-security)).
-- **Everything else binds loopback**: reth's RPC (`:8545`), its WebSocket
-  (`:8546`), and both metrics endpoints. reth's public namespace list is
+- **The image decides which ports listen beyond loopback and what each
+  serves.** reth's RPC, WebSocket and metrics and summit's JSON-RPC and
+  metrics bind `0.0.0.0`; reth's Engine API over HTTP (`:8551`) and summit's
+  admin RPC (`:3031`) bind loopback. reth's public namespace list is
   `eth,net,web3`, and its general IPC-RPC server is disabled, so `admin`,
   `debug`, and `txpool` have no path to the outside; the `seismic` namespace
   registers alongside `eth`.
-- **TLS on `:443` is hygiene, not a boundary.** Browsers reach the attestation
-  service through Caddy's `/attestation` route rather than `:7878` directly,
-  since mixed-content rules bar a plain-HTTP fetch from an HTTPS origin, and
-  the evidence they fetch is verifiable on its own
+- **TLS is not a boundary.** It ends at the front, which reads non-shielded
+  RPC in plaintext. Shielded requests rest on `tx_io_pk`, and the attestation
+  evidence a browser fetches through the front is verifiable on its own
   ([keys, not channels](key-custody.md#design-rationale)).
 
 ## Storage
@@ -387,7 +388,7 @@ Only `/persistent` survives a reboot.
 ### `/persistent`: the LUKS volume
 
 One LUKS2 volume holds everything a node keeps across boots: reth's datadir,
-summit's keystore and database, and Caddy's certificate. Its unlock key is
+summit's keystore and database. Its unlock key is
 derived from `root_key`, so the volume is readable only by a guest that the
 network has admitted. No human and no cloud operator ever holds the unlock
 material, and there is no TPM seal to migrate or scrub.
@@ -470,17 +471,15 @@ verifier that holds the custodian grants
 with the grants, behind the split; otherwise a compromised front end could
 still obtain `root_key` from a peer.
 
-**An unprivileged Caddy rather than nginx and certbot**
-([what the outside can reach](#what-the-outside-can-reach)). In-guest root
-defeats every access control on the node: root can read `root_key` out of the
-custodian's memory, whatever the socket's ACL or the units' sandboxing. So the
-lever left is running as little as possible as root, and the public proxy is
-the most exposed process on the node while nothing in its job needs
-privilege: binding `:443` takes `CAP_NET_BIND_SERVICE` alone. nginx runs its
-master as root, and certbot is a root Python process that talks to the network
-and rewrites the proxy's config. Caddy takes and renews its certificate in the
-same unprivileged process that serves, from a static config in the measured
-image, so every node runs the config its measurement names.
+**No TLS terminator in the image, rather than a proxy in the guest**
+([what the outside can reach](#what-the-outside-can-reach)). Clients trust the
+data and the key, not the channel, so nothing needs TLS to end in the CVM, and
+an in-image certificate bound to no quote gives a client nothing to verify. A
+proxy in the guest would put the most exposed parser on the node beside
+`root_key`, where in-guest root can read it, and would need a new image to
+change which routes are public. The options pass, and the condition for
+bringing a terminator back, are in
+[the public RPC trust record](decisions/2026-10-public-rpc-trust.md).
 
 **A `root_key`-derived LUKS key rather than a TPM-sealed one**
 ([the volume](#persistent-the-luks-volume)). A TPM-sealed volume key unlocks for

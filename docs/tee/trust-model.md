@@ -271,7 +271,7 @@ in a single validator's lifecycle:
 |  | receive a snapshot at a resync | is this state the canonical network's | `K_snap` is derivable only from `root_key`, so a snapshot that decrypts came from inside the trust domain | designed; the purpose is ungranted and no process serves it |
 | Client | submit a TxSeismic | is this `tx_io_pk` this network's recipient key | epoch 0: the pin — hash the manifest against a pinned `network_id` and compare `tx_io_pk@0`, with no quote verification; later epochs: a record signed by the validator set, checked by a light client | epoch 0: the pin is built, the SDK check is [SEI-646](https://linear.app/seismic-systems/issue/SEI-646); later epochs open — today the SDKs trust whichever RPC they ask |
 |  | read shielded state — a signed read | did the response come from the network, unread on the way | `tx_io_pk`, as for a TxSeismic: the request is encrypted to it, and the response under a key from the same ECDH ([`TxResponse`](../key-schedule.md#layer-2--ecdh-shared-secrets)), so only a holder of `root_key` reads the one or produces the other. It says nothing about which head the node answered from | shipped; the anchor is the row above's, with its gaps |
-|  | read public state | is this response the chain's | today, the RPC it asks: TLS authenticates the name, which the operator controls ([clients of the public port](networking.md#clients-and-the-operator)); later, finalized heads checked by a light client | today the RPC is trusted; the light client is open ([Key records & light clients](https://linear.app/seismic-systems/project/key-records-and-light-clients-9a17291b5b1c)) |
+|  | read public state | is this response the chain's | today, the RPC it asks: TLS authenticates the name, which the operator controls ([clients of the public RPC](networking.md#clients-and-the-operator)); later, finalized heads checked by a light client | today the RPC is trusted; the light client is open ([Key records & light clients](https://linear.app/seismic-systems/project/key-records-and-light-clients-9a17291b5b1c)) |
 | Governance | change the accepted measurement set | is the change authorized | the manifest-pinned authority contract | a dev authority today; the mainnet authority is open |
 |  | rotate `root_key` to fresh entropy | is the rotation authorized, and does the successor chain to the key it replaces | undecided — the candidates are the manifest-pinned authority contract and a consensus event, and a post-recovery rotation is the security council's, authorized by the recovery ceremony itself; a published chain of wraps links each version to its predecessor, which is continuity, not authenticity: two holders can each wrap a different successor, and both chains verify. Authenticity needs an anchor `network_id` commits to; the direction is a record signed by the validator set, with the epoch-0 pin as its base case | open, and prerequisite to any nonzero purpose-key epoch |
 | Security Council | recover the network after a full-fleet loss | how does the network outlive losing every TEE at once | nothing — at least one node must stay live | open, pre-mainnet |
@@ -381,12 +381,10 @@ corroboration is open design work.
 
 **The operator reads and can forge public RPC.** Non-shielded requests and
 responses are protected by TLS only as far as where it ends, and the operator
-decides that by controlling the name's DNS: today it can get a certificate for
-its node's name at will, and once the image drops its proxy (decided, not
-built), TLS ends at a front the operator runs or rents. Either way the operator,
-and whoever runs its front, sees which public data a client asks for and can
-answer it falsely. Shielded state is unaffected: signed reads and transactions
-rest on `tx_io_pk` ([the trust anchor, per action](#the-trust-anchor-per-action)).
+decides that by controlling the name's DNS: the image terminates no TLS, so it
+ends at a front the operator runs or rents. The operator, and whoever runs its
+front, sees which public data a client asks for and can answer it falsely.
+Shielded state is unaffected: signed reads and transactions rest on `tx_io_pk` ([the trust anchor, per action](#the-trust-anchor-per-action)).
 Accepted because no guarantee about the transport reaches a browser without an
 anchor `network_id` does not commit to; the integrity of public reads is to
 come from the light client instead ([why not the
@@ -402,8 +400,8 @@ detects the rewind. The instances:
 - **LUKS is tamper-evident, not rollback-protected.** The header MAC and
   dm-integrity refuse an *edited* volume, but a snapshot of the whole volume
   is internally consistent, MAC and all, and restores cleanly. Everything
-  under `/persistent` — reth's datadir, summit's database, Caddy's certificate —
-  can be rewound together.
+  under `/persistent` — reth's datadir and summit's database — can be rewound
+  together.
 - **A chain view can be held at block 0.** That lands the responder's admission
   gate on the founding policy, where no timestamp check bites and "still at
   genesis" is indistinguishable from "chain withheld" from inside the guest. So

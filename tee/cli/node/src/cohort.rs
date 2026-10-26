@@ -79,7 +79,7 @@ use seismic_tee_common::{
     Artifact, Descriptors, Manifest, NetworkDir, NodeDescriptor, hex_0x, http, next_step, rpc,
 };
 use seismic_verify_quote::SeismicMeasurementPolicy;
-use tdx_init_config::{Bootnode, PlainEmail};
+use tdx_init_config::Bootnode;
 use tokio::sync::mpsc;
 use tokio::task::JoinSet;
 
@@ -336,7 +336,6 @@ pub struct Shared {
     /// The delivered summit genesis: in a founding, the artifact-set copy
     /// with current IPs spliced in.
     pub summit_genesis: Artifact,
-    pub email: PlainEmail,
     /// `None` under `--no-verify`.
     pub appraisal: Option<Appraisal>,
     pub dir: NetworkDir,
@@ -474,8 +473,6 @@ async fn configure_node(node: Node, shared: Arc<Shared>, status: StatusTx) -> (S
             summit_genesis: &shared.summit_genesis,
             bootnodes: &node.bootnodes,
             external_ip: node.descriptor.public_ip,
-            fqdn: &node.descriptor.fqdn,
-            email: &shared.email,
             pinned_box: node.pinned,
         })?;
         // The record first: what is about to be sent exists on disk before
@@ -701,7 +698,7 @@ fn report(
     println!("\n{rule}\nNODES CONFIGURED\n{rule}");
     for node in nodes {
         println!(
-            "  {} {} ({}) — https://{}/rpc",
+            "  {} {} ({}) — {}",
             if outcome(node) == Outcome::Ready {
                 "✓"
             } else {
@@ -709,7 +706,7 @@ fn report(
             },
             node.name,
             node.role(),
-            node.descriptor.fqdn
+            node.descriptor.eth_rpc_url()
         );
     }
     for name in skipped {
@@ -1073,7 +1070,6 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
             manifest: &manifest,
             reth_genesis: &reth_genesis,
             summit_genesis: &summit_genesis,
-            email: &args.email,
             policy: policy_source.as_deref(),
             run: &run,
             skipped: &skipped,
@@ -1109,7 +1105,6 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
         manifest,
         reth_genesis,
         summit_genesis,
-        email: args.email.clone(),
         appraisal,
         dir: dir.clone(),
         client,
@@ -1254,8 +1249,8 @@ pub async fn check(
         targets.len(),
         manifest_path.display()
     );
-    // The eth RPC is reached over TLS; see `node verify` for why the provider
-    // is chosen here.
+    // The eth RPC is plain HTTP, but the client still builds a rustls config,
+    // which needs a provider; see `node verify` for why this one.
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
     assert_launch(
         &http::client()?,
@@ -1466,7 +1461,6 @@ mod tests {
                 "summit-genesis.toml",
                 b"namespace = \"seismic-devnet-3\"\n".to_vec(),
             ),
-            email: "ops@example.com".parse().unwrap(),
             appraisal: None,
             dir: dir.clone(),
             client: http::client().unwrap(),
@@ -1515,8 +1509,9 @@ mod tests {
     /// network directory, and a node the harvest does not know is skipped
     /// rather than held to a pin it never had. The nodes here are
     /// unreachable — the descriptor fixes the ports the assertions dial, so
-    /// a fake server cannot stand in, and an `.invalid` name never resolves —
-    /// and the check says so, per node.
+    /// a fake server cannot stand in, and the IPv6 loopback is where a local
+    /// sanvil, on `127.0.0.1:8545`, does not answer — and the check says so,
+    /// per node.
     #[tokio::test]
     async fn check_asserts_the_founding_cohort_and_writes_nothing() {
         use seismic_tee_common::test_support::{NODE_KEY_1, descriptors_of, network_dir, record};
@@ -1525,8 +1520,8 @@ mod tests {
         std::fs::write(dir.manifest(), FIXTURE_MANIFEST).unwrap();
         write_harvest(&dir, "node-1", &record(NODE_KEY_1, "cc"));
         let descriptors = descriptors_of(&[
-            ("node-1", "127.0.0.1", "node-1.invalid"),
-            ("node-2", "127.0.0.1", "node-2.invalid"),
+            ("node-1", "::1", "node-1.invalid"),
+            ("node-2", "::1", "node-2.invalid"),
         ]);
         let nodes = dir.root().join("nodes.json");
         std::fs::write(&nodes, serde_json::to_vec(&descriptors).unwrap()).unwrap();
@@ -1544,7 +1539,7 @@ mod tests {
             .to_string();
         assert!(err.contains("Cohort disagrees"), "{err}");
         assert!(
-            err.contains("✗ node-1: unreachable via https://node-1.invalid/rpc"),
+            err.contains("✗ node-1: unreachable via http://[::1]:8545"),
             "{err}"
         );
         assert!(!err.contains("node-2"), "{err}");

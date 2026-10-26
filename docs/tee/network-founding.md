@@ -184,9 +184,9 @@ while a restart of `summit.service` alone does not.
   the setup units, cannot replace the keys the manifest pins. That holds
   because nothing deletes the tmpfs keys before the next reboot empties tmpfs.
 - **The attestation service serves the harvest on `:7879`.** It starts at boot,
-  and until the POST arrives this is all it serves. The port is plain HTTP:
-  Caddy and its TLS certificate exist only after the POST, and deploy tooling
-  already polls raw ports during first boot. `GET /v1/keys` returns both
+  and until the POST arrives this is all it serves. The port is plain HTTP,
+  like every listener in the guest, and deploy tooling already polls raw ports
+  during first boot. `GET /v1/keys` returns both
   pubkeys from the public-keys file. `GET /v1/quote?nonce=…` adds the
   custodian's candidate `tx_io_pk@0`, from the candidate file the custodian
   writes when it mints, and a quote whose `report_data` is a domain-separated

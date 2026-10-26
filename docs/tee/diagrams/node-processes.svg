@@ -46,8 +46,9 @@
   <!-- ================= external actors ================= -->
   <g class="node" transform="translate(140,40)">
     <rect width="340" height="110" rx="14"/>
-    <text class="name" x="170" y="44">RPC clients</text>
-    <text class="sub" x="170" y="76">wallets · indexers · frontends</text>
+    <text class="name" x="170" y="40">RPC clients</text>
+    <text class="sub" x="170" y="70">wallets · indexers · frontends</text>
+    <text class="sub" x="170" y="94">through the front, outside the CVM</text>
   </g>
   <g class="node" transform="translate(1260,40)">
     <rect width="420" height="110" rx="14"/>
@@ -64,11 +65,6 @@
   <text class="zone-label" x="90" y="268">the TDX guest — MRTD and the RTMRs measure this image</text>
 
   <!-- band 1: what the network reaches -->
-  <g class="node" transform="translate(160,300)">
-    <rect width="400" height="110" rx="12"/>
-    <text class="name" x="200" y="44">caddy :443</text>
-    <text class="sub" x="200" y="76">the only TLS terminator</text>
-  </g>
   <g class="node" transform="translate(760,300)">
     <rect width="440" height="130" rx="12"/>
     <text class="name" x="220" y="40">attestation-service</text>
@@ -85,12 +81,12 @@
   <g class="node" transform="translate(160,600)">
     <rect width="400" height="110" rx="12"/>
     <text class="name" x="200" y="44">summit</text>
-    <text class="sub" x="200" y="76">BFT consensus · drives reth</text>
+    <text class="sub" x="200" y="76">BFT consensus · drives reth · :3030</text>
   </g>
   <g class="node" transform="translate(760,600)">
     <rect width="440" height="110" rx="12"/>
     <text class="name" x="220" y="44">reth</text>
-    <text class="sub" x="220" y="76">EVM + Ethereum RPC on loopback</text>
+    <text class="sub" x="220" y="76">EVM + Ethereum RPC · :8545 · :8546</text>
   </g>
   <g class="node secret" transform="translate(1360,600)">
     <rect width="400" height="110" rx="12"/>
@@ -146,19 +142,17 @@
   <g class="node volume" transform="translate(160,1440)">
     <rect width="1600" height="140" rx="14"/>
     <text class="name" x="800" y="56">/persistent — LUKS2</text>
-    <text class="sub" x="800" y="92">reth datadir · summit keystore and db · caddy certificate</text>
+    <text class="sub" x="800" y="92">reth datadir · summit keystore and db</text>
   </g>
 
   <!-- ================= client plane ================= -->
-  <line class="flow" x1="310" y1="150" x2="340" y2="294" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="310" y="226" text-anchor="end">HTTPS</text>
-
-  <line class="flow" x1="560" y1="355" x2="754" y2="355" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="657" y="343" text-anchor="middle">/attestation</text>
-  <line class="flow" x1="300" y1="410" x2="300" y2="594" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="314" y="500">/summit</text>
-  <line class="flow" x1="480" y1="410" x2="860" y2="594" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="690" y="480" text-anchor="middle">/rpc · /ws</text>
+  <!-- plain HTTP from the front: no process in the guest terminates TLS -->
+  <line class="flow" x1="480" y1="110" x2="754" y2="340" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="662" y="280" text-anchor="end">attestation</text>
+  <line class="flow" x1="300" y1="150" x2="300" y2="594" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="314" y="420">summit RPC</text>
+  <line class="flow" x1="420" y1="150" x2="860" y2="594" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="600" y="420" text-anchor="middle">RPC · WebSocket</text>
 
   <!-- ================= operator plane ================= -->
   <line class="flow" x1="1330" y1="150" x2="1100" y2="294" marker-end="url(#arrow)"/>

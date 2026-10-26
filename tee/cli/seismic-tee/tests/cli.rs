@@ -164,7 +164,7 @@ fn env_prints_only_export_lines_on_stdout() {
     assert!(output.status.success());
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
-        "export ETH_RPC_URL='https://alpha.example.com/rpc'\n\
+        "export ETH_RPC_URL='http://203.0.113.7:8545'\n\
          export SEISMIC_CONTEXT='devnet-1/alpha'\n"
     );
     let stderr = String::from_utf8(output.stderr).unwrap();
@@ -262,8 +262,8 @@ fn a_shell_loop_over_list_names_reaches_every_node_through_exec() {
     assert_eq!(output.status.code(), Some(7), "{output:?}");
     assert_eq!(
         sandbox.log(),
-        "block-number\nhttps://alpha.example.com/rpc\ndevnet-1/alpha\n\
-         block-number\nhttps://beta.example.com/rpc\ndevnet-1/beta\n"
+        "block-number\nhttp://203.0.113.7:8545\ndevnet-1/alpha\n\
+         block-number\nhttp://203.0.113.8:8545\ndevnet-1/beta\n"
     );
 }
 
@@ -281,7 +281,7 @@ fn exec_hands_the_child_the_selected_nodes_rpc_url_and_context() {
     let log = sandbox.log();
     let mut lines = log.lines();
     assert_eq!(lines.next(), Some("block-number"));
-    assert_eq!(lines.next(), Some("https://alpha.example.com/rpc"));
+    assert_eq!(lines.next(), Some("http://203.0.113.7:8545"));
     assert_eq!(lines.next(), Some("devnet-1/alpha"));
 }
 
@@ -312,7 +312,7 @@ fn exec_dry_run_runs_nothing() {
     assert!(!sandbox.log_path().exists());
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("scast block-number"), "{stdout}");
-    assert!(stdout.contains("https://alpha.example.com/rpc"), "{stdout}");
+    assert!(stdout.contains("http://203.0.113.7:8545"), "{stdout}");
     assert!(
         stdout.contains("SEISMIC_CONTEXT=devnet-1/alpha"),
         "{stdout}"
@@ -333,7 +333,7 @@ fn the_env_var_beats_the_persisted_selection() {
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("devnet-1/beta"), "{stdout}");
-    assert!(stdout.contains("beta.example.com"), "{stdout}");
+    assert!(stdout.contains("203.0.113.8"), "{stdout}");
 }
 
 #[test]
@@ -350,7 +350,7 @@ fn the_flag_beats_the_env_var() {
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout).unwrap();
     assert!(stdout.contains("devnet-1/alpha"), "{stdout}");
-    assert!(stdout.contains("alpha.example.com"), "{stdout}");
+    assert!(stdout.contains("203.0.113.7"), "{stdout}");
 }
 
 #[test]
@@ -370,7 +370,7 @@ fn a_network_only_context_needs_name() {
         .unwrap();
     assert!(output.status.success());
     let stdout = String::from_utf8(output.stdout).unwrap();
-    assert!(stdout.contains("alpha.example.com"), "{stdout}");
+    assert!(stdout.contains("203.0.113.7"), "{stdout}");
     // The pin names the node it resolved to, not just the network, so the
     // next command in that shell needs no --name.
     assert!(

@@ -60,7 +60,7 @@ const STATUS_GLANCE: Duration = Duration::from_secs(2);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LaunchTarget {
     pub name: String,
-    /// `https://<fqdn>/rpc`.
+    /// `http://<ip>:8545`.
     pub eth_rpc_url: String,
     /// `http://<ip>:7878`.
     pub attestation_rpc_url: String,
@@ -83,8 +83,8 @@ impl LaunchTarget {
     }
 }
 
-/// Block 0's hash as reth serves it, lowercase. `client` is the node's public
-/// JSON-RPC (`https://<fqdn>/rpc`).
+/// Block 0's hash as reth serves it, lowercase. `client` is reth's JSON-RPC on
+/// the node's IP (`http://<ip>:8545`).
 pub async fn fetch_block0_hash(client: &rpc::Client) -> anyhow::Result<String> {
     let block = client
         .call("eth_getBlockByNumber", rpc_params!["0x0", false])

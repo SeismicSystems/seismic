@@ -131,19 +131,21 @@ handshake's mutual attestation on each exchange, not by the address.
 
 Two more parties reach a node, neither of them a peer:
 
-- **Clients of the public HTTPS port** reach `:443` by the node's FQDN: RPC
-  clients on `/rpc` and `/ws`, and on the same name, `/summit`,
-  `/attestation` and the `/metrics` routes
-  ([the port table](node.md#what-the-outside-can-reach)). The TLS
-  certificate authenticates that name, not the node: the operator controls the
-  name's DNS ([DNS](#dns)) and can get a certificate for it at will. It
-  protects against third parties on the path. Everything a client relies on
-  beyond that is end to end — transaction signatures, signed reads, encryption
-  to `tx_io_pk`.
+- **Clients of the public RPC** reach a node through a front outside the CVM,
+  which terminates HTTPS and forwards to reth's RPC and WebSocket, summit's
+  JSON-RPC and the attestation service, each on its own port
+  ([the port table](node.md#what-the-outside-can-reach)). The front is deploy's
+  ([SEI-992](https://linear.app/seismic-systems/issue/SEI-992)). Its
+  certificate authenticates the front's name, not the node: the operator
+  controls that name's DNS ([DNS](#dns)) and the front, which reads
+  non-shielded RPC in plaintext. It protects against third parties on the
+  path. Everything a client relies on beyond that is end to end — transaction
+  signatures, signed reads, encryption to `tx_io_pk`.
 - **The operator's CLI** reaches a node by the node table's `public_ip`: the
   config POST on `:8080` and the founding harvest on `:7879`, both reachable
   only from the operator's address range, and deploy verification on the public
-  `:7878`. It reads a node's enode over `https://<fqdn>/rpc`.
+  `:7878`. It reads a node's enode, and in the launch assertions its block 0,
+  from reth's RPC at `http://<public_ip>:8545`, never through the front.
 
 ## Four kinds of name
 
@@ -158,7 +160,7 @@ some time.
 
 | Object | In Seismic | Its names |
 | --- | --- | --- |
-| Service | The network itself; its public RPC; `root_key`; consensus participation; transaction gossip | `network_id` names the network. Nothing names its RPC as a whole: each node's FQDN is that node's endpoint. |
+| Service | The network itself; its public RPC; `root_key`; consensus participation; transaction gossip | `network_id` names the network. Its public RPC is named by the front's hostname, which deploy chooses. |
 | Node | A TDX box running the measured image | The node table's `<operator>-<key>`, which is also its Azure VM and DNS label, and its resource group unless the stack sets `cohort_resource_group`; summit's Ed25519 node key; reth's enode id (secp256k1). Nothing standing on `:7878`: each exchange attests itself. |
 | Attachment point | The box's public IP, one port per plane | `<public_ip>:<port>` |
 | Path | Internet routing, and Azure's NAT from the public IP to the NIC's private one | Not named by Seismic |
@@ -169,8 +171,8 @@ And the bindings between them:
   - **`root_key`:** any node that holds it — a *key holder*, which answers on
     `:7878`. The CLI finds them by probing the node table.
   - **Consensus:** the validator set, in summit's consensus state.
-  - **Public RPC:** the client picks a node's FQDN. There is no network-level
-    name to resolve.
+  - **Public RPC:** DNS picks the front, and the front's path map picks the
+    node and port.
 - **Node → attachment point.** Bound in several places, listed in
   [Where each address comes from](#where-each-address-comes-from).
 - **Attachment point → path.** The internet's, not Seismic's.
@@ -202,7 +204,7 @@ written by someone, at some time, and checked by someone or by no one.
 | Binding | Written by | When | Read by, for |
 | --- | --- | --- | --- |
 | Node name → `{public_ip, fqdn}` | The provisioner: deploy's Pulumi program outputs the map, `seismic-tee ctx set-nodes` stores it. Or the operator, by hand, as a descriptor file. | Provisioning | The CLI, for every call it makes to a node |
-| FQDN → public IP | The DNS A record (see [DNS](#dns)) | Provisioning | Caddy's certificate request, the CLI's RPC calls, RPC clients |
+| FQDN → public IP | The DNS A record (see [DNS](#dns)) | Provisioning | Nothing in the image, and none of the CLI's calls |
 | `[node].external_ip` | The CLI, from the node table's `public_ip` | Every config POST, so every boot | tdx-init, which renders reth's `--nat extip` and summit's `--ip` |
 | `[network].bootnodes` | The CLI. Founding: the genesis node's enode. Later: the enodes of the node table's key holders that pass their appraisal, or `--bootnode`. | Every config POST | tdx-init, which renders reth's `--bootnodes` and `--trusted-peers` and the `root_key` fetch peers |
 | Summit genesis `ip_address` | `network assemble`, from the node table's `public_ip` for each founding validator | Assembly | summit, as its initial dial set |
@@ -217,14 +219,13 @@ so an address can change without changing the network.
 
 ### DNS
 
-- **What the FQDN is for:**
-  - the TLS certificate for the node's public RPC: `[node.domain].name` in the
-    config, for which Caddy requests a certificate over `:443`, so the A record
-    must point at the box before the node can serve TLS;
-  - the CLI's RPC calls (`https://<fqdn>/rpc`);
-  - RPC clients.
-- **What it is not for:** consensus, devp2p, the `root_key` fetch and the
-  operator ports all use IP addresses.
+- **What the FQDN is:** a per-node name at the node's public IP, which the
+  CLI shows beside it. The node is never told it: the config POST carries no
+  name, and the image serves no TLS.
+- **What it is not for:** consensus, devp2p, the `root_key` fetch, the
+  operator ports and the CLI's reth reads all use IP addresses. The public
+  RPC's name is the front's
+  ([clients and the operator](#clients-and-the-operator)).
 - **How deploy's Pulumi program does it**
   ([`__main__.py`](https://github.com/SeismicSystems/deploy/blob/main/tee/pulumi/seismic_node/__main__.py)):
   - It needs an existing Azure DNS zone, named by the stack's `dns_zone_name`
@@ -253,9 +254,8 @@ so an address can change without changing the network.
   - **Deploy verification** appraises whatever answers at `public_ip:7878`: a
     TEE on an accepted image holding this manifest. It says nothing about which
     node keys that box holds.
-  - **Handing out an enode** follows two lookups of one node: the enode is read
-    over `https://<fqdn>/rpc`, through DNS and TLS, and its host is compared
-    with the `public_ip` that was appraised. tdx-init fetches `root_key` from
+  - **Handing out an enode** reads it from reth at `public_ip:8545`, the
+    address that was appraised, and compares its host with that `public_ip`. tdx-init fetches `root_key` from
     that host, so a match means the joiner reaches the box that was appraised.
     - **Joining a live network:** a key holder whose enode is elsewhere is not
       handed out.
@@ -291,7 +291,7 @@ sequenceDiagram
     participant J as A joining box
     CLI->>G: config POST, no bootnodes (public_ip:8080)
     CLI->>G: deploy verification (public_ip:7878)
-    CLI->>G: read its enode (https://fqdn/rpc)
+    CLI->>G: read its enode (public_ip:8545)
     CLI->>J: config POST, bootnodes = [pinned box's enode] (public_ip:8080)
     J->>G: root-key fetch (the enode's host:7878)
     J->>G: devp2p (the enode)
