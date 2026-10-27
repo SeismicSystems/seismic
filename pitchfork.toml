@@ -5,6 +5,7 @@
 run = "mise run sanvil::start --port 8545"
 ready_port = 8545
 
+# SDK tests need account zero funded at block 0; production --chain dev does not.
 [daemons.sreth-local]
-run = "mise run sreth::start-local --port 8545"
+run = "mise run sreth::start-local --port 8545 --chain clients/test-genesis/reth.json"
 ready_port = 8545

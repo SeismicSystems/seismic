@@ -32,6 +32,13 @@ export SRETH_ROOT=~/code/seismic-workspace/seismic-reth
 
 See `.env.example` for a template you can copy to `.env`.
 
+The reth harness passes `--dev --chain clients/test-genesis/reth.json` (resolved
+relative to the harness, not the current directory). This shared SDK-only genesis
+funds Anvil account zero from block 0; production `--chain dev` deliberately leaves
+public Anvil keys unfunded. Sanvil keeps its own default account funding. See
+[`../test-genesis/README.md`](../test-genesis/README.md) for provenance and refresh
+instructions. `SRETH_BIN` can point directly to a prebuilt reth binary, as in CI.
+
 ## Commands
 
 | Command | Description |

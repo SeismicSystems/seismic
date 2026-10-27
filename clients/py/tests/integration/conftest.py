@@ -22,6 +22,7 @@ import socket
 import subprocess
 import tempfile
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -59,12 +60,13 @@ def pytest_report_header() -> str:
 # Constants
 # ---------------------------------------------------------------------------
 
-# Dev account #0 (same key used by both sanvil and seismic-reth dev mode)
+# Anvil account #0; explicitly funded by the shared reth test genesis.
 DEV_PRIVATE_KEY_HEX: str = (
     "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 )
 DEV_PRIVATE_KEY: bytes = bytes.fromhex(DEV_PRIVATE_KEY_HEX)
 DEV_ADDRESS: str = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+RETH_TEST_GENESIS = Path(__file__).resolve().parents[3] / "test-genesis" / "reth.json"
 
 # Expected chain IDs per backend
 CHAIN_IDS: dict[str, int] = {
@@ -179,7 +181,7 @@ def _start_anvil(port: int) -> _StartResult:
 
 
 def _start_reth(port: int) -> _StartResult:
-    """Start seismic-reth in dev mode, matching seismic-viem's CI config."""
+    """Start reth with auto-mining and the shared, funded SDK test genesis."""
     tmpdir = tempfile.mkdtemp(prefix="seismic-reth-")
     cmd = [
         _get_reth_bin(),
@@ -188,6 +190,10 @@ def _start_reth(port: int) -> _StartResult:
         "--dev",
         "--dev.block-max-transactions",
         "1",
+        # --dev enables mining, not account funding. Production dev genesis
+        # deliberately leaves the public Anvil keys unfunded.
+        "--chain",
+        str(RETH_TEST_GENESIS),
         # HTTP RPC
         "--http",
         "--http.port",

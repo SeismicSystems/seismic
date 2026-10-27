@@ -78,6 +78,8 @@ bun run viem:test         # connects to http://127.0.0.1:8545 by default
 
 **Reth tests** run the binary at `SRETH_BIN` if set (CI sets it to a prebuilt nightly via the monorepo's [setup-sreth action](../../.github/actions/setup-sreth/action.yml)); otherwise the mise task builds and runs the sibling [seismic-reth](https://github.com/SeismicSystems/seismic-reth) checkout at `../../seismic-reth`.
 
+The managed reth test daemon uses `clients/test-genesis/reth.json`, shared with the Python harness, to fund Anvil account zero from block 0. Production `--chain dev` does not fund public Anvil keys. Direct `sreth::start-local` retains its production default; pass `--chain` with the test genesis for manual SDK testing. See [`../test-genesis/README.md`](../test-genesis/README.md) before refreshing the fixture.
+
 > **Note**: The `seismic-viem-tests` package still exports process management functions (`setupNode`, `buildNode`, etc.) for backward compatibility with seismic-reth and seismic-foundry. These are deprecated and will be removed in a future version.
 
 ### Docs
