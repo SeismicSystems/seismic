@@ -27,6 +27,18 @@ from seismic_web3.abis.deposit_contract import (
 from seismic_web3.contract.abi import encode_shielded_calldata
 from seismic_web3.contract.public import AsyncPublicContract, PublicContract
 from seismic_web3.contract.shielded import AsyncShieldedContract, ShieldedContract
+from seismic_web3.explorer import (
+    AddressExplorerTab,
+    BlockExplorerTab,
+    ExplorerItem,
+    TokenExplorerTab,
+    TxExplorerTab,
+    address_explorer_url,
+    block_explorer_url,
+    get_explorer_url,
+    token_explorer_url,
+    tx_explorer_url,
+)
 from seismic_web3.rpc import async_get_tee_public_key, get_tee_public_key
 from seismic_web3.transaction.send import (
     async_debug_send_shielded_transaction,
@@ -45,6 +57,7 @@ if TYPE_CHECKING:
     from web3 import AsyncWeb3, Web3
 
     from seismic_web3._types import CompressedPublicKey, PrivateKey
+    from seismic_web3.chains import ChainConfig
     from seismic_web3.client import EncryptionState
     from seismic_web3.gas_payment import GasPayment
     from seismic_web3.transaction_types import DebugWriteResult, SeismicSecurityParams
@@ -64,10 +77,16 @@ class SeismicPublicNamespace:
 
     Args:
         w3: Sync ``Web3`` instance.
+        chain: Optional Seismic chain configuration.
     """
 
-    def __init__(self, w3: Web3) -> None:
+    def __init__(
+        self,
+        w3: Web3,
+        chain: ChainConfig | None = None,
+    ) -> None:
         self._w3 = w3
+        self.chain = chain
 
     def get_tee_public_key(self) -> CompressedPublicKey:
         """Fetch the TEE's compressed secp256k1 public key (sync).
@@ -138,6 +157,73 @@ class SeismicPublicNamespace:
         count_bytes = bytes(raw[64:72])
         return int.from_bytes(count_bytes, "little")
 
+    def explorer_url(
+        self,
+        *,
+        item: ExplorerItem | None = None,
+        id: str | int | HexBytes | None = None,
+        tab: str | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for this client's configured chain."""
+        return get_explorer_url(
+            self.chain,
+            item=item,
+            id=id,
+            tab=tab,
+        )
+
+    def tx_explorer_url(
+        self,
+        tx_hash: str | HexBytes,
+        *,
+        tab: TxExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for a transaction."""
+        return tx_explorer_url(
+            self.chain,
+            tx_hash,
+            tab=tab,
+        )
+
+    def address_explorer_url(
+        self,
+        address: str,
+        *,
+        tab: AddressExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for an address."""
+        return address_explorer_url(
+            self.chain,
+            address,
+            tab=tab,
+        )
+
+    def block_explorer_url(
+        self,
+        block_number: int | str,
+        *,
+        tab: BlockExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for a block."""
+        return block_explorer_url(
+            self.chain,
+            block_number,
+            tab=tab,
+        )
+
+    def token_explorer_url(
+        self,
+        address: str,
+        *,
+        tab: TokenExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for a token."""
+        return token_explorer_url(
+            self.chain,
+            address,
+            tab=tab,
+        )
+
 
 class AsyncSeismicPublicNamespace:
     """Async public Seismic namespace -- attached as ``w3.seismic``.
@@ -148,10 +234,16 @@ class AsyncSeismicPublicNamespace:
 
     Args:
         w3: Async ``AsyncWeb3`` instance.
+        chain: Optional Seismic chain configuration.
     """
 
-    def __init__(self, w3: AsyncWeb3) -> None:
+    def __init__(
+        self,
+        w3: AsyncWeb3,
+        chain: ChainConfig | None = None,
+    ) -> None:
         self._w3 = w3
+        self.chain = chain
 
     async def get_tee_public_key(self) -> CompressedPublicKey:
         """Fetch the TEE's compressed secp256k1 public key (async).
@@ -222,6 +314,73 @@ class AsyncSeismicPublicNamespace:
         count_bytes = bytes(raw[64:72])
         return int.from_bytes(count_bytes, "little")
 
+    def explorer_url(
+        self,
+        *,
+        item: ExplorerItem | None = None,
+        id: str | int | HexBytes | None = None,
+        tab: str | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for this client's configured chain."""
+        return get_explorer_url(
+            self.chain,
+            item=item,
+            id=id,
+            tab=tab,
+        )
+
+    def tx_explorer_url(
+        self,
+        tx_hash: str | HexBytes,
+        *,
+        tab: TxExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for a transaction."""
+        return tx_explorer_url(
+            self.chain,
+            tx_hash,
+            tab=tab,
+        )
+
+    def address_explorer_url(
+        self,
+        address: str,
+        *,
+        tab: AddressExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for an address."""
+        return address_explorer_url(
+            self.chain,
+            address,
+            tab=tab,
+        )
+
+    def block_explorer_url(
+        self,
+        block_number: int | str,
+        *,
+        tab: BlockExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for a block."""
+        return block_explorer_url(
+            self.chain,
+            block_number,
+            tab=tab,
+        )
+
+    def token_explorer_url(
+        self,
+        address: str,
+        *,
+        tab: TokenExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for a token."""
+        return token_explorer_url(
+            self.chain,
+            address,
+            tab=tab,
+        )
+
 
 # ---------------------------------------------------------------------------
 # Wallet (full capabilities) namespaces — extend public namespaces
@@ -246,6 +405,7 @@ class SeismicNamespace(SeismicPublicNamespace):
         w3: Sync ``Web3`` instance.
         encryption: Encryption state.
         private_key: 32-byte signing key for transactions.
+        chain: Optional Seismic chain configuration.
     """
 
     def __init__(
@@ -253,8 +413,9 @@ class SeismicNamespace(SeismicPublicNamespace):
         w3: Web3,
         encryption: EncryptionState,
         private_key: PrivateKey,
+        chain: ChainConfig | None = None,
     ) -> None:
-        super().__init__(w3)
+        super().__init__(w3, chain=chain)
         self.encryption = encryption
         self._private_key = private_key
 
@@ -501,6 +662,7 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
         w3: Async ``AsyncWeb3`` instance.
         encryption: Encryption state.
         private_key: 32-byte signing key for transactions.
+        chain: Optional Seismic chain configuration.
     """
 
     def __init__(
@@ -508,8 +670,9 @@ class AsyncSeismicNamespace(AsyncSeismicPublicNamespace):
         w3: AsyncWeb3,
         encryption: EncryptionState,
         private_key: PrivateKey,
+        chain: ChainConfig | None = None,
     ) -> None:
-        super().__init__(w3)
+        super().__init__(w3, chain=chain)
         self.encryption = encryption
         self._private_key = private_key
 

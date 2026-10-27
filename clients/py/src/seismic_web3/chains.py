@@ -22,8 +22,21 @@ from seismic_web3.client import (
     create_public_client,
     create_wallet_client,
 )
+from seismic_web3.explorer import (
+    AddressExplorerTab,
+    BlockExplorerTab,
+    ExplorerItem,
+    TokenExplorerTab,
+    TxExplorerTab,
+    address_explorer_url,
+    block_explorer_url,
+    get_explorer_url,
+    token_explorer_url,
+    tx_explorer_url,
+)
 
 if TYPE_CHECKING:
+    from hexbytes import HexBytes
     from web3 import AsyncWeb3, Web3
 
     from seismic_web3._types import PrivateKey
@@ -54,12 +67,14 @@ class ChainConfig:
         rpc_url: HTTP(S) JSON-RPC endpoint.
         ws_url: WebSocket endpoint (``None`` if not available).
         name: Human-readable network name.
+        explorer_url: Block explorer URL (``None`` if not available).
     """
 
     chain_id: int
     rpc_url: str
     ws_url: str | None = None
     name: str = ""
+    explorer_url: str | None = None
 
     # -- Wallet (private key required) ----------------------------------
 
@@ -82,6 +97,7 @@ class ChainConfig:
             self.rpc_url,
             private_key=private_key,
             encryption_sk=encryption_sk,
+            chain=self,
         )
 
     async def async_wallet_client(
@@ -118,6 +134,7 @@ class ChainConfig:
             private_key=private_key,
             encryption_sk=encryption_sk,
             ws=ws,
+            chain=self,
         )
 
     # -- Public (no private key required) --------------------------------
@@ -131,7 +148,10 @@ class ChainConfig:
             A ``Web3`` instance with ``w3.seismic`` namespace attached
             (read-only).
         """
-        return create_public_client(self.rpc_url)
+        return create_public_client(
+            self.rpc_url,
+            chain=self,
+        )
 
     def async_public_client(
         self,
@@ -158,7 +178,89 @@ class ChainConfig:
             url = self.ws_url
         else:
             url = self.rpc_url
-        return create_async_public_client(url, ws=ws)
+        return create_async_public_client(
+            url,
+            ws=ws,
+            chain=self,
+        )
+
+    # -- Explorer URL Helpers --------------------------------------------
+
+    def get_explorer_url(
+        self,
+        *,
+        item: ExplorerItem | None = None,
+        id: str | int | HexBytes | None = None,
+        tab: str | None = None,
+    ) -> str | None:
+        """Build a block explorer URL for this chain.
+
+        Args:
+            item: Resource type (``'tx'``, ``'address'``, ``'token'``, or ``'block'``).
+            id: Resource identifier.
+            tab: Optional sub-tab parameter.
+
+        Returns:
+            The formatted explorer URL, or ``None`` if this chain has no explorer.
+        """
+        return get_explorer_url(
+            self,
+            item=item,
+            id=id,
+            tab=tab,
+        )
+
+    def tx_explorer_url(
+        self,
+        tx_hash: str | HexBytes,
+        *,
+        tab: TxExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for a transaction on this chain."""
+        return tx_explorer_url(
+            self,
+            tx_hash,
+            tab=tab,
+        )
+
+    def address_explorer_url(
+        self,
+        address: str,
+        *,
+        tab: AddressExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for an address on this chain."""
+        return address_explorer_url(
+            self,
+            address,
+            tab=tab,
+        )
+
+    def block_explorer_url(
+        self,
+        block_number: int | str,
+        *,
+        tab: BlockExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for a block on this chain."""
+        return block_explorer_url(
+            self,
+            block_number,
+            tab=tab,
+        )
+
+    def token_explorer_url(
+        self,
+        address: str,
+        *,
+        tab: TokenExplorerTab | None = None,
+    ) -> str | None:
+        """Generate a block explorer URL for a token on this chain."""
+        return token_explorer_url(
+            self,
+            address,
+            tab=tab,
+        )
 
     # -- Deprecated aliases ----------------------------------------------
 
@@ -203,6 +305,7 @@ def make_seismic_testnet(
     n: int = 1,
     *,
     host: str | None = None,
+    explorer_url: str | None = "https://seismic-testnet.socialscan.io",
 ) -> ChainConfig:
     """Create a ``ChainConfig`` for a Seismic testnet.
 
@@ -211,6 +314,7 @@ def make_seismic_testnet(
     Args:
         n: GCP node number (default ``1``).
         host: Custom hostname. Mutually exclusive with *n*.
+        explorer_url: Block explorer URL (default ``"https://seismic-testnet.socialscan.io"``).
 
     Returns:
         A ``ChainConfig`` for the specified testnet.
@@ -229,6 +333,7 @@ def make_seismic_testnet(
         rpc_url=f"https://{host}/rpc",
         ws_url=f"wss://{host}/ws",
         name="Seismic Testnet",
+        explorer_url=explorer_url,
     )
 
 
@@ -241,4 +346,5 @@ SANVIL: ChainConfig = ChainConfig(
     rpc_url="http://127.0.0.1:8545",
     ws_url="ws://127.0.0.1:8545",
     name="Sanvil (local)",
+    explorer_url=None,
 )

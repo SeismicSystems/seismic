@@ -4,8 +4,8 @@ Deferred features not included in the initial SDK implementation.
 
 ## Block Explorer URL Helpers
 
-- Generate URLs for addresses, transactions, tokens, blocks
-- Support for SeismicScan explorer
+- [x] Generate URLs for addresses, transactions, tokens, blocks
+- [x] Support for SeismicScan explorer
 
 ## Faucet Interaction
 
