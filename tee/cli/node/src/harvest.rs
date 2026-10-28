@@ -463,7 +463,9 @@ pub struct HarvestArgs {
     #[arg(long, value_name = "FILE")]
     pub node: Option<PathBuf>,
 
-    /// Platform the policy promoted from inputs/measurements.json pins.
+    /// Platform of inputs/measurements.json when it is a raw measurements
+    /// file stamped with none. The policy `init` writes is a record list
+    /// naming its platform per record, and passes through unchanged.
     #[arg(long, value_name = "TYPE", default_value = DEFAULT_ATTESTATION_TYPE)]
     pub attestation_type: String,
 

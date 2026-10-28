@@ -438,7 +438,9 @@ pub struct AssembleArgs {
     #[arg(long, value_name = "FILE", conflicts_with = "check")]
     pub nodes: Option<PathBuf>,
 
-    /// Platform the policy promoted from inputs/measurements.json pins.
+    /// Platform of inputs/measurements.json when it is a raw measurements
+    /// file stamped with none. The policy `init` writes is a record list
+    /// naming its platform per record, and passes through unchanged.
     #[arg(long, value_name = "TYPE", default_value = DEFAULT_ATTESTATION_TYPE)]
     pub attestation_type: String,
 
@@ -591,8 +593,12 @@ pub(crate) mod tests {
     use seismic_tee_common::test_support::write_file;
     use seismic_tee_context::ContextArgs;
 
+    use seismic_tee_common::founding::load_harvest_records;
+
     use super::*;
     use crate::gates::tests::{FIXTURE_POLICY, FIXTURE_RETH_GENESIS, REGISTRY, other_policy};
+    use crate::image::ImageRecord;
+    use crate::image::tests::{TAG, local_release, release_files, with_gcp_target};
 
     pub(crate) const AUTHORITY: Address =
         alloy_primitives::address!("0x1000000000000000000000000000000000000002");
@@ -948,23 +954,27 @@ pub(crate) mod tests {
     /// derived artifact set at the top level, the inputs untouched.
     #[tokio::test]
     async fn init_then_assemble_share_a_directory() {
-        use crate::image::tests::{TAG, local_release, release_files};
-
         let authored = authored();
         let net = NetworkDir::new(authored.dir.path().join("networks").join("testnet-1"));
         let raw = write_file(
             &authored.dir,
             "raw-measurements.json",
-            format!(r#"{{"measurement_id": "{TAG}.vhd", "measurements": {{"4": {{"expected": "ab"}}}}}}"#)
-                .as_bytes(),
+            format!(
+                r#"{{"measurement_id": "{TAG}.vhd", "measurements": {{"4": {{"expected": "{}"}}, "9": {{"expected": "{}"}}, "11": {{"expected": "{}"}}}}}}"#,
+                "ab".repeat(32),
+                "cd".repeat(32),
+                "ef".repeat(32)
+            )
+            .as_bytes(),
         );
         let (_, image) = local_release(&authored.dir.path().join("build"), &release_files(TAG));
         crate::init::init_network_dir(
             &crate::init::fetch_client().unwrap(),
             &net,
+            image,
             &crate::init::InitInputs {
                 name: "testnet-1",
-                image,
+                attestation_types: &[],
                 measurements: Some(raw.to_str().unwrap()),
                 reth_genesis: Some(authored.reth_genesis.to_str().unwrap()),
                 summit_genesis: Some(authored.summit_genesis.to_str().unwrap()),
@@ -1010,6 +1020,96 @@ pub(crate) mod tests {
             assembled.reth_genesis
         );
         assert_ne!(net.reth_genesis(), net.input_reth_genesis());
+    }
+
+    /// `init` from the fixture's image published for GCP too, then the
+    /// two-record policy it wrote through everything `harvest` and `assemble`
+    /// do with one: promoted again (a record list passes through verbatim),
+    /// loaded by the verifier, the fixture's real Azure cohort replayed
+    /// against it, and the artifact set assembled over it, pinning it.
+    #[tokio::test]
+    async fn an_inited_two_platform_policy_founds_through_harvest_and_assemble() {
+        let fixture = NetworkDir::new(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../networks/fixture-devnet"),
+        );
+        let tag = ImageRecord::read(&fixture).unwrap().image;
+        let mut files = release_files(&tag);
+        files.insert(
+            "measurements.azure-tdx.json".to_string(),
+            std::fs::read(fixture.input_measurements()).unwrap(),
+        );
+        let files = with_gcp_target(files, &tag);
+
+        let authored = authored();
+        let net = NetworkDir::new(authored.dir.path().join("networks").join("testnet-1"));
+        let (_, image) = local_release(&authored.dir.path().join("build"), &files);
+        crate::init::init_network_dir(
+            &crate::init::fetch_client().unwrap(),
+            &net,
+            image,
+            &crate::init::InitInputs {
+                name: "testnet-1",
+                attestation_types: &[],
+                measurements: None,
+                reth_genesis: Some(authored.reth_genesis.to_str().unwrap()),
+                summit_genesis: Some(authored.summit_genesis.to_str().unwrap()),
+                founders: 1,
+            },
+            false,
+        )
+        .await
+        .unwrap();
+
+        let written = std::fs::read(net.input_measurements()).unwrap();
+        let policy = promote_measurements(&written, None, Some(DEFAULT_ATTESTATION_TYPE)).unwrap();
+        assert_eq!(policy, written);
+        SeismicMeasurementPolicy::from_json_bytes(&policy).unwrap();
+        let records: Vec<serde_json::Value> = serde_json::from_slice(&policy).unwrap();
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[1]["attestation_type"], "gcp-tdx");
+        // The Azure record is the fixture's own, promoted from the same
+        // measurements.
+        let committed: Vec<serde_json::Value> = serde_json::from_slice(FIXTURE_POLICY).unwrap();
+        assert_eq!(records[0], committed[0]);
+
+        let harvested = load_harvest_records(&fixture).unwrap();
+        verify_harvest_records(&fixture, &harvested, &policy).unwrap();
+
+        let assembled = assemble(
+            &AssembleInputs {
+                name: "testnet-1",
+                reth_genesis: &Artifact::read(&net.input_reth_genesis()).unwrap(),
+                summit_genesis: &Artifact::read(&net.input_summit_genesis()).unwrap(),
+                policy: &policy,
+                validators: &[validator()],
+                founding_tx_io_pk: FOUNDING_TX_IO_PK,
+                registry: REGISTRY,
+                authority: AUTHORITY,
+            },
+            &Fake::default(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(assembled.policy, policy);
+        assert_eq!(
+            assembled.manifest.measurements.bootstrap_policy_hash,
+            <[u8; 32]>::from(Sha256::digest(&policy))
+        );
+        let genesis: serde_json::Value = serde_json::from_slice(&assembled.reth_genesis).unwrap();
+        let storage = genesis["alloc"][&hex_0x(REGISTRY.as_slice())]["storage"]
+            .as_object()
+            .unwrap();
+        assert_eq!(
+            storage.len(),
+            compile(&policy).unwrap().registry_genesis_storage.len()
+        );
+        assert!(
+            storage.len()
+                > compile(FIXTURE_POLICY)
+                    .unwrap()
+                    .registry_genesis_storage
+                    .len()
+        );
     }
 
     /// Re-verification is offline and per record: a record that is not a

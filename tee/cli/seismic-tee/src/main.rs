@@ -823,6 +823,16 @@ mod tests {
             vec![
                 "network",
                 "init",
+                "--name",
+                "devnet-4",
+                "--image-json",
+                "https://github.com/SeismicSystems/seismic-images/releases/download/seismic_2026-10-28.fbece2/image.json",
+                "--attestation-type",
+                "gcp-tdx",
+            ],
+            vec![
+                "network",
+                "init",
                 "tee/networks/devnet-4",
                 "--image-json",
                 "build/image.json",

@@ -32,6 +32,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::{Context as _, bail};
+use seismic_measurement_admission::{AZURE_TDX_ATTESTATION_TYPE, GCP_TDX_ATTESTATION_TYPE};
 use seismic_tee_common::NetworkDir;
 use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
@@ -302,6 +303,32 @@ impl ImageRecord {
     /// The VHD name the image's measurements are stamped with.
     pub fn vhd(&self) -> String {
         format!("{}.vhd", self.image)
+    }
+
+    /// The attestation types the image is published for, in name order.
+    pub fn attestation_types(&self) -> Vec<&str> {
+        self.targets.keys().map(String::as_str).collect()
+    }
+
+    /// The artifact `attestation_type`'s measurements are stamped with: the
+    /// VHD for `azure-tdx`, the tarball for `gcp-tdx`.
+    pub fn artifact(&self, attestation_type: &str) -> anyhow::Result<String> {
+        match attestation_type {
+            AZURE_TDX_ATTESTATION_TYPE => Ok(self.vhd()),
+            GCP_TDX_ATTESTATION_TYPE => Ok(format!("{}.tar.gz", self.image)),
+            other => bail!(
+                "attestation type {other:?} is not {AZURE_TDX_ATTESTATION_TYPE} or \
+                 {GCP_TDX_ATTESTATION_TYPE}"
+            ),
+        }
+    }
+
+    /// The artifacts the image is published as, one per attestation type.
+    pub fn artifacts(&self) -> Vec<String> {
+        self.attestation_types()
+            .into_iter()
+            .filter_map(|attestation_type| self.artifact(attestation_type).ok())
+            .collect()
     }
 
     /// The measurements asset for `target` (an attestation type, `azure-tdx`).
@@ -664,8 +691,13 @@ pub(crate) mod tests {
             ),
             (
                 "measurements.azure-tdx.json".to_string(),
-                format!(r#"{{"measurement_id": "{tag}.vhd", "measurements": {{"4": {{"expected": "ab"}}}}}}"#)
-                    .into_bytes(),
+                format!(
+                    r#"{{"measurement_id": "{tag}.vhd", "measurements": {{"4": {{"expected": "{}"}}, "9": {{"expected": "{}"}}, "11": {{"expected": "{}"}}}}}}"#,
+                    "ab".repeat(32),
+                    "cd".repeat(32),
+                    "ef".repeat(32)
+                )
+                .into_bytes(),
             ),
             (
                 RETH_GENESIS_ASSET.to_string(),
@@ -698,6 +730,37 @@ pub(crate) mod tests {
             .chain(std::iter::once(format!("{}  {tag}.efi\n", "ab".repeat(32))))
             .collect();
         files.insert(SHA256SUMS_ASSET.to_string(), sums.into_bytes());
+    }
+
+    /// `files` published for GCP too: a `gcp-tdx` target in image.json and
+    /// the measurements stamped for the tarball beside it.
+    pub(crate) fn with_gcp_target(
+        mut files: BTreeMap<String, Vec<u8>>,
+        tag: &str,
+    ) -> BTreeMap<String, Vec<u8>> {
+        let mut image_json: serde_json::Value =
+            serde_json::from_slice(&files[IMAGE_JSON_ASSET]).unwrap();
+        image_json["targets"]["gcp-tdx"] = serde_json::json!({
+            "gce_image": format!("projects/seismic-images/global/images/{}", tag.replace(['_', '.'], "-")),
+            "tarball_url": format!("https://storage.googleapis.com/seismic-images/{tag}.tar.gz"),
+            "measurements": "measurements.gcp-tdx.json",
+            "efi_sha256": "aa".repeat(32),
+        });
+        files.insert(
+            IMAGE_JSON_ASSET.to_string(),
+            serde_json::to_vec_pretty(&image_json).unwrap(),
+        );
+        files.insert(
+            "measurements.gcp-tdx.json".to_string(),
+            format!(
+                r#"{{"attestation_type": "gcp-tdx", "measurement_id": "{tag}.tar.gz", "measurements": {{"rtmr1": {{"expected": "{}"}}, "rtmr2": {{"expected": "{}"}}}}}}"#,
+                "ab".repeat(48),
+                "cd".repeat(48)
+            )
+            .into_bytes(),
+        );
+        resum(&mut files, tag);
+        files
     }
 
     /// Serve `files` as release `tag`, at the paths GitHub would.
@@ -913,6 +976,8 @@ pub(crate) mod tests {
         let record = ImageRecord::parse(&files[IMAGE_JSON_ASSET], "image.json").unwrap();
         assert_eq!(record.release(), ImageRelease::new(TAG));
         assert_eq!(record.vhd(), format!("{TAG}.vhd"));
+        assert_eq!(record.attestation_types(), ["azure-tdx"]);
+        assert_eq!(record.artifacts(), [format!("{TAG}.vhd")]);
         assert_eq!(
             record.measurements_asset("azure-tdx").unwrap(),
             "measurements.azure-tdx.json"
@@ -929,6 +994,27 @@ pub(crate) mod tests {
             .to_string();
         assert!(err.contains("not published for gcp-tdx"), "{err}");
         assert!(err.contains("azure-tdx"), "{err}");
+
+        // Published for both: each type names its stamped artifact, and an
+        // unknown type is refused by name.
+        let files = with_gcp_target(files, TAG);
+        let record = ImageRecord::parse(&files[IMAGE_JSON_ASSET], "image.json").unwrap();
+        assert_eq!(record.attestation_types(), ["azure-tdx", "gcp-tdx"]);
+        assert_eq!(record.artifact("azure-tdx").unwrap(), format!("{TAG}.vhd"));
+        assert_eq!(record.artifact("gcp-tdx").unwrap(), format!("{TAG}.tar.gz"));
+        assert_eq!(
+            record.artifacts(),
+            [format!("{TAG}.vhd"), format!("{TAG}.tar.gz")]
+        );
+        assert_eq!(
+            record.measurements_asset("gcp-tdx").unwrap(),
+            "measurements.gcp-tdx.json"
+        );
+        let err = record.artifact("aws-nitro").unwrap_err().to_string();
+        assert!(
+            err.contains("\"aws-nitro\" is not azure-tdx or gcp-tdx"),
+            "{err}"
+        );
 
         let err = ImageRecord::parse(b"{\"image\": 1}", "x/image.json")
             .unwrap_err()
