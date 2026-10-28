@@ -25,8 +25,8 @@ tee/networks/<name>/
 │   │                               image, built from what, bytes where
 │   ├── reth-genesis.json           authored: policy-free EL genesis
 │   ├── summit-genesis.toml         authored: consensus parameter choices
-│   ├── measurements.json           authored: raw PCRs from `make measure`,
-│   │                               carrying its measurement_id
+│   ├── measurements.json           authored: the image's measurements as
+│   │                               policy records, one per platform admitted
 │   ├── founder-withdrawal-credentials.json
 │   │                               authored: one address per founding
 │   │                               node, in node-name order

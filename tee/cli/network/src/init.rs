@@ -11,12 +11,13 @@
 //! `https://` URL, and the directory it sits in supplies everything the
 //! founding takes from the image ([`crate::image`]): the record itself,
 //! copied in byte for byte as the record of which image this network is
-//! founded on; its measurements; and both genesis templates as the image's
-//! own `seismic-reth` and `summit` have them — every one of them verified
-//! against the `SHA256SUMS` beside it, whose build provenance is verified
-//! first (`gh attestation verify`, so `gh` must be installed and logged in),
-//! and the measurements additionally gated on being stamped for that very
-//! image. A release's download directory is one such directory; a local
+//! founded on; its measurements for every platform it is published for
+//! (`--attestation-type` narrows them); and both genesis templates as the
+//! image's own `seismic-reth` and `summit` have them — every one of them
+//! verified against the `SHA256SUMS` beside it, whose build provenance is
+//! verified first (`gh attestation verify`, so `gh` must be installed and
+//! logged in), and the measurements additionally gated on being stamped for
+//! that very image. A release's download directory is one such directory; a local
 //! build's `build/` is another, founded on with `--allow-unattested`, which
 //! skips the provenance check and nothing else. Each of the three inputs
 //! can still be given as a local path or an `https://` URL
@@ -25,7 +26,9 @@
 //!
 //! The inputs are copied into `inputs/` verbatim, each gated on parsing as
 //! its format — except that a summit genesis with an empty or missing
-//! `namespace` gets `namespace = <name>` filled in. `--founders N` writes N
+//! `namespace` gets `namespace = <name>` filled in, and the measurements are
+//! promoted into the policy document the network admits nodes by, one record
+//! per platform, as `admission promote` renders it. `--founders N` writes N
 //! placeholder withdrawal credentials, obviously fake (`0x00…0<i>`) so a set
 //! that survives into a network anyone cares about shows on sight. The
 //! founder edits the inputs in place, then provisions and harvests the
@@ -47,6 +50,9 @@ use std::time::Duration;
 
 use anyhow::{Context as _, bail};
 use clap::Args;
+use seismic_measurement_admission::{
+    AZURE_TDX_ATTESTATION_TYPE, GCP_TDX_ATTESTATION_TYPE, compile_policy, promote_measurements,
+};
 use seismic_tee_common::home::{abbreviate, expand_tilde};
 use seismic_tee_common::network_dir::{
     FOUNDERS_FILENAME, IMAGE_FILENAME, MEASUREMENTS_FILENAME, RETH_GENESIS_FILENAME,
@@ -59,7 +65,6 @@ use seismic_tee_context::config::{Network, check_network_name};
 use seismic_tee_context::path::networks_root;
 use seismic_tee_context::{Context, Selection, write};
 
-use crate::assemble::DEFAULT_ATTESTATION_TYPE;
 use crate::image::{self, ImageRecord, ImageRelease};
 
 /// How long one input fetch may take.
@@ -201,30 +206,35 @@ pub fn fill_summit_namespace(raw: &[u8], name: &str, source: &str) -> anyhow::Re
 
 /// Gate a measurements input on carrying the id of the image it measures.
 ///
-/// The measurements file is the only binding between a network's PCR
-/// allowlist and an image: seismic-images stamps the versioned VHD filename
-/// into it, and promotion reads the id from there. `init` gates
-/// on the stamp so a missing one surfaces while the operator still holds loose
-/// files, not after the cohort has been provisioned and harvested. A promoted
-/// policy is a record list, each record carrying its own id.
+/// The measurements file is the only binding between a network's register
+/// allowlist and an image: seismic-images stamps the versioned artifact
+/// filename into it (`<image>.vhd`, `<image>.tar.gz`), and promotion reads
+/// the id from there. `init` gates on the stamp so a missing one surfaces
+/// while the operator still holds loose files, not after the cohort has been
+/// provisioned and harvested. A promoted policy is a record list, each record
+/// carrying its own id.
 pub fn require_measurement_id(raw: &[u8], source: &str) -> anyhow::Result<()> {
     let value: serde_json::Value = serde_json::from_slice(raw)
         .map_err(|e| anyhow::anyhow!("{source} is not valid JSON: {e}{}", raw_url_hint(source)))?;
     if value.is_object() && value.get("measurement_id").is_none() {
         bail!(
             "{source} carries no measurement_id — use the measurements a seismic-images release \
-             carries, which are stamped with the versioned image filename these PCRs measure"
+             carries, which are stamped with the versioned image filename these registers measure"
         );
     }
     Ok(())
 }
 
-/// Gate a measurements input on being the given image's: stamped
-/// `<image>.vhd` (or, for a promoted policy, carrying a record so stamped).
-/// The whole point of `--image-json` is that the directory names one image;
-/// measurements for some other image would leave `image.json` and the PCRs
-/// disagreeing about which.
-pub fn require_measurement_of(raw: &[u8], vhd: &str, source: &str) -> anyhow::Result<()> {
+/// Gate a measurements input on being the given image's: stamped with one of
+/// its `artifacts`, `<image>.vhd` or `<image>.tar.gz` (or, for a promoted
+/// policy, carrying a record so stamped). The whole point of `--image-json`
+/// is that the directory names one image; measurements for some other image
+/// would leave `image.json` and the registers disagreeing about which.
+pub fn require_measurement_of(
+    raw: &[u8],
+    artifacts: &[String],
+    source: &str,
+) -> anyhow::Result<()> {
     let value: serde_json::Value = serde_json::from_slice(raw)
         .map_err(|e| anyhow::anyhow!("{source} is not valid JSON: {e}{}", raw_url_hint(source)))?;
     let ids: Vec<&str> = match &value {
@@ -238,27 +248,88 @@ pub fn require_measurement_of(raw: &[u8], vhd: &str, source: &str) -> anyhow::Re
             .into_iter()
             .collect(),
     };
-    if !ids.contains(&vhd) {
+    if !ids
+        .iter()
+        .any(|id| artifacts.iter().any(|artifact| artifact == id))
+    {
         bail!(
-            "{source} measures {}, not {vhd} — the image --image-json names; pass the \
+            "{source} measures {}, not {} — the image --image-json names; pass the \
              measurements of that image, or name the image these measure",
             if ids.is_empty() {
                 "no named image".to_string()
             } else {
                 ids.join(", ")
-            }
+            },
+            artifacts.join(" or ")
         );
     }
     Ok(())
 }
 
-/// What `init` scaffolds a network directory from: the image's release, and
-/// whichever inputs are given as loose files (a local path or an `https://`
-/// URL) instead of taken from it.
+/// The attestation types `init` admits: the ones `named`, each checked
+/// against what the image is published for, or every one of the image's.
+fn select_attestation_types<'a>(
+    record: &'a ImageRecord,
+    named: &'a [String],
+) -> anyhow::Result<Vec<&'a str>> {
+    if named.is_empty() {
+        let types = record.attestation_types();
+        if types.is_empty() {
+            bail!(
+                "image {} is published for no platform: its image.json names no target",
+                record.image
+            );
+        }
+        return Ok(types);
+    }
+    let mut types: Vec<&str> = Vec::with_capacity(named.len());
+    for attestation_type in named {
+        record.measurements_asset(attestation_type)?;
+        if !types.contains(&attestation_type.as_str()) {
+            types.push(attestation_type);
+        }
+    }
+    Ok(types)
+}
+
+/// The records a promoted policy document carries.
+fn policy_records(policy: &[u8], source: &str) -> anyhow::Result<Vec<serde_json::Value>> {
+    serde_json::from_slice(policy)
+        .with_context(|| format!("{source}: the promoted policy is not a record list"))
+}
+
+/// One policy document over `records`, rendered as `admission promote`
+/// renders one record's and compiled before it is handed back: the bytes
+/// the manifest will commit to.
+fn policy_document(records: &[serde_json::Value]) -> anyhow::Result<Vec<u8>> {
+    let mut rendered = serde_json::to_vec_pretty(records).expect("JSON values serialize");
+    rendered.push(b'\n');
+    compile_policy(&rendered).context("compiling the measurement policy")?;
+    Ok(rendered)
+}
+
+/// The attestation types `records` admit, in record order.
+fn admitted(records: &[serde_json::Value]) -> Vec<String> {
+    let mut types: Vec<String> = Vec::new();
+    for record in records {
+        if let Some(attestation_type) = record.get("attestation_type").and_then(|t| t.as_str())
+            && !types.iter().any(|t| t == attestation_type)
+        {
+            types.push(attestation_type.to_string());
+        }
+    }
+    types
+}
+
+/// What `init` scaffolds a network directory from: which of the image's
+/// platforms to admit, and whichever inputs are given as loose files (a
+/// local path or an `https://` URL) instead of taken from the image.
 #[derive(Debug, Clone)]
 pub struct InitInputs<'a> {
     pub name: &'a str,
-    pub image: ImageRelease,
+    /// The attestation types admitted, of those the image is published for;
+    /// empty admits every one.
+    pub attestation_types: &'a [String],
     pub measurements: Option<&'a str>,
     pub reth_genesis: Option<&'a str>,
     pub summit_genesis: Option<&'a str>,
@@ -341,107 +412,201 @@ async fn input_from(
     }
 }
 
-/// Scaffold a network directory's authored inputs under `inputs/`. Returns
-/// the paths written. With `force`, the directory is a network started over:
-/// whatever [`network_state`] finds is removed first.
+/// A network directory being scaffolded: what the layout already holds,
+/// refused unless forced, and the image's release, opened. Two steps, so
+/// that [`run`] can ask which of the image's platforms to admit in between.
+struct Scaffold {
+    dir: NetworkDir,
+    existing: Vec<PathBuf>,
+    opened: OpenedRelease,
+}
+
+impl Scaffold {
+    /// Refuse what `dir` holds unless `force`, then open `image`'s release.
+    async fn open(dir: &NetworkDir, image: ImageRelease, force: bool) -> anyhow::Result<Self> {
+        // Refused before anything is downloaded.
+        let existing = network_state(dir);
+        if !existing.is_empty() && !force {
+            bail!(
+                "refusing to overwrite the network directory {}: it holds {} — pass --force to \
+                 start it over (the authored inputs and harvest, the artifact set and nodes/ are \
+                 removed first; re-authoring the inputs and re-assembling is a new network \
+                 identity)",
+                dir.root().display(),
+                existing
+                    .iter()
+                    .map(|p| p
+                        .strip_prefix(dir.root())
+                        .unwrap_or(p)
+                        .display()
+                        .to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+        }
+        let opened = OpenedRelease::open(image).await?;
+        Ok(Self {
+            dir: dir.clone(),
+            existing,
+            opened,
+        })
+    }
+
+    /// The attestation types the image is published for.
+    fn attestation_types(&self) -> Vec<&str> {
+        self.opened.record.attestation_types()
+    }
+
+    /// The measurement policy the network admits nodes by, and the
+    /// attestation types it admits: the loose `--measurements` promoted (a
+    /// record list passes through verbatim), else the image's measurements
+    /// for each admitted platform, each gated on its stamp and promoted into
+    /// one record.
+    async fn measurement_policy(
+        &self,
+        client: &reqwest::Client,
+        inputs: &InitInputs<'_>,
+    ) -> anyhow::Result<(Vec<u8>, Vec<String>)> {
+        let record = &self.opened.record;
+        if let Some(source) = inputs.measurements {
+            let raw = read_input_source(client, source).await?;
+            require_measurement_id(&raw, source)?;
+            require_measurement_of(&raw, &record.artifacts(), source)?;
+            let policy =
+                promote_measurements(&raw, None, None).with_context(|| source.to_string())?;
+            let admitted = admitted(&policy_records(&policy, source)?);
+            return Ok((policy, admitted));
+        }
+        let mut records = Vec::new();
+        for attestation_type in select_attestation_types(record, inputs.attestation_types)? {
+            let (raw, source) = self
+                .opened
+                .input(record.measurements_asset(attestation_type)?)
+                .await?;
+            require_measurement_id(&raw, &source)?;
+            require_measurement_of(&raw, &[record.artifact(attestation_type)?], &source)?;
+            let promoted = promote_measurements(&raw, None, Some(attestation_type))
+                .with_context(|| source.clone())?;
+            for promoted_record in policy_records(&promoted, &source)? {
+                if promoted_record["attestation_type"] != attestation_type {
+                    bail!(
+                        "{source} measures {} and image.json lists it for {attestation_type}",
+                        promoted_record["attestation_type"]
+                    );
+                }
+                records.push(promoted_record);
+            }
+        }
+        let admitted = admitted(&records);
+        Ok((policy_document(&records)?, admitted))
+    }
+
+    /// Scaffold the authored inputs under the opened directory's `inputs/`.
+    /// Returns the paths written. Forced, the directory is a network started
+    /// over: whatever [`Self::open`] found is removed first.
+    async fn write(
+        self,
+        client: &reqwest::Client,
+        inputs: &InitInputs<'_>,
+    ) -> anyhow::Result<Vec<PathBuf>> {
+        let (measurements, admitted) = self.measurement_policy(client, inputs).await?;
+        let dir = &self.dir;
+        let opened = &self.opened;
+        let (reth_genesis, reth_source) = input_from(
+            client,
+            opened,
+            inputs.reth_genesis,
+            image::RETH_GENESIS_ASSET,
+        )
+        .await?;
+        serde_json::from_slice::<serde_json::Value>(&reth_genesis).map_err(|e| {
+            anyhow::anyhow!(
+                "{reth_source} is not valid JSON: {e}{}",
+                raw_url_hint(&reth_source)
+            )
+        })?;
+        let (summit_starter, summit_source) = input_from(
+            client,
+            opened,
+            inputs.summit_genesis,
+            image::SUMMIT_STARTER_ASSET,
+        )
+        .await?;
+        let summit_genesis = fill_summit_namespace(&summit_starter, inputs.name, &summit_source)?;
+        let credentials: Vec<String> = (1..=inputs.founders)
+            .map(|i| format!("0x{i:040x}"))
+            .collect();
+        let mut founders = serde_json::to_vec_pretty(&credentials).expect("strings serialize");
+        founders.push(b'\n');
+
+        let contents = [
+            (RETH_GENESIS_FILENAME, reth_genesis),
+            (MEASUREMENTS_FILENAME, measurements),
+            (SUMMIT_GENESIS_FILENAME, summit_genesis),
+            (FOUNDERS_FILENAME, founders),
+            // The record of which image, verbatim: `assemble` reads the image's
+            // name from it, the provisioner the blob location.
+            (IMAGE_FILENAME, self.opened.record_bytes.clone()),
+        ];
+        if !self.existing.is_empty() {
+            // Whole, not just the four inputs: a harvest or artifact set left
+            // from an earlier cohort would describe boxes these inputs never
+            // met, and `harvest` would refuse the stale records by name later.
+            for path in &self.existing {
+                if path.is_dir() {
+                    std::fs::remove_dir_all(path)
+                } else {
+                    std::fs::remove_file(path)
+                }
+                .with_context(|| format!("removing {}", path.display()))?;
+                eprintln!("removed {}", path.display());
+            }
+        }
+        let inputs_dir = dir.inputs();
+        std::fs::create_dir_all(&inputs_dir)
+            .with_context(|| format!("creating {}", inputs_dir.display()))?;
+        let mut written = Vec::with_capacity(contents.len());
+        for (name, bytes) in contents {
+            let path = inputs_dir.join(name);
+            std::fs::write(&path, bytes).with_context(|| format!("writing {}", path.display()))?;
+            written.push(path);
+        }
+        eprintln!(
+            "admitting {} nodes: {}",
+            admitted.join(" and "),
+            match inputs.measurements {
+                Some(source) => format!("the policy records of {source}"),
+                None => format!(
+                    "one policy record per platform in {}, promoted from the image's measurements",
+                    dir.input_measurements().display()
+                ),
+            }
+        );
+        Ok(written)
+    }
+}
+
+/// Scaffold a network directory's authored inputs under `inputs/` from
+/// `image`: what `dir` already holds is refused unless `force`, then the
+/// release is opened and the inputs written.
 pub async fn init_network_dir(
     client: &reqwest::Client,
     dir: &NetworkDir,
+    image: ImageRelease,
     inputs: &InitInputs<'_>,
     force: bool,
 ) -> anyhow::Result<Vec<PathBuf>> {
-    // Refused before anything is downloaded.
-    let existing = network_state(dir);
-    if !existing.is_empty() && !force {
-        bail!(
-            "refusing to overwrite the network directory {}: it holds {} — pass --force to start \
-             it over (the authored inputs and harvest, the artifact set and nodes/ are removed \
-             first; re-authoring the inputs and re-assembling is a new network identity)",
-            dir.root().display(),
-            existing
-                .iter()
-                .map(|p| p
-                    .strip_prefix(dir.root())
-                    .unwrap_or(p)
-                    .display()
-                    .to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
-    }
-    let opened = OpenedRelease::open(inputs.image.clone()).await?;
-
-    let measurements_asset = opened.record.measurements_asset(DEFAULT_ATTESTATION_TYPE)?;
-    let (measurements, measurements_source) =
-        input_from(client, &opened, inputs.measurements, measurements_asset).await?;
-    require_measurement_id(&measurements, &measurements_source)?;
-    require_measurement_of(&measurements, &opened.record.vhd(), &measurements_source)?;
-    let (reth_genesis, reth_source) = input_from(
-        client,
-        &opened,
-        inputs.reth_genesis,
-        image::RETH_GENESIS_ASSET,
-    )
-    .await?;
-    serde_json::from_slice::<serde_json::Value>(&reth_genesis).map_err(|e| {
-        anyhow::anyhow!(
-            "{reth_source} is not valid JSON: {e}{}",
-            raw_url_hint(&reth_source)
-        )
-    })?;
-    let (summit_starter, summit_source) = input_from(
-        client,
-        &opened,
-        inputs.summit_genesis,
-        image::SUMMIT_STARTER_ASSET,
-    )
-    .await?;
-    let summit_genesis = fill_summit_namespace(&summit_starter, inputs.name, &summit_source)?;
-    let credentials: Vec<String> = (1..=inputs.founders)
-        .map(|i| format!("0x{i:040x}"))
-        .collect();
-    let mut founders = serde_json::to_vec_pretty(&credentials).expect("strings serialize");
-    founders.push(b'\n');
-
-    let contents = [
-        (RETH_GENESIS_FILENAME, reth_genesis),
-        (MEASUREMENTS_FILENAME, measurements),
-        (SUMMIT_GENESIS_FILENAME, summit_genesis),
-        (FOUNDERS_FILENAME, founders),
-        // The record of which image, verbatim: `assemble` reads the image's
-        // name from it, the provisioner the blob location.
-        (IMAGE_FILENAME, opened.record_bytes),
-    ];
-    if !existing.is_empty() {
-        // Whole, not just the four inputs: a harvest or artifact set left
-        // from an earlier cohort would describe boxes these inputs never
-        // met, and `harvest` would refuse the stale records by name later.
-        for path in &existing {
-            if path.is_dir() {
-                std::fs::remove_dir_all(path)
-            } else {
-                std::fs::remove_file(path)
-            }
-            .with_context(|| format!("removing {}", path.display()))?;
-            eprintln!("removed {}", path.display());
-        }
-    }
-    let inputs_dir = dir.inputs();
-    std::fs::create_dir_all(&inputs_dir)
-        .with_context(|| format!("creating {}", inputs_dir.display()))?;
-    let mut written = Vec::with_capacity(contents.len());
-    for (name, bytes) in contents {
-        let path = inputs_dir.join(name);
-        std::fs::write(&path, bytes).with_context(|| format!("writing {}", path.display()))?;
-        written.push(path);
-    }
-    Ok(written)
+    Scaffold::open(dir, image, force)
+        .await?
+        .write(client, inputs)
+        .await
 }
 
 #[derive(Debug, Args)]
 #[command(after_help = "Examples:\n  \
     seismic-tee network init     asks for the image, the name and the directory\n  \
     seismic-tee network init --name devnet-4 --founders 4 --image-json https://github.com/SeismicSystems/seismic-images/releases/download/seismic_2026-10-01.6a90ed/image.json\n  \
+    seismic-tee network init --name devnet-4 --image-json https://github.com/SeismicSystems/seismic-images/releases/download/seismic_2026-10-28.fbece2/image.json --attestation-type gcp-tdx     # admits GCP nodes alone; by default every platform the image is published for\n  \
     seismic-tee network init tee/networks/devnet-4 --image-json build/image.json --allow-unattested")]
 pub struct InitArgs {
     /// Network directory to create. Default: <NAME>/ under
@@ -487,11 +652,26 @@ pub struct InitArgs {
     pub reth_genesis: Option<String>,
 
     /// The image's measurements (or a promoted policy; local path or https://
-    /// URL), copied in as inputs/measurements.json — the PCRs of a real
-    /// image, never generated, and stamped for the image --image-json names.
-    /// Default: the image's measurements asset.
+    /// URL), promoted into inputs/measurements.json in place of the image's
+    /// own: the registers of a real image, never generated, and stamped for
+    /// the image --image-json names. Default: the image's measurements for
+    /// every platform --attestation-type admits.
     #[arg(long, value_name = "PATH_OR_URL")]
     pub measurements: Option<String>,
+
+    /// Platform the nodes attest on, azure-tdx or gcp-tdx: which of the
+    /// image's measurements are promoted into inputs/measurements.json, one
+    /// policy record each. Repeatable, or comma-separated. Default: every
+    /// platform the image is published for, offered to pick from when the
+    /// image is asked for.
+    #[arg(
+        long,
+        value_name = "TYPE",
+        value_parser = [AZURE_TDX_ATTESTATION_TYPE, GCP_TDX_ATTESTATION_TYPE],
+        value_delimiter = ',',
+        conflicts_with = "measurements"
+    )]
+    pub attestation_type: Vec<String>,
 
     /// Authored summit genesis (local path or https:// URL), copied in
     /// verbatim except that an empty namespace is filled with <name>. Every
@@ -549,7 +729,9 @@ struct Defaults<'a> {
 
 /// [`run`], with `prompt` asking for what is missing: the image, then the
 /// name, then the directory, offered as the name's under
-/// `defaults.networks`.
+/// `defaults.networks`, then, once an image asked for is open and published
+/// for more than one platform, which of them to admit, every one offered
+/// first, unless `--attestation-type` or `--measurements` already decides.
 async fn run_with(
     args: InitArgs,
     config: Option<&Path>,
@@ -557,8 +739,9 @@ async fn run_with(
     defaults: &Defaults<'_>,
 ) -> anyhow::Result<ExitCode> {
     let client = fetch_client()?;
+    let image_asked_for = args.image_json.is_none();
     // Listed ahead, the listing being async; only when it will be shown.
-    let images = if args.image_json.is_none() && prompt.can_ask() {
+    let images = if image_asked_for && prompt.can_ask() {
         Some(image_choices(&client, defaults.releases_api, args.allow_unattested).await)
     } else {
         None
@@ -601,20 +784,39 @@ async fn run_with(
     if args.allow_unattested {
         image = image.unattested();
     }
-    let written = init_network_dir(
-        &client,
-        &dir,
-        &InitInputs {
-            name: &name,
-            image,
-            measurements: args.measurements.as_deref(),
-            reth_genesis: args.reth_genesis.as_deref(),
-            summit_genesis: args.summit_genesis.as_deref(),
-            founders: args.founders,
-        },
-        args.force,
-    )
-    .await?;
+    let scaffold = Scaffold::open(&dir, image, args.force).await?;
+    // The platforms follow from the image, so they are offered only when the
+    // image was itself asked for, there is more than one, and nothing on the
+    // command line already decides them.
+    let attestation_types: Vec<String> = match platform_choices(&scaffold.attestation_types()) {
+        Some(choices)
+            if image_asked_for
+                && args.attestation_type.is_empty()
+                && args.measurements.is_none() =>
+        {
+            let picked: String = prompt.pick(
+                None,
+                "Platforms to admit",
+                "--attestation-type <TYPE>",
+                choices,
+            )?;
+            picked.split(',').map(str::to_string).collect()
+        }
+        _ => args.attestation_type,
+    };
+    let written = scaffold
+        .write(
+            &client,
+            &InitInputs {
+                name: &name,
+                attestation_types: &attestation_types,
+                measurements: args.measurements.as_deref(),
+                reth_genesis: args.reth_genesis.as_deref(),
+                summit_genesis: args.summit_genesis.as_deref(),
+                founders: args.founders,
+            },
+        )
+        .await?;
     for path in &written {
         eprintln!("wrote {}", path.display());
     }
@@ -698,6 +900,27 @@ fn refuse_a_registered_name(context: &Context, name: &str, root: &Path) -> anyho
     Ok(())
 }
 
+/// What `init` offers when the image it was asked for is published for
+/// several platforms: every one of them first, then each alone. `None`
+/// for one platform, which is nothing to pick between.
+fn platform_choices(attestation_types: &[&str]) -> Option<Vec<Choice>> {
+    if attestation_types.len() < 2 {
+        return None;
+    }
+    let mut choices = vec![Choice {
+        label: format!(
+            "{} (every platform the image is published for)",
+            attestation_types.join(", ")
+        ),
+        value: attestation_types.join(","),
+    }];
+    choices.extend(attestation_types.iter().map(|attestation_type| Choice {
+        label: attestation_type.to_string(),
+        value: attestation_type.to_string(),
+    }));
+    Some(choices)
+}
+
 /// What `init` offers when asked for --image-json: a local build's
 /// `build/image.json` when the working directory has one (a seismic-images
 /// checkout), then the published releases, newest first. A listing that
@@ -750,9 +973,15 @@ async fn image_choices(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
+    use clap::Parser as _;
     use seismic_tee_common::test_support::{refused_url, write_file};
 
     use super::*;
+    use crate::image::tests::{
+        TAG, fake_gh, local_release, release_files, resum, serve_release, with_gcp_target,
+    };
 
     const STARTER: &str = "# starter params\nnamespace = \"\"\nleader_timeout_ms = 2000\n";
     const MEASUREMENTS: &str =
@@ -773,8 +1002,6 @@ mod tests {
     }
 
     fn loose() -> Loose {
-        use crate::image::tests::{TAG, local_release, release_files};
-
         let dir = tempfile::tempdir().unwrap();
         let out = NetworkDir::new(dir.path().join("networks").join("testnet-1"));
         let (image_json, image) = local_release(&dir.path().join("build"), &release_files(TAG));
@@ -797,9 +1024,10 @@ mod tests {
         init_network_dir(
             &fetch_client().unwrap(),
             &loose.out,
+            loose.image.clone(),
             &InitInputs {
                 name: "testnet-1",
-                image: loose.image.clone(),
+                attestation_types: &[],
                 measurements: None,
                 reth_genesis: None,
                 summit_genesis: None,
@@ -816,13 +1044,27 @@ mod tests {
         out: &NetworkDir,
         overrides: (Option<&str>, Option<&str>, Option<&str>),
     ) -> anyhow::Result<Vec<PathBuf>> {
+        init_admitting(&[], release, out, overrides).await
+    }
+
+    /// `init --image-json --attestation-type ...`, against `release` and
+    /// with `overrides`.
+    async fn init_admitting(
+        attestation_types: &[&str],
+        release: ImageRelease,
+        out: &NetworkDir,
+        overrides: (Option<&str>, Option<&str>, Option<&str>),
+    ) -> anyhow::Result<Vec<PathBuf>> {
         let (reth_genesis, measurements, summit_genesis) = overrides;
+        let attestation_types: Vec<String> =
+            attestation_types.iter().map(|t| t.to_string()).collect();
         init_network_dir(
             &fetch_client().unwrap(),
             out,
+            release,
             &InitInputs {
                 name: "testnet-1",
-                image: release,
+                attestation_types: &attestation_types,
                 measurements,
                 reth_genesis,
                 summit_genesis,
@@ -833,13 +1075,22 @@ mod tests {
         .await
     }
 
+    /// The policy `admission promote` renders from one of `files`' raw
+    /// measurements assets, as `init` writes it for one platform.
+    fn promoted(files: &BTreeMap<String, Vec<u8>>, asset: &str, attestation_type: &str) -> Vec<u8> {
+        promote_measurements(&files[asset], None, Some(attestation_type)).unwrap()
+    }
+
+    /// The records of a promoted policy document.
+    fn records(policy: &[u8]) -> Vec<serde_json::Value> {
+        serde_json::from_slice(policy).unwrap()
+    }
+
     /// One release supplies every input, and image.json is copied in as the
     /// record — byte for byte, since it is what the provisioner reads. The
     /// starter's namespace slot is filled as for a loose file.
     #[tokio::test]
     async fn image_scaffolds_five_inputs_from_one_release() {
-        use crate::image::tests::{TAG, release_files, serve_release};
-
         let dir = tempfile::tempdir().unwrap();
         let out = NetworkDir::new(dir.path().join("testnet-1"));
         let files = release_files(TAG);
@@ -864,9 +1115,11 @@ mod tests {
             std::fs::read(out.input_image()).unwrap(),
             files[image::IMAGE_JSON_ASSET]
         );
+        // Published for Azure alone: the one platform's measurements,
+        // promoted byte for byte as `admission promote` renders them.
         assert_eq!(
             std::fs::read(out.input_measurements()).unwrap(),
-            files["measurements.azure-tdx.json"]
+            promoted(&files, "measurements.azure-tdx.json", "azure-tdx")
         );
         assert_eq!(
             std::fs::read(out.input_reth_genesis()).unwrap(),
@@ -894,8 +1147,6 @@ mod tests {
     /// measurements override must still be the image's.
     #[tokio::test]
     async fn loose_files_override_the_images_inputs_but_must_measure_the_image() {
-        use crate::image::tests::TAG;
-
         let loose = loose();
         let release = loose.image.clone();
         let out = &loose.out;
@@ -925,8 +1176,6 @@ mod tests {
     /// is written.
     #[tokio::test]
     async fn a_release_that_does_not_verify_writes_nothing() {
-        use crate::image::tests::{TAG, release_files, resum, serve_release};
-
         let dir = tempfile::tempdir().unwrap();
         let out = NetworkDir::new(dir.path().join("testnet-1"));
 
@@ -973,8 +1222,6 @@ mod tests {
     /// says how.
     #[tokio::test]
     async fn a_local_build_founds_only_with_allow_unattested() {
-        use crate::image::tests::fake_gh;
-
         let loose = loose();
         let gh_dir = tempfile::tempdir().unwrap();
         let fail = "echo 'Error: no attestations found' >&2; exit 1";
@@ -994,30 +1241,206 @@ mod tests {
 
     #[test]
     fn measurements_are_held_to_the_named_image() {
-        require_measurement_of(MEASUREMENTS.as_bytes(), "img.vhd", "m.json").unwrap();
+        let vhd = ["img.vhd".to_string()];
+        require_measurement_of(MEASUREMENTS.as_bytes(), &vhd, "m.json").unwrap();
         // A promoted policy covering the image passes.
         require_measurement_of(
             br#"[{"measurement_id": "old.vhd"}, {"measurement_id": "img.vhd"}]"#,
-            "img.vhd",
+            &vhd,
             "p.json",
         )
         .unwrap();
-        let err = require_measurement_of(MEASUREMENTS.as_bytes(), "new.vhd", "m.json")
+        // Any of the image's artifacts: an image published for both clouds
+        // takes measurements stamped for its tarball.
+        let both = ["img.vhd".to_string(), "img.tar.gz".to_string()];
+        require_measurement_of(br#"{"measurement_id": "img.tar.gz"}"#, &both, "m.json").unwrap();
+        let other = ["new.vhd".to_string(), "new.tar.gz".to_string()];
+        let err = require_measurement_of(MEASUREMENTS.as_bytes(), &other, "m.json")
             .unwrap_err()
             .to_string();
-        assert!(err.contains("measures img.vhd, not new.vhd"), "{err}");
-        let err = require_measurement_of(br#"{"measurements": {}}"#, "new.vhd", "m.json")
+        assert!(
+            err.contains("measures img.vhd, not new.vhd or new.tar.gz"),
+            "{err}"
+        );
+        let err = require_measurement_of(br#"{"measurements": {}}"#, &vhd, "m.json")
             .unwrap_err()
             .to_string();
         assert!(err.contains("measures no named image"), "{err}");
+    }
+
+    /// An image published for both clouds founds a network admitting both:
+    /// each platform's measurements, stamped for its own artifact, promoted
+    /// into one record of inputs/measurements.json, in the image's order.
+    #[tokio::test]
+    async fn every_platform_the_image_is_published_for_is_admitted_by_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let files = with_gcp_target(release_files(TAG), TAG);
+        let (_server, release) = serve_release(TAG, files.clone());
+        let out = NetworkDir::new(dir.path().join("both"));
+        init_from(release, &out, (None, None, None)).await.unwrap();
+        let policy = std::fs::read(out.input_measurements()).unwrap();
+        compile_policy(&policy).unwrap();
+        let written = records(&policy);
+        let (vhd, tarball) = (format!("{TAG}.vhd"), format!("{TAG}.tar.gz"));
+        assert_eq!(
+            written
+                .iter()
+                .map(|r| (
+                    r["attestation_type"].as_str().unwrap(),
+                    r["measurement_id"].as_str().unwrap()
+                ))
+                .collect::<Vec<_>>(),
+            [("azure-tdx", vhd.as_str()), ("gcp-tdx", tarball.as_str())]
+        );
+        // Each record is the one `admission promote` renders from its asset.
+        assert_eq!(
+            written[0],
+            records(&promoted(
+                &files,
+                "measurements.azure-tdx.json",
+                "azure-tdx"
+            ))[0]
+        );
+        assert_eq!(
+            written[1],
+            records(&promoted(&files, "measurements.gcp-tdx.json", "gcp-tdx"))[0]
+        );
+    }
+
+    /// `--attestation-type` narrows the admitted platforms to those named,
+    /// in the order named and each once; a platform the image is not
+    /// published for is refused by name.
+    #[tokio::test]
+    async fn attestation_type_narrows_the_platforms_admitted() {
+        let dir = tempfile::tempdir().unwrap();
+        let files = with_gcp_target(release_files(TAG), TAG);
+        let (_server, release) = serve_release(TAG, files.clone());
+        let gcp = NetworkDir::new(dir.path().join("gcp"));
+        init_admitting(&["gcp-tdx"], release.clone(), &gcp, (None, None, None))
+            .await
+            .unwrap();
+        assert_eq!(
+            std::fs::read(gcp.input_measurements()).unwrap(),
+            promoted(&files, "measurements.gcp-tdx.json", "gcp-tdx")
+        );
+
+        let both = NetworkDir::new(dir.path().join("both"));
+        init_admitting(
+            &["gcp-tdx", "azure-tdx", "gcp-tdx"],
+            release.clone(),
+            &both,
+            (None, None, None),
+        )
+        .await
+        .unwrap();
+        let types: Vec<String> = records(&std::fs::read(both.input_measurements()).unwrap())
+            .iter()
+            .map(|r| r["attestation_type"].as_str().unwrap().to_string())
+            .collect();
+        assert_eq!(types, ["gcp-tdx", "azure-tdx"]);
+
+        let aws = NetworkDir::new(dir.path().join("aws"));
+        let err = init_admitting(&["aws-nitro"], release, &aws, (None, None, None))
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("not published for aws-nitro"), "{err}");
+        assert!(err.contains("azure-tdx, gcp-tdx"), "{err}");
+        assert!(!aws.root().exists());
+    }
+
+    /// One platform's measurements broken blocks the default, which admits
+    /// every platform, before anything is written; naming the other platform
+    /// founds on it alone.
+    #[tokio::test]
+    async fn a_broken_platform_blocks_the_default_and_the_flag_founds_on_the_other() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut files = with_gcp_target(release_files(TAG), TAG);
+        files.insert(
+            "measurements.gcp-tdx.json".to_string(),
+            format!(
+                r#"{{"attestation_type": "gcp-tdx", "measurement_id": "{TAG}.tar.gz", "measurements": {{"rtmr1": {{"expected": "{}"}}}}}}"#,
+                "ab".repeat(48)
+            )
+            .into_bytes(),
+        );
+        resum(&mut files, TAG);
+        let (_server, release) = serve_release(TAG, files.clone());
+
+        let both = NetworkDir::new(dir.path().join("both"));
+        let err = init_from(release.clone(), &both, (None, None, None))
+            .await
+            .unwrap_err();
+        assert!(
+            format!("{err:#}").contains("measurements.gcp-tdx.json"),
+            "{err:#}"
+        );
+        assert!(format!("{err:#}").contains("rtmr2"), "{err:#}");
+        assert!(!both.root().exists());
+
+        let azure = NetworkDir::new(dir.path().join("azure"));
+        init_admitting(&["azure-tdx"], release, &azure, (None, None, None))
+            .await
+            .unwrap();
+        assert_eq!(
+            std::fs::read(azure.input_measurements()).unwrap(),
+            promoted(&files, "measurements.azure-tdx.json", "azure-tdx")
+        );
+    }
+
+    /// An image published for Azure alone cannot found a gcp-tdx network.
+    #[tokio::test]
+    async fn gcp_tdx_needs_the_image_published_for_gcp() {
+        let dir = tempfile::tempdir().unwrap();
+        let (_server, release) = serve_release(TAG, release_files(TAG));
+        let out = NetworkDir::new(dir.path().join("gcp"));
+        let err = init_admitting(&["gcp-tdx"], release, &out, (None, None, None))
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("not published for gcp-tdx"), "{err}");
+        assert!(!out.root().exists());
+    }
+
+    /// A loose measurements file is promoted too: a raw file into one record,
+    /// a policy already promoted, spanning both platforms, through verbatim.
+    #[tokio::test]
+    async fn loose_measurements_are_promoted_and_a_loose_policy_passes_through() {
+        let dir = tempfile::tempdir().unwrap();
+        let build = dir.path().join("build");
+        let files = with_gcp_target(release_files(TAG), TAG);
+        let (_image_json, release) = local_release(&build, &files);
+
+        let raw = build.join("measurements.gcp-tdx.json");
+        let one = NetworkDir::new(dir.path().join("one"));
+        init_from(release.clone(), &one, (None, Some(s(&raw)), None))
+            .await
+            .unwrap();
+        assert_eq!(
+            std::fs::read(one.input_measurements()).unwrap(),
+            promoted(&files, "measurements.gcp-tdx.json", "gcp-tdx")
+        );
+
+        let mut spanning = records(&promoted(&files, "measurements.gcp-tdx.json", "gcp-tdx"));
+        spanning.extend(records(&promoted(
+            &files,
+            "measurements.azure-tdx.json",
+            "azure-tdx",
+        )));
+        let policy = serde_json::to_vec(&spanning).unwrap();
+        let policy_path = dir.path().join("policy.json");
+        std::fs::write(&policy_path, &policy).unwrap();
+        let both = NetworkDir::new(dir.path().join("both"));
+        init_from(release, &both, (None, Some(s(&policy_path)), None))
+            .await
+            .unwrap();
+        assert_eq!(std::fs::read(both.input_measurements()).unwrap(), policy);
     }
 
     /// A local build's `build/` is a release like any other: the same five
     /// inputs, the record copied in byte for byte.
     #[tokio::test]
     async fn a_local_build_scaffolds_the_five_inputs_and_fills_the_namespace() {
-        use crate::image::tests::{TAG, release_files};
-
         let loose = loose();
         let written = init(&loose, 0, false).await.unwrap();
         let inputs = loose.out.inputs();
@@ -1053,7 +1476,7 @@ mod tests {
         );
         assert_eq!(
             std::fs::read(loose.out.input_measurements()).unwrap(),
-            files["measurements.azure-tdx.json"]
+            promoted(&files, "measurements.azure-tdx.json", "azure-tdx")
         );
         // The starter's namespace slot is empty, so init fills the network
         // name into it; every other authored line (comments included) is
@@ -1157,18 +1580,24 @@ mod tests {
 
         // Refused before the image is read: one that cannot be is never
         // reached.
-        let unreadable = InitInputs {
-            name: "testnet-1",
-            image: ImageRelease::beside("/nonexistent/image.json").unwrap(),
-            measurements: None,
-            reth_genesis: None,
-            summit_genesis: None,
-            founders: 0,
-        };
-        let err = init_network_dir(&fetch_client().unwrap(), out, &unreadable, false)
-            .await
-            .unwrap_err()
-            .to_string();
+        let unreadable = ImageRelease::beside("/nonexistent/image.json").unwrap();
+        let err = init_network_dir(
+            &fetch_client().unwrap(),
+            out,
+            unreadable,
+            &InitInputs {
+                name: "testnet-1",
+                attestation_types: &[],
+                measurements: None,
+                reth_genesis: None,
+                summit_genesis: None,
+                founders: 0,
+            },
+            false,
+        )
+        .await
+        .unwrap_err()
+        .to_string();
         assert!(err.contains("refusing to overwrite"), "{err}");
         assert!(err.contains("--force"), "{err}");
         for held in ["inputs", "network-manifest.json", "nodes"] {
@@ -1262,15 +1691,55 @@ mod tests {
     }
 
     fn parse(argv: &[&str]) -> InitArgs {
-        use clap::Parser as _;
+        try_parse(argv).expect("well-formed argv")
+    }
+
+    fn try_parse(argv: &[&str]) -> Result<InitArgs, clap::Error> {
         #[derive(clap::Parser)]
         struct Probe {
             #[command(flatten)]
             args: InitArgs,
         }
-        Probe::try_parse_from(std::iter::once(&"init").chain(argv))
-            .expect("well-formed argv")
-            .args
+        Probe::try_parse_from(std::iter::once(&"init").chain(argv)).map(|probe| probe.args)
+    }
+
+    /// `--attestation-type` repeats or splits on commas, and names what
+    /// `--measurements` replaces, so the two conflict.
+    #[test]
+    fn attestation_types_repeat_or_split_and_conflict_with_measurements() {
+        let image = ["n", "--image-json", "i.json"];
+        let repeated = parse(
+            &[
+                &image[..],
+                &[
+                    "--attestation-type",
+                    "gcp-tdx",
+                    "--attestation-type",
+                    "azure-tdx",
+                ],
+            ]
+            .concat(),
+        );
+        assert_eq!(repeated.attestation_type, ["gcp-tdx", "azure-tdx"]);
+        let split = parse(&[&image[..], &["--attestation-type", "azure-tdx,gcp-tdx"]].concat());
+        assert_eq!(split.attestation_type, ["azure-tdx", "gcp-tdx"]);
+        assert!(parse(&image).attestation_type.is_empty());
+        let err = try_parse(
+            &[
+                &image[..],
+                &["--attestation-type", "gcp-tdx", "--measurements", "m.json"],
+            ]
+            .concat(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(err.contains("cannot be used with"), "{err}");
+        // A platform no image can be published for is refused before any
+        // release is reached.
+        let err = try_parse(&[&image[..], &["--attestation-type", "aws-nitro"]].concat())
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("possible values: azure-tdx, gcp-tdx"), "{err}");
     }
 
     fn read_config(path: &Path) -> seismic_tee_context::config::Config {
@@ -1334,6 +1803,93 @@ mod tests {
         let config = read_config(&config_path);
         assert_eq!(config.current.as_deref(), Some("testnet-1"));
         assert!(loose.out.inputs().join(IMAGE_FILENAME).is_file());
+    }
+
+    /// With the image asked for and published for both platforms, which to
+    /// admit is asked after the directory, every one offered first; given
+    /// `--image-json` or `--attestation-type`, nothing more is asked.
+    #[tokio::test]
+    async fn the_platforms_are_asked_for_when_the_image_was() {
+        let dir = tempfile::tempdir().unwrap();
+        let files = with_gcp_target(release_files(TAG), TAG);
+        let (image_json, _) = local_release(&dir.path().join("build"), &files);
+        let networks = dir.path().join("networks");
+        let defaults = Defaults {
+            releases_api: "/nonexistent/releases",
+            networks: networks.clone(),
+        };
+        let config_path = dir.path().join("config.toml");
+        let types_of = |name: &str| -> Vec<String> {
+            let out = NetworkDir::new(networks.join(name));
+            records(&std::fs::read(out.input_measurements()).unwrap())
+                .iter()
+                .map(|r| r["attestation_type"].as_str().unwrap().to_string())
+                .collect()
+        };
+
+        run_with(
+            parse(&["--allow-unattested"]),
+            Some(&config_path),
+            &mut Prompt::scripted(&[&image_json, "gcp-only", "", "gcp-tdx"]),
+            &defaults,
+        )
+        .await
+        .unwrap();
+        assert_eq!(types_of("gcp-only"), ["gcp-tdx"]);
+
+        run_with(
+            parse(&["--allow-unattested"]),
+            Some(&config_path),
+            &mut Prompt::scripted(&[
+                &image_json,
+                "every",
+                "",
+                "azure-tdx, gcp-tdx (every platform the image is published for)",
+            ]),
+            &defaults,
+        )
+        .await
+        .unwrap();
+        assert_eq!(types_of("every"), ["azure-tdx", "gcp-tdx"]);
+
+        run_with(
+            parse(&["--allow-unattested", "--attestation-type", "azure-tdx"]),
+            Some(&config_path),
+            &mut Prompt::scripted(&[&image_json, "flagged", ""]),
+            &defaults,
+        )
+        .await
+        .unwrap();
+        assert_eq!(types_of("flagged"), ["azure-tdx"]);
+
+        run_with(
+            parse(&[
+                "--name",
+                "given",
+                "--image-json",
+                &image_json,
+                "--allow-unattested",
+            ]),
+            Some(&config_path),
+            &mut Prompt::nobody(),
+            &defaults,
+        )
+        .await
+        .unwrap();
+        assert_eq!(types_of("given"), ["azure-tdx", "gcp-tdx"]);
+
+        // A loose --measurements decides too: no fourth answer is taken, and
+        // the policy is the loose file's.
+        let loose = dir.path().join("build").join("measurements.gcp-tdx.json");
+        run_with(
+            parse(&["--allow-unattested", "--measurements", s(&loose)]),
+            Some(&config_path),
+            &mut Prompt::scripted(&[&image_json, "loose", ""]),
+            &defaults,
+        )
+        .await
+        .unwrap();
+        assert_eq!(types_of("loose"), ["gcp-tdx"]);
     }
 
     /// `--name` alone names the directory under the networks root, and
