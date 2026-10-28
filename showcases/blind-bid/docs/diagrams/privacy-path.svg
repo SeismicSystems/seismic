@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 620" width="1180" height="620" font-family="IBM Plex Mono, ui-monospace, monospace">
+  <rect width="1180" height="620" fill="#0a0e0c"/>
+
+  <!-- crop marks -->
+  <g stroke="#2b6b4a" stroke-width="1" opacity=".55">
+    <path d="M24 24 h34 M24 24 v34"/><path d="M1156 24 h-34 M1156 24 v34"/>
+    <path d="M24 596 h34 M24 596 v-34"/><path d="M1156 596 h-34 M1156 596 v-34"/>
+  </g>
+
+  <text x="60" y="66" fill="#7ef7c0" font-size="13" letter-spacing="3">BLINDBID · PRIVACY PATH</text>
+  <text x="60" y="104" fill="#e8fff4" font-size="30" font-weight="bold" letter-spacing="1">WHERE THE BID AMOUNT STOPS BEING PUBLIC</text>
+  <text x="60" y="132" fill="#5f8a78" font-size="13">three independent layers: transaction · storage · comparison</text>
+
+  <!-- column 1: supplier -->
+  <rect x="60" y="176" width="250" height="120" fill="#0e1412" stroke="#2b6b4a" stroke-dasharray="5 4"/>
+  <text x="78" y="204" fill="#7ef7c0" font-size="12" letter-spacing="2">SUPPLIER</text>
+  <text x="78" y="232" fill="#e8fff4" font-size="15">submitBid(amount)</text>
+  <text x="78" y="256" fill="#5f8a78" font-size="12">encrypted client-side</text>
+  <text x="78" y="276" fill="#5f8a78" font-size="12">key never leaves the browser</text>
+
+  <!-- arrow 1 -->
+  <path d="M310 236 H392" stroke="#ff3ea5" stroke-width="2"/>
+  <path d="M392 236 l-9 -6 v12 z" fill="#ff3ea5"/>
+  <text x="318" y="222" fill="#ff3ea5" font-size="12" letter-spacing="1">TX TYPE 0x4A</text>
+  <text x="318" y="258" fill="#5f8a78" font-size="11">observer sees only</text>
+  <text x="318" y="274" fill="#5f8a78" font-size="11">"someone called X"</text>
+
+  <!-- column 2: contract -->
+  <rect x="400" y="176" width="300" height="200" fill="#0e1412" stroke="#2b6b4a"/>
+  <text x="418" y="204" fill="#7ef7c0" font-size="12" letter-spacing="2">BLINDBID (SOLIDITY)</text>
+  <text x="418" y="234" fill="#e8fff4" font-size="14">store(slot, amount)</text>
+  <text x="418" y="262" fill="#e8fff4" font-size="14">minSlot(slots)</text>
+  <text x="418" y="290" fill="#e8fff4" font-size="14">sumSlots(slots)</text>
+  <text x="418" y="322" fill="#5f8a78" font-size="12">plain 0.8.37 — no shielded</text>
+  <text x="418" y="340" fill="#5f8a78" font-size="12">types needed</text>
+  <text x="418" y="360" fill="#5f8a78" font-size="12">tender logic stays readable</text>
+
+  <!-- arrow 2 -->
+  <path d="M700 236 H782" stroke="#7ef7c0" stroke-width="2"/>
+  <path d="M782 236 l-9 -6 v12 z" fill="#7ef7c0"/>
+  <text x="708" y="222" fill="#7ef7c0" font-size="12" letter-spacing="1">CSTORE 0xB1</text>
+
+  <!-- column 3: private storage -->
+  <rect x="790" y="176" width="330" height="200" fill="#0e1412" stroke="#2b6b4a" stroke-dasharray="5 4"/>
+  <text x="808" y="204" fill="#7ef7c0" font-size="12" letter-spacing="2">SEALSTORE (YUL LIBRARY)</text>
+  <text x="808" y="238" fill="#e8fff4" font-size="14">slot flagged private</text>
+  <text x="808" y="266" fill="#e8fff4" font-size="14">eth_getStorageAt → 0x0…0</text>
+  <text x="808" y="294" fill="#e8fff4" font-size="14">CLOAD 0xB0 → real value</text>
+  <text x="808" y="326" fill="#5f8a78" font-size="12">value exists only inside the TEE;</text>
+  <text x="808" y="344" fill="#5f8a78" font-size="12">the comparison below never leaves it</text>
+
+  <!-- award flow -->
+  <path d="M955 376 V470 H310 V386" fill="none" stroke="#ffb64a" stroke-width="2" stroke-dasharray="7 5"/>
+  <path d="M310 386 l-6 9 h12 z" fill="#ffb64a"/>
+  <text x="470" y="492" fill="#ffb64a" font-size="12" letter-spacing="1">AWARD — CLOSEANDAWARD</text>
+  <text x="470" y="512" fill="#5f8a78" font-size="11">minSlot() compares the private values inside the enclave:</text>
+
+  <!-- comparison box -->
+  <rect x="60" y="524" width="1060" height="72" fill="#0e1412" stroke="#ffb64a" stroke-dasharray="5 4"/>
+  <text x="84" y="554" fill="#ffb64a" font-size="13" letter-spacing="2">INSIDE THE TEE</text>
+  <text x="84" y="580" fill="#e8fff4" font-size="14">the ranking of the bids never existed in public state — not just the amounts</text>
+</svg>
