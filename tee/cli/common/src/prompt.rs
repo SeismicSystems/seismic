@@ -4,7 +4,9 @@
 //! no terminal there is nobody to ask, so the command fails naming the flag
 //! that supplies it. A prompt never blocks a script, and every prompt has a
 //! flag that answers it. An optional path is offered pre-filled with its
-//! default, to accept or edit, and taken as the default with no terminal.
+//! default, to accept or edit, and taken as the default with no terminal; an
+//! optional choice is offered as a list with its default first, and taken as
+//! the default with no terminal.
 
 use std::collections::VecDeque;
 use std::fmt;
@@ -189,6 +191,46 @@ impl Prompt {
             }
         };
         Ok(expand(answer)?.into())
+    }
+
+    /// `value` when the command line gave it; else one of `choices`, the
+    /// first offered to accept with Enter, and taken with nobody to ask. A
+    /// closed list: what it does not hold, the flag supplies.
+    pub fn pick<T: From<String>>(
+        &mut self,
+        value: Option<T>,
+        question: &str,
+        flag: &str,
+        choices: Vec<Choice>,
+    ) -> anyhow::Result<T> {
+        if let Some(value) = value {
+            return Ok(value);
+        }
+        let Some(default) = choices.first().map(|choice| choice.value.clone()) else {
+            bail!("nothing to pick for {flag}");
+        };
+        let answer = match &mut self.answers {
+            Answers::Nobody => default,
+            Answers::Scripted(answers) => {
+                let answer = next(answers, flag)?;
+                match choices
+                    .into_iter()
+                    .find(|choice| choice.label == answer || choice.value == answer)
+                {
+                    Some(choice) => choice.value,
+                    None => bail!("{answer:?} is not a choice for {flag}"),
+                }
+            }
+            Answers::Terminal => {
+                let entries: Vec<Entry> = choices.into_iter().map(Entry::Choice).collect();
+                match Select::new(question, entries).prompt() {
+                    Ok(Entry::Choice(choice)) => choice.value,
+                    Ok(Entry::Other) => unreachable!("a closed list"),
+                    Err(error) => return Err(interrupted(error, flag)),
+                }
+            }
+        };
+        Ok(answer.into())
     }
 }
 
@@ -413,6 +455,47 @@ mod tests {
             .path(Some("/given".to_string()), "Q", "DIR", "/d")
             .unwrap();
         assert_eq!(given, "/given");
+    }
+
+    /// A picked value is its default unless given or chosen, by label or by
+    /// value; what the list does not hold is refused, not typed.
+    #[test]
+    fn a_pick_is_its_default_unless_given_or_chosen() {
+        let choices = || {
+            vec![
+                Choice {
+                    label: "both (every platform)".to_string(),
+                    value: "azure-tdx,gcp-tdx".to_string(),
+                },
+                Choice {
+                    label: "gcp-tdx".to_string(),
+                    value: "gcp-tdx".to_string(),
+                },
+            ]
+        };
+        let value: String = Prompt::nobody()
+            .pick(None, "Q", "--type", choices())
+            .unwrap();
+        assert_eq!(value, "azure-tdx,gcp-tdx");
+        let mut prompt = Prompt::scripted(&["both (every platform)", "gcp-tdx", "aws"]);
+        let by_label: String = prompt.pick(None, "Q", "--type", choices()).unwrap();
+        assert_eq!(by_label, "azure-tdx,gcp-tdx");
+        let by_value: String = prompt.pick(None, "Q", "--type", choices()).unwrap();
+        assert_eq!(by_value, "gcp-tdx");
+        let err = prompt
+            .pick::<String>(None, "Q", "--type", choices())
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("\"aws\" is not a choice for --type"), "{err}");
+        let given: String = prompt
+            .pick(Some("given".to_string()), "Q", "--type", choices())
+            .unwrap();
+        assert_eq!(given, "given");
+        let err = Prompt::nobody()
+            .pick::<String>(None, "Q", "--type", Vec::new())
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("nothing to pick for --type"), "{err}");
     }
 
     #[test]
