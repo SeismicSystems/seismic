@@ -12,12 +12,13 @@ pragma solidity ^0.8.20;
 ///      contract.
 ///
 ///      At genesis, deploy tooling writes the compiled IDs and document hash directly
-///      into storage as policy revision 1. For later revisions, authority tooling
-///      diffs the previous and new compiled ID sets and calls `applyPolicyUpdate` with
-///      the status delta and the hash of the new complete document.
+///      into storage as policy revision 1, alongside the admin. For later revisions,
+///      admin tooling diffs the previous and new compiled ID sets and calls
+///      `applyPolicyUpdate` with the status delta and the hash of the new complete
+///      document.
 ///
 ///      The registry does not verify that a status delta corresponds to a policy
-///      hash; the authorized caller attests to that relationship. The status mapping
+///      hash; the admin attests to that relationship. The status mapping
 ///      is the sole source of admission decisions. The hashes, revision, and count
 ///      support provenance, update sequencing, auditing, and consistency checks.
 ///
@@ -51,6 +52,9 @@ contract MeasurementRegistry {
         // Cached number of concrete admission clauses currently Accepted after
         // policy expansion. Used for auditing and consistency, not admission.
         uint256 acceptedCount;
+        // The only account allowed to apply policy updates and to transfer this
+        // role. Written directly into genesis; zero leaves the policy frozen.
+        address admin;
     }
 
     /// @dev keccak256(abi.encode(uint256(
@@ -60,10 +64,8 @@ contract MeasurementRegistry {
     bytes32 internal constant REGISTRY_STORAGE_LOCATION =
         0xa3ae60943e4f183142036d77b94858085814dd428f131289aea7e42703fb0b00;
 
-    /// @notice Well-known address of the contract authorized to mutate policy.
-    address public constant AUTHORITY = 0x1000000000000000000000000000000000000002;
-
     error Unauthorized(address caller);
+    error ZeroAddress();
     error Uninitialized();
     error EmptyUpdate();
     error UnchangedPolicyHash(bytes32 policyHash);
@@ -89,8 +91,13 @@ contract MeasurementRegistry {
         uint64 indexed policyRevision, bytes32 indexed activePolicyHash, uint256 accepted, uint256 deprecated
     );
 
-    modifier onlyAuthority() {
-        if (msg.sender != AUTHORITY) revert Unauthorized(msg.sender);
+    /// @notice Emitted when the admin changes.
+    /// @param previousAdmin The address of the previous admin.
+    /// @param newAdmin The address of the new admin.
+    event AdminTransferred(address indexed previousAdmin, address indexed newAdmin);
+
+    modifier onlyAdmin() {
+        if (msg.sender != _getRegistryStorage().admin) revert Unauthorized(msg.sender);
         _;
     }
 
@@ -127,13 +134,18 @@ contract MeasurementRegistry {
         return _getRegistryStorage().acceptedCount;
     }
 
+    /// @notice The account allowed to apply policy updates and transfer this role.
+    function admin() external view returns (address) {
+        return _getRegistryStorage().admin;
+    }
+
     /// @notice Applies the admission-ID difference for a new complete policy document.
-    /// @dev Authority tooling is expected to compile the previous and new complete
+    /// @dev Admin tooling is expected to compile the previous and new complete
     ///      policy documents, set `accept` to IDs present only in the new set, and set
     ///      `deprecate` to IDs present only in the previous set.
     ///
     ///      `newActivePolicyHash` identifies the complete new policy document, not a delta.
-    ///      The registry trusts the authority to provide a matching ID delta and hash.
+    ///      The registry trusts the admin to provide a matching ID delta and hash.
     ///      All status changes, metadata changes, and events are atomic.
     ///
     ///      Genesis must initialize the registry at revision 1. This function cannot
@@ -143,7 +155,7 @@ contract MeasurementRegistry {
     /// @param newActivePolicyHash SHA-256 of the exact complete new policy document bytes.
     function applyPolicyUpdate(bytes32[] calldata accept, bytes32[] calldata deprecate, bytes32 newActivePolicyHash)
         external
-        onlyAuthority
+        onlyAdmin
     {
         RegistryStorage storage registry = _getRegistryStorage();
 
@@ -178,6 +190,17 @@ contract MeasurementRegistry {
         registry.acceptedCount = newAcceptedCount;
 
         emit PolicyUpdated(newPolicyRevision, newActivePolicyHash, accept.length, deprecate.length);
+    }
+
+    /// @notice Transfers the admin role.
+    /// @param newAdmin The new admin; must not be the zero address (there is no
+    ///        renounce — an admin-less registry could never update its policy).
+    function transferAdmin(address newAdmin) external onlyAdmin {
+        if (newAdmin == address(0)) revert ZeroAddress();
+        RegistryStorage storage registry = _getRegistryStorage();
+        address previousAdmin = registry.admin;
+        registry.admin = newAdmin;
+        emit AdminTransferred(previousAdmin, newAdmin);
     }
 
     function _validateBatch(RegistryStorage storage registry, bytes32[] calldata accept, bytes32[] calldata deprecate)

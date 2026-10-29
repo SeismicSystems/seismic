@@ -65,7 +65,7 @@ caveat per mechanism.
   its one real exit, freshness evidence a host cannot mint — is
   [collected below](#the-rollback-family).
 - **The open decisions have deadlines.** Disaster recovery and the registry's
-  mainnet mutation authority must close before mainnet; validator key
+  mainnet admin must close before mainnet; validator key
   custody must close before staking opens to outside operators; root-key
   rotation must close before any purpose key
   ships a nonzero epoch.
@@ -75,7 +75,7 @@ caveat per mechanism.
 One rule runs through every doc in this directory: a verifier trusts only what
 `network_id` commits to, or what an authority it commits to signs. Founding
 produces the manifest; the manifest's pins seed the chain; the validator set and the
-registry authority those pins name move the chain and its policy forward; and
+registry admin the genesis pin seeds move the chain and its policy forward; and
 every party that checks something reaches back to `network_id` along one of
 these arrows. Each band's title names the doc that owns it.
 
@@ -272,8 +272,8 @@ in a single validator's lifecycle:
 | Client | submit a TxSeismic | is this `tx_io_pk` this network's recipient key | epoch 0: the pin — hash the manifest against a pinned `network_id` and compare `tx_io_pk@0`, with no quote verification; later epochs: a record signed by the validator set, checked by a light client | epoch 0: the pin is built, the SDK check is [SEI-646](https://linear.app/seismic-systems/issue/SEI-646); later epochs open — today the SDKs trust whichever RPC they ask |
 |  | read shielded state — a signed read | did the response come from the network, unread on the way | `tx_io_pk`, as for a TxSeismic: the request is encrypted to it, and the response under a key from the same ECDH ([`TxResponse`](../key-schedule.md#layer-2--ecdh-shared-secrets)), so only a holder of `root_key` reads the one or produces the other. It says nothing about which head the node answered from | shipped; the anchor is the row above's, with its gaps |
 |  | read public state | is this response the chain's | today, the RPC it asks: TLS authenticates the name, which the operator controls ([clients of the public RPC](networking.md#clients-and-the-operator)); later, finalized heads checked by a light client | today the RPC is trusted; the light client is open ([Key records & light clients](https://linear.app/seismic-systems/project/key-records-and-light-clients-9a17291b5b1c)) |
-| Governance | change the accepted measurement set | is the change authorized | the manifest-pinned authority contract | a dev authority today; the mainnet authority is open |
-|  | rotate `root_key` to fresh entropy | is the rotation authorized, and does the successor chain to the key it replaces | undecided — the candidates are the manifest-pinned authority contract and a consensus event, and a post-recovery rotation is the security council's, authorized by the recovery ceremony itself; a published chain of wraps links each version to its predecessor, which is continuity, not authenticity: two holders can each wrap a different successor, and both chains verify. Authenticity needs an anchor `network_id` commits to; the direction is a record signed by the validator set, with the epoch-0 pin as its base case | open, and prerequisite to any nonzero purpose-key epoch |
+| Governance | change the accepted measurement set | is the change authorized | the registry admin seeded in genesis storage | a development key today; the mainnet admin is open |
+|  | rotate `root_key` to fresh entropy | is the rotation authorized, and does the successor chain to the key it replaces | undecided — the candidates are the registry admin and a consensus event, and a post-recovery rotation is the security council's, authorized by the recovery ceremony itself; a published chain of wraps links each version to its predecessor, which is continuity, not authenticity: two holders can each wrap a different successor, and both chains verify. Authenticity needs an anchor `network_id` commits to; the direction is a record signed by the validator set, with the epoch-0 pin as its base case | open, and prerequisite to any nonzero purpose-key epoch |
 | Security Council | recover the network after a full-fleet loss | how does the network outlive losing every TEE at once | nothing — at least one node must stay live | open, pre-mainnet |
 
 The validator's four actions repeat and interleave — `root_key` is RAM-only,
@@ -477,7 +477,7 @@ are described after it.
   - [SEI-381](https://linear.app/seismic-systems/issue/SEI-381): how a sealed
     node's deposit signature binds its withdrawal address.
 - **The control plane**, who changes what the network trusts:
-  - Registry mutation authority
+  - Registry admin
     ([SEI-286](https://linear.app/seismic-systems/issue/SEI-286),
     [SEI-660](https://linear.app/seismic-systems/issue/SEI-660)), below.
   - [SEI-891](https://linear.app/seismic-systems/issue/SEI-891) and
@@ -534,11 +534,11 @@ are described after it.
   for it. A check at admission meets the
   storage cycle again: on a reboot the keys are on the volume `root_key`
   unlocks, so they cannot be presented before the fetch.
-- **Registry mutation authority** — must close before mainnet. The manifest
-  pins which contract may change the accepted measurement set, and today
-  that role is filled by a dev authority. Who holds it on mainnet — a
-  multisig, a governance contract, a council — decides who can admit code
-  into the trust domain.
+- **Registry admin** — must close before mainnet. The registry's admin, an
+  account seeded in its genesis storage and transferable on-chain, may change
+  the accepted measurement set, and today dev networks seed a development
+  key. Who holds it on mainnet — a multisig, a governance contract, a
+  council — decides who can admit code into the trust domain.
 - **Root-key rotation** — must close before any purpose key ships a nonzero
   epoch. Nothing introduces fresh entropy after genesis, and the holder set
   only grows: a retired operator's TEE keeps `root_key` in RAM indefinitely.

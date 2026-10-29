@@ -95,7 +95,6 @@ src/
     Directory.sol                 Stores per-user encryption keys using suint256 (shielded)
     Intelligence.sol              Encrypts data to a list of providers via Directory
     MeasurementRegistry.sol       Admission status of compiled measurement IDs
-    MeasurementAuthorityDev.sol   Interim dev forwarder authorized to update MeasurementRegistry
     KeyRotationRegistry.sol       Schedule of purpose-key rotations
     ShieldedDelegationAccount.sol EIP-7702 delegation with session keys (P256/WebAuthn/Secp256k1)
   seismic-std-lib/       Published library (soldeer) for contracts building on Seismic

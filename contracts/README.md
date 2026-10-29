@@ -25,7 +25,6 @@ contracts/
 │   │   ├── GasTokenRegistry.sol   # Ordered gas-token configuration read by the execution client
 │   │   ├── Intelligence.sol       # Multi-provider encryption
 │   │   ├── KeyRotationRegistry.sol
-│   │   ├── MeasurementAuthorityDev.sol
 │   │   ├── MeasurementRegistry.sol
 │   │   ├── ProtocolParams.sol     # Protocol configuration
 │   │   └── ShieldedDelegationAccount.sol

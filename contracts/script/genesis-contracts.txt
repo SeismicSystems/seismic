@@ -1,5 +1,4 @@
 MeasurementRegistry
-MeasurementAuthorityDev
 ShieldedDelegationAccount
 DepositContract
 Directory
