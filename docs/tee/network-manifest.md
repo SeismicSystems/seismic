@@ -103,8 +103,8 @@ Who *does* use the manifest, and for what, is
   [chain-backed admission](chain-backed-admission.md).
 - **peer discovery or per-node config.** Bootnodes, domain names, and IPs ride
   in the per-boot config POST, outside the manifest.
-- **a mutable registry.** Post-genesis measurement changes are authority
-  transactions against the registry contract.
+- **a mutable registry.** Post-genesis measurement changes are transactions
+  the registry's admin sends to the registry contract.
 
 ## `network_id` = SHA-256 of the exact bytes
 
@@ -167,10 +167,7 @@ and how the bootstrap policy and the root-key pin are used.
   "manifest_version": 1,
   "measurements": {
     "bootstrap_policy_hash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "contracts": {
-      "authority": "0x1000000000000000000000000000000000000002",
-      "registry": "0x1000000000000000000000000000000000000001"
-    }
+    "registry": "0x1000000000000000000000000000000000000001"
   },
   "name": "seismic-devnet-3",
   "summit": {
@@ -193,16 +190,13 @@ documentation is this table.
 | `summit.genesis_config_digest`       | 32-byte hex | Summit's own `config_digest` over the complete `summit-genesis.toml`: SHA-256 over its domain-prefixed SSZ, computed offline by `summit genesis digest`. Covers the consensus parameters and, per validator, both pubkeys and the withdrawal credentials; excludes `ip_address`, which is topology rather than identity. The same value domain-separates every consensus signature, so live nodes already enforce agreement on everything it covers ([what it covers](#what-summitgenesis_config_digest-covers)). |
 | `summit.namespace`                   | string      | The BLS signature domain separator. Must equal the genesis file's value; duplicated here so a verifier need not parse TOML. Distinct namespaces are what stop a validator key active on two chains from producing votes valid on both.                                                                                                                                                                                                                                                         |
 | `measurements.bootstrap_policy_hash` | 32-byte hex | SHA-256 of the bootstrap policy document's bytes — the founding accepted measurement set, promoted from seismic-images' `make measure` output. The document format is the [attestation crate's](https://github.com/SeismicSystems/attested-tls/blob/main/crates/attestation/README.md) list of per-image measurement records, one file covering every attestation type.                                                                                                                        |
-| `measurements.contracts.registry`    | address     | The measurement registry, duplicated from the genesis alloc for verifiers that do not hold the genesis file. Grouping it under `measurements` is deliberate: this contract's storage and the bootstrap document are two representations of one measurement set.                                                                                                                                                                                                                                |
-| `measurements.contracts.authority`   | address     | The authority allowed to mutate the registry.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `measurements.registry`              | address     | The measurement registry, duplicated from the genesis alloc for verifiers that do not hold the genesis file. Grouping it under `measurements` is deliberate: this contract's storage and the bootstrap document are two representations of one measurement set. Who may change it is registry state (`admin()`), seeded in the genesis alloc and so committed through `eth.genesis_hash`.                                                                                                      |
 | `founding_tx_io_pk`                  | 33-byte hex | `tx_io_pk@0` of the `root_key` the network was founded with: the founding box's candidate, a compressed secp256k1 point. The custodian keeps its candidate, and installs a fetched key, only if it derives this; a client encrypts to it ([the root-key pin](#the-root-key-pin)).                                                                                                                                                                                                           |
 
-Both contract fields are named by role, not by contract class, so a contract
-rename never touches the hashed schema. Today the roles are filled by
-[`MeasurementRegistry.sol`](../../contracts/src/predeploys/MeasurementRegistry.sol)
-and
-[`MeasurementAuthorityDev.sol`](../../contracts/src/predeploys/MeasurementAuthorityDev.sol),
-predeployed at the addresses above.
+The registry field is named by role, not by contract class, so a contract
+rename never touches the hashed schema. Today the role is filled by
+[`MeasurementRegistry.sol`](../../contracts/src/predeploys/MeasurementRegistry.sol),
+predeployed at the address above.
 
 **Strictness.** A v1 parser rejects unknown keys. Until a permanent network
 pins a v1 manifest, v1 changes in place; after that, new fields mean
@@ -237,7 +231,7 @@ flowchart LR
     PRE["every pre-configure fact:<br/>the policy document,<br/>the reth genesis,<br/>the summit genesis with the<br/>harvested validator keys,<br/>tx_io_pk@0 of a candidate<br/>root_key minted at boot"]
     M["network-manifest.json"]
     NID(["network_id"])
-    AUTH["authorities it pins:<br/>the registry's authority,<br/>the founding validator set"]
+    AUTH["authorities it pins:<br/>the registry's genesis admin,<br/>the founding validator set"]
     LATER["later facts:<br/>the live measurement policy,<br/>key epochs above 0"]
     PRE -->|"all of it exists before<br/>any node is configured"| M
     M -->|"SHA-256(file bytes)"| NID
@@ -286,7 +280,7 @@ document.
 
 Three scalar fields name values that also appear in a genesis file:
 
-- **`summit.namespace` and `measurements.contracts.registry`** sit under a
+- **`summit.namespace` and `measurements.registry`** sit under a
   genesis digest and are repeated for verifiers that do not parse summit's TOML
   or hold the reth genesis file.
 - **`eth.chain_id`** is a direct pin only. reth reads it from the genesis
@@ -394,7 +388,7 @@ output. `network_id` commits to it in two representations:
 The [validation gates](#validation-gates) hold the two in agreement, and
 [direct pins and genesis pins](#direct-pins-and-genesis-pins) says why both
 exist. After founding, the registry carries the live policy, changed only by
-its authority, and the document stays frozen. Each reader uses the
+its admin, and the document stays frozen. Each reader uses the
 representation that fits it:
 
 - **The responder** appraises a joiner against the registry on its own reth,
@@ -486,7 +480,7 @@ boot:
   chain state the host supplies — so the binding has to be enforced inside the
   guest, at the point of use. Reth validating every state transition from that
   genesis does the rest: reaching a policy the network never authorized then
-  needs the authority key, not an edited JSON file.
+  needs the registry admin's key, not an edited JSON file.
 
 ## Consumers of `network_id`
 
@@ -529,7 +523,7 @@ every binding: `getTxIoAttestationEvidence(epoch)` answers with
 `deploy_verification_binding(network_id, deployment_nonce)` — the caller
 contributes only freshness — and `getWrappedRootKey` runs the request and
 response bindings above. Two more manifest fields feed its
-admission path: `measurements.contracts.registry`, the contract it asks for a
+admission path: `measurements.registry`, the contract it asks for a
 verdict, and `eth.genesis_hash`, the chain that contract has to live on.
 
 **tdx-init** receives the manifest bytes in the config POST's `[network]`
@@ -551,7 +545,7 @@ client hashes the manifest it is given and reads `tx_io_pk@0` from it.
 - **`network_id` is immutable for the network's lifetime** — across disaster
   recovery, across measurement-policy updates, across forks. The deploy tool
   refuses to overwrite an existing manifest for exactly this reason.
-- **Policy updates are on-chain**, through the authority to the registry — the
+- **Policy updates are on-chain**, sent by the registry's admin — the
   mechanism for changing any network-defining value after founding, since the
   file itself never changes. The manifest's pinned policy is the bootstrap
   policy only, and there is deliberately no manifest-refresh machinery. The

@@ -8,7 +8,7 @@ import {MeasurementRegistry} from "../src/predeploys/MeasurementRegistry.sol";
 bytes32 constant REGISTRY_STORAGE_LOCATION = 0xa3ae60943e4f183142036d77b94858085814dd428f131289aea7e42703fb0b00;
 
 contract MeasurementRegistryTest is Test {
-    address internal constant AUTHORITY = 0x1000000000000000000000000000000000000002;
+    address internal constant ADMIN = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
 
     bytes32 internal constant BOOTSTRAP_POLICY_HASH = keccak256("bootstrap-policy");
     bytes32 internal constant INITIAL_ADMISSION_ID = bytes32(uint256(1));
@@ -28,13 +28,15 @@ contract MeasurementRegistryTest is Test {
         uint64 indexed policyRevision, bytes32 indexed activePolicyHash, uint256 accepted, uint256 deprecated
     );
 
+    event AdminTransferred(address indexed previousAdmin, address indexed newAdmin);
+
     function setUp() public {
         registry = new MeasurementRegistry();
         _initializeRegistry();
     }
 
     function test_GenesisStorageLoadsExpectedState() public view {
-        assertEq(registry.AUTHORITY(), AUTHORITY);
+        assertEq(registry.admin(), ADMIN);
         assertEq(registry.bootstrapPolicyHash(), BOOTSTRAP_POLICY_HASH);
         assertEq(registry.activePolicyHash(), BOOTSTRAP_POLICY_HASH);
         assertEq(registry.policyRevision(), 1);
@@ -61,6 +63,10 @@ contract MeasurementRegistryTest is Test {
         assertEq(
             bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 4),
             0xa3ae60943e4f183142036d77b94858085814dd428f131289aea7e42703fb0b04
+        );
+        assertEq(
+            bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 5),
+            0xa3ae60943e4f183142036d77b94858085814dd428f131289aea7e42703fb0b05
         );
     }
 
@@ -129,7 +135,7 @@ contract MeasurementRegistryTest is Test {
         _apply(_singleton(added), _singleton(INITIAL_ADMISSION_ID), newPolicyHash);
     }
 
-    function test_RevertWhen_CallerIsNotAuthority() public {
+    function test_RevertWhen_CallerIsNotAdmin() public {
         address caller = makeAddr("caller");
 
         vm.prank(caller);
@@ -137,22 +143,31 @@ contract MeasurementRegistryTest is Test {
         registry.applyPolicyUpdate(_singleton(keccak256("added")), _empty(), keccak256("policy-2"));
     }
 
+    function test_RevertWhen_AdminIsUnset() public {
+        MeasurementRegistry adminlessRegistry = new MeasurementRegistry();
+
+        vm.prank(ADMIN);
+        vm.expectRevert(abi.encodeWithSelector(MeasurementRegistry.Unauthorized.selector, ADMIN));
+        adminlessRegistry.applyPolicyUpdate(_singleton(keccak256("added")), _empty(), keccak256("policy-2"));
+    }
+
     function test_RevertWhen_RegistryIsUninitialized() public {
         MeasurementRegistry uninitializedRegistry = new MeasurementRegistry();
+        _storeAdmin(address(uninitializedRegistry), ADMIN);
 
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(MeasurementRegistry.Uninitialized.selector);
         uninitializedRegistry.applyPolicyUpdate(_singleton(keccak256("added")), _empty(), keccak256("policy-2"));
     }
 
     function test_RevertWhen_UpdateIsEmpty() public {
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(MeasurementRegistry.EmptyUpdate.selector);
         registry.applyPolicyUpdate(_empty(), _empty(), keccak256("policy-2"));
     }
 
     function test_RevertWhen_PolicyHashIsUnchanged() public {
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(abi.encodeWithSelector(MeasurementRegistry.UnchangedPolicyHash.selector, BOOTSTRAP_POLICY_HASH));
         registry.applyPolicyUpdate(_singleton(keccak256("added")), _empty(), BOOTSTRAP_POLICY_HASH);
     }
@@ -163,7 +178,7 @@ contract MeasurementRegistryTest is Test {
         accept[0] = admissionId;
         accept[1] = admissionId;
 
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(abi.encodeWithSelector(MeasurementRegistry.DuplicateAdmissionId.selector, admissionId));
         registry.applyPolicyUpdate(accept, _empty(), keccak256("policy-2"));
     }
@@ -173,13 +188,13 @@ contract MeasurementRegistryTest is Test {
         deprecate[0] = INITIAL_ADMISSION_ID;
         deprecate[1] = INITIAL_ADMISSION_ID;
 
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(abi.encodeWithSelector(MeasurementRegistry.DuplicateAdmissionId.selector, INITIAL_ADMISSION_ID));
         registry.applyPolicyUpdate(_empty(), deprecate, keccak256("policy-2"));
     }
 
     function test_RevertWhen_BatchesContradict() public {
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(
             abi.encodeWithSelector(MeasurementRegistry.ContradictoryAdmissionId.selector, INITIAL_ADMISSION_ID)
         );
@@ -189,7 +204,7 @@ contract MeasurementRegistryTest is Test {
     }
 
     function test_RevertWhen_AcceptingAcceptedAdmissionId() public {
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(
             abi.encodeWithSelector(
                 MeasurementRegistry.InvalidTransition.selector,
@@ -204,7 +219,7 @@ contract MeasurementRegistryTest is Test {
     function test_RevertWhen_DeprecatingUnknownAdmissionId() public {
         bytes32 admissionId = keccak256("unknown");
 
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(
             abi.encodeWithSelector(
                 MeasurementRegistry.InvalidTransition.selector,
@@ -220,7 +235,7 @@ contract MeasurementRegistryTest is Test {
         bytes32 admissionId = keccak256("deprecated");
         _storeStatus(admissionId, MeasurementRegistry.Status.Deprecated);
 
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(
             abi.encodeWithSelector(
                 MeasurementRegistry.InvalidTransition.selector,
@@ -238,7 +253,7 @@ contract MeasurementRegistryTest is Test {
         accept[0] = validAdmissionId;
         accept[1] = INITIAL_ADMISSION_ID;
 
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(
             abi.encodeWithSelector(
                 MeasurementRegistry.InvalidTransition.selector,
@@ -253,6 +268,39 @@ contract MeasurementRegistryTest is Test {
         assertEq(registry.acceptedCount(), 1);
         assertEq(registry.policyRevision(), 1);
         assertEq(registry.activePolicyHash(), BOOTSTRAP_POLICY_HASH);
+    }
+
+    function test_TransferAdmin() public {
+        address newAdmin = makeAddr("newAdmin");
+
+        vm.expectEmit(true, true, false, false, address(registry));
+        emit AdminTransferred(ADMIN, newAdmin);
+        vm.prank(ADMIN);
+        registry.transferAdmin(newAdmin);
+        assertEq(registry.admin(), newAdmin);
+
+        // The old admin loses the update role; the new one has it.
+        vm.prank(ADMIN);
+        vm.expectRevert(abi.encodeWithSelector(MeasurementRegistry.Unauthorized.selector, ADMIN));
+        registry.applyPolicyUpdate(_singleton(keccak256("added")), _empty(), keccak256("policy-2"));
+
+        vm.prank(newAdmin);
+        registry.applyPolicyUpdate(_singleton(keccak256("added")), _empty(), keccak256("policy-2"));
+        assertEq(registry.policyRevision(), 2);
+    }
+
+    function test_RevertWhen_TransferAdminToZeroAddress() public {
+        vm.prank(ADMIN);
+        vm.expectRevert(MeasurementRegistry.ZeroAddress.selector);
+        registry.transferAdmin(address(0));
+    }
+
+    function test_RevertWhen_TransferAdminCallerIsNotAdmin() public {
+        address caller = makeAddr("caller");
+
+        vm.prank(caller);
+        vm.expectRevert(abi.encodeWithSelector(MeasurementRegistry.Unauthorized.selector, caller));
+        registry.transferAdmin(caller);
     }
 
     function testFuzz_AcceptThenDeprecate(bytes32 admissionId) public {
@@ -307,7 +355,7 @@ contract MeasurementRegistryTest is Test {
         bytes32[] memory accept = _distinctIds(seed, "accept", idCount);
         accept[duplicateAt] = accept[0];
 
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(abi.encodeWithSelector(MeasurementRegistry.DuplicateAdmissionId.selector, accept[0]));
         registry.applyPolicyUpdate(accept, _empty(), keccak256(abi.encode(seed, "updated-policy")));
     }
@@ -321,7 +369,7 @@ contract MeasurementRegistryTest is Test {
         _apply(deprecate, _empty(), keccak256(abi.encode(seed, "staging-policy")));
         deprecate[duplicateAt] = deprecate[0];
 
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(abi.encodeWithSelector(MeasurementRegistry.DuplicateAdmissionId.selector, deprecate[0]));
         registry.applyPolicyUpdate(_empty(), deprecate, keccak256(abi.encode(seed, "updated-policy")));
     }
@@ -345,7 +393,7 @@ contract MeasurementRegistryTest is Test {
         bytes32[] memory accept = _distinctIds(seed, "accept", acceptCount);
         accept[acceptAt] = deprecate[deprecateAt];
 
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         vm.expectRevert(
             abi.encodeWithSelector(MeasurementRegistry.ContradictoryAdmissionId.selector, deprecate[deprecateAt])
         );
@@ -357,7 +405,12 @@ contract MeasurementRegistryTest is Test {
         vm.store(address(registry), bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 2), BOOTSTRAP_POLICY_HASH);
         vm.store(address(registry), bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 3), bytes32(uint256(1)));
         vm.store(address(registry), bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 4), bytes32(uint256(1)));
+        _storeAdmin(address(registry), ADMIN);
         _storeStatus(INITIAL_ADMISSION_ID, MeasurementRegistry.Status.Accepted);
+    }
+
+    function _storeAdmin(address target, address admin) internal {
+        vm.store(target, bytes32(uint256(REGISTRY_STORAGE_LOCATION) + 5), bytes32(uint256(uint160(admin))));
     }
 
     function _storeStatus(bytes32 admissionId, MeasurementRegistry.Status status) internal {
@@ -366,7 +419,7 @@ contract MeasurementRegistryTest is Test {
     }
 
     function _apply(bytes32[] memory accept, bytes32[] memory deprecate, bytes32 newPolicyHash) internal {
-        vm.prank(AUTHORITY);
+        vm.prank(ADMIN);
         registry.applyPolicyUpdate(accept, deprecate, newPolicyHash);
     }
 

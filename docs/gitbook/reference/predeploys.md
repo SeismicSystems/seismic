@@ -30,14 +30,15 @@ configuration.
 | Protocol parameters | `0x0000000000000000000000000000506172616D73` | Stores owner-managed protocol configuration |
 | Shielded delegation account | `0x0000000000000000000000000000000000002001` | Experimental EIP-7702 delegation implementation with shielded session keys |
 | MeasurementRegistry | `0x1000000000000000000000000000000000000001` | Stores the admission status of TEE measurements permitted to participate in the network |
-| MeasurementAuthorityDev | `0x1000000000000000000000000000000000000002` | Development-only authority allowed to update MeasurementRegistry |
 | Directory | `0x1000000000000000000000000000000000000004` | Stores account viewing keys used by SRC20 encrypted events |
 | Intelligence | `0x1000000000000000000000000000000000000005` | Manages intelligence providers and encrypts data to their registered keys |
 | Operations sentinel | `0x1000000000000000000000000000000000000006` | Reserved target for node operations authorization messages; not an application contract |
 
-`MeasurementAuthorityDev` is controlled by a well-known Anvil test key, so
-any network running it has a publicly known admission authority. Production
-networks install a different authority contract at the same address.
+`MeasurementRegistry` accepts policy updates only from its `admin`, an
+account held in the registry's own storage and seeded in the genesis
+allocation, the same way `ProtocolParams` seeds its `owner`. The admin can
+hand the role to another account with `transferAdmin`, for example from a
+development key to a multisig.
 
 The public testnet genesis predates these contracts. It holds the retired
 [`UpgradeOperator`](https://github.com/SeismicSystems/seismic/blob/18671d81287f3e70631269ef02fe8c95cb473fbf/contracts/src/enclave/UpgradeOperator.sol) at

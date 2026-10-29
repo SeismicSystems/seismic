@@ -136,7 +136,7 @@
     <rect class="shipped" width="340" height="95" rx="8"/>
     <text x="14" y="26">measurements.</text>
     <text x="14" y="48">  bootstrap_policy_hash</text>
-    <text x="14" y="70">contracts: registry, authority</text>
+    <text x="14" y="70">  registry</text>
   </g>
   <g transform="translate(1540,640)">
     <rect class="shipped" width="380" height="95" rx="8"/>
