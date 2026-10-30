@@ -47,7 +47,7 @@ use alloy_primitives::Address;
 use anyhow::{Context as _, bail};
 use clap::Args;
 use seismic_manifest::{
-    ContractsManifest, EthManifest, MeasurementsManifest, NetworkManifestV1, SummitManifest, render,
+    EthManifest, MeasurementsManifest, NetworkManifestV1, SummitManifest, render,
 };
 use seismic_measurement_admission::promote_measurements;
 use seismic_tee_common::founding::{
@@ -63,12 +63,9 @@ use crate::gates::{ArtifactSet, compile, inject_registry_genesis_storage, run_va
 use crate::init::{absolute, network_name};
 use crate::shell_outs::{DerivationArgs, Derivations};
 
-/// Genesis-alloc addresses of the admission-policy contracts, named by role as
-/// in the manifest schema: registry = the measurement allowlist
-/// (MeasurementRegistry.sol), authority = its mutation authority (today
-/// MeasurementAuthorityDev.sol).
+/// Genesis-alloc address of the measurement allowlist (MeasurementRegistry.sol),
+/// named by role as in the manifest schema.
 pub const DEFAULT_REGISTRY: &str = "0x1000000000000000000000000000000000000001";
-pub const DEFAULT_AUTHORITY: &str = "0x1000000000000000000000000000000000000002";
 
 /// The platform a policy promoted from the measurements input pins, unless
 /// told otherwise.
@@ -105,7 +102,6 @@ pub struct AssembleInputs<'a> {
     /// The pinned box's candidate `tx_io_pk@0` (see [`pinned_box`]).
     pub founding_tx_io_pk: [u8; 33],
     pub registry: Address,
-    pub authority: Address,
 }
 
 /// Set `eth_genesis_hash` in an authored summit genesis to the computed value.
@@ -249,10 +245,7 @@ pub async fn assemble(
         },
         measurements: MeasurementsManifest {
             bootstrap_policy_hash: Sha256::digest(inputs.policy).into(),
-            contracts: ContractsManifest {
-                registry: inputs.registry.into_array(),
-                authority: inputs.authority.into_array(),
-            },
+            registry: inputs.registry.into_array(),
         },
         founding_tx_io_pk: inputs.founding_tx_io_pk,
     });
@@ -448,10 +441,6 @@ pub struct AssembleArgs {
     #[arg(long, value_name = "ADDRESS", default_value = DEFAULT_REGISTRY)]
     pub registry: Address,
 
-    /// Registry mutation-authority contract address.
-    #[arg(long, value_name = "ADDRESS", default_value = DEFAULT_AUTHORITY)]
-    pub authority: Address,
-
     /// Overwrite an existing manifest (a new network identity).
     #[arg(long, conflicts_with = "check")]
     pub force: bool,
@@ -550,7 +539,6 @@ pub async fn run(args: AssembleArgs, config: Option<&Path>) -> anyhow::Result<Ex
             validators: &founding.validators,
             founding_tx_io_pk,
             registry: args.registry,
-            authority: args.authority,
         },
         &shell_outs,
     )
@@ -595,13 +583,12 @@ pub(crate) mod tests {
 
     use seismic_tee_common::founding::load_harvest_records;
 
+    use seismic_measurement_admission::genesis::ADMIN_SLOT;
+
     use super::*;
     use crate::gates::tests::{FIXTURE_POLICY, FIXTURE_RETH_GENESIS, REGISTRY, other_policy};
     use crate::image::ImageRecord;
     use crate::image::tests::{TAG, local_release, release_files, with_gcp_target};
-
-    pub(crate) const AUTHORITY: Address =
-        alloy_primitives::address!("0x1000000000000000000000000000000000000002");
 
     /// The candidate `tx_io_pk@0` the tests pin.
     pub(crate) const FOUNDING_TX_IO_PK: [u8; 33] = {
@@ -687,9 +674,32 @@ pub(crate) mod tests {
         }
     }
 
+    /// The registry admin the tests seed: Anvil account 0, as a storage word.
+    pub(crate) fn admin_word() -> String {
+        format!(
+            "0x{}f39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+            "00".repeat(12)
+        )
+    }
+
+    /// `genesis` with the registry admin seeded beside whatever storage the
+    /// registry account holds, as an authored genesis carries it.
+    pub(crate) fn seeded(genesis: &[u8]) -> Vec<u8> {
+        let mut genesis: serde_json::Value = serde_json::from_slice(genesis).unwrap();
+        let account = &mut genesis["alloc"][&hex_0x(REGISTRY.as_slice())];
+        if account.get("storage").is_none() {
+            account["storage"] = serde_json::json!({});
+        }
+        account["storage"][hex_0x(ADMIN_SLOT.as_slice())] = serde_json::json!(admin_word());
+        let mut bytes = serde_json::to_vec_pretty(&genesis).unwrap();
+        bytes.push(b'\n');
+        bytes
+    }
+
     /// An authored artifact set in a temp dir: the fixture network's reth
-    /// genesis (its registry predeploy is the canonical runtime) and a
-    /// minimal summit genesis with no eth_genesis_hash (assemble fills it).
+    /// genesis (its registry predeploy is the canonical runtime) with the
+    /// registry admin seeded, and a minimal summit genesis with no
+    /// eth_genesis_hash (assemble fills it).
     pub(crate) struct Authored {
         pub dir: tempfile::TempDir,
         pub reth_genesis: PathBuf,
@@ -698,7 +708,7 @@ pub(crate) mod tests {
 
     pub(crate) fn authored() -> Authored {
         let dir = tempfile::tempdir().unwrap();
-        let reth_genesis = write_file(&dir, "reth-genesis.json", FIXTURE_RETH_GENESIS);
+        let reth_genesis = write_file(&dir, "reth-genesis.json", &seeded(FIXTURE_RETH_GENESIS));
         let summit_genesis =
             write_file(&dir, "summit-genesis.toml", b"namespace = \"testnet-1\"\n");
         Authored {
@@ -722,7 +732,6 @@ pub(crate) mod tests {
                 validators: &[validator()],
                 founding_tx_io_pk: FOUNDING_TX_IO_PK,
                 registry: REGISTRY,
-                authority: AUTHORITY,
             },
             fake,
         )
@@ -751,10 +760,7 @@ pub(crate) mod tests {
             first.manifest.measurements.bootstrap_policy_hash,
             <[u8; 32]>::from(Sha256::digest(FIXTURE_POLICY))
         );
-        assert_eq!(
-            first.manifest.measurements.contracts.registry,
-            REGISTRY.into_array()
-        );
+        assert_eq!(first.manifest.measurements.registry, REGISTRY.into_array());
         assert_eq!(first.manifest.founding_tx_io_pk, FOUNDING_TX_IO_PK);
         assert_eq!(first.policy, FIXTURE_POLICY);
     }
@@ -774,7 +780,9 @@ pub(crate) mod tests {
             .as_object()
             .unwrap();
         let report = compile(&policy).unwrap();
-        assert_eq!(storage.len(), report.registry_genesis_storage.len());
+        // The compiled policy, beside the authored admin.
+        assert_eq!(storage.len(), report.registry_genesis_storage.len() + 1);
+        assert_eq!(storage[&hex_0x(ADMIN_SLOT.as_slice())], admin_word());
         // The example's committed storage was compiled from another policy,
         // and was replaced wholesale.
         let example: serde_json::Value = serde_json::from_slice(FIXTURE_RETH_GENESIS).unwrap();
@@ -833,7 +841,6 @@ pub(crate) mod tests {
                 validators: &[],
                 founding_tx_io_pk: FOUNDING_TX_IO_PK,
                 registry: REGISTRY,
-                authority: AUTHORITY,
             },
             &Fake::default(),
         )
@@ -995,7 +1002,6 @@ pub(crate) mod tests {
                 validators: &[validator()],
                 founding_tx_io_pk: FOUNDING_TX_IO_PK,
                 registry: REGISTRY,
-                authority: AUTHORITY,
             },
             &Fake::default(),
         )
@@ -1009,7 +1015,7 @@ pub(crate) mod tests {
         );
         assert_eq!(
             std::fs::read(net.input_reth_genesis()).unwrap(),
-            FIXTURE_RETH_GENESIS
+            seeded(FIXTURE_RETH_GENESIS)
         );
         assert_eq!(
             std::fs::read(net.summit_genesis()).unwrap(),
@@ -1084,7 +1090,6 @@ pub(crate) mod tests {
                 validators: &[validator()],
                 founding_tx_io_pk: FOUNDING_TX_IO_PK,
                 registry: REGISTRY,
-                authority: AUTHORITY,
             },
             &Fake::default(),
         )
@@ -1099,9 +1104,10 @@ pub(crate) mod tests {
         let storage = genesis["alloc"][&hex_0x(REGISTRY.as_slice())]["storage"]
             .as_object()
             .unwrap();
+        // The compiled policy, beside the authored admin.
         assert_eq!(
             storage.len(),
-            compile(&policy).unwrap().registry_genesis_storage.len()
+            compile(&policy).unwrap().registry_genesis_storage.len() + 1
         );
         assert!(
             storage.len()
@@ -1249,7 +1255,6 @@ pub(crate) mod tests {
                     validators,
                     founding_tx_io_pk: FOUNDING_TX_IO_PK,
                     registry: REGISTRY,
-                    authority: AUTHORITY,
                 },
                 &Fake::default(),
             )
@@ -1280,7 +1285,6 @@ pub(crate) mod tests {
     fn the_addresses_parse_from_the_flags() {
         let args = AssembleArgs::try_parse_from_probe(&["assemble", "/nets/x"]);
         assert_eq!(args.registry, REGISTRY);
-        assert_eq!(args.authority, AUTHORITY);
         assert_eq!(args.attestation_type, DEFAULT_ATTESTATION_TYPE);
         assert!(!args.force);
         assert!(!args.check);

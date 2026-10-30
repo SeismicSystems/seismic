@@ -10,19 +10,21 @@
 //! commitments by simply not agreeing with each other.
 //!
 //! The registry gate is the one with teeth. Committed genesis files are
-//! policy-free (canonical registry runtime, empty storage — failing closed):
-//! the accepted admission IDs are a per-network fact, so `assemble` compiles
-//! the network's policy document with `seismic-measurement-admission` and
-//! writes the compiled `registry_genesis_storage` into the registry account
-//! ([`inject_registry_genesis_storage`]). The gate then requires the account
-//! to hold the canonical runtime code and exactly that storage — every
-//! expected slot with the expected word, and no unexplained slots — so
-//! `eth.genesis_hash` commits to the reviewed policy and nothing else.
+//! policy-free (canonical registry runtime, only the admin seeded — failing
+//! closed): the accepted admission IDs are a per-network fact, so `assemble`
+//! compiles the network's policy document with `seismic-measurement-admission`
+//! and writes the compiled `registry_genesis_storage` into the registry account
+//! beside the authored admin ([`inject_registry_genesis_storage`]). The gate
+//! then requires the account to hold the canonical runtime code, a nonzero
+//! admin, and exactly that storage — every expected slot with the expected
+//! word, and no unexplained slots — so `eth.genesis_hash` commits to the
+//! reviewed policy, the genesis admin, and nothing else.
 
 use std::collections::BTreeMap;
 
 use alloy_primitives::{Address, B256, U256, keccak256};
 use anyhow::{Context as _, bail};
+use seismic_measurement_admission::genesis::ADMIN_SLOT;
 use seismic_measurement_admission::{CompileReport, compile_policy};
 use seismic_tee_common::{Artifact, Manifest, NetworkDir, hex_0x};
 use serde_json::Value;
@@ -42,13 +44,16 @@ pub fn compile(policy: &[u8]) -> anyhow::Result<CompileReport> {
 }
 
 /// Write the compile report's `registry_genesis_storage` verbatim into the
-/// reth genesis's registry account, replacing any existing storage.
+/// reth genesis's registry account, replacing any existing storage but the
+/// admin slot.
 ///
-/// Replacement, not merge: the gate requires the account to hold exactly the
-/// compiled map, and wholesale replacement keeps re-assembly idempotent when
-/// the policy changes. Everything else in the document — key order included —
-/// is left as authored, so a re-assembly diffs as the injection and nothing
-/// else.
+/// The admin is authored — the genesis template seeds it, as it seeds the
+/// owners of the other owner-gated predeploys — so it is kept, respelled
+/// canonically; every other slot is replaced, not merged: the gate requires
+/// the account to hold exactly the compiled map beside the admin, and
+/// wholesale replacement keeps re-assembly idempotent when the policy changes.
+/// Everything else in the document — key order included — is left as
+/// authored, so a re-assembly diffs as the injection and nothing else.
 pub fn inject_registry_genesis_storage(
     genesis: &[u8],
     registry: Address,
@@ -81,8 +86,13 @@ pub fn inject_registry_genesis_storage(
     let Some(account) = alloc.get_mut(&key).and_then(Value::as_object_mut) else {
         bail!("registry {wanted} alloc entry is not an object");
     };
-    let storage: serde_json::Map<String, Value> = report
-        .registry_genesis_storage
+    let mut storage: BTreeMap<B256, B256> = report.registry_genesis_storage.clone();
+    if let Some(authored) = account.get("storage")
+        && let Some(admin) = read_storage(authored, &wanted)?.get(&ADMIN_SLOT)
+    {
+        storage.insert(ADMIN_SLOT, *admin);
+    }
+    let storage: serde_json::Map<String, Value> = storage
         .iter()
         .map(|(slot, word)| {
             (
@@ -118,9 +128,31 @@ fn normalize_word(value: &Value, what: &str) -> anyhow::Result<B256> {
     Ok(B256::from(word))
 }
 
-/// Exact registry-account gate: canonical runtime code and precisely the
-/// compiled genesis storage — every expected slot present with the expected
-/// word, and no unexplained slots.
+/// A genesis account's `storage` object as normalized words.
+fn read_storage(storage: &Value, address: &str) -> anyhow::Result<BTreeMap<B256, B256>> {
+    let Value::Object(raw_storage) = storage else {
+        bail!("registry {address} storage: expected an object, got {storage}");
+    };
+    let mut words: BTreeMap<B256, B256> = BTreeMap::new();
+    for (slot, word) in raw_storage {
+        let slot = normalize_word(
+            &Value::String(slot.clone()),
+            &format!("registry {address} storage slot"),
+        )?;
+        let word = normalize_word(word, &format!("registry {address} storage value at {slot}"))?;
+        if words.insert(slot, word).is_some() {
+            bail!(
+                "registry {address} genesis storage lists the same slot twice under different \
+                 hex spellings"
+            );
+        }
+    }
+    Ok(words)
+}
+
+/// Exact registry-account gate: canonical runtime code, a nonzero admin, and
+/// precisely the compiled genesis storage beside it — every expected slot
+/// present with the expected word, and no unexplained slots.
 fn validate_registry_account(
     account: &Value,
     address: &str,
@@ -144,31 +176,31 @@ fn validate_registry_account(
     }
 
     let expected: &BTreeMap<B256, B256> = &report.registry_genesis_storage;
-    let raw_storage = match account.get("storage") {
-        None => &serde_json::Map::new(),
-        Some(Value::Object(storage)) => storage,
-        Some(other) => bail!("registry {address} storage: expected an object, got {other}"),
+    let mut actual = match account.get("storage") {
+        None => BTreeMap::new(),
+        Some(storage) => read_storage(storage, address)?,
     };
-    let mut actual: BTreeMap<B256, B256> = BTreeMap::new();
-    for (slot, word) in raw_storage {
-        let slot = normalize_word(
-            &Value::String(slot.clone()),
-            &format!("registry {address} storage slot"),
-        )?;
-        let word = normalize_word(word, &format!("registry {address} storage value at {slot}"))?;
-        if actual.insert(slot, word).is_some() {
-            bail!(
-                "registry {address} genesis storage lists the same slot twice under different \
-                 hex spellings"
-            );
-        }
-    }
     if actual.is_empty() {
         bail!(
             "registry {address} genesis storage is empty: the admission policy must be \
              genesis-pinned. Seed the account with the compiled registry_genesis_storage \
              (`seismic-tee admission compile measurement-policy-bootstrap.json`)"
         );
+    }
+    // The admin is authored, not compiled: any nonzero address passes, since
+    // an unset admin leaves the policy frozen forever.
+    match actual.remove(&ADMIN_SLOT) {
+        None => bail!(
+            "registry {address} genesis storage seeds no admin (slot {}): nothing could ever \
+             update the policy. Seed the admin in the authored reth genesis",
+            hex_0x(ADMIN_SLOT.as_slice()),
+        ),
+        Some(admin) if admin.is_zero() || admin[..12].iter().any(|byte| *byte != 0) => bail!(
+            "registry {address} admin (slot {}) is {}, not a nonzero address",
+            hex_0x(ADMIN_SLOT.as_slice()),
+            hex_0x(admin.as_slice()),
+        ),
+        Some(_) => {}
     }
     if &actual != expected {
         let mut problems = Vec::new();
@@ -317,31 +349,28 @@ pub async fn run_validation_gates(
                 .collect()
         })
         .unwrap_or_default();
-    let contracts = &manifest.measurements.contracts;
-    let registry_address = hex_0x(&contracts.registry);
-    for (role, address) in [
-        ("registry", &registry_address),
-        ("authority", &hex_0x(&contracts.authority)),
-    ] {
-        let Some(account) = alloc.get(address) else {
-            bail!("measurements.contracts.{role} {address} is not in the reth genesis alloc");
-        };
-        if account
-            .get("code")
-            .and_then(Value::as_str)
-            .is_none_or(str::is_empty)
-        {
-            bail!("measurements.contracts.{role} {address} has no code in the reth genesis alloc");
-        }
+    let registry_address = hex_0x(&manifest.measurements.registry);
+    let Some(registry_account) = alloc.get(&registry_address) else {
+        bail!("measurements.registry {registry_address} is not in the reth genesis alloc");
+    };
+    if registry_account
+        .get("code")
+        .and_then(Value::as_str)
+        .is_none_or(str::is_empty)
+    {
+        bail!(
+            "measurements.registry {registry_address} has no code in the reth genesis \
+             alloc"
+        );
     }
 
     // Policy artifact <-> registry account consistency: compile the policy
     // with the linked admission crate and require the registry genesis
-    // account to hold the canonical runtime code plus exactly the compiled
-    // storage, so the genesis hash commits to the reviewed policy and nothing
-    // else.
+    // account to hold the canonical runtime code, an admin, and exactly the
+    // compiled storage, so the genesis hash commits to the reviewed policy and
+    // nothing else.
     let report = compile(set.policy.bytes())?;
-    validate_registry_account(alloc[&registry_address], &registry_address, &report)?;
+    validate_registry_account(registry_account, &registry_address, &report)?;
     Ok(warnings)
 }
 
@@ -351,7 +380,7 @@ pub(crate) mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::assemble::tests::{Fake, assemble_with, authored};
+    use crate::assemble::tests::{Fake, admin_word, assemble_with, authored, seeded};
     use crate::assemble::write_artifact_set;
 
     /// The committed fixture network's reth genesis: the registry predeploy
@@ -389,28 +418,27 @@ pub(crate) mod tests {
     }
 
     /// Injection writes exactly the report's storage into the registry
-    /// account, replaces whatever was there, and leaves the rest of the
-    /// document — key order included — as authored.
+    /// account beside the authored admin, replaces whatever else was there,
+    /// and leaves the rest of the document — key order included — as
+    /// authored.
     #[test]
     fn injection_replaces_the_registry_storage_and_nothing_else() {
+        let authored = seeded(FIXTURE_RETH_GENESIS);
         let report = compile(&other_policy()).unwrap();
-        let injected =
-            inject_registry_genesis_storage(FIXTURE_RETH_GENESIS, REGISTRY, &report).unwrap();
+        let injected = inject_registry_genesis_storage(&authored, REGISTRY, &report).unwrap();
 
         let account = registry_account(&injected);
         let storage = account["storage"].as_object().unwrap();
-        assert_eq!(storage.len(), report.registry_genesis_storage.len());
+        assert_eq!(storage.len(), report.registry_genesis_storage.len() + 1);
         for (slot, word) in &report.registry_genesis_storage {
             assert_eq!(storage[&hex_0x(slot.as_slice())], hex_0x(word.as_slice()));
         }
+        assert_eq!(storage[&hex_0x(ADMIN_SLOT.as_slice())], admin_word());
         // The fixture's own storage (compiled from its policy) is gone.
-        assert_ne!(
-            account["storage"],
-            registry_account(FIXTURE_RETH_GENESIS)["storage"]
-        );
+        assert_ne!(account["storage"], registry_account(&authored)["storage"]);
 
         // Everything else survives, in the authored order.
-        let mut before: Value = serde_json::from_slice(FIXTURE_RETH_GENESIS).unwrap();
+        let mut before: Value = serde_json::from_slice(&authored).unwrap();
         let mut after: Value = serde_json::from_slice(&injected).unwrap();
         for genesis in [&mut before, &mut after] {
             genesis["alloc"][&hex_0x(REGISTRY.as_slice())]
@@ -426,12 +454,30 @@ pub(crate) mod tests {
         // Re-injecting the fixture's own policy reproduces its committed
         // registry storage.
         let report = compile(FIXTURE_POLICY).unwrap();
-        let reinjected =
-            inject_registry_genesis_storage(FIXTURE_RETH_GENESIS, REGISTRY, &report).unwrap();
+        let reinjected = inject_registry_genesis_storage(&authored, REGISTRY, &report).unwrap();
         assert_eq!(
             registry_account(&reinjected)["storage"],
-            registry_account(FIXTURE_RETH_GENESIS)["storage"]
+            registry_account(&authored)["storage"]
         );
+    }
+
+    /// An authored genesis that seeds no admin gets none: injection writes the
+    /// policy alone and leaves the refusal to the gate.
+    #[test]
+    fn injection_invents_no_admin() {
+        let mut unseeded: Value = serde_json::from_slice(FIXTURE_RETH_GENESIS).unwrap();
+        unseeded["alloc"][&hex_0x(REGISTRY.as_slice())]
+            .as_object_mut()
+            .unwrap()
+            .remove("storage");
+        let report = compile(FIXTURE_POLICY).unwrap();
+        let injected =
+            inject_registry_genesis_storage(unseeded.to_string().as_bytes(), REGISTRY, &report)
+                .unwrap();
+        let account = registry_account(&injected);
+        let storage = account["storage"].as_object().unwrap();
+        assert_eq!(storage.len(), report.registry_genesis_storage.len());
+        assert!(!storage.contains_key(&hex_0x(ADMIN_SLOT.as_slice())));
     }
 
     #[test]
@@ -470,7 +516,7 @@ pub(crate) mod tests {
     fn the_registry_gate_is_exact_over_normalized_words() {
         let report = compile(FIXTURE_POLICY).unwrap();
         let address = hex_0x(REGISTRY.as_slice());
-        let canonical = registry_account(FIXTURE_RETH_GENESIS);
+        let canonical = registry_account(&seeded(FIXTURE_RETH_GENESIS));
         validate_registry_account(&canonical, &address, &report).unwrap();
 
         // Respelled: uppercase digits, `0x0` shorthand for a zero-padded word.
@@ -505,7 +551,8 @@ pub(crate) mod tests {
         // A missing slot, an unexplained slot, and a wrong word are each named.
         let (first_slot, first_word) = {
             let storage = canonical["storage"].as_object().unwrap();
-            let (s, w) = storage.iter().next().unwrap();
+            let admin_slot = hex_0x(ADMIN_SLOT.as_slice());
+            let (s, w) = storage.iter().find(|(s, _)| **s != admin_slot).unwrap();
             (s.clone(), w.as_str().unwrap().to_string())
         };
         let mut tampered = canonical.clone();
@@ -691,14 +738,16 @@ pub(crate) mod tests {
         let err = failure(gates_over(&dir).await);
         assert!(err.contains("genesis storage is empty"), "{err}");
 
-        // A genesis assembled around another policy: same slots, other words.
+        // A genesis assembled around another policy: same slots, other words,
+        // the same admin.
         let other = compile(&other_policy()).unwrap();
         edit_genesis(&dir, |g| {
-            let storage: serde_json::Map<String, Value> = other
+            let mut storage: serde_json::Map<String, Value> = other
                 .registry_genesis_storage
                 .iter()
                 .map(|(s, w)| (hex_0x(s.as_slice()), json!(hex_0x(w.as_slice()))))
                 .collect();
+            storage.insert(hex_0x(ADMIN_SLOT.as_slice()), json!(admin_word()));
             g["alloc"][&registry]["storage"] = json!(storage);
         });
         let err = failure(gates_over(&dir).await);
@@ -722,19 +771,50 @@ pub(crate) mod tests {
             g["alloc"].as_object_mut().unwrap().remove(&registry);
         });
         let err = failure(gates_over(&dir).await);
-        assert!(err.contains("measurements.contracts.registry"), "{err}");
+        assert!(err.contains("measurements.registry"), "{err}");
         assert!(err.contains("not in the reth genesis alloc"), "{err}");
     }
 
     #[tokio::test]
-    async fn a_contract_without_code_is_rejected() {
+    async fn a_registry_without_code_is_rejected() {
         let (_tmp, dir) = assembled_dir().await;
+        let registry = hex_0x(REGISTRY.as_slice());
         edit_genesis(&dir, |g| {
-            g["alloc"]["0x1000000000000000000000000000000000000002"]["code"] = json!("");
+            g["alloc"][&registry]["code"] = json!("");
         });
         let err = failure(gates_over(&dir).await);
-        assert!(err.contains("measurements.contracts.authority"), "{err}");
+        assert!(err.contains("measurements.registry"), "{err}");
         assert!(err.contains("has no code"), "{err}");
+    }
+
+    /// The admin is the one slot the policy does not explain: it must be
+    /// present and hold a nonzero address, or nothing could ever update the
+    /// policy.
+    #[test]
+    fn the_registry_gate_requires_an_admin() {
+        let report = compile(FIXTURE_POLICY).unwrap();
+        let address = hex_0x(REGISTRY.as_slice());
+        let admin_slot = hex_0x(ADMIN_SLOT.as_slice());
+        let canonical = registry_account(&seeded(FIXTURE_RETH_GENESIS));
+
+        let mut unseeded = canonical.clone();
+        unseeded["storage"]
+            .as_object_mut()
+            .unwrap()
+            .remove(&admin_slot);
+        let err = validate_registry_account(&unseeded, &address, &report)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("seeds no admin"), "{err}");
+
+        for word in ["0x0".to_string(), format!("0x{}", "11".repeat(32))] {
+            let mut bad = canonical.clone();
+            bad["storage"][&admin_slot] = json!(word);
+            let err = validate_registry_account(&bad, &address, &report)
+                .unwrap_err()
+                .to_string();
+            assert!(err.contains("not a nonzero address"), "{err}");
+        }
     }
 
     #[test]

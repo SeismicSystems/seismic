@@ -163,7 +163,7 @@
       <tspan x="1246" dy="18">},</tspan>
       <tspan x="1246" dy="18">"measurements": {</tspan>
       <tspan x="1260" dy="18">"bootstrap_policy_hash": "0x..",</tspan>
-      <tspan x="1260" dy="18">"contracts": { reg, auth }</tspan>
+      <tspan x="1260" dy="18">"registry": "0x.."</tspan>
       <tspan x="1246" dy="18">}</tspan>
       <tspan x="1232" dy="18">}</tspan>
     </text>

@@ -11,7 +11,7 @@ authors.workspace = true
 # Governance's crate depends on neither side of the workspace: reviewing a
 # policy reads no descriptor and no network directory, only the enclave's
 # admission compiler. The dependencies the mutation half will bring — a
-# transaction client and a signer for the authority contract — land here,
+# transaction client and a signer for the registry admin — land here,
 # where the founder and operator crates never see them.
 seismic-measurement-admission.workspace = true
 

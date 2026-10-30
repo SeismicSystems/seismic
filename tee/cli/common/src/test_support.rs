@@ -34,10 +34,7 @@ pub const FIXTURE_MANIFEST: &[u8] = br#"{
   "manifest_version": 1,
   "measurements": {
     "bootstrap_policy_hash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "contracts": {
-      "authority": "0x1000000000000000000000000000000000000002",
-      "registry": "0x1000000000000000000000000000000000000001"
-    }
+    "registry": "0x1000000000000000000000000000000000000001"
   },
   "name": "seismic-devnet-3",
   "summit": {
