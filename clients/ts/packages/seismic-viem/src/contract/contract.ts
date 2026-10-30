@@ -241,7 +241,7 @@ export type ShieldedContract<
  * @remarks
  * - The `read` property auto-detects shielded params and routes to signed read or transparent read
  * - The `write` property auto-detects shielded params and routes to shielded write or transparent write
- * - The `sread` property always calls a signed read
+ * - The `sread` property always calls a signed read. Use it for functions that check `msg.sender`, even when their ABI inputs have no shielded types; smart `read` would route those calls transparently with the zero address as sender
  * - The `swrite` property always encrypts calldata via seismic transaction
  * - The `tread` property always performs a transparent read. Seismic zeroes out `from` on transparent `eth_call`, so `tread` rejects `account` here to prevent silent bugs; use `sread` for sender-aware reads
  * - The `twrite` property makes a normal write with transparent calldata
