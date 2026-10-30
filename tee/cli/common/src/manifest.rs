@@ -184,7 +184,7 @@ mod tests {
         assert_eq!(manifest.bytes(), FIXTURE_DEVNET);
         assert_eq!(
             manifest.network_id().to_string(),
-            "0x474cda948c71c7976aeb29fbfd6c32bab4bf7c14b0718048157691c7e5c615ab"
+            "0x31f2ba7ac91a4a9a560c2a4bcd9cee348a76d980537448d85924a1507cc989fc"
         );
     }
 

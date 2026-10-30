@@ -1,4 +1,4 @@
-eth_genesis_hash = "0x9bb15f315471726587048c40539fddd7c1a049410510631856549579925ec693"
+eth_genesis_hash = "0x38e2ddd05b04921a7a19537b40b776e540cd1a721a3586b7257d140b1a80173c"
 leader_timeout_ms = 2000
 notarization_timeout_ms = 4000
 nullify_timeout_ms = 4000
@@ -18,13 +18,13 @@ invalid_deposit_tax = 0
 max_pending_withdrawals_per_validator = 3
 
 [[validators]]
-node_public_key = "c9dcc88c2c474e28594cc915fdc6e22bc3eee4a08774ea8a3f200ebe6aa1b99a"
-consensus_public_key = "95804d1d0ebdfcd42cee900e5140220288ec7c833aa27e7206fa9ba0d49e3e87e57e4d649f897f76b6988afc5678ff6d"
-ip_address = "20.106.244.87:18551"
+node_public_key = "18ddec82a14b0c6f376a91450b69cb67e735a2b0e412e59288e0a0bf381f14b1"
+consensus_public_key = "950c9649db0a2699d7cfa60fbd9de61311e812d75a49e224840fe1f7e5ace550e4fb26fbaff2c73248b597bda77d84c9"
+ip_address = "35.193.143.214:18551"
 withdrawal_credentials = "0x0000000000000000000000000000000000000002"
 
 [[validators]]
-node_public_key = "cf8f263e1ccf28a2bda0853e29eefafab94d0ba68cb219010500fe3730c18706"
-consensus_public_key = "ae978ada03f3932c53ca8701fb298a38a2cd535b4cdbabf8f0c188c872f5ca77a7b21573bb7739b53439c616dacad54c"
-ip_address = "20.51.241.214:18551"
+node_public_key = "1d968e431eee7b5098fcc7ba7bca0417757dd1182364109e55a9d44b3fc46b21"
+consensus_public_key = "98e7e56a621b0995c55f19d8bce2d722485bb4bdae0da2be8f62159c3f432f64aef278e5d7984977e2ec6f155b4419c4"
+ip_address = "172.178.66.45:18551"
 withdrawal_credentials = "0x0000000000000000000000000000000000000001"

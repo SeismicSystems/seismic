@@ -1,21 +1,37 @@
 [
   {
     "attestation_type": "azure-tdx",
-    "measurement_id": "seismic_2026-10-19.6aed44.vhd",
+    "measurement_id": "seismic_2026-10-30.3534db.vhd",
     "measurements": {
       "pcr4": {
         "expected_any": [
-          "e0b5e97b1baca2d24d8b2a1fc8a71ac3ab2d0d1b90a433134cfdd9e00c936477"
+          "1702e126a8c17587e46531077b892dad585b837d342067d65618898e68d7dcf9"
         ]
       },
       "pcr9": {
         "expected_any": [
-          "b5fe68b953bc77a43d43267fbe5fc81724d160c8f851cb330e0493cd38de3b08"
+          "c45a4798321db635853e0f60289c8357377223b543c3046f56c2554c916b478c"
         ]
       },
       "pcr11": {
         "expected_any": [
-          "f92d721096921fd02fb74f599e983025300056306f0a6349e9244920ec15e00c"
+          "dd0c01612c9c2882981951d5a0c6cc3d17260ed56a1f453c29b6f440abec6910"
+        ]
+      }
+    }
+  },
+  {
+    "attestation_type": "gcp-tdx",
+    "measurement_id": "seismic_2026-10-30.3534db.tar.gz",
+    "measurements": {
+      "rtmr1": {
+        "expected_any": [
+          "542891a3dc86677a299b2e77ccc3b6a5165db37e5b4f5029d3f2e78eee10ea718ee37c6f0d0dbf0e42719042c08f240f"
+        ]
+      },
+      "rtmr2": {
+        "expected_any": [
+          "0c4b8d8241ee84520ad96c750456b2929aa76a1c429f7e4c96bca7ac4377c38882f9f558d68941ddfeea68e7049dfec1"
         ]
       }
     }

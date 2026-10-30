@@ -39,7 +39,7 @@ pub const MANIFEST_FILENAME: &str = "network-manifest.json";
 /// "bootstrap" because this is only the *founding* allowlist — what the
 /// manifest's `bootstrap_policy_hash` pins and the registry's genesis storage
 /// is compiled from. The live policy is the registry contract's state, which
-/// the authority can mutate after genesis.
+/// the registry admin can mutate after genesis.
 pub const POLICY_FILENAME: &str = "measurement-policy-bootstrap.json";
 pub const RETH_GENESIS_FILENAME: &str = "reth-genesis.json";
 /// Both the authored input and the shipped artifact use this basename: same

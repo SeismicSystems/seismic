@@ -6,7 +6,7 @@
 //! pipeline from an image's measurements to the policy record a network
 //! accepts, in the order it is run. The steps that exist today are the
 //! authoring and review half; the mutation half — proposing a record to the
-//! manifest-pinned authority contract, deprecating one — is open and belongs
+//! registry admin, deprecating one — is open and belongs
 //! here when it lands. Policy semantics (which registers form guest identity,
 //! which value forms are canonical, how admission IDs key registry storage)
 //! have one implementation, the enclave's `seismic-measurement-admission`
