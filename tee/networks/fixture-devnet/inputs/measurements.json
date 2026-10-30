@@ -1,117 +1,39 @@
-{
-  "measurements": {
-    "11": {
-      "expected": "f92d721096921fd02fb74f599e983025300056306f0a6349e9244920ec15e00c"
-    },
-    "12": {
-      "expected": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    "13": {
-      "expected": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    "15": {
-      "expected": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    "4": {
-      "expected": "e0b5e97b1baca2d24d8b2a1fc8a71ac3ab2d0d1b90a433134cfdd9e00c936477"
-    },
-    "8": {
-      "expected": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    "9": {
-      "expected": "b5fe68b953bc77a43d43267fbe5fc81724d160c8f851cb330e0493cd38de3b08"
+[
+  {
+    "attestation_type": "azure-tdx",
+    "measurement_id": "seismic_2026-10-30.3534db.vhd",
+    "measurements": {
+      "pcr4": {
+        "expected_any": [
+          "1702e126a8c17587e46531077b892dad585b837d342067d65618898e68d7dcf9"
+        ]
+      },
+      "pcr9": {
+        "expected_any": [
+          "c45a4798321db635853e0f60289c8357377223b543c3046f56c2554c916b478c"
+        ]
+      },
+      "pcr11": {
+        "expected_any": [
+          "dd0c01612c9c2882981951d5a0c6cc3d17260ed56a1f453c29b6f440abec6910"
+        ]
+      }
     }
   },
-  "EventLog": {
-    "Events": [
-      {
-        "PCRIndex": 4,
-        "Digest": "3d6772b4f84ed47595d72a2c4c5ffd15f5bb72c7507fe26f2aaee2c69d5633ba",
-        "Description": "EV_EFI_ACTION: Calling EFI Application from Boot Option"
+  {
+    "attestation_type": "gcp-tdx",
+    "measurement_id": "seismic_2026-10-30.3534db.tar.gz",
+    "measurements": {
+      "rtmr1": {
+        "expected_any": [
+          "542891a3dc86677a299b2e77ccc3b6a5165db37e5b4f5029d3f2e78eee10ea718ee37c6f0d0dbf0e42719042c08f240f"
+        ]
       },
-      {
-        "PCRIndex": 4,
-        "Digest": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
-        "Data": "AAAAAA==",
-        "Description": "EV_SEPARATOR"
-      },
-      {
-        "PCRIndex": 4,
-        "Digest": "50522ba79509a62ac2cb201448b81907c19f6ca470a401261190fa7edbfa35dc",
-        "Description": "Boot Stage 1: Unified Kernel Image (UKI)"
-      },
-      {
-        "PCRIndex": 4,
-        "Digest": "8931590fbe48c93ce713306a4f1b4e753fb0b6c18ebe65a1e4fd943c4d14d430",
-        "Description": "Boot Stage 2: Linux"
-      },
-      {
-        "PCRIndex": 9,
-        "Digest": "e789e8c884dee23de5c326d09c7747880d73da0c606376e70f5c668420dfbdbd",
-        "Data": "YwBvAG4AcwBvAGwAZQA9AHQAdAB5ADAAIABjAG8AbgBzAG8AbABlAD0AdAB0AHkAUwAwACwAMQAxADUAMgAwADAAbgA4ACAAbQBpAHQAaQBnAGEAdABpAG8AbgBzAD0AYQB1AHQAbwAsAG4AbwBzAG0AdAAgAHMAcABlAGMAXwBzAHQAbwByAGUAXwBiAHkAcABhAHMAcwBfAGQAaQBzAGEAYgBsAGUAPQBvAG4AIABuAG8AcwBwAGUAYwB0AHIAZQBfAHYAMgAgAHQAcgBhAG4AcwBwAGEAcgBlAG4AdABfAGgAdQBnAGUAcABhAGcAZQA9AG0AYQBkAHYAaQBzAGUAIABzAHkAcwB0AGUAbQBkAC4AdQBuAGkAdAA9AG0AaQBuAGkAbQBhAGwALgB0AGEAcgBnAGUAdAAAAA==",
-        "Description": "EV_EVENT_TAG: Linux LOAD_FILE2 protocol: cmdline \"console=tty0 console=ttyS0,115200n8 mitigations=auto,nosmt spec_store_bypass_disable=on nospectre_v2 transparent_hugepage=madvise systemd.unit=minimal.target\\x00\""
-      },
-      {
-        "PCRIndex": 9,
-        "Digest": "82e7fd3dad1f64d866018b0b2e32b778c5826ceac8675e917d4213116221fed9",
-        "Description": "EV_EVENT_TAG: Linux LOAD_FILE2 protocol: initrd (digest 82e7fd3dad1f64d866018b0b2e32b778c5826ceac8675e917d4213116221fed9)"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "0da293e37ad5511c59be47993769aacb91b243f7d010288e118dc90e95aaef5a",
-        "Data": "LmxpbnV4AA==",
-        "Description": "EV_IPL: UKI section 1 name: .linux"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "163ab2d0b82d48730595f817f13f340fec92277e294ef97355af4bfbe3e8eb0c",
-        "Description": "EV_IPL: UKI section 1 data: 163ab2d0b82d48730595f817f13f340fec92277e294ef97355af4bfbe3e8eb0c"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "461203a89f23e36c3a4dc817f905b00484d2cf7e7d9376f13df91c41d84abe46",
-        "Data": "LmNtZGxpbmUA",
-        "Description": "EV_IPL: UKI section 2 name: .cmdline"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "434524eb9683085d3def33be7f1cd78fea6b95a16d26899f862821c0fce3952d",
-        "Description": "EV_IPL: UKI section 2 data: 434524eb9683085d3def33be7f1cd78fea6b95a16d26899f862821c0fce3952d"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "15ee37e75f1e8d42080e91fdbbd2560780918c81fe3687ae6d15c472bbdaac75",
-        "Data": "LmluaXRyZAA=",
-        "Description": "EV_IPL: UKI section 3 name: .initrd"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "82e7fd3dad1f64d866018b0b2e32b778c5826ceac8675e917d4213116221fed9",
-        "Description": "EV_IPL: UKI section 3 data: 82e7fd3dad1f64d866018b0b2e32b778c5826ceac8675e917d4213116221fed9"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "da7a6d941caa9d28b8a3665c4865c143db8f99400ac88d883370ae3021636c30",
-        "Data": "LnVuYW1lAA==",
-        "Description": "EV_IPL: UKI section 4 name: .uname"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "924269613322794f02d72ed37fb43d0e6e2a314fa5d01bc2c2a2bfb31f856506",
-        "Description": "EV_IPL: UKI section 4 data: 924269613322794f02d72ed37fb43d0e6e2a314fa5d01bc2c2a2bfb31f856506"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "ff552fd255be18a3d61c0da88976fc71559d13aad12d1dfe1708cf950cc4b74c",
-        "Data": "LnNiYXQA",
-        "Description": "EV_IPL: UKI section 5 name: .sbat"
-      },
-      {
-        "PCRIndex": 11,
-        "Digest": "184873eaefa801d5ff85df463ec98c117c00dd56a8426c00413991751d2fe602",
-        "Description": "EV_IPL: UKI section 5 data: 184873eaefa801d5ff85df463ec98c117c00dd56a8426c00413991751d2fe602"
+      "rtmr2": {
+        "expected_any": [
+          "0c4b8d8241ee84520ad96c750456b2929aa76a1c429f7e4c96bca7ac4377c38882f9f558d68941ddfeea68e7049dfec1"
+        ]
       }
-    ]
-  },
-  "measurement_id": "seismic_2026-10-19.6aed44.vhd"
-}
+    }
+  }
+]

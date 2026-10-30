@@ -588,7 +588,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::gates::tests::{FIXTURE_POLICY, FIXTURE_RETH_GENESIS, REGISTRY, other_policy};
     use crate::image::ImageRecord;
-    use crate::image::tests::{TAG, local_release, release_files, with_gcp_target};
+    use crate::image::tests::{TAG, local_release, release_files, resum, with_gcp_target};
 
     /// The candidate `tx_io_pk@0` the tests pin.
     pub(crate) const FOUNDING_TX_IO_PK: [u8; 33] = {
@@ -1028,23 +1028,30 @@ pub(crate) mod tests {
         assert_ne!(net.reth_genesis(), net.input_reth_genesis());
     }
 
-    /// `init` from the fixture's image published for GCP too, then the
-    /// two-record policy it wrote through everything `harvest` and `assemble`
-    /// do with one: promoted again (a record list passes through verbatim),
-    /// loaded by the verifier, the fixture's real Azure cohort replayed
-    /// against it, and the artifact set assembled over it, pinning it.
+    /// `init` from the fixture's image, published for Azure and GCP with the
+    /// fixture's own measurements, then the two-record policy it wrote
+    /// through everything `harvest` and `assemble` do with one: promoted
+    /// again (a record list passes through verbatim), loaded by the verifier,
+    /// the fixture's real Azure and GCP cohort replayed against it, and the
+    /// artifact set assembled over it, pinning it.
     #[tokio::test]
     async fn an_inited_two_platform_policy_founds_through_harvest_and_assemble() {
         let fixture = NetworkDir::new(
             Path::new(env!("CARGO_MANIFEST_DIR")).join("../../networks/fixture-devnet"),
         );
         let tag = ImageRecord::read(&fixture).unwrap().image;
-        let mut files = release_files(&tag);
-        files.insert(
-            "measurements.azure-tdx.json".to_string(),
-            std::fs::read(fixture.input_measurements()).unwrap(),
-        );
-        let files = with_gcp_target(files, &tag);
+        let committed: Vec<serde_json::Value> = serde_json::from_slice(FIXTURE_POLICY).unwrap();
+        let mut files = with_gcp_target(release_files(&tag), &tag);
+        for record in &committed {
+            files.insert(
+                format!(
+                    "measurements.{}.json",
+                    record["attestation_type"].as_str().unwrap()
+                ),
+                serde_json::to_vec_pretty(&[record]).unwrap(),
+            );
+        }
+        resum(&mut files, &tag);
 
         let authored = authored();
         let net = NetworkDir::new(authored.dir.path().join("networks").join("testnet-1"));
@@ -1073,10 +1080,8 @@ pub(crate) mod tests {
         let records: Vec<serde_json::Value> = serde_json::from_slice(&policy).unwrap();
         assert_eq!(records.len(), 2);
         assert_eq!(records[1]["attestation_type"], "gcp-tdx");
-        // The Azure record is the fixture's own, promoted from the same
-        // measurements.
-        let committed: Vec<serde_json::Value> = serde_json::from_slice(FIXTURE_POLICY).unwrap();
-        assert_eq!(records[0], committed[0]);
+        // Both records are the fixture's own, from the same measurements.
+        assert_eq!(records, committed);
 
         let harvested = load_harvest_records(&fixture).unwrap();
         verify_harvest_records(&fixture, &harvested, &policy).unwrap();
@@ -1108,13 +1113,6 @@ pub(crate) mod tests {
         assert_eq!(
             storage.len(),
             compile(&policy).unwrap().registry_genesis_storage.len() + 1
-        );
-        assert!(
-            storage.len()
-                > compile(FIXTURE_POLICY)
-                    .unwrap()
-                    .registry_genesis_storage
-                    .len()
         );
     }
 
