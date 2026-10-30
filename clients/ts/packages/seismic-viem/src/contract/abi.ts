@@ -4,6 +4,7 @@ import {
   type AbiParameter,
   fromHex,
   getAbiItem,
+  isHex,
   sha256,
   toHex,
 } from 'viem'
@@ -67,12 +68,6 @@ const remapSeismicParam = (
   return { shielded: false, type: ty }
 }
 
-export function hasShieldedParams(abi: Abi, functionName: string): boolean {
-  const abiItem = getAbiItem({ abi, name: functionName }) as AbiFunction
-  if (!abiItem?.inputs) return false
-  return abiItem.inputs.some((param) => remapSeismicParam(param).shielded)
-}
-
 /**
  * Remaps an entire ABI, converting all shielded types (suint256, saddress, etc.)
  * to their standard equivalents (uint256, address, etc.) so viem can encode them.
@@ -82,6 +77,58 @@ export const remapSeismicAbi = (abi: Abi): Abi => {
     if (item.type !== 'function') return item
     return remapSeismicAbiInputs(item)
   }) as Abi
+}
+
+/**
+ * Resolves an ABI function item from a Seismic contract ABI, supporting
+ * function overloads.
+ *
+ * When `name` is a selector (hex string), it resolves directly by selector.
+ * When `args` is provided, shielded types (e.g. `suint256`, `saddress`) are
+ * remapped to standard EVM types so viem's overload resolution can correctly
+ * match against JavaScript/TypeScript runtime argument types, and the
+ * matching original Seismic ABI item is returned.
+ *
+ * If `args` is omitted or no overload matches, falls back to standard name matching.
+ */
+export function getSeismicAbiItem(
+  abi: Abi,
+  name: string,
+  args?: readonly unknown[]
+): AbiFunction | undefined {
+  if (isHex(name, { strict: false })) {
+    return getAbiItem({ abi, name }) as AbiFunction | undefined
+  }
+
+  if (args !== undefined) {
+    const remapped = remapSeismicAbi(abi)
+    const matchedRemapped = getAbiItem({
+      abi: remapped,
+      name,
+      args,
+    })
+
+    if (matchedRemapped) {
+      const matchingIndex = remapped.findIndex(
+        (item) => item === matchedRemapped
+      )
+      if (matchingIndex !== -1) {
+        return abi[matchingIndex] as AbiFunction
+      }
+    }
+  }
+
+  return getAbiItem({ abi, name }) as AbiFunction | undefined
+}
+
+export function hasShieldedParams(
+  abi: Abi,
+  functionName: string,
+  args?: readonly unknown[]
+): boolean {
+  const abiItem = getSeismicAbiItem(abi, functionName, args)
+  if (!abiItem?.inputs) return false
+  return abiItem.inputs.some((param) => remapSeismicParam(param).shielded)
 }
 
 export const remapSeismicAbiInputs = (

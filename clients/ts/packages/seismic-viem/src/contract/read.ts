@@ -15,7 +15,6 @@ import type {
 import {
   decodeFunctionResult,
   encodeAbiParameters,
-  getAbiItem,
   toFunctionSelector,
 } from 'viem'
 import { readContract as viemReadContract } from 'viem/actions'
@@ -23,6 +22,7 @@ import { formatAbiItem } from 'viem/utils'
 
 import { ShieldedWalletClient } from '@sviem/client.ts'
 import {
+  getSeismicAbiItem,
   hasShieldedParams,
   remapSeismicAbiInputs,
 } from '@sviem/contract/abi.ts'
@@ -68,8 +68,9 @@ export async function smartReadContract<
   const readArgs = parameters as unknown as {
     abi: Abi
     functionName: string
+    args?: readonly unknown[]
   }
-  if (hasShieldedParams(readArgs.abi, readArgs.functionName)) {
+  if (hasShieldedParams(readArgs.abi, readArgs.functionName, readArgs.args)) {
     const account = forcedAccount ?? walletClient?.account
     if (!walletClient || !account) {
       throw new Error('Wallet must have an account to perform signed reads')
@@ -157,7 +158,7 @@ export async function signedReadContract<
     address,
     ...rest
   } = parameters as ReadContractParameters
-  const seismicAbi = getAbiItem({ abi: abi, name: functionName }) as AbiFunction
+  const seismicAbi = getSeismicAbiItem(abi, functionName, args) as AbiFunction
   const selector = toFunctionSelector(formatAbiItem(seismicAbi))
   const ethAbi = remapSeismicAbiInputs(seismicAbi)
   const encodedParams = encodeAbiParameters(ethAbi.inputs, args).slice(2)
@@ -202,7 +203,7 @@ export async function transparentReadContract<
     ...rest
   } = parameters as ReadContractParameters
   assertAutoGasPayment(gasPayment)
-  const seismicAbi = getAbiItem({ abi, name: functionName }) as AbiFunction
+  const seismicAbi = getSeismicAbiItem(abi, functionName, args) as AbiFunction
   const selector = toFunctionSelector(formatAbiItem(seismicAbi))
   const ethAbi = remapSeismicAbiInputs(seismicAbi)
   const encodedParams = encodeAbiParameters(ethAbi.inputs, args).slice(2)

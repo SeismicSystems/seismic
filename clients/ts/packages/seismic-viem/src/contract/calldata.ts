@@ -7,10 +7,13 @@ import type {
   ContractFunctionName,
   Hex,
 } from 'viem'
-import { encodeAbiParameters, getAbiItem, toFunctionSelector } from 'viem'
+import { encodeAbiParameters, toFunctionSelector } from 'viem'
 import { formatAbiItem } from 'viem/utils'
 
-import { remapSeismicAbiInputs } from '@sviem/contract/abi.ts'
+import {
+  getSeismicAbiItem,
+  remapSeismicAbiInputs,
+} from '@sviem/contract/abi.ts'
 import type { WriteContractParameters } from '@sviem/contract/parameters.ts'
 
 /**
@@ -48,7 +51,7 @@ export const getPlaintextCalldata = <
   >
 ): Hex => {
   const { abi, functionName, args = [] } = parameters as WriteContractParameters
-  const seismicAbi = getAbiItem({ abi, name: functionName }) as AbiFunction
+  const seismicAbi = getSeismicAbiItem(abi, functionName, args) as AbiFunction
   const selector = toFunctionSelector(formatAbiItem(seismicAbi))
   const ethAbi = remapSeismicAbiInputs(seismicAbi)
   const encodedParams = encodeAbiParameters(ethAbi.inputs, args).slice(2)

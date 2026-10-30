@@ -1,6 +1,14 @@
 import { describe, test } from 'bun:test'
 
 import {
+  testBackwardCompatibilityWithoutArgs,
+  testHasShieldedParamsDisambiguatesOverloads,
+  testPlaintextCalldataForOverloads,
+  testResolveBySelector,
+  testResolveOverloadByArgCount,
+  testResolveOverloadByTypeMatch,
+} from '@sviem-tests/tests/abiOverload.ts'
+import {
   testNativeBalanceBlockSelection,
   testNativeBalanceModes,
   testNativeBalanceNeverFallsBack,
@@ -256,4 +264,25 @@ describe('signedCall envelope handling', () => {
   test('rejects a bare 0x result', async () => {
     await testSignedCallRejectsBareZeroX()
   })
+})
+
+describe('ABI overloaded function resolution', () => {
+  test('resolves overloads by argument count', testResolveOverloadByArgCount)
+  test(
+    'disambiguates shielded and transparent overloads in hasShieldedParams',
+    testHasShieldedParamsDisambiguatesOverloads
+  )
+  test(
+    'resolves overloads by argument type match',
+    testResolveOverloadByTypeMatch
+  )
+  test('resolves functions by 4-byte selector', testResolveBySelector)
+  test(
+    'preserves backward compatibility when args is omitted',
+    testBackwardCompatibilityWithoutArgs
+  )
+  test(
+    'generates distinct plaintext calldata for overloaded functions',
+    testPlaintextCalldataForOverloads
+  )
 })
