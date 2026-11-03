@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 1050"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 1100"
      font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
   <style>
     text { fill: #374151; font-size: 16px; }
@@ -10,15 +10,16 @@
     .custodian-zone { fill: none; stroke: #047857; stroke-width: 2; stroke-dasharray: 8 6; }
     .custodian-label { font-size: 15px; font-weight: 600; fill: #047857; }
     .volume { fill: #dbeafe; stroke: #1e3a5f; stroke-width: 2; }
-    .volume > text { fill: #1e3a5f; }
-    .volume-title { font-weight: 700; }
+    .volume-part { fill: #eff6ff; stroke: #1e3a5f; stroke-width: 1.5; }
+    .volume-text { fill: #1e3a5f; }
+    .volume-title { fill: #1e3a5f; font-weight: 700; }
     .plain { fill: #ffffff; stroke: #64748b; stroke-width: 2; }
     .chip > rect { stroke-width: 2; }
     .chip > text { text-anchor: middle; dominant-baseline: middle; font-size: 14px; }
     /* network-shared keys: derived from root_key, RAM only -> dotted border */
     .chip.shared > rect { fill: #a7f3d0; stroke: #047857; stroke-dasharray: 3 5; stroke-linecap: round; }
     .chip.shared > text { fill: #065f46; }
-    /* per-VM keys: independent randomness, persisted inside LUKS -> solid border */
+    /* per-VM keys: independent randomness, persisted on the LUKS volume -> solid border */
     .chip.pervm > rect { fill: #fed7aa; stroke: #c2410c; }
     .chip.pervm > text { fill: #7c2d12; }
     .flow { stroke: #64748b; stroke-width: 2; fill: none; }
@@ -32,7 +33,7 @@
     </marker>
   </defs>
 
-  <rect width="2000" height="1050" fill="#ffffff"/>
+  <rect width="2000" height="1100" fill="#ffffff"/>
 
   <text class="title" x="40" y="52">The two key families</text>
 
@@ -46,7 +47,7 @@
     <rect width="200" height="38" rx="9"/>
     <text x="100" y="20">per-VM random</text>
   </g>
-  <text class="sub" x="1508" y="50">independent per node · persisted inside LUKS</text>
+  <text class="sub" x="1508" y="50">independent per node · persisted on its volume</text>
 
   <!-- ================= client ================= -->
   <g class="chip">
@@ -85,7 +86,11 @@
   </g>
   <g class="chip shared" transform="translate(380,598)">
     <rect width="360" height="44" rx="10"/>
-    <text x="180" y="23">LUKS keys — per boot, then shredded</text>
+    <text x="180" y="23">storage_key — per boot, then shredded</text>
+  </g>
+  <g class="chip shared" transform="translate(380,654)">
+    <rect width="360" height="44" rx="10"/>
+    <text x="180" y="23">header_mac_key — same handoff</text>
   </g>
 
   <!-- per-VM keys -->
@@ -102,34 +107,55 @@
     <text x="180" y="23">reth devp2p secret</text>
   </g>
 
-  <!-- ================= /persistent volume ================= -->
-  <g class="volume">
-    <rect class="volume" x="520" y="860" width="700" height="130" rx="16"/>
-    <text class="volume-title" x="870" y="915" text-anchor="middle">/persistent — LUKS2</text>
-    <text x="870" y="950" text-anchor="middle">reth datadir · summit keys and db</text>
-  </g>
+  <!-- ================= A's /persistent volume ================= -->
+  <rect class="volume" x="340" y="830" width="880" height="240" rx="16"/>
+  <text class="volume-title" x="780" y="862" text-anchor="middle">/persistent — LUKS2</text>
 
-  <!-- LUKS keys unlock the volume -->
-  <line class="flow" x1="560" y1="642" x2="640" y2="854" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="500" y="740">unlocks</text>
+  <!-- the header: plaintext on the host's disk, holds the wrapped volume key -->
+  <rect class="volume-part" x="370" y="880" width="370" height="170" rx="10"/>
+  <text class="volume-title" x="390" y="908">header</text>
+  <text class="sub" x="460" y="908">plaintext, on the host's disk</text>
+  <g class="chip pervm" transform="translate(390,940)">
+    <rect width="330" height="44" rx="10"/>
+    <text x="165" y="23">volume_key, wrapped in keyslot 0</text>
+  </g>
+  <text class="sub" x="390" y="1026">seismic-header-mac token</text>
+
+  <!-- the data segment: what the volume key encrypts -->
+  <rect class="volume-part" x="840" y="880" width="350" height="170" rx="10"/>
+  <text class="volume-title" x="860" y="908">data</text>
+  <text class="sub" x="910" y="908">aes-xts-random + HMAC tags</text>
+  <text class="volume-text" x="860" y="960">reth: db, devp2p key</text>
+  <text class="volume-text" x="860" y="990">summit: db, BLS + Ed25519 keys</text>
+
+  <!-- storage_key unwraps the volume key -->
+  <path class="flow" d="M 380 620 H 356 V 962 H 384" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="346" y="790" text-anchor="end">unwraps</text>
+
+  <!-- header_mac_key verifies the header before it is used -->
+  <line class="flow" x1="560" y1="698" x2="560" y2="874" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="572" y="800">verifies the header MAC</text>
+
+  <!-- the volume key opens the data segment -->
+  <line class="flow" x1="720" y1="962" x2="834" y2="962" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="752" y="950">unlocks</text>
 
   <!-- per-VM keys are persisted inside it -->
-  <line class="flow" x1="1000" y1="586" x2="920" y2="854" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="985" y="740">persisted inside</text>
+  <line class="flow" x1="1000" y1="586" x2="1000" y2="874" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1012" y="800">persisted inside</text>
 
-  <!-- B's volume: every node has one, under its own root_key-derived key -->
-  <g class="volume">
-    <rect class="volume" x="1450" y="860" width="510" height="130" rx="16"/>
-    <text class="volume-title" x="1705" y="915" text-anchor="middle">/persistent — LUKS2</text>
-    <text x="1705" y="950" text-anchor="middle">same layout — its own volume key</text>
-  </g>
-  <line class="flow" x1="1600" y1="586" x2="1600" y2="854" marker-end="url(#arrow)"/>
+  <!-- B's volume: every node has one, with its own volume key -->
+  <rect class="volume" x="1450" y="830" width="510" height="240" rx="16"/>
+  <text class="volume-title" x="1705" y="862" text-anchor="middle">/persistent — LUKS2</text>
+  <text class="volume-text" x="1705" y="930" text-anchor="middle">same layout — its own volume_key,</text>
+  <text class="volume-text" x="1705" y="960" text-anchor="middle">wrapped under the same storage_key</text>
+  <line class="flow" x1="1600" y1="586" x2="1600" y2="824" marker-end="url(#arrow)"/>
 
   <!-- state transfer between admitted nodes: designed, not built -->
-  <line class="flow planned" x1="1226" y1="925" x2="1444" y2="925" marker-end="url(#arrow)"/>
-  <text class="flow-label" x="1240" y="888">chain state only,</text>
-  <text class="flow-label" x="1240" y="910">sealed under K_snap</text>
-  <text class="sub" x="1240" y="955">designed, not built</text>
+  <line class="flow planned" x1="1226" y1="990" x2="1444" y2="990" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1240" y="953">chain state only,</text>
+  <text class="flow-label" x="1240" y="975">sealed under K_snap</text>
+  <text class="sub" x="1240" y="1020">designed, not built</text>
 
   <!-- ================= validator B (abbreviated mirror) ================= -->
   <rect class="guest" x="1450" y="120" width="510" height="640" rx="20"/>
