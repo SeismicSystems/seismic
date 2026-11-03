@@ -2,7 +2,7 @@
 
 How a Seismic node finds the others, and how an operator finds the nodes.
 Which ports a node exposes, and to whom, is in
-[node.md](node.md#what-the-outside-can-reach).
+[node.md](node.md#ports).
 
 The wire formats are normative elsewhere: the config POST's `[network]` and
 `[node]` sections in
@@ -134,7 +134,7 @@ Two more parties reach a node, neither of them a peer:
 - **Clients of the public RPC** reach a node through a front outside the CVM,
   which terminates HTTPS and forwards to reth's RPC and WebSocket, summit's
   JSON-RPC and the attestation service, each on its own port
-  ([the port table](node.md#what-the-outside-can-reach)). The front is deploy's
+  ([the port table](node.md#ports)). The front is deploy's
   ([SEI-992](https://linear.app/seismic-systems/issue/SEI-992)). Its
   certificate authenticates the front's name, not the node: the operator
   controls that name's DNS ([DNS](#dns)) and the front, which reads

@@ -352,7 +352,7 @@ per-VM keys persist inside LUKS](diagrams/key-families.svg)
 | tx-io secp256k1 | network-shared | derived in the custodian, held by reth for its process lifetime | the manifest's `founding_tx_io_pk` at epoch 0; a TDX quote over `(network_id, tx_io_pk, epoch)`, served by `getTxIoAttestationEvidence` |
 | RNG precompile input material | network-shared | derived in the custodian, held by reth | consensus: the precompile's outputs are in the chain |
 | snapshot AES-256-GCM (`K_snap`) | network-shared | derivable, held by nothing today | transitively by `root_key` |
-| LUKS volume key | network-shared | derived per boot, handed over on tmpfs, then shredded | transitively by `root_key` |
+| LUKS unlock key | network-shared | derived per boot, handed over on tmpfs, then shredded | transitively by `root_key` |
 | LUKS header MAC key | network-shared | same handoff, same lifetime | transitively by `root_key` |
 | summit BLS12-381 | per-VM random | born at boot in tmpfs by `summit-keygen`, persisted under `/persistent/summit/keys` | the harvest quote at founding; the validator set the manifest pins, or the deposit path afterwards |
 | summit Ed25519 | per-VM random | same | same, and it is the commonware-p2p peer id |

@@ -291,7 +291,7 @@ configure stops when the pinned box fails. Guards:
 - **Network-level**: the cloud firewall restricts the config port (`:8080`)
   and the harvest port (`:7879`) to the operator's source CIDR, permanently,
   since both come back on every boot
-  ([what the outside can reach](node.md#what-the-outside-can-reach)).
+  ([ports](node.md#ports)).
 - **Burned-key rule**: a harvested key is trustworthy only if the same box
   later accepts the real configure cleanly. Any anomaly — a quote window
   already closed, a failed verification, a POST rejected, an unexpected
