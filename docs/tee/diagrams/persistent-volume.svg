@@ -1,0 +1,232 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 1310"
+     font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <style>
+    text { fill: #374151; font-size: 16px; }
+    .title    { font-size: 30px; font-weight: 700; fill: #1e40af; }
+    .sub      { font-size: 14px; fill: #64748b; }
+    .zone-label { font-size: 15px; font-weight: 600; fill: #1e40af; }
+    /* guest RAM: TDX-encrypted against the host, empty at every reboot */
+    .guest { fill: #eff6ff; stroke: #1e3a5f; stroke-width: 2; }
+    /* the host-attached data disk: the host reads and rewrites every byte */
+    .disk { fill: #f8fafc; stroke: #475569; stroke-width: 2; }
+    .disk-label { font-size: 15px; font-weight: 600; fill: #334155; }
+    .custodian-zone { fill: none; stroke: #047857; stroke-width: 2; stroke-dasharray: 8 6; }
+    .custodian-label { font-size: 15px; font-weight: 600; fill: #047857; }
+    /* tmpfs under /run */
+    .tmpfs { fill: #f5f3ff; stroke: #6d28d9; stroke-width: 2; stroke-dasharray: 8 5; }
+    .tmpfs-label { font-size: 15px; font-weight: 600; fill: #6d28d9; }
+    .kernel { fill: #f1f5f9; stroke: #475569; stroke-width: 2; }
+    .kernel-label { font-size: 15px; font-weight: 600; fill: #334155; }
+    /* a backing in the zone's own fill, so a crossing arrow breaks behind the label */
+    .label-bg.tmpfs-bg  { fill: #f5f3ff; }
+    .label-bg.kernel-bg { fill: #f1f5f9; }
+    .chip > rect { stroke-width: 2; }
+    .chip .name { font-weight: 700; }
+    /* derived from root_key: dotted border, as in key-families.svg */
+    .chip.shared > rect { fill: #a7f3d0; stroke: #047857; stroke-dasharray: 3 5; stroke-linecap: round; }
+    .chip.shared .name { fill: #065f46; }
+    /* random, independent of root_key: solid orange, as in key-families.svg */
+    .chip.random > rect { fill: #fed7aa; stroke: #c2410c; }
+    .chip.random .name { fill: #7c2d12; }
+    /* a key named inside running text, in its family's color */
+    .k-shared { fill: #047857; font-weight: 700; }
+    .k-random { fill: #c2410c; font-weight: 700; }
+    /* a field's limit, on the same line as its bold name */
+    .limit { font-size: 14px; font-weight: 400; fill: #64748b; }
+    .chip.file > rect { fill: #ede9fe; stroke: #6d28d9; }
+    .chip.file .name { fill: #4c1d95; }
+    .chip.plain > rect { fill: #ffffff; stroke: #475569; }
+    .chip.plain .name { fill: #111827; }
+    /* LUKS2 header fields */
+    .header-box { fill: #dbeafe; stroke: #1e3a5f; stroke-width: 2; }
+    .header-title { font-weight: 700; fill: #1e3a5f; }
+    .field > rect { fill: #ffffff; stroke: #1e3a5f; stroke-width: 2; }
+    .field .name { font-weight: 700; fill: #1e3a5f; }
+    .field.token > rect { fill: #a7f3d0; stroke: #047857; stroke-dasharray: 3 5; stroke-linecap: round; }
+    .field.token .name { fill: #065f46; }
+    .attack { font-size: 14px; fill: #b91c1c; }
+    .attack-box { fill: none; stroke: #b91c1c; stroke-width: 2; stroke-dasharray: 6 4; }
+    .scope { stroke: #1e3a5f; stroke-width: 2; fill: none; }
+    .scope-label { font-size: 14px; font-weight: 600; fill: #1e3a5f; }
+    /* sectors */
+    .ct  { fill: #dbeafe; stroke: #1e3a5f; stroke-width: 2; }
+    .tag { fill: #fed7aa; stroke: #c2410c; stroke-width: 2; }
+    .cell { font-size: 13px; text-anchor: middle; }
+    .flow { stroke: #64748b; stroke-width: 2; fill: none; }
+    /* white halo keeps labels readable where they sit on a line */
+    .flow-label { font-size: 14px; fill: #374151; paint-order: stroke; stroke: #ffffff; stroke-width: 5px; stroke-linejoin: round; }
+    .step { font-size: 15px; }
+    .step-head { font-size: 15px; font-weight: 700; fill: #1e40af; }
+  </style>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="2000" height="1310" fill="#ffffff"/>
+
+  <text class="title" x="40" y="62">/persistent: keys, header, sectors</text>
+
+  <!-- ================= legend ================= -->
+  <g class="chip shared" transform="translate(720,30)"><rect width="34" height="26" rx="6"/></g>
+  <text class="sub" x="766" y="49">derived from root_key</text>
+  <g class="chip random" transform="translate(990,30)"><rect width="34" height="26" rx="6"/></g>
+  <text class="sub" x="1036" y="49">random, independent of root_key</text>
+  <rect class="tmpfs" x="1340" y="30" width="34" height="26" rx="6"/>
+  <text class="sub" x="1386" y="49">tmpfs under /run</text>
+  <rect class="attack-box" x="1580" y="30" width="34" height="26" rx="6"/>
+  <text class="sub" x="1626" y="49">the host's attack</text>
+
+  <!-- ================= guest RAM ================= -->
+  <rect class="guest" x="40" y="100" width="880" height="950" rx="20"/>
+  <text class="zone-label" x="66" y="134">TDX guest RAM — encrypted against the host, empty at every boot</text>
+
+  <!-- custodian -->
+  <rect class="custodian-zone" x="80" y="160" width="800" height="130" rx="14"/>
+  <text class="custodian-label" x="100" y="190">custodian</text>
+  <g class="chip shared" transform="translate(100,208)">
+    <rect width="260" height="60" rx="10"/>
+    <text class="name" x="130" y="37" text-anchor="middle">root_key</text>
+  </g>
+
+  <!-- the LUKS keyfile -->
+  <rect class="tmpfs" x="80" y="350" width="800" height="150" rx="14"/>
+  <g class="chip shared" transform="translate(100,398)">
+    <rect width="370" height="80" rx="10"/>
+    <text class="name" x="185" y="34" text-anchor="middle">storage_key</text>
+    <text class="sub" x="185" y="60" text-anchor="middle">bytes 0–31 · unlocks keyslot 0</text>
+  </g>
+  <g class="chip shared" transform="translate(490,398)">
+    <rect width="370" height="80" rx="10"/>
+    <text class="name" x="185" y="34" text-anchor="middle">header_mac_key</text>
+    <text class="sub" x="185" y="60" text-anchor="middle">bytes 32–63 · MACs the header</text>
+  </g>
+
+  <!-- derivation arrows -->
+  <path class="flow" d="M 230 268 V 394" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="246" y="326">HKDF, epoch 0, "storage"</text>
+  <path class="flow" d="M 360 238 H 675 V 394" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="390" y="228">HKDF, epoch 0, "luks-header-mac"</text>
+
+  <!-- the verified header copy -->
+  <rect class="tmpfs" x="80" y="560" width="800" height="170" rx="14"/>
+  <g class="chip file" transform="translate(100,608)">
+    <rect width="760" height="100" rx="10"/>
+    <text class="name" x="380" y="40" text-anchor="middle">luks-header.bin</text>
+    <text class="sub" x="380" y="70" text-anchor="middle">this boot's snapshot of the disk header: checked, then opened from</text>
+  </g>
+
+  <path class="flow" d="M 230 478 V 604" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="246" y="536">③ unwraps keyslot 0</text>
+  <path class="flow" d="M 675 478 V 604" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="691" y="536">② checks the MAC</text>
+
+  <!-- kernel -->
+  <rect class="kernel" x="80" y="790" width="800" height="230" rx="14"/>
+  <g class="chip random" transform="translate(100,836)">
+    <rect width="760" height="80" rx="10"/>
+    <text class="name" x="380" y="34" text-anchor="middle">volume_key</text>
+    <text class="sub" x="380" y="60" text-anchor="middle">drawn by cryptsetup at format · AES-XTS 512-bit + HMAC 256-bit</text>
+  </g>
+  <g class="chip plain" transform="translate(100,930)">
+    <rect width="760" height="76" rx="10"/>
+    <text class="name" x="380" y="32" text-anchor="middle">/dev/mapper/persistent → ext4 at /persistent</text>
+    <text class="sub" x="380" y="58" text-anchor="middle">reth datadir · summit keystore and db</text>
+  </g>
+
+  <path class="flow" d="M 230 708 V 832" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="246" y="766">volume_key, checked against digests</text>
+
+  <!-- zone labels last, on a backing, so the arrows that cross them break behind -->
+  <rect class="label-bg tmpfs-bg" x="94" y="357" width="584" height="24"/>
+  <text class="tmpfs-label" x="100" y="374">/run/seismic/custodian/luks-keys — 64 bytes, shredded after use</text>
+  <rect class="label-bg tmpfs-bg" x="94" y="567" width="330" height="24"/>
+  <text class="tmpfs-label" x="100" y="584">/run/seismic-persistent-luks-setup/</text>
+  <rect class="label-bg kernel-bg" x="94" y="797" width="330" height="24"/>
+  <text class="kernel-label" x="100" y="814">kernel — dm-crypt over dm-integrity</text>
+
+  <!-- ================= data disk ================= -->
+  <rect class="disk" x="1080" y="100" width="880" height="950" rx="20"/>
+  <text class="disk-label" x="1106" y="134">data disk — the host reads and rewrites every byte</text>
+
+  <!-- LUKS2 header -->
+  <rect class="header-box" x="1120" y="160" width="800" height="570" rx="14"/>
+  <text class="header-title" x="1140" y="192">LUKS2 header — plaintext JSON metadata</text>
+
+  <!-- MAC scope bracket over the three covered fields -->
+  <path class="scope" d="M 1172 214 H 1156 V 520 H 1172"/>
+  <text class="scope-label" transform="translate(1146,367) rotate(-90)" text-anchor="middle">MAC scope</text>
+
+  <g class="field" transform="translate(1180,212)">
+    <rect width="720" height="92" rx="10"/>
+    <text class="name" x="20" y="34">keyslots<tspan class="limit" dx="10">· up to 32 · this volume uses one</tspan></text>
+    <text class="sub" x="20" y="64">slot 0: the <tspan class="k-random">volume_key</tspan>, wrapped under Argon2id(<tspan class="k-shared">storage_key</tspan>)</text>
+  </g>
+  <g class="field" transform="translate(1180,320)">
+    <rect width="720" height="92" rx="10"/>
+    <rect class="attack-box" x="-6" y="-6" width="732" height="104" rx="13"/>
+    <text class="name" x="20" y="34">segments</text>
+    <text class="sub" x="20" y="64">cipher aes-xts-random · integrity hmac-sha256</text>
+  </g>
+  <g class="field" transform="translate(1180,428)">
+    <rect width="720" height="92" rx="10"/>
+    <text class="name" x="20" y="34">digests</text>
+    <text class="sub" x="20" y="64">a check value for the <tspan class="k-random">volume_key</tspan> — not for the metadata</text>
+  </g>
+  <g class="field token" transform="translate(1180,544)">
+    <rect width="720" height="166" rx="10"/>
+    <text class="name" x="20" y="34">tokens<tspan class="limit" dx="10">· up to 32 · this volume stores one</tspan></text>
+    <text class="sub" x="20" y="64">seismic-header-mac: HMAC-SHA256(header_mac_key,</text>
+    <text class="sub" x="40" y="88">canonical_json({segments, keyslots, digests}))</text>
+    <text class="sub" x="20" y="122">why: rewrite segments to <tspan class="attack">cipher_null</tspan> and writes go</text>
+    <text class="sub" x="20" y="146">plaintext, yet keyslot 0 still opens · ② catches it</text>
+  </g>
+
+  <!-- ① header copied to tmpfs -->
+  <path class="flow" d="M 1118 658 H 864" marker-end="url(#arrow)"/>
+  <text class="flow-label" x="1000" y="646" text-anchor="middle">① copied once</text>
+
+  <!-- data area -->
+  <rect class="header-box" x="1120" y="790" width="800" height="230" rx="14"/>
+  <text class="header-title" x="1140" y="822">data area — every sector carries its own tag: IV · HMAC</text>
+  <g transform="translate(1150,842)">
+    <rect class="ct"  x="0"   y="0"  width="116" height="64"/>
+    <rect class="tag" x="0"   y="64" width="116" height="36"/>
+    <text class="cell" x="58"  y="37">ciphertext</text>
+    <text class="cell" x="58"  y="88">IV · HMAC</text>
+    <rect class="ct"  x="124" y="0"  width="116" height="64"/>
+    <rect class="tag" x="124" y="64" width="116" height="36"/>
+    <text class="cell" x="182" y="37">ciphertext</text>
+    <text class="cell" x="182" y="88">IV · HMAC</text>
+    <rect class="ct"  x="248" y="0"  width="116" height="64"/>
+    <rect class="tag" x="248" y="64" width="116" height="36"/>
+    <text class="cell" x="306" y="37">ciphertext</text>
+    <text class="cell" x="306" y="88">IV · HMAC</text>
+    <rect class="ct"  x="372" y="0"  width="116" height="64"/>
+    <rect class="tag" x="372" y="64" width="116" height="36"/>
+    <text class="cell" x="430" y="37">ciphertext</text>
+    <text class="cell" x="430" y="88">IV · HMAC</text>
+    <rect class="ct"  x="496" y="0"  width="116" height="64"/>
+    <rect class="tag" x="496" y="64" width="116" height="36"/>
+    <text class="cell" x="554" y="37">ciphertext</text>
+    <text class="cell" x="554" y="88">IV · HMAC</text>
+    <text class="cell" x="660" y="56" style="font-size: 24px">…</text>
+  </g>
+  <text class="sub" x="1140" y="976">IV: fresh random per write, so equal plaintexts never match on disk</text>
+  <text class="sub" x="1140" y="1000">HMAC: a tampered sector reads back as an I/O error</text>
+
+  <!-- ④ every sector through the volume_key -->
+  <path class="flow" d="M 862 876 H 1146" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <text class="flow-label" x="1000" y="864" text-anchor="middle">④ every sector</text>
+
+  <!-- ================= steps ================= -->
+  <text class="step-head" x="40" y="1098">First boot</text>
+  <text class="step" x="40" y="1128">luksFormat writes the header with a fresh volume_key and writes every sector once, so each starts with a valid tag; then the MAC is computed and stored as the token.</text>
+  <text class="step-head" x="40" y="1168">Every boot after the first</text>
+  <text class="step" x="40" y="1198">① copy the header to tmpfs, once; every later step reads that copy, so a header rewritten after the check never reaches dm-crypt.</text>
+  <text class="step" x="40" y="1226">② recompute the HMAC over segments, keyslots and digests and compare it to the token; a mismatch refuses the mount.</text>
+  <text class="step" x="40" y="1254">③ open with --header on the copy: storage_key unwraps keyslot 0, and the volume_key is checked against digests.</text>
+  <text class="step" x="40" y="1282">④ dm-crypt encrypts each sector under AES-XTS with a fresh random IV; dm-integrity stores the IV and an HMAC in the sector's tag.</text>
+</svg>

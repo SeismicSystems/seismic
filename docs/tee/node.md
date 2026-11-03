@@ -21,7 +21,7 @@ and this doc links its tables rather than repeating them.
   - [Unit groups](#unit-groups)
   - [One process opens the TPM](#one-process-opens-the-tpm)
 - [IPC](#ipc)
-- [What the outside can reach](#what-the-outside-can-reach)
+- [Ports](#ports)
 - [Storage](#storage)
   - [`/persistent`: the LUKS volume](#persistent-the-luks-volume)
 - [Design rationale](#design-rationale)
@@ -64,7 +64,7 @@ runs on:
 - **Firewall rules per port and source.** The peer ports are open to anyone,
   the RPC ports to the front, and the two operator ports only to the
   operator's address range
-  ([what the outside can reach](#what-the-outside-can-reach)).
+  ([ports](#ports)).
 - **A public HTTPS front**, outside the CVM, which terminates TLS and forwards
   to the node's RPC ports.
 - **A DNS name for the public IP** ([DNS](networking.md#dns)).
@@ -222,8 +222,9 @@ socket; the setup units hand state to the services through directories under
 | `reth` | execution: the EVM, Ethereum JSON-RPC, chain state, the gossip plane | `:8545`, `:8546`, `:9001`, `:30303` | the tx-io keypair, the RNG input, its devp2p key |
 | `summit` | consensus: BFT voting, checkpoints, reth's forkchoice | `:3030`, `:9002`, `:18551` | its BLS and Ed25519 keys |
 
-Each runs as its own system user. Users, groups, unit ordering and every
-service's flags are in the
+Each runs as its own system user. Every unit in the image carries a `seismic-`
+prefix (`seismic-custodian.service`), which these docs drop. Users, groups,
+unit ordering and every service's flags are in the
 [seismic image module](https://github.com/SeismicSystems/seismic-images/blob/seismic/modules/seismic/readme.md#services).
 
 ### Unit groups
@@ -277,7 +278,7 @@ back is the attestation service's startup
   ([accepted risks](trust-model.md#accepted-risks)).
 
 The unit edges, and what each restart reaches, are in
-[`custodian.service`](https://github.com/SeismicSystems/seismic-images/blob/seismic/modules/seismic/mkosi.extra/etc/systemd/system/custodian.service).
+[`seismic-custodian.service`](https://github.com/SeismicSystems/seismic-images/blob/seismic/modules/seismic/mkosi.extra/etc/systemd/system/seismic-custodian.service).
 
 The same rule says which secrets need a process. **A secret that is only ever
 handed over needs a file with the right owner; a secret that is never handed
@@ -310,7 +311,7 @@ other processes off it:
 | summit → reth | Engine API, Unix socket | forkchoice and payloads | the `engine-api` group |
 | the attestation service → reth | JSON-RPC, loopback TCP `:8545` | the chain reads behind each admission decision | nothing: a TCP port has no owner (below) |
 | tdx-init → every service | files in `/run/seismic/conf` | the manifest, both genesis files, per-service env | the `conf` group |
-| the custodian → `persistent-luks-setup` | a keyfile, shredded after use | the LUKS volume key and header MAC key | file mode: the custodian user and root |
+| the custodian → `persistent-luks-setup` | a keyfile, shredded after use | the LUKS unlock key and header MAC key | file mode: the custodian user and root |
 | the custodian → the attestation service, tdx-init | `candidate-tx-io-pk` | the candidate's `tx_io_pk@0` | the `custodian-ipc` group |
 | `summit-keygen` → `summit-persist` | `/run/seismic/summit/keys` | summit's keypairs | the summit user only |
 | summit's setup units → the attestation service | `public-keys.json` | summit's public keys | write access for summit's units only |
@@ -326,7 +327,7 @@ registry read included. The Engine API and the custodian use Unix sockets
 instead, which carry an owner and file modes. Closing this is
 [SEI-626](https://linear.app/seismic-systems/issue/SEI-626).
 
-## What the outside can reach
+## Ports
 
 No process in the guest terminates TLS. Each service answers on its own port,
 in plain HTTP, and a front outside the CVM terminates public HTTPS and forwards
@@ -393,9 +394,19 @@ derived from `root_key`, so the volume is readable only by a guest that the
 network has admitted. No human and no cloud operator ever holds the unlock
 material, and there is no TPM seal to migrate or scrub.
 
-**The key handoff.** The custodian writes the per-boot LUKS keyfile the moment
-it holds `root_key`. `persistent-luks-setup` polls for it, uses the first 32
-bytes as the unlock key and the second 32 as the header MAC key, and shreds it.
+![the custodian derives storage_key and header_mac_key from root_key into a
+64-byte tmpfs keyfile; every boot after the first copies the plaintext LUKS2
+header from the host's disk to tmpfs once, checks the header MAC token over
+segments, keyslots and digests on that copy, unwraps the random volume_key from
+keyslot 0 with storage_key, and opens dm-crypt from the copy; every sector on
+disk is ciphertext with its own random IV and HMAC tag; the host's attack,
+rewriting segments to cipher_null, fails the MAC check](diagrams/persistent-volume.svg)
+
+**The key handoff.** The custodian writes the per-boot LUKS keyfile to tmpfs,
+at `/run/seismic/custodian/luks-keys`, the moment it holds `root_key`.
+`persistent-luks-setup` polls for it, uses the first 32 bytes as the unlock key
+(`storage_key` in the code, from the HKDF purpose `storage`) and the second 32
+as the header MAC key, and shreds it.
 
 The volume is formatted `aes-xts-random` with a 512-bit key and dm-integrity
 HMAC-SHA256. The random per-sector IVs are the point: they close the
@@ -414,7 +425,7 @@ same subset, compares, and opens with `--header` pointing at that verified copy
 — which closes the window between checking the header and configuring dm-crypt.
 A mismatch refuses the mount. Tokens are outside the MAC's scope, so storing
 the token cannot invalidate it
-([`persistent-luks-setup`](https://github.com/SeismicSystems/seismic-images/blob/seismic/modules/seismic/mkosi.extra/usr/bin/persistent-luks-setup)).
+([`persistent-luks-setup`](https://github.com/SeismicSystems/seismic-images/blob/seismic/modules/seismic/mkosi.extra/usr/bin/seismic-persistent-luks-setup)).
 
 First boot also wipes the whole device to seed the integrity tags, which takes
 an hour or more on a multi-TB disk. The script publishes byte progress to tmpfs
@@ -472,7 +483,7 @@ with the grants, behind the split; otherwise a compromised front end could
 still obtain `root_key` from a peer.
 
 **No TLS terminator in the image, rather than a proxy in the guest**
-([what the outside can reach](#what-the-outside-can-reach)). Clients trust the
+([ports](#ports)). Clients trust the
 data and the key, not the channel, so nothing needs TLS to end in the CVM, and
 an in-image certificate bound to no quote gives a client nothing to verify. A
 proxy in the guest would put the most exposed parser on the node beside
