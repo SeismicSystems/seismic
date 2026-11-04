@@ -277,9 +277,8 @@ pub async fn run_validation_gates(
     let manifest = &set.manifest;
     let mut warnings = Vec::new();
 
-    // eth.chain_id == reth genesis config.chainId.
-    manifest
-        .check_reth_genesis(set.reth_genesis.bytes())
+    // eth.chain_id == reth genesis config.chainId, as tdx-init checks it.
+    tdx_init_config::check_reth_genesis(manifest, set.reth_genesis.bytes())
         .with_context(|| format!("reth genesis {}", set.reth_genesis.path().display()))?;
     let genesis: Value = serde_json::from_slice(set.reth_genesis.bytes())
         .context("reth genesis is not valid JSON")?;
@@ -324,8 +323,7 @@ pub async fn run_validation_gates(
             hex_0x(&manifest.eth.genesis_hash),
         );
     }
-    manifest
-        .check_summit_genesis(set.summit_genesis.bytes())
+    tdx_init_config::check_summit_genesis(manifest, set.summit_genesis.bytes())
         .with_context(|| format!("summit genesis {}", set.summit_genesis.path().display()))?;
     if manifest.summit.namespace == SUMMIT_DEFAULT_NAMESPACE {
         warnings.push(format!(

@@ -675,7 +675,7 @@ root-key pin](#the-root-key-pin)). Summit genesis is where the validator set
 starts, and record 0 of the key series could sit beside it, under
 `config_digest`. Neither reader of the pin could use that copy. The digest is
 SHA-256 over summit's own SSZ encoding, and tdx-init does not recompute it
-([`summit_genesis.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/bin/tdx-init/src/summit_genesis.rs)),
+([`validate.rs`](https://github.com/SeismicSystems/enclave/blob/seismic/crates/tdx-init-config/src/validate.rs)),
 so a custodian that read its pin there would act on input nothing in the guest
 has bound to `network_id`. A client that read it would need summit's SSZ
 encoding in every SDK instead of one hash comparison. And a light client, the

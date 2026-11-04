@@ -16,6 +16,7 @@ seismic-tee-context.workspace = true
 seismic-manifest.workspace = true
 seismic-measurement-admission.workspace = true
 seismic-verify-quote.workspace = true
+tdx-init-config.workspace = true
 
 alloy-primitives.workspace = true
 anstream.workspace = true

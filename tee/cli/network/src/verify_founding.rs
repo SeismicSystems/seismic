@@ -242,8 +242,7 @@ pub fn audit_founding(dir: &NetworkDir, record: Option<&str>) -> anyhow::Result<
 
     let summit_path = dir.summit_genesis();
     let summit_genesis = read_pinned(&summit_path, "completed summit genesis")?;
-    manifest
-        .check_summit_genesis(&summit_genesis)
+    tdx_init_config::check_summit_genesis(&manifest, &summit_genesis)
         .with_context(|| format!("summit genesis {}", summit_path.display()))?;
     let pinned = pinned_validator_keys(&summit_genesis)
         .with_context(|| format!("summit genesis {}", summit_path.display()))?;
