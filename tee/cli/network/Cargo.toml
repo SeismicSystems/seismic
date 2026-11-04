@@ -38,3 +38,7 @@ toml.workspace = true
 
 [dev-dependencies]
 seismic-tee-common = { workspace = true, features = ["test-support"] }
+# The enclave's Rust registry interfaces, which tests/enclave_pin.rs holds to
+# this repo's MeasurementRegistry artifact.
+seismic-measurement-admission = { workspace = true, features = ["registry-abi"] }
+seismic-measurement-registry-client.workspace = true
