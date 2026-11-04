@@ -329,8 +329,8 @@ anything reaches `root_key` at all.
 `--seismic.custodian.socket` with bounded retries. The retries are
 load-bearing: systemd ordering guarantees the custodian has *started*, not that
 it holds `root_key` yet, and on a joining node that waits on the peer handshake.
-reth rejects a served tx-io keypair whose public key is not the secret key's — a
-node must never advertise a key whose traffic it cannot decrypt
+The custodian serves only the tx-io secret key, and reth derives the public key
+from it, so a node can never advertise a key whose traffic it cannot decrypt
 ([`keys_source.rs`](https://github.com/SeismicSystems/seismic-reth/blob/seismic/crates/seismic/node/src/keys_source.rs)).
 `built-in` selects keys compiled into the binary: real, consensus-visible keys
 with zero secrecy, which is what pre-TEE networks run on. Those two are the only
