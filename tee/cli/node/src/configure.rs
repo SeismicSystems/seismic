@@ -49,7 +49,7 @@ use clap_complete::ArgValueCandidates;
 use seismic_tee_common::{Artifact, Descriptors, Manifest, NetworkDir};
 use seismic_tee_context::{Context, Selected, complete, echo, read_nodes};
 use sha2::{Digest as _, Sha256};
-use tdx_init_config::{Bootnode, InitConfig, NetworkConfig, NodeConfig};
+use tdx_init_config::{Bootnode, InitConfig, InvalidNetwork, NetworkConfig, NodeConfig};
 
 use crate::args::CohortArgs;
 use crate::cohort;
@@ -146,9 +146,11 @@ pub struct ConfigInputs<'a> {
 /// still costs nothing:
 ///
 /// - A joiner needs at least one bootnode: tdx-init derives its root_key
-///   fetch peers from them, so none means no way to bootstrap.
-/// - The manifest's gates over the two genesis files, naming the file that
-///   fails.
+///   fetch peers from them, so none means no way to bootstrap. tdx-init
+///   decides this from the custodian's candidate, which only the node holds;
+///   this is the deploy-side reading of the same rule.
+/// - [`InitConfig::validate`]: the manifest's gates over the two genesis
+///   files, the same code tdx-init runs, naming the file that fails.
 ///
 /// The artifacts travel base64-encoded so they stay opaque through the TOML
 /// hop: tdx-init decodes and writes these exact bytes verbatim.
@@ -159,22 +161,9 @@ pub fn build_config(inputs: &ConfigInputs<'_>) -> anyhow::Result<InitConfig> {
              root_key fetch peers from them)"
         );
     }
-    inputs
-        .manifest
-        .check_reth_genesis(inputs.reth_genesis.bytes())
-        .with_context(|| format!("--reth-genesis {}", inputs.reth_genesis.path().display()))?;
-    inputs
-        .manifest
-        .check_summit_genesis(inputs.summit_genesis.bytes())
-        .with_context(|| {
-            format!(
-                "--summit-genesis {}",
-                inputs.summit_genesis.path().display()
-            )
-        })?;
 
     let base64 = base64::engine::general_purpose::STANDARD;
-    Ok(InitConfig {
+    let config = InitConfig {
         network: NetworkConfig {
             manifest_base64: base64.encode(inputs.manifest.bytes()),
             reth_genesis_base64: base64.encode(inputs.reth_genesis.bytes()),
@@ -184,7 +173,21 @@ pub fn build_config(inputs: &ConfigInputs<'_>) -> anyhow::Result<InitConfig> {
         node: NodeConfig {
             external_ip: inputs.external_ip,
         },
-    })
+    };
+    config.validate().map_err(|e| {
+        let source = match e {
+            InvalidNetwork::Manifest(_) => "the manifest".to_string(),
+            InvalidNetwork::RethGenesis(_) => {
+                format!("--reth-genesis {}", inputs.reth_genesis.path().display())
+            }
+            InvalidNetwork::SummitGenesis(_) => format!(
+                "--summit-genesis {}",
+                inputs.summit_genesis.path().display()
+            ),
+        };
+        anyhow::Error::new(e).context(source)
+    })?;
+    Ok(config)
 }
 
 /// The config as the TOML document tdx-init receives.

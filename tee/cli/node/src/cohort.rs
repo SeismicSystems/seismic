@@ -921,15 +921,13 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
         args.reth_genesis.as_deref(),
         &manifest_path,
     )?)?;
-    manifest
-        .check_reth_genesis(reth_genesis.bytes())
+    tdx_init_config::check_reth_genesis(&manifest, reth_genesis.bytes())
         .with_context(|| format!("--reth-genesis {}", reth_genesis.path().display()))?;
     let assembled = Artifact::read(&resolve_summit_genesis(
         args.summit_genesis.as_deref(),
         &manifest_path,
     )?)?;
-    manifest
-        .check_summit_genesis(assembled.bytes())
+    tdx_init_config::check_summit_genesis(&manifest, assembled.bytes())
         .with_context(|| format!("--summit-genesis {}", assembled.path().display()))?;
 
     // Resolve the policy once for the whole run, before any node is touched:
