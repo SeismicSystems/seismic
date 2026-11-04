@@ -65,13 +65,17 @@ seismic-tee-admission = { path = "admission" }
 # seismic-crypto. Every rule the network's identity depends on has exactly one
 # implementation, and linking it rather than reimplementing it is what keeps
 # the CLI's answer and a node's answer the same answer.
-seismic-network-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "cd376e9f00c2465dbdd5f9a1c5817f1f4d8529c0" }
-seismic-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "cd376e9f00c2465dbdd5f9a1c5817f1f4d8529c0" }
-seismic-measurement-admission = { git = "https://github.com/SeismicSystems/enclave.git", rev = "cd376e9f00c2465dbdd5f9a1c5817f1f4d8529c0" }
-seismic-verify-quote = { git = "https://github.com/SeismicSystems/enclave.git", rev = "cd376e9f00c2465dbdd5f9a1c5817f1f4d8529c0" }
+seismic-network-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "5256a17fb7ad5e9b67a6fd36c81c384d551c3514" }
+seismic-manifest = { git = "https://github.com/SeismicSystems/enclave.git", rev = "5256a17fb7ad5e9b67a6fd36c81c384d551c3514" }
+seismic-measurement-admission = { git = "https://github.com/SeismicSystems/enclave.git", rev = "5256a17fb7ad5e9b67a6fd36c81c384d551c3514" }
+# The enclave runtime's read binding to the MeasurementRegistry. Only a
+# dev-dependency (of network/), for tests/enclave_pin.rs to hold it to this
+# repo's contract artifact; declared here so every enclave rev is in one place.
+seismic-measurement-registry-client = { git = "https://github.com/SeismicSystems/enclave.git", rev = "5256a17fb7ad5e9b67a6fd36c81c384d551c3514" }
+seismic-verify-quote = { git = "https://github.com/SeismicSystems/enclave.git", rev = "5256a17fb7ad5e9b67a6fd36c81c384d551c3514" }
 # The schema of the config POSTed to tdx-init, as the type tdx-init itself
 # deserializes: a field it would reject fails to compile here.
-tdx-init-config = { git = "https://github.com/SeismicSystems/enclave.git", rev = "cd376e9f00c2465dbdd5f9a1c5817f1f4d8529c0" }
+tdx-init-config = { git = "https://github.com/SeismicSystems/enclave.git", rev = "5256a17fb7ad5e9b67a6fd36c81c384d551c3514" }
 
 # The 20- and 32-byte words the registry gate compares — genesis storage
 # slots and the compile report's — and keccak256 over the registry's runtime

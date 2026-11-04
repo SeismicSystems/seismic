@@ -28,8 +28,9 @@
 //! reach nothing outside the workspace, so they run in the hermetic suite:
 //! replaying the committed founding archives through the pinned verifier
 //! (`replay.rs`, walking the same `support::committed_network_dirs` list),
-//! and holding the admission crate's registry runtime-code pin to this repo's
-//! contract artifact (`registry_pin.rs`).
+//! and holding the admission crate's registry runtime-code pin, the Rust
+//! registry interfaces and the policy compiler to this repo's contract
+//! artifact and fixtures (`enclave_pin.rs`).
 
 mod support;
 

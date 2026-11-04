@@ -20,10 +20,18 @@ on:
     branches: [main]
     paths:
       - "tee/**"
+      # Read by network/tests/enclave_pin.rs: a contract or fixture change must
+      # go red here until the enclave pin agrees with it.
+      - "contracts/artifacts/MeasurementRegistry.json"
+      - "contracts/test/fixtures/**"
       - ".github/workflows/seismic-tee.yml"
   pull_request:
     paths:
       - "tee/**"
+      # Read by network/tests/enclave_pin.rs: a contract or fixture change must
+      # go red here until the enclave pin agrees with it.
+      - "contracts/artifacts/MeasurementRegistry.json"
+      - "contracts/test/fixtures/**"
       - ".github/workflows/seismic-tee.yml"
 
 concurrency:

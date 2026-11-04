@@ -449,10 +449,11 @@ contract MeasurementRegistryTest is Test {
 /// Pins the committed measurement-policy fixture pair from Solidity: the
 /// compiled report's genesis storage map, loaded verbatim, must produce the
 /// getters the report claims, and the report itself must re-derive from the
-/// policy document and the frozen slot formulas. The fixtures are verbatim
-/// copies of the golden pair owned by the enclave repo's policy compiler
-/// (https://github.com/SeismicSystems/enclave/blob/main/crates/measurement-admission/fixtures/golden/),
-/// so Rust, deploy tooling, and Solidity all pin the same bytes.
+/// policy document and the frozen slot formulas. The compiled report is the
+/// enclave policy compiler's output for the document, at the rev
+/// tee/cli pins (https://github.com/SeismicSystems/enclave/tree/seismic/crates/measurement-admission);
+/// tee/cli/network/tests/enclave_pin.rs recompiles it, so Rust, deploy
+/// tooling, and Solidity all pin the same bytes.
 contract MeasurementRegistryFixtureTest is Test {
     using stdJson for string;
 
