@@ -52,6 +52,7 @@ use sha2::{Digest as _, Sha256};
 use tdx_init_config::{Bootnode, InitConfig, InvalidNetwork, NetworkConfig, NodeConfig};
 
 use crate::args::CohortArgs;
+use crate::bootnodes;
 use crate::cohort;
 use crate::launch;
 use crate::plan::{Remedy, Run, Through};
@@ -215,8 +216,11 @@ pub struct Preview<'a> {
     pub reth_genesis: &'a Artifact,
     /// As delivered: spliced, in a founding.
     pub summit_genesis: &'a Artifact,
-    /// The policy's provenance, or `None` under `--no-verify`.
-    pub policy: Option<&'a str>,
+    /// The policy's provenance.
+    pub policy: &'a str,
+    /// Whether the nodes configured are appraised too, not only the boxes
+    /// the run relies on: false under `--no-verify`.
+    pub appraise_configured: bool,
     pub run: &'a Run,
     /// The nodes named that took their config this boot.
     pub skipped: &'a [String],
@@ -238,6 +242,7 @@ pub fn render_preview(preview: &Preview<'_>) -> String {
         reth_genesis,
         summit_genesis,
         policy,
+        appraise_configured,
         run,
         skipped,
         bootnodes,
@@ -283,7 +288,11 @@ pub fn render_preview(preview: &Preview<'_>) -> String {
     );
     field(
         "Appraise against:",
-        policy.unwrap_or("nothing (--no-verify)").to_string(),
+        if *appraise_configured {
+            policy.to_string()
+        } else {
+            format!("{policy}; not the nodes configured (--no-verify)")
+        },
     );
     match run {
         Run::Found { pinned, rest } => {
@@ -310,7 +319,7 @@ pub fn render_preview(preview: &Preview<'_>) -> String {
             let names: Vec<&str> = nodes.iter().map(|node| node.name.as_str()).collect();
             field("Nodes:", names.join(", "));
             let source = match through {
-                Through::NamedPeers => "named by --bootnode",
+                Through::NamedPeers(_) => "peer(s) named by --bootnode that passed their appraisal",
                 Through::KeyHolders(_) => "key holder(s) that passed their appraisal",
             };
             field("Bootnodes:", format!("{}, {source}", bootnodes.len()));
@@ -466,23 +475,28 @@ pub struct ConfigureArgs {
     #[arg(long, value_name = "FILE")]
     pub summit_genesis: Option<PathBuf>,
 
-    /// Join through this peer's enode URL (enode://<pubkey>@<host>:<port>)
+    /// Join through this peer's enode URL (enode://<pubkey>@<ip>:<port>)
     /// → [network].bootnodes. reth dials it on startup, and tdx-init derives
-    /// the root_key fetch peer from it (http://<host>:7878). Repeatable.
+    /// the root_key fetch peer from it (http://<ip>:7878). Repeatable.
     /// Default: the enode of every node in the node table that holds root_key
     /// (serves :7878) and passes its deploy verification, under --no-verify
     /// too; with none, nothing is sent. Name a peer when the table holds no
     /// key holder — your own nodes joining someone else's network — from its
-    /// seismic_nodeInfo RPC. Refused while the network is unfounded.
-    #[arg(long, value_name = "ENODE")]
+    /// seismic_nodeInfo RPC. Its host must be an IP that names the same box
+    /// from here as from the node (not loopback or link-local): the key
+    /// holder there is deploy-verified, under --no-verify too, and the enode
+    /// is handed out only if it passes. Two different enodes at one IP are
+    /// refused. Refused while the network is unfounded.
+    #[arg(long, value_name = "ENODE", value_parser = bootnodes::parse_named)]
     pub bootnode: Vec<Bootnode>,
 
     /// Configure without deploy-verifying the nodes configured. By default
     /// each node is appraised once it is up — the same check as `seismic-tee
     /// node verify`, against the policy --manifest pins — and a node that
     /// fails counts as failed. What the run itself relies on is checked
-    /// either way: the pinned box's quote before a founding, the key holders
-    /// before a join.
+    /// either way, against the same policy (--policy and --measurements still
+    /// apply): the pinned box's quote before a founding, the key holders or
+    /// named peers before a join.
     #[arg(long)]
     pub no_verify: bool,
 
@@ -971,12 +985,32 @@ mod tests {
     }
 
     /// `--bootnode` is parsed as the type tdx-init takes, so a value it would
-    /// refuse is refused before anything is probed or sent.
+    /// refuse is refused before anything is probed or sent. A
+    /// `seismic_nodeInfo` enode's `?discport=` is dropped rather than
+    /// refused, and a hostname is refused: the run appraises an IP.
     #[test]
     fn a_flag_value_tdx_init_would_refuse_does_not_parse() {
         assert!(parse(&["--bootnode", "enode://ab@1.2.3.4:30303"]).is_err());
         let args = parse(&["--bootnode", bootnode().as_ref()]).unwrap();
         assert_eq!(args.bootnode, [bootnode()]);
+        let with_discport = format!("{}?discport=30304", bootnode());
+        let args = parse(&["--bootnode", &with_discport]).unwrap();
+        assert_eq!(args.bootnode, [bootnode()]);
+        let named = format!("enode://{}@peer.example.com:30303", "ab".repeat(64));
+        assert!(parse(&["--bootnode", &named]).is_err());
+    }
+
+    /// `--no-verify` skips appraising the nodes configured only: the boxes the
+    /// run relies on are still appraised, against the policy these flags pick.
+    #[test]
+    fn no_verify_still_takes_a_policy_source() {
+        let args = parse(&["--no-verify", "--measurements", "m.json"]).unwrap();
+        assert!(args.no_verify);
+        assert_eq!(
+            args.policy_source.measurements.as_deref(),
+            Some(Path::new("m.json"))
+        );
+        assert!(parse(&["--no-verify", "--policy", "p.json"]).is_ok());
     }
 
     /// `--email` went with the node's certificate: the image takes none.
@@ -1096,7 +1130,8 @@ mod tests {
             manifest: &manifest,
             reth_genesis: &reth_genesis,
             summit_genesis: &summit_genesis,
-            policy: Some("/nets/devnet/measurement-policy-bootstrap.json (pinned by --manifest)"),
+            policy: "/nets/devnet/measurement-policy-bootstrap.json (pinned by --manifest)",
+            appraise_configured: true,
             run: &run,
             skipped: &[],
             bootnodes: &[],
@@ -1147,7 +1182,8 @@ mod tests {
             manifest: &manifest,
             reth_genesis: &reth_genesis,
             summit_genesis: &summit_genesis,
-            policy: None,
+            policy: "/nets/devnet/measurement-policy-bootstrap.json (pinned by --manifest)",
+            appraise_configured: false,
             run: &run,
             skipped: &skipped,
             bootnodes: &bootnodes,
@@ -1162,7 +1198,8 @@ mod tests {
             "Bootnodes:        1, key holder(s) that passed their appraisal",
             bootnode().as_ref(),
             "Skipped:          alpha (took its config this boot)",
-            "nothing (--no-verify)",
+            "measurement-policy-bootstrap.json (pinned by --manifest); not the nodes configured \
+             (--no-verify)",
         ] {
             assert!(text.contains(expected), "missing {expected:?} in:\n{text}");
         }

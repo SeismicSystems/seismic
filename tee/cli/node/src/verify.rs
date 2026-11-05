@@ -92,17 +92,10 @@ pub struct VerifierArgs {
     pub pccs_url: Option<String>,
 }
 
-/// Reject a contradictory or unreadable policy source up front, like every
-/// other file flag. `--policy` itself is checked by [`resolve_policy`], which
-/// also owns the default-location hint. `no_verify` is the caller's opt-out,
-/// for the commands that offer one.
-pub fn check_policy_source_files(source: &PolicySourceArgs, no_verify: bool) -> anyhow::Result<()> {
-    if no_verify && (source.policy.is_some() || source.measurements.is_some()) {
-        bail!(
-            "--no-verify skips verification, so it contradicts --policy / --measurements \
-             (which choose what to verify against). Drop one."
-        );
-    }
+/// Reject an unreadable policy source up front, like every other file flag.
+/// `--policy` itself is checked by [`resolve_policy`], which also owns the
+/// default-location hint.
+pub fn check_policy_source_files(source: &PolicySourceArgs) -> anyhow::Result<()> {
     if let Some(measurements) = &source.measurements
         && !measurements.is_file()
     {
@@ -115,14 +108,7 @@ pub fn check_policy_source_files(source: &PolicySourceArgs, no_verify: bool) -> 
 /// `measurement-policy-bootstrap.json` beside the manifest, exactly where
 /// `assemble` writes it — so the policy appraising the node is the one the
 /// manifest's `measurements.bootstrap_policy_hash` was computed from.
-///
-/// `offer_no_verify` names the caller's opt-out in the hint, for a command
-/// that verifies unless told not to.
-pub fn resolve_policy_path(
-    policy: Option<&Path>,
-    manifest_path: &Path,
-    offer_no_verify: bool,
-) -> anyhow::Result<PathBuf> {
+pub fn resolve_policy_path(policy: Option<&Path>, manifest_path: &Path) -> anyhow::Result<PathBuf> {
     let path = policy.map_or_else(
         || NetworkDir::of_manifest(manifest_path).policy(),
         Path::to_path_buf,
@@ -133,18 +119,13 @@ pub fn resolve_policy_path(
     if policy.is_some() {
         bail!("--policy file not found: {}", path.display());
     }
-    let mut escapes = vec![
-        "  --policy FILE        the network's policy document, if it lives elsewhere",
-        "  --measurements FILE  promote your own measurements into a policy",
-    ];
-    if offer_no_verify {
-        escapes.push("  --no-verify          configure without appraising");
-    }
     bail!(
         "measurement policy not found: {}\nThe default is {POLICY_FILENAME} beside --manifest \
-         (the artifact set `assemble` writes). Instead:\n{}",
+         (the artifact set `assemble` writes). Instead:\n  seismic-tee ctx set-network --name \
+         <NETWORK> --dir <PATH|URL>\n                       fetch the network directory, which \
+         holds it\n  --policy FILE        the network's policy document, if it lives \
+         elsewhere\n  --measurements FILE  promote your own measurements into a policy",
         path.display(),
-        escapes.join("\n"),
     )
 }
 
@@ -175,7 +156,6 @@ pub fn resolve_policy(
     source: &PolicySourceArgs,
     manifest_path: &Path,
     manifest: &Manifest,
-    offer_no_verify: bool,
 ) -> anyhow::Result<ResolvedPolicy> {
     if let Some(measurements) = &source.measurements {
         let raw = std::fs::read(measurements)
@@ -192,8 +172,7 @@ pub fn resolve_policy(
         });
     }
 
-    let policy_path =
-        resolve_policy_path(source.policy.as_deref(), manifest_path, offer_no_verify)?;
+    let policy_path = resolve_policy_path(source.policy.as_deref(), manifest_path)?;
     let policy = std::fs::read(&policy_path)
         .with_context(|| format!("reading measurement policy {}", policy_path.display()))?;
     manifest.check_policy(&policy).with_context(|| {
@@ -317,12 +296,12 @@ pub struct VerifyArgs {
 
 pub async fn run(args: VerifyArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
     let (_, descriptor) = args.node.load(config)?;
-    check_policy_source_files(&args.policy_source, false)?;
+    check_policy_source_files(&args.policy_source)?;
     let manifest_path =
         crate::resolve_manifest(args.manifest.as_deref(), &args.node.cohort.context, config)?;
     let manifest = crate::load_manifest(&manifest_path)?;
 
-    let policy = resolve_policy(&args.policy_source, &manifest_path, &manifest, false)?;
+    let policy = resolve_policy(&args.policy_source, &manifest_path, &manifest)?;
     eprintln!("Appraising against {}", policy.source);
     verify_deployment(
         &descriptor,
@@ -402,17 +381,8 @@ mod tests {
         }
     }
 
-    fn resolve(
-        set: &ArtifactSet,
-        argv: &[&str],
-        offer_no_verify: bool,
-    ) -> anyhow::Result<ResolvedPolicy> {
-        resolve_policy(
-            &source(argv),
-            &set.manifest_path,
-            &set.manifest,
-            offer_no_verify,
-        )
+    fn resolve(set: &ArtifactSet, argv: &[&str]) -> anyhow::Result<ResolvedPolicy> {
+        resolve_policy(&source(argv), &set.manifest_path, &set.manifest)
     }
 
     fn failure(result: anyhow::Result<ResolvedPolicy>) -> String {
@@ -422,7 +392,7 @@ mod tests {
     #[test]
     fn defaults_to_the_policy_beside_the_manifest() {
         let set = artifact_set();
-        let policy = resolve(&set, &[], false).unwrap();
+        let policy = resolve(&set, &[]).unwrap();
         assert_eq!(policy.bytes, POLICY_BYTES);
         assert!(policy.source.contains(POLICY_FILENAME), "{}", policy.source);
         assert!(
@@ -441,7 +411,7 @@ mod tests {
         )
         .unwrap();
 
-        let error = failure(resolve(&set, &[], false));
+        let error = failure(resolve(&set, &[]));
         assert!(error.contains("bootstrap_policy_hash mismatch"), "{error}");
         assert!(error.contains(POLICY_FILENAME), "{error}");
         assert!(error.contains("--measurements"), "{error}");
@@ -455,36 +425,33 @@ mod tests {
         let path = write_file(&elsewhere, "policy.json", POLICY_BYTES);
         let argv = ["--policy", path.to_str().unwrap()];
 
-        assert_eq!(resolve(&set, &argv, false).unwrap().bytes, POLICY_BYTES);
+        assert_eq!(resolve(&set, &argv).unwrap().bytes, POLICY_BYTES);
 
         std::fs::write(&path, b"[]\n").unwrap();
-        let error = failure(resolve(&set, &argv, false));
+        let error = failure(resolve(&set, &argv));
         assert!(error.contains("bootstrap_policy_hash mismatch"), "{error}");
     }
 
     #[test]
     fn a_missing_explicit_policy_is_rejected_by_flag_name() {
         let set = artifact_set();
-        let error = failure(resolve(&set, &["--policy", "/absent/policy.json"], false));
+        let error = failure(resolve(&set, &["--policy", "/absent/policy.json"]));
         assert!(error.contains("--policy file not found"), "{error}");
     }
 
-    /// The default's absence names the alternatives — and `verify` has nothing
-    /// to skip (the appraisal is the whole command), so `--no-verify` appears
-    /// only for a caller that offers it.
+    /// The default's absence names the alternatives — never `--no-verify`,
+    /// which skips appraising the nodes configured, not every appraisal.
     #[test]
     fn a_missing_default_policy_names_the_alternatives() {
         let set = artifact_set();
         std::fs::remove_file(&set.policy_path).unwrap();
 
-        let error = failure(resolve(&set, &[], false));
+        let error = failure(resolve(&set, &[]));
         assert!(error.contains(POLICY_FILENAME), "{error}");
+        assert!(error.contains("seismic-tee ctx set-network"), "{error}");
         assert!(error.contains("--policy"), "{error}");
         assert!(error.contains("--measurements"), "{error}");
         assert!(!error.contains("--no-verify"), "{error}");
-
-        let error = failure(resolve(&set, &[], true));
-        assert!(error.contains("--no-verify"), "{error}");
     }
 
     /// An operator's own measurements need not promote to the founder's
@@ -497,12 +464,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let measurements = write_file(&dir, "measurements.json", raw_measurements().as_bytes());
 
-        let promoted = resolve(
-            &set,
-            &["--measurements", measurements.to_str().unwrap()],
-            false,
-        )
-        .unwrap();
+        let promoted = resolve(&set, &["--measurements", measurements.to_str().unwrap()]).unwrap();
 
         assert!(
             promoted.source.contains("--measurements"),
@@ -532,7 +494,6 @@ mod tests {
         let error = failure(resolve(
             &set,
             &["--measurements", measurements.to_str().unwrap()],
-            false,
         ));
         assert!(error.contains("--measurements"), "{error}");
         assert!(error.contains("measurement_id"), "{error}");
@@ -544,18 +505,12 @@ mod tests {
     }
 
     #[test]
-    fn no_verify_contradicts_a_policy_source_and_measurements_must_exist() {
-        let error = check_policy_source_files(&source(&["--policy", "p.json"]), true)
+    fn measurements_must_exist() {
+        check_policy_source_files(&source(&["--policy", "p.json"])).unwrap();
+
+        let error = check_policy_source_files(&source(&["--measurements", "/absent/m.json"]))
             .unwrap_err()
             .to_string();
-        assert!(error.contains("--no-verify"), "{error}");
-
-        check_policy_source_files(&source(&["--policy", "p.json"]), false).unwrap();
-
-        let error =
-            check_policy_source_files(&source(&["--measurements", "/absent/m.json"]), false)
-                .unwrap_err()
-                .to_string();
         assert!(error.contains("--measurements file not found"), "{error}");
     }
 

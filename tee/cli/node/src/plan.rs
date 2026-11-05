@@ -44,8 +44,9 @@ use anyhow::bail;
 use seismic_tee_common::founding::{FoundingRecord, FoundingRecords};
 use seismic_tee_common::http::HARVEST_PORT;
 use seismic_tee_common::{Descriptors, NodeDescriptor};
+use tdx_init_config::Bootnode;
 
-use crate::bootnodes::KeyHolder;
+use crate::bootnodes::{self, KeyHolder};
 use crate::probe::{Asked, ConfigState, Founding, NetworkState, NodeState, assess};
 use crate::status::network_line;
 
@@ -87,8 +88,18 @@ pub struct Pinned {
 pub enum Through {
     /// The node table's key holders, once each passes its appraisal.
     KeyHolders(Vec<KeyHolder>),
-    /// The peers `--bootnode` names.
-    NamedPeers,
+    /// The key holders `--bootnode` names, each at the IP its enode names,
+    /// once each passes its appraisal.
+    NamedPeers(Vec<KeyHolder>),
+}
+
+impl Through {
+    /// The key holders to appraise, wherever they came from.
+    pub fn candidates(&self) -> &[KeyHolder] {
+        match self {
+            Self::KeyHolders(key_holders) | Self::NamedPeers(key_holders) => key_holders,
+        }
+    }
 }
 
 /// What the run does, with the nodes it configures.
@@ -248,14 +259,14 @@ fn named<'a>(
 /// whose probe is `states`.
 ///
 /// `founding` is what the network directory pins, `records` its harvest
-/// records, and `named_peers` whether `--bootnode` was given.
+/// records, and `named_peers` the enodes `--bootnode` names.
 pub fn decide(
     table: &Descriptors,
     names: &[String],
     states: &BTreeMap<String, NodeState>,
     founding: &Founding,
     records: Option<&FoundingRecords>,
-    named_peers: bool,
+    named_peers: &[Bootnode],
     remedy: &Remedy,
 ) -> anyhow::Result<Plan> {
     // The probe read every node in the table, so each named node has its
@@ -316,7 +327,7 @@ pub fn decide(
     let network = assess(states, Some(founding));
     let run = match &network {
         NetworkState::Unfounded { pinned_box } => {
-            if named_peers {
+            if !named_peers.is_empty() {
                 bail!(
                     "{}\nNothing was sent. A founding fetches root_key from the pinned box, not \
                      from a named peer: drop --bootnode to found it.",
@@ -355,12 +366,12 @@ pub fn decide(
                 rest: rest.into_iter().map(|node| planned(node, true)).collect(),
             }
         }
-        _ if named_peers => Run::Join {
+        _ if !named_peers.is_empty() => Run::Join {
             nodes: configure
                 .into_iter()
                 .map(|node| planned(node, false))
                 .collect(),
-            through: Through::NamedPeers,
+            through: Through::NamedPeers(bootnodes::named_peers(named_peers)?),
         },
         NetworkState::Live { key_holders } => Run::Join {
             nodes: configure
@@ -462,6 +473,13 @@ mod tests {
 
     const ALPHA_KEY: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const BETA_KEY: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+    /// A peer `--bootnode` names.
+    fn peer() -> Bootnode {
+        format!("enode://{}@203.0.113.9:30303", "ab".repeat(64))
+            .parse()
+            .unwrap()
+    }
 
     fn remedy() -> Remedy {
         Remedy {
@@ -577,13 +595,18 @@ mod tests {
         states: &BTreeMap<String, NodeState>,
         named_peers: bool,
     ) -> anyhow::Result<Plan> {
+        let named_peers: Vec<Bootnode> = if named_peers {
+            vec![peer()]
+        } else {
+            Vec::new()
+        };
         decide(
             &table_of(states),
             &names(named),
             states,
             &founding(),
             Some(&records()),
-            named_peers,
+            &named_peers,
             &remedy(),
         )
     }
@@ -819,17 +842,15 @@ mod tests {
         let states = states(&[("operator-1", awaiting(&"ee".repeat(32), &"02".repeat(33)))]);
         let plan = decide_over(&["operator-1"], &states, true).unwrap();
         let run = plan.run.unwrap();
-        assert!(
-            matches!(
-                run,
-                Run::Join {
-                    through: Through::NamedPeers,
-                    ..
-                }
-            ),
-            "{run:?}"
-        );
         assert_eq!(run.names(), ["operator-1"]);
+        let Run::Join {
+            through: Through::NamedPeers(peers),
+            ..
+        } = run
+        else {
+            panic!("{run:?}");
+        };
+        assert_eq!(peers, bootnodes::named_peers(&[peer()]).unwrap());
     }
 
     /// No key holder: the refusal reads the network as `node status` does,
