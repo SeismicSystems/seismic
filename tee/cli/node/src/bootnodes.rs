@@ -12,11 +12,16 @@
 //!   [`crate::cohort`]), polled with [`collect_enodes`].
 //! - **Joining.** Every other config POST goes to a live network, whose key
 //!   holders (nodes serving `:7878`) the [`crate::probe`] of the node table
-//!   found ([`from_key_holders`]). Nothing is remembered between runs, so
+//!   found ([`from_join`]). Nothing is remembered between runs, so
 //!   each run re-applies the founding's rule that a node's enode reaches
 //!   others only after it passes its appraisal: every key holder is
 //!   deploy-verified, and only those that pass are handed out. With none,
 //!   the run refuses before anything is sent.
+//! - **Joining through named peers.** An operator whose node table holds no
+//!   key holder names key holders outside it with `--bootnode`
+//!   ([`parse_named`]). Each is appraised at the IP its enode names, and its
+//!   enode, as named, is handed out once it passes ([`from_join`]). The
+//!   enode is not read back ([`EnodeFrom::Named`]).
 //!
 //! `seismic_nodeInfo` is read from reth's JSON-RPC on the node's IP
 //! (`http://<ip>:8545`), the IP the key holder's appraisal names, with the
@@ -36,12 +41,12 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context as _, bail};
 use jsonrpsee::rpc_params;
-use seismic_tee_common::{Manifest, NodeDescriptor, rpc};
+use seismic_tee_common::{Manifest, NodeDescriptor, http, rpc};
 use tdx_init_config::{Bootnode, BootnodeHost};
 use tokio::task::JoinSet;
 
 use crate::cohort::Appraisal;
-use crate::plan::Remedy;
+use crate::plan::{Remedy, Through};
 use crate::verify::challenge_node;
 
 /// Enode-readiness polling. reth serves `seismic_nodeInfo` only once it is up
@@ -71,6 +76,72 @@ pub fn normalize_enode(enode: &str) -> anyhow::Result<Bootnode> {
         );
     }
     Ok(bootnode)
+}
+
+/// A `--bootnode` value: an enode, normalized as a fetched one is, whose host
+/// is a public IP address, spelled one way.
+///
+/// The key holder at that IP is appraised, and the enode is handed out only
+/// if it passes. A name is refused rather than resolved: DNS could answer
+/// with another box between the appraisal and the joining node's `root_key`
+/// fetch. So is an IP that names a different box from here than from the
+/// joining node — loopback, link-local, and the like.
+///
+/// The enode is spelled canonically — its pubkey in lowercase hex, its IP and
+/// port as they print — so that two spellings of one peer compare equal
+/// ([`named_peers`]). reth reads either spelling as the same peer.
+pub fn parse_named(value: &str) -> anyhow::Result<Bootnode> {
+    let enode = normalize_enode(value)?;
+    let BootnodeHost::Ip(ip) = *enode.host() else {
+        bail!(
+            "its host {} is not an IP address: the peer is vetted at an IP, and a name is not \
+             resolved. Name it by IP, as its seismic_nodeInfo enode does",
+            enode.host()
+        );
+    };
+    if let Some(kind) = local_kind(ip) {
+        bail!(
+            "its host {} is a {kind} address: the CLI would appraise the box at it from this \
+             machine, and the joining node would fetch root_key from the box at it from its own, \
+             and those are not the same box. Name the peer by its public IP, as its \
+             seismic_nodeInfo enode does",
+            enode.host()
+        );
+    }
+    // A parsed enode is `enode://<id>@<host>:<port>`, with a numeric port.
+    let url = enode.as_ref();
+    let (id, _) = url
+        .strip_prefix("enode://")
+        .and_then(|rest| rest.split_once('@'))
+        .context("a parsed enode has an id")?;
+    let (_, port) = url.rsplit_once(':').context("a parsed enode has a port")?;
+    let port: u16 = port.parse().context("a parsed enode's port is numeric")?;
+    if port == 0 {
+        bail!("its port is 0: reth cannot dial it. Name the peer's devp2p port");
+    }
+    // An IPv4-mapped IPv6 address is spelled as the IPv4 address it maps, so
+    // that one box at one IP is one peer however it is written.
+    let canonical = format!(
+        "enode://{}@{}:{port}",
+        id.to_ascii_lowercase(),
+        BootnodeHost::Ip(ip.to_canonical())
+    );
+    Ok(canonical.parse()?)
+}
+
+/// What kind of address `ip` is, if it names a box only relative to whoever
+/// dials it — so that this machine and a joining node would reach different
+/// boxes at it — or `None` for an address that names one box from anywhere.
+fn local_kind(ip: IpAddr) -> Option<&'static str> {
+    match ip.to_canonical() {
+        ip if ip.is_unspecified() => Some("unspecified"),
+        ip if ip.is_loopback() => Some("loopback"),
+        ip if ip.is_multicast() => Some("multicast"),
+        IpAddr::V4(ip) if ip.is_broadcast() => Some("broadcast"),
+        IpAddr::V4(ip) if ip.is_link_local() => Some("link-local"),
+        IpAddr::V6(ip) if ip.is_unicast_link_local() => Some("link-local"),
+        _ => None,
+    }
 }
 
 /// Whether an enode's host is the IP address `ip`, by value: an IPv6
@@ -194,47 +265,126 @@ pub async fn collect_enodes(
     }
 }
 
-/// A key holder as a joining run vets it: where its attestation service
-/// is appraised, and where its enode is read.
+/// A key holder as a joining run vets it: where its attestation service is
+/// appraised, and where its enode comes from once it passes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyHolder {
+    /// Its name in the node table, or the IP `--bootnode` names.
     pub name: String,
     pub public_ip: IpAddr,
     /// `http://<ip>:7878`, the endpoint appraised.
     pub attestation_rpc_url: String,
-    /// `http://<ip>:8545`, where `seismic_nodeInfo` is read.
-    pub eth_rpc_url: String,
+    pub enode: EnodeFrom,
+}
+
+/// Where a key holder's enode comes from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EnodeFrom {
+    /// Read from reth's `seismic_nodeInfo` at this URL (`http://<ip>:8545`):
+    /// a key holder in the node table, whose RPC its operator reaches.
+    Rpc(String),
+    /// As `--bootnode` named it, not read back: the key holder is often
+    /// another operator's, whose reth RPC need not be open to this one.
+    Named(Bootnode),
 }
 
 impl KeyHolder {
+    /// A key holder in the node table.
     pub fn new(name: &str, descriptor: &NodeDescriptor) -> Self {
         Self {
             name: name.to_string(),
             public_ip: descriptor.public_ip,
             attestation_rpc_url: descriptor.attestation_rpc_url(),
-            eth_rpc_url: descriptor.eth_rpc_url(),
+            enode: EnodeFrom::Rpc(descriptor.eth_rpc_url()),
+        }
+    }
+
+    /// The key holder at the IP a `--bootnode` enode names.
+    pub fn named(ip: IpAddr, enode: &Bootnode) -> Self {
+        Self {
+            name: ip.to_string(),
+            public_ip: ip,
+            attestation_rpc_url: http::attestation_rpc_url(ip),
+            enode: EnodeFrom::Named(enode.clone()),
         }
     }
 }
 
-/// The bootnodes of a run joining a live network: the enodes of the
-/// `key_holders` that pass their appraisal.
+/// The key holders `--bootnode` names, one per IP, from enodes as
+/// [`parse_named`] spells them. An enode named twice, however spelled,
+/// counts once. Two different enodes at one IP are refused: one box runs one
+/// reth, so one of them is stale or mistyped, and nothing here can tell which.
+pub fn named_peers(enodes: &[Bootnode]) -> anyhow::Result<Vec<KeyHolder>> {
+    let mut named: Vec<(IpAddr, &Bootnode)> = Vec::new();
+    for enode in enodes {
+        let BootnodeHost::Ip(ip) = *enode.host() else {
+            bail!("--bootnode {enode}: its host is not an IP address");
+        };
+        match named.iter().find(|(seen, _)| *seen == ip) {
+            None => named.push((ip, enode)),
+            Some((_, first)) if *first == enode => {}
+            Some((_, first)) => bail!(
+                "--bootnode names two different enodes at {ip}:\n    {first}\n    {enode}\nOne box \
+                 runs one reth, so one of them is stale or mistyped. Nothing was sent. Name each \
+                 peer once, with the enode its seismic_nodeInfo returns."
+            ),
+        }
+    }
+    Ok(named
+        .into_iter()
+        .map(|(ip, enode)| KeyHolder::named(ip, enode))
+        .collect())
+}
+
+/// Where a joining run's candidates came from, which decides the way on
+/// when none passes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Source {
+    /// The key holders in the operator's own node table.
+    NodeTable,
+    /// The key holders `--bootnode` names, often another operator's.
+    NamedPeers,
+}
+
+impl From<&Through> for Source {
+    fn from(through: &Through) -> Self {
+        match through {
+            Through::KeyHolders(_) => Self::NodeTable,
+            Through::NamedPeers(_) => Self::NamedPeers,
+        }
+    }
+}
+
+impl Source {
+    fn label(self) -> &'static str {
+        match self {
+            Self::NodeTable => "key holder(s)",
+            Self::NamedPeers => "peer(s) named by --bootnode",
+        }
+    }
+}
+
+/// The bootnodes of a run joining a live network: the enodes of the key
+/// holders `through` gives that pass their appraisal.
 ///
-/// Every key holder is appraised, `--no-verify` or not: that flag is about
+/// Every candidate is appraised, `--no-verify` or not: that flag is about
 /// the nodes configured. Refuses — nothing has been sent — when none passes.
-pub async fn from_key_holders(
-    key_holders: &[KeyHolder],
+pub async fn from_join(
+    through: &Through,
     manifest: &Manifest,
     appraisal: &Appraisal,
     remedy: &Remedy,
 ) -> anyhow::Result<Vec<Bootnode>> {
+    let key_holders = through.candidates();
+    let source = Source::from(through);
     let names: Vec<&str> = key_holders
         .iter()
         .map(|holder| holder.name.as_str())
         .collect();
     eprintln!(
-        "{} key holder(s): {}; deploy-verifying each before handing out an enode...",
+        "{} {}: {}; deploy-verifying each before handing out an enode...",
         key_holders.len(),
+        source.label(),
         names.join(", ")
     );
     let mut tasks = JoinSet::new();
@@ -258,7 +408,7 @@ pub async fn from_key_holders(
             Err(reason) => eprintln!("  ✗ {name}: {reason}"),
         }
     }
-    handed_out(&vetted, remedy)
+    handed_out(&vetted, source, remedy)
 }
 
 /// Why a key holder's enode is not handed out. Each calls for its own
@@ -285,7 +435,7 @@ impl std::fmt::Display for Unvetted {
     }
 }
 
-/// Appraise one key holder, then read its enode. The verdict is the enode to
+/// Appraise one key holder, then take its enode. The verdict is the enode to
 /// hand out, or why not.
 pub async fn vet(
     holder: &KeyHolder,
@@ -300,39 +450,45 @@ pub async fn vet(
     )
     .await
     .map_err(|error| Unvetted::FailedAppraisal(format!("{error:#}")))?;
-    read_enode(holder).await
+    match &holder.enode {
+        EnodeFrom::Rpc(eth_rpc_url) => read_enode(eth_rpc_url, holder.public_ip).await,
+        // Its host is the IP appraised by construction.
+        EnodeFrom::Named(enode) => Ok(enode.clone()),
+    }
 }
 
-/// A key holder's enode, normalized, or why it cannot be handed out.
+/// The enode reth's RPC at `eth_rpc_url` serves, normalized, or why it
+/// cannot be handed out.
 ///
-/// The enode's host must be the IP whose attestation service was appraised:
-/// tdx-init fetches `root_key` from the enode's host, so an enode elsewhere
-/// would send the joiner to a box nobody appraised.
-pub async fn read_enode(holder: &KeyHolder) -> Result<Bootnode, Unvetted> {
-    let client = rpc::Client::new(&holder.eth_rpc_url)
+/// The enode's host must be `public_ip`, the IP whose attestation service was
+/// appraised: tdx-init fetches `root_key` from the enode's host, so an enode
+/// elsewhere would send the joiner to a box nobody appraised.
+pub async fn read_enode(eth_rpc_url: &str, public_ip: IpAddr) -> Result<Bootnode, Unvetted> {
+    let client = rpc::Client::new(eth_rpc_url)
         .map_err(|error| Unvetted::UnusableEnode(format!("{error:#}")))?;
     let raw = fetch_enode(&client)
         .await
         .map_err(|error| Unvetted::NoEnodeYet(format!("no enode: {error:#}")))?;
     let enode =
         normalize_enode(&raw).map_err(|error| Unvetted::UnusableEnode(format!("{error:#}")))?;
-    if !is_at_ip(&enode, holder.public_ip) {
+    if !is_at_ip(&enode, public_ip) {
         return Err(Unvetted::UnusableEnode(format!(
-            "its enode {enode} is not at its public_ip {}: the joining node would fetch root_key \
-             from a box other than the one appraised",
-            holder.public_ip
+            "its enode {enode} is not at {public_ip}, the IP appraised: the joining node would \
+             fetch root_key from a box other than the one appraised"
         )));
     }
     Ok(enode)
 }
 
-/// The enodes that passed, or the refusal that none did, naming each key
-/// holder's reason. One that passed but serves no enode yet is waited for;
-/// re-founding is the way on only when every key holder failed its
-/// appraisal; otherwise a re-run reads the same enodes, and only a peer named
-/// by hand is left.
+/// The enodes that passed, or the refusal that none did, naming each
+/// candidate's reason. For the node table's key holders: one that passed but
+/// serves no enode yet is waited for; re-founding is the way on only when
+/// every one failed its appraisal; otherwise a re-run reads the same enodes,
+/// and only a peer named by hand is left. A named peer can only fail its
+/// appraisal, and the way on is another peer.
 pub fn handed_out(
     vetted: &BTreeMap<String, Result<Bootnode, Unvetted>>,
+    source: Source,
     remedy: &Remedy,
 ) -> anyhow::Result<Vec<Bootnode>> {
     let enodes: Vec<Bootnode> = vetted.values().filter_map(|v| v.clone().ok()).collect();
@@ -349,24 +505,36 @@ pub fn handed_out(
     let failed_appraisal = vetted
         .values()
         .all(|verdict| matches!(verdict, Err(Unvetted::FailedAppraisal(_))));
-    let instead = if starting {
-        format!(
-            "A key holder that passed its appraisal but serves no enode yet is still starting: \
-             watch it (`{}`) and re-run once it serves one; or name a live peer",
-            remedy.watch()
-        )
-    } else if failed_appraisal {
-        format!(
-            "A key holder that fails its appraisal must not serve root_key to anyone: {}; or name \
-             a live peer",
-            remedy.re_found()
-        )
-    } else {
-        "A re-run reads the same enodes: name a live peer instead".to_string()
+    // A named peer is in no table this CLI can watch, nor in a network this
+    // operator can re-found.
+    let (none, instead) = match source {
+        Source::NodeTable => (
+            "no key holder in the node table",
+            if starting {
+                format!(
+                    "A key holder that passed its appraisal but serves no enode yet is still \
+                     starting: watch it (`{}`) and re-run once it serves one; or name a live peer",
+                    remedy.watch()
+                )
+            } else if failed_appraisal {
+                format!(
+                    "A key holder that fails its appraisal must not serve root_key to anyone: {}; \
+                     or name a live peer",
+                    remedy.re_found()
+                )
+            } else {
+                "A re-run reads the same enodes: name a live peer instead".to_string()
+            },
+        ),
+        Source::NamedPeers => (
+            "no peer named by --bootnode",
+            "A peer that fails its appraisal must not serve root_key to anyone: name another live \
+             peer"
+                .to_string(),
+        ),
     };
     bail!(
-        "no key holder in the node table can be handed out as a bootnode:\n{}\nNothing was \
-         sent. {instead}:\n    {}",
+        "{none} can be handed out as a bootnode:\n{}\nNothing was sent. {instead}:\n    {}",
         reasons.join("\n"),
         remedy.bootnode()
     )
@@ -398,7 +566,6 @@ mod tests {
 
     #[test]
     fn an_enode_is_at_its_ip_by_value() {
-        let ip = |ip: &str| ip.parse().unwrap();
         let ipv6 = normalize_enode(&format!("enode://{}@[2001:0db8::1]:30303", id())).unwrap();
         assert!(is_at_ip(&ipv6, ip("2001:db8:0:0:0:0:0:1")));
         let ipv4 = normalize_enode(&format!("enode://{}@1.2.3.4:30303", id())).unwrap();
@@ -406,6 +573,90 @@ mod tests {
         assert!(!is_at_ip(&ipv4, ip("1.2.3.5")));
         let named = normalize_enode(&format!("enode://{}@node1.example.com:30303", id())).unwrap();
         assert!(!is_at_ip(&named, ip("1.2.3.4")));
+    }
+
+    /// A named enode is normalized as a fetched one is, and must be at an IP:
+    /// that IP is what the run appraises.
+    #[test]
+    fn a_named_enode_is_normalized_and_must_be_at_an_ip() {
+        let canonical = format!("enode://{}@1.2.3.4:30303", id());
+        assert_eq!(
+            parse_named(&format!("{canonical}?discport=30304"))
+                .unwrap()
+                .to_string(),
+            canonical
+        );
+        let err = parse_named(&format!("enode://{}@node1.example.com:30303", id()))
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains("its host node1.example.com is not an IP address"),
+            "{err}"
+        );
+        assert!(parse_named("enode://ab@1.2.3.4:30303").is_err());
+    }
+
+    /// Two spellings of one peer parse to one enode, so naming it twice
+    /// counts once.
+    #[test]
+    fn a_named_enode_is_spelled_one_way() {
+        let canonical = format!("enode://{}@[2001:db8::1]:30303", id());
+        for spelling in [
+            format!("enode://{}@[2001:0db8:0:0::1]:30303", id()),
+            format!("enode://{}@[2001:db8::1]:030303", id()),
+            format!("enode://{}@[2001:db8::1]:30303", id().to_ascii_uppercase()),
+        ] {
+            assert_eq!(parse_named(&spelling).unwrap().to_string(), canonical);
+        }
+        // An IPv4-mapped address is the IPv4 address it maps.
+        assert_eq!(
+            parse_named(&format!("enode://{}@[::ffff:1.2.3.4]:30303", id()))
+                .unwrap()
+                .to_string(),
+            format!("enode://{}@1.2.3.4:30303", id())
+        );
+        assert!(
+            parse_named(&format!("enode://{}@1.2.3.4:0", id()))
+                .unwrap_err()
+                .to_string()
+                .contains("its port is 0")
+        );
+        let ipv4 = format!("enode://{}@1.2.3.4:30303", id().to_ascii_uppercase());
+        let peers = named_peers(&[
+            parse_named(&ipv4).unwrap(),
+            parse_named(&format!("enode://{}@1.2.3.4:30303", id())).unwrap(),
+        ])
+        .unwrap();
+        assert_eq!(peers.len(), 1, "{peers:?}");
+    }
+
+    /// An IP that names a different box from this machine than from the
+    /// joining node is refused: the box appraised would not be the one the
+    /// joiner fetches root_key from.
+    #[test]
+    fn a_named_enode_at_a_local_address_is_refused() {
+        for (host, kind) in [
+            ("127.0.0.1", "loopback"),
+            ("[::1]", "loopback"),
+            ("[::ffff:127.0.0.1]", "loopback"),
+            ("0.0.0.0", "unspecified"),
+            ("[::]", "unspecified"),
+            ("169.254.0.1", "link-local"),
+            ("[fe80::1]", "link-local"),
+            ("224.0.0.1", "multicast"),
+            ("255.255.255.255", "broadcast"),
+        ] {
+            let err = parse_named(&format!("enode://{}@{host}:30303", id()))
+                .unwrap_err()
+                .to_string();
+            assert!(
+                err.contains(&format!("is a {kind} address")),
+                "{host}: {err}"
+            );
+        }
+        // A private address names one box within its network: it may be the
+        // network the joining node and this machine share.
+        assert!(parse_named(&format!("enode://{}@10.0.0.4:30303", id())).is_ok());
     }
 
     #[test]
@@ -561,12 +812,16 @@ mod tests {
         }
     }
 
+    fn ip(value: &str) -> IpAddr {
+        value.parse().unwrap()
+    }
+
     fn key_holder(public_ip: &str, eth_rpc_url: &str) -> KeyHolder {
         KeyHolder {
             name: "alpha".to_string(),
             public_ip: public_ip.parse().unwrap(),
             attestation_rpc_url: refused_url(),
-            eth_rpc_url: eth_rpc_url.to_string(),
+            enode: EnodeFrom::Rpc(eth_rpc_url.to_string()),
         }
     }
 
@@ -582,7 +837,7 @@ mod tests {
             |host: &str| json!({"enode": format!("enode://{}@{host}:30303?discport=30304", id())});
         let server = FakeServer::serve(vec![(200, rpc_result(enode("1.1.1.1")))]);
         assert_eq!(
-            read_enode(&key_holder("1.1.1.1", &server.url))
+            read_enode(&server.url, ip("1.1.1.1"))
                 .await
                 .unwrap()
                 .to_string(),
@@ -591,29 +846,23 @@ mod tests {
 
         // Elsewhere, or malformed: a re-run reads the same.
         let server = FakeServer::serve(vec![(200, rpc_result(enode("10.0.0.4")))]);
-        let reason = read_enode(&key_holder("1.1.1.1", &server.url))
-            .await
-            .unwrap_err();
+        let reason = read_enode(&server.url, ip("1.1.1.1")).await.unwrap_err();
         assert!(matches!(reason, Unvetted::UnusableEnode(_)), "{reason:?}");
         assert!(
             reason
                 .to_string()
-                .contains("is not at its public_ip 1.1.1.1"),
+                .contains("is not at 1.1.1.1, the IP appraised"),
             "{reason}"
         );
         let server = FakeServer::serve(vec![(
             200,
             rpc_result(json!({"enode": "enode://short@1.1.1.1:30303"})),
         )]);
-        let reason = read_enode(&key_holder("1.1.1.1", &server.url))
-            .await
-            .unwrap_err();
+        let reason = read_enode(&server.url, ip("1.1.1.1")).await.unwrap_err();
         assert!(matches!(reason, Unvetted::UnusableEnode(_)), "{reason:?}");
 
         // No answer yet: reth is still starting.
-        let reason = read_enode(&key_holder("1.1.1.1", &refused_url()))
-            .await
-            .unwrap_err();
+        let reason = read_enode(&refused_url(), ip("1.1.1.1")).await.unwrap_err();
         assert!(matches!(reason, Unvetted::NoEnodeYet(_)), "{reason:?}");
         assert!(reason.to_string().starts_with("no enode: "), "{reason}");
     }
@@ -641,6 +890,100 @@ mod tests {
         assert!(server.requests().is_empty());
     }
 
+    /// A named peer is a key holder at the IP its enode names, whose enode is
+    /// the one named. An enode named twice counts once; a name is refused,
+    /// not resolved.
+    #[test]
+    fn a_named_peer_is_a_key_holder_at_its_enodes_ip() {
+        let enode = |id: &str, host: &str| -> Bootnode {
+            format!("enode://{}@{host}:30303", id.repeat(64))
+                .parse()
+                .unwrap()
+        };
+        let peers = named_peers(&[
+            enode("ab", "1.2.3.4"),
+            enode("ab", "1.2.3.4"),
+            enode("cd", "[2001:db8::1]"),
+        ])
+        .unwrap();
+        assert_eq!(
+            peers,
+            [
+                KeyHolder {
+                    name: "1.2.3.4".to_string(),
+                    public_ip: ip("1.2.3.4"),
+                    attestation_rpc_url: "http://1.2.3.4:7878".to_string(),
+                    enode: EnodeFrom::Named(enode("ab", "1.2.3.4")),
+                },
+                KeyHolder {
+                    name: "2001:db8::1".to_string(),
+                    public_ip: ip("2001:db8::1"),
+                    attestation_rpc_url: "http://[2001:db8::1]:7878".to_string(),
+                    enode: EnodeFrom::Named(enode("cd", "[2001:db8::1]")),
+                },
+            ]
+        );
+        assert!(named_peers(&[enode("ab", "node1.example.com")]).is_err());
+    }
+
+    /// Two different enodes at one IP are refused, naming both: one box runs
+    /// one reth, so one of them is stale or mistyped.
+    #[test]
+    fn two_different_enodes_at_one_ip_are_refused() {
+        let ab = format!("enode://{}@1.2.3.4:30303", "ab".repeat(64));
+        let cd = format!("enode://{}@1.2.3.4:30303", "cd".repeat(64));
+        let err = named_peers(&[ab.parse().unwrap(), cd.parse().unwrap()])
+            .unwrap_err()
+            .to_string();
+        for expected in [
+            "--bootnode names two different enodes at 1.2.3.4",
+            ab.as_str(),
+            cd.as_str(),
+            "Nothing was sent",
+        ] {
+            assert!(err.contains(expected), "missing {expected:?} in:\n{err}");
+        }
+    }
+
+    /// A named peer that passes its appraisal is handed out as named.
+    #[test]
+    fn a_named_peer_that_passes_is_handed_out_as_named() {
+        let named: Bootnode = format!("enode://{}@1.2.3.4:30303", id()).parse().unwrap();
+        let vetted = BTreeMap::from([("1.2.3.4".to_string(), Ok(named.clone()))]);
+        assert_eq!(
+            handed_out(&vetted, Source::NamedPeers, &remedy()).unwrap(),
+            [named]
+        );
+    }
+
+    /// A named peer whose appraisal fails is not handed out, and the refusal
+    /// names only the way on that is the operator's: another peer, never a
+    /// re-founding. (The policy fails to load, so nothing is dialled.)
+    #[tokio::test]
+    async fn a_named_peer_that_fails_its_appraisal_is_not_handed_out() {
+        let appraisal = Appraisal {
+            policy: b"{ not a policy".to_vec(),
+            pccs_url: None,
+        };
+        let peer = parse_named(&format!("enode://{}@203.0.113.9:30303", id())).unwrap();
+        let through = Through::NamedPeers(named_peers(&[peer]).unwrap());
+        let err = from_join(&through, &manifest(), &appraisal, &remedy())
+            .await
+            .unwrap_err()
+            .to_string();
+        for expected in [
+            "no peer named by --bootnode can be handed out as a bootnode",
+            "  ✗ 203.0.113.9: deploy verification FAILED",
+            "Nothing was sent",
+            "name another live peer",
+            "seismic-tee node configure --node nodes.json gamma --bootnode <ENODE>",
+        ] {
+            assert!(err.contains(expected), "missing {expected:?} in:\n{err}");
+        }
+        assert!(!err.contains("re-found"), "{err}");
+        assert!(!err.contains("harvest"), "{err}");
+    }
+
     /// Only the key holders that passed are handed out; with none, the
     /// refusal names each one's reason and the way on.
     #[test]
@@ -651,10 +994,15 @@ mod tests {
             ("alpha".to_string(), failed()),
             ("beta".to_string(), Ok(enode.clone())),
         ]);
-        assert_eq!(handed_out(&vetted, &remedy()).unwrap(), [enode]);
+        assert_eq!(
+            handed_out(&vetted, Source::NodeTable, &remedy()).unwrap(),
+            [enode]
+        );
 
         let vetted = BTreeMap::from([("alpha".to_string(), failed())]);
-        let err = handed_out(&vetted, &remedy()).unwrap_err().to_string();
+        let err = handed_out(&vetted, Source::NodeTable, &remedy())
+            .unwrap_err()
+            .to_string();
         assert!(
             err.contains("  ✗ alpha: deploy verification FAILED: x"),
             "{err}"
@@ -686,7 +1034,9 @@ mod tests {
                 )),
             ),
         ]);
-        let err = handed_out(&vetted, &remedy()).unwrap_err().to_string();
+        let err = handed_out(&vetted, Source::NodeTable, &remedy())
+            .unwrap_err()
+            .to_string();
         assert!(
             err.contains("  ✗ beta: no enode: connection refused"),
             "{err}"
@@ -720,7 +1070,9 @@ mod tests {
                 )),
             ),
         ]);
-        let err = handed_out(&vetted, &remedy()).unwrap_err().to_string();
+        let err = handed_out(&vetted, Source::NodeTable, &remedy())
+            .unwrap_err()
+            .to_string();
         assert!(err.contains("  ✗ beta: its enode"), "{err}");
         assert!(err.contains("A re-run reads the same enodes"), "{err}");
         assert!(!err.contains("still starting"), "{err}");

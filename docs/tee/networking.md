@@ -206,7 +206,7 @@ written by someone, at some time, and checked by someone or by no one.
 | Node name → `{public_ip, fqdn}` | The provisioner: deploy's Pulumi program outputs the map, `seismic-tee ctx set-nodes` stores it. Or the operator, by hand, as a descriptor file. | Provisioning | The CLI, for every call it makes to a node |
 | FQDN → public IP | The DNS A record (see [DNS](#dns)) | Provisioning | Nothing in the image, and none of the CLI's calls |
 | `[node].external_ip` | The CLI, from the node table's `public_ip` | Every config POST, so every boot | tdx-init, which renders reth's `--nat extip` and summit's `--ip` |
-| `[network].bootnodes` | The CLI. Founding: the genesis node's enode. Later: the enodes of the node table's key holders that pass their appraisal, or `--bootnode`. | Every config POST | tdx-init, which renders reth's `--bootnodes` and `--trusted-peers` and the `root_key` fetch peers |
+| `[network].bootnodes` | The CLI. Founding: the genesis node's enode. Later: the enodes of the node table's key holders that pass their appraisal, or the enodes `--bootnode` names, each once the key holder at its IP passes its appraisal. | Every config POST | tdx-init, which renders reth's `--bootnodes` and `--trusted-peers` and the `root_key` fetch peers |
 | Summit genesis `ip_address` | `network assemble`, from the node table's `public_ip` for each founding validator | Assembly | summit, as its initial dial set |
 | The same, delivered | `node configure` founding the network splices in the node table's current IPs; joining a live one, it sends the file `assemble` wrote as it is | Every config POST | summit |
 | A validator's live address | The node itself, signed with its node key | summit's start, then gossip | Every summit peer |
@@ -311,9 +311,12 @@ against the appraised `public_ip`: a mismatch only warns.
   those that pass and whose host is the IP it appraised. With none that
   passes, it sends nothing.
 - **A node of another operator** has none of the network's key holders in its
-  node table. It names a live peer with `--bootnode`, got from the network's
-  operators or a live node's `seismic_nodeInfo`. Nothing publishes the network's
-  key holders yet
+  node table. It names one with `--bootnode`: an enode at an IP (not a
+  loopback or link-local one, which would name another box from the joiner
+  than from the CLI), got from the network's operators or a live node's
+  `seismic_nodeInfo`. The CLI appraises the key holder at that IP, and hands
+  out the enode as named only if it passes. It does not read the enode back
+  ([why](#design-rationale)). Nothing publishes the network's key holders yet
   ([SEI-880](https://linear.app/seismic-systems/issue/SEI-880)).
 - **A reboot** loses the tmpfs config, so the node is configured again as a
   joiner, with its address and bootnodes bound afresh.
@@ -347,6 +350,14 @@ against the appraised `public_ip`: a mismatch only warns.
   moves, and it says nothing about whether the box still passes its appraisal.
   Reading the enodes live, after appraising each key holder, keeps both
   current.
+- **Why a named peer's enode is not read back.** A peer named with
+  `--bootnode` is often another operator's node, and its reth RPC (`:8545`)
+  need not be open to this operator: deploy's firewall keeps it to the node's
+  own operator for now, and some operators may keep it closed once it opens.
+  `:7878` is open to peers, so the CLI appraises the peer there and hands out
+  the enode as named. A stale or mistyped pubkey or port is not caught before
+  the POST, and costs only reth's peering with that enode: the `root_key` fetch
+  uses the host alone, and attests on every exchange.
 - **Why enodes name IPs rather than hostnames.** tdx-init and reth both accept a
   DNS host in an enode. The CLI hands out IP enodes because its appraisal is of
   an IP: with a hostname, DNS could resolve to a different box between the

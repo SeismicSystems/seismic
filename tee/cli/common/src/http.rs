@@ -8,7 +8,7 @@
 //! reach over HTTPS through the network's front and this tooling reaches
 //! directly.
 
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
 
 use crate::descriptor::NodeDescriptor;
@@ -67,6 +67,13 @@ pub fn client() -> Result<reqwest::Client> {
         .build()?)
 }
 
+/// The attestation service's JSON-RPC endpoint at `ip`: for a node in the
+/// node table, [`NodeDescriptor::attestation_rpc_url`]; also a peer known only
+/// by the IP its enode names.
+pub fn attestation_rpc_url(ip: IpAddr) -> String {
+    format!("http://{}", SocketAddr::new(ip, ATTESTATION_RPC_PORT))
+}
+
 impl NodeDescriptor {
     /// tdx-init's config receiver, on the operator-only port.
     pub fn tdx_init_url(&self) -> String {
@@ -75,10 +82,7 @@ impl NodeDescriptor {
 
     /// The attestation service's JSON-RPC endpoint.
     pub fn attestation_rpc_url(&self) -> String {
-        format!(
-            "http://{}",
-            SocketAddr::new(self.public_ip, ATTESTATION_RPC_PORT)
-        )
+        attestation_rpc_url(self.public_ip)
     }
 
     /// The attestation service's founding-harvest endpoint, which `harvest`

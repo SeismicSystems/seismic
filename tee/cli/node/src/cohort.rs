@@ -93,7 +93,7 @@ use crate::dashboard::CohortDashboard;
 use crate::harvest::{FetchError, HarvestTarget, build_record, fetch_quote, verify_quote};
 use crate::launch::{self, LaunchTarget};
 use crate::load_manifest;
-use crate::plan::{self, Pinned, Plan, Planned, Remedy, Run, Through, Up};
+use crate::plan::{self, Pinned, Plan, Planned, Remedy, Run, Up};
 use crate::probe::{self, Founding, probe_all};
 use crate::status::{POLL_INTERVAL, ProvisioningWatch, poll_provisioning};
 use crate::verify::{check_policy_source_files, resolve_policy};
@@ -780,44 +780,6 @@ fn rerun(args: &ConfigureArgs, remedy: &Remedy, names: &[&str]) -> String {
     )
 }
 
-/// What the run checks its own decisions against: the appraisal policy, or
-/// under `--no-verify` — which skips appraising the nodes configured only —
-/// the network's own, beside --manifest (`--no-verify` refuses --policy and
-/// --measurements). A join can name its peer instead; a founding cannot.
-fn checks_policy(
-    args: &ConfigureArgs,
-    appraisal: Option<&Appraisal>,
-    manifest_path: &Path,
-    manifest: &Manifest,
-    founding: bool,
-    remedy: &Remedy,
-) -> anyhow::Result<Appraisal> {
-    if let Some(appraisal) = appraisal {
-        return Ok(appraisal.clone());
-    }
-    let path = NetworkDir::of_manifest(manifest_path).policy();
-    if !path.is_file() {
-        let or_name_a_peer = if founding {
-            String::new()
-        } else {
-            format!(", or name a peer yourself:\n    {}", remedy.bootnode())
-        };
-        bail!(
-            "measurement policy not found: {}\nThe pinned box's quote before a founding, and the \
-             key holders before a join, are checked against the network's policy beside \
-             --manifest; --no-verify skips appraising the nodes configured only. Nothing was \
-             sent. Instead, fetch the network directory (`seismic-tee ctx \
-             set-network`){or_name_a_peer}",
-            path.display(),
-        );
-    }
-    let policy = resolve_policy(&args.policy_source, manifest_path, manifest, false)?;
-    Ok(Appraisal {
-        policy: policy.bytes,
-        pccs_url: args.verifier.pccs_url.clone(),
-    })
-}
-
 /// The network directory's harvest records, when it has a harvest. Read
 /// strictly, unlike `node status`'s informational reading: a founding stands
 /// on them, so an unreadable record, or a manifest whose pin no harvested box
@@ -911,7 +873,10 @@ async fn verify_pinned_box(
 /// `configure`: probe the node table, decide, check, preview, ask, run,
 /// report, and assert the launch of every founding node configured.
 pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::Result<ExitCode> {
-    check_policy_source_files(&args.policy_source, args.no_verify)?;
+    check_policy_source_files(&args.policy_source)?;
+    // Two different enodes at one IP fail here, before the node table is
+    // probed; the plan takes the peers again once it knows it joins.
+    bootnodes::named_peers(&args.bootnode)?;
     // Validate the shared network artifacts once, so a bad one fails fast
     // here rather than as N identical per-node errors mid-dashboard.
     let inputs = Inputs::new(args, config);
@@ -933,7 +898,15 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
     // Resolve the policy once for the whole run, before any node is touched:
     // a policy the manifest doesn't commit to, or a rejected measurements
     // file, must fail while the fix still costs nothing — config delivery is
-    // once per boot.
+    // once per boot. Every run appraises the boxes it relies on with it: the
+    // pinned box before a founding, the key holders or named peers before a
+    // join. --no-verify skips only appraising the nodes configured.
+    let policy = resolve_policy(&args.policy_source, &manifest_path, &manifest)?;
+    eprintln!("Appraising against {}", policy.source);
+    let checks = Appraisal {
+        policy: policy.bytes,
+        pccs_url: args.verifier.pccs_url.clone(),
+    };
     let appraisal = if args.no_verify {
         eprintln!(
             "warning: --no-verify: the nodes configured will not be appraised. Run `seismic-tee \
@@ -941,17 +914,8 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
         );
         None
     } else {
-        let policy = resolve_policy(&args.policy_source, &manifest_path, &manifest, true)?;
-        eprintln!("Appraising against {}", policy.source);
-        Some((
-            policy.source,
-            Appraisal {
-                policy: policy.bytes,
-                pccs_url: args.verifier.pccs_url.clone(),
-            },
-        ))
+        Some(checks.clone())
     };
-    let (policy_source, appraisal) = appraisal.unzip();
 
     // The founding inputs live beside the manifest (the network-directory
     // layout): the harvest supplies each box's pinned keys; the node table
@@ -974,7 +938,7 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
         &states,
         &founding,
         records.as_ref(),
-        !args.bootnode.is_empty(),
+        &args.bootnode,
         &remedy,
     )?;
     let Some(run) = run else {
@@ -1003,14 +967,6 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
 
     let (summit_genesis, bootnodes) = match &run {
         Run::Found { pinned, .. } => {
-            let checks = checks_policy(
-                args,
-                appraisal.as_ref(),
-                &manifest_path,
-                &manifest,
-                true,
-                &remedy,
-            )?;
             verify_pinned_box(
                 &client,
                 &HarvestTarget::new(&pinned.name, &pinned.descriptor),
@@ -1038,26 +994,10 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
             }
             (Artifact::new(assembled.path(), spliced), Vec::new())
         }
-        Run::Join {
-            through: Through::KeyHolders(key_holders),
-            ..
-        } => {
-            let checks = checks_policy(
-                args,
-                appraisal.as_ref(),
-                &manifest_path,
-                &manifest,
-                false,
-                &remedy,
-            )?;
-            let enodes =
-                bootnodes::from_key_holders(key_holders, &manifest, &checks, &remedy).await?;
+        Run::Join { through, .. } => {
+            let enodes = bootnodes::from_join(through, &manifest, &checks, &remedy).await?;
             (assembled, enodes)
         }
-        Run::Join {
-            through: Through::NamedPeers,
-            ..
-        } => (assembled, args.bootnode.clone()),
     };
 
     eprint!(
@@ -1068,7 +1008,8 @@ pub async fn configure(args: &ConfigureArgs, config: Option<&Path>) -> anyhow::R
             manifest: &manifest,
             reth_genesis: &reth_genesis,
             summit_genesis: &summit_genesis,
-            policy: policy_source.as_deref(),
+            policy: &policy.source,
+            appraise_configured: !args.no_verify,
             run: &run,
             skipped: &skipped,
             bootnodes: &bootnodes,
@@ -1263,7 +1204,6 @@ pub async fn check(
 #[cfg(test)]
 mod tests {
     use clap::Parser;
-    use seismic_tee_common::network_dir::MANIFEST_FILENAME;
     use seismic_tee_common::test_support::{
         FIXTURE_FOUNDING_TX_IO_PK, FIXTURE_MANIFEST, FakeServer, azure_evidence,
         candidate_tx_io_public_key, consensus_key, refused_url, write_harvest,
@@ -1555,66 +1495,28 @@ mod tests {
         assert!(err.contains("--manifest file not found"), "{err}");
     }
 
-    /// --no-verify skips appraising the nodes configured, not what the run
-    /// relies on: without the network's policy, nothing is sent, and the
-    /// refusal names the way on — a named peer only for a join.
-    #[test]
-    fn no_verify_still_checks_what_the_run_relies_on() {
-        let dir = tempfile::tempdir().unwrap();
-        let manifest_path = dir.path().join(MANIFEST_FILENAME);
+    /// `--no-verify` skips appraising the nodes configured only: the boxes
+    /// the run relies on still need the network's policy, so without one
+    /// nothing is read from the node table, let alone sent.
+    #[tokio::test]
+    async fn no_verify_without_a_policy_fails_before_the_node_table() {
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../networks/fixture-devnet");
+        let (_tmp, dir) = seismic_tee_common::test_support::network_dir();
+        std::fs::copy(fixture.join("network-manifest.json"), dir.manifest()).unwrap();
+        std::fs::copy(fixture.join("reth-genesis.json"), dir.reth_genesis()).unwrap();
+        std::fs::copy(fixture.join("summit-genesis.toml"), dir.summit_genesis()).unwrap();
+
         let args = parse(&[
-            "dev-2",
             "--manifest",
-            manifest_path.to_str().unwrap(),
+            &dir.manifest().to_string_lossy(),
+            "--node",
+            "/absent/nodes.json",
             "--no-verify",
+            "-y",
         ]);
-        let manifest = Manifest::from_json_bytes(FIXTURE_MANIFEST).unwrap();
-
-        let refusal = |founding: bool| {
-            format!(
-                "{:#}",
-                checks_policy(
-                    &args,
-                    None,
-                    &manifest_path,
-                    &manifest,
-                    founding,
-                    &remedy(&args)
-                )
-                .unwrap_err()
-            )
-        };
-        let error = refusal(false);
-        for expected in [
-            "measurement policy not found",
-            "--no-verify skips appraising the nodes configured only",
-            "Nothing was sent",
-            "seismic-tee node configure dev-2 --bootnode <ENODE>",
-        ] {
-            assert!(
-                error.contains(expected),
-                "missing {expected:?} in:\n{error}"
-            );
-        }
-        let error = refusal(true);
-        assert!(error.contains("`seismic-tee ctx set-network`"), "{error}");
-        assert!(!error.contains("--bootnode"), "{error}");
-
-        // An appraisal already resolved is the one used.
-        let appraisal = Appraisal {
-            policy: b"[]".to_vec(),
-            pccs_url: None,
-        };
-        let checks = checks_policy(
-            &args,
-            Some(&appraisal),
-            &manifest_path,
-            &manifest,
-            false,
-            &remedy(&args),
-        )
-        .unwrap();
-        assert_eq!(checks.policy, b"[]");
+        let err = format!("{:#}", configure(&args, None).await.unwrap_err());
+        assert!(err.contains("measurement policy not found"), "{err}");
+        assert!(err.contains("seismic-tee ctx set-network"), "{err}");
     }
 
     /// The appraisal retries a transient failure and then fails the node; the
