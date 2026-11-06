@@ -194,9 +194,11 @@ const complianceToken = getShieldedContract({
 });
 
 // This is a signed read -- response encrypted to the compliance officer's key
-const balance = await complianceToken.read.complianceBalanceOf([targetAccount]);
+const balance = await complianceToken.sread.complianceBalanceOf([targetAccount]);
 console.log("Account balance:", balance);
 ```
+
+Use `.sread` explicitly because `complianceBalanceOf(address)` has no shielded input parameters. Smart `.read` would choose a transparent read, where `msg.sender` is the zero address and cannot authenticate the compliance officer's role. The same applies to `getBalance(address)` and `auditBalanceOf(address)`, which also check `msg.sender`. See [Signed Reads](../../clients/typescript/viem/signed-reads.md) for the routing rules.
 
 The balance is returned encrypted to the compliance officer's key. No one else -- not even other compliance officers -- can see this specific response.
 
