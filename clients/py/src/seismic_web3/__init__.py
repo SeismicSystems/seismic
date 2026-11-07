@@ -35,6 +35,11 @@ Public API
     :class:`SeismicNamespace`, :class:`AsyncSeismicNamespace`,
     :class:`SeismicPublicNamespace`, :class:`AsyncSeismicPublicNamespace`
 
+**Explorer URL helpers** (``seismic_web3.explorer``):
+    :func:`get_explorer_url`, :func:`tx_explorer_url`,
+    :func:`address_explorer_url`, :func:`block_explorer_url`,
+    :func:`token_explorer_url`
+
 **EIP-712** (``seismic_web3.transaction.eip712``):
     :func:`sign_seismic_tx_eip712`, :func:`eip712_signing_hash`,
     :func:`domain_separator`, :func:`struct_hash`,
@@ -94,6 +99,19 @@ from seismic_web3.contract.shielded import (
     AsyncShieldedContract,
     ShieldedContract,
 )
+from seismic_web3.explorer import (
+    AddressExplorerTab,
+    BlockExplorerTab,
+    ExplorerItem,
+    ExplorerTab,
+    TokenExplorerTab,
+    TxExplorerTab,
+    address_explorer_url,
+    block_explorer_url,
+    get_explorer_url,
+    token_explorer_url,
+    tx_explorer_url,
+)
 from seismic_web3.gas_payment import GasPayment
 
 # -- Module ------------------------------------------------------------------
@@ -141,16 +159,20 @@ __all__ = [
     "SEISMIC_TESTNET",
     "SEISMIC_TX_TYPE",
     "SRC20_ABI",
+    "AddressExplorerTab",
     "AsyncPublicContract",
     "AsyncSeismicNamespace",
     "AsyncSeismicPublicNamespace",
     "AsyncShieldedContract",
+    "BlockExplorerTab",
     "Bytes32",
     "ChainConfig",
     "CompressedPublicKey",
     "DebugWriteResult",
     "EncryptionNonce",
     "EncryptionState",
+    "ExplorerItem",
+    "ExplorerTab",
     "GasPayment",
     "GasPaymentResponse",
     "LegacyFields",
@@ -164,8 +186,12 @@ __all__ = [
     "SeismicTransactionResponse",
     "ShieldedContract",
     "Signature",
+    "TokenExplorerTab",
+    "TxExplorerTab",
     "TxSeismicMetadata",
     "UnsignedSeismicTx",
+    "address_explorer_url",
+    "block_explorer_url",
     "build_seismic_typed_data",
     "compute_deposit_data_root",
     "create_async_public_client",
@@ -177,6 +203,7 @@ __all__ = [
     "domain_separator",
     "eip712_signing_hash",
     "get_encryption",
+    "get_explorer_url",
     "has_shielded_params",
     "hex_to_bytes",
     "is_seismic_transaction",
@@ -184,4 +211,6 @@ __all__ = [
     "make_withdrawal_credentials",
     "sign_seismic_tx_eip712",
     "struct_hash",
+    "token_explorer_url",
+    "tx_explorer_url",
 ]

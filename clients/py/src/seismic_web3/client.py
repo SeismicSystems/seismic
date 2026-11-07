@@ -44,6 +44,7 @@ from seismic_web3.transaction.aead import (
 if TYPE_CHECKING:
     from hexbytes import HexBytes
 
+    from seismic_web3.chains import ChainConfig
     from seismic_web3.transaction_types import TxSeismicMetadata
 
 
@@ -165,6 +166,7 @@ def create_wallet_client(
     private_key: PrivateKey,
     *,
     encryption_sk: PrivateKey | None = None,
+    chain: ChainConfig | None = None,
 ) -> Web3:
     """Create a sync ``Web3`` instance with full Seismic wallet capabilities.
 
@@ -181,6 +183,7 @@ def create_wallet_client(
         private_key: 32-byte signing key for transactions.
         encryption_sk: Optional 32-byte key for ECDH.  If ``None``,
             a random ephemeral key is generated.
+        chain: Optional Seismic chain configuration.
 
     Returns:
         A ``Web3`` instance with ``w3.seismic`` namespace attached.
@@ -189,7 +192,12 @@ def create_wallet_client(
     network_pk = get_tee_public_key(w3)
     encryption = get_encryption(network_pk, encryption_sk)
 
-    w3.seismic = SeismicNamespace(w3, encryption, private_key)  # type: ignore[attr-defined]
+    w3.seismic = SeismicNamespace(
+        w3,
+        encryption,
+        private_key,
+        chain=chain,
+    )  # type: ignore[attr-defined]
     return w3
 
 
@@ -199,6 +207,7 @@ async def create_async_wallet_client(
     *,
     encryption_sk: PrivateKey | None = None,
     ws: bool = False,
+    chain: ChainConfig | None = None,
 ) -> AsyncWeb3:
     """Create an async ``Web3`` instance with full Seismic wallet capabilities.
 
@@ -210,6 +219,7 @@ async def create_async_wallet_client(
         ws: If ``True``, uses ``WebSocketProvider``
             (persistent connection, supports subscriptions).
             Otherwise uses ``AsyncHTTPProvider``.
+        chain: Optional Seismic chain configuration.
 
     Returns:
         An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached.
@@ -223,7 +233,12 @@ async def create_async_wallet_client(
     network_pk = await async_get_tee_public_key(w3)
     encryption = get_encryption(network_pk, encryption_sk)
 
-    w3.seismic = AsyncSeismicNamespace(w3, encryption, private_key)  # type: ignore[attr-defined]
+    w3.seismic = AsyncSeismicNamespace(
+        w3,
+        encryption,
+        private_key,
+        chain=chain,
+    )  # type: ignore[attr-defined]
     return w3
 
 
@@ -232,7 +247,11 @@ async def create_async_wallet_client(
 # ---------------------------------------------------------------------------
 
 
-def create_public_client(rpc_url: str) -> Web3:
+def create_public_client(
+    rpc_url: str,
+    *,
+    chain: ChainConfig | None = None,
+) -> Web3:
     """Create a sync ``Web3`` instance with public (read-only) Seismic access.
 
     No private key required.  The ``w3.seismic`` namespace provides
@@ -242,12 +261,16 @@ def create_public_client(rpc_url: str) -> Web3:
 
     Args:
         rpc_url: HTTP(S) URL of the Seismic node.
+        chain: Optional Seismic chain configuration.
 
     Returns:
         A ``Web3`` instance with ``w3.seismic`` namespace attached.
     """
     w3 = Web3(Web3.HTTPProvider(rpc_url))
-    w3.seismic = SeismicPublicNamespace(w3)  # type: ignore[attr-defined]
+    w3.seismic = SeismicPublicNamespace(
+        w3,
+        chain=chain,
+    )  # type: ignore[attr-defined]
     return w3
 
 
@@ -255,6 +278,7 @@ def create_async_public_client(
     provider_url: str,
     *,
     ws: bool = False,
+    chain: ChainConfig | None = None,
 ) -> AsyncWeb3:
     """Create an async ``Web3`` instance with public (read-only) Seismic access.
 
@@ -264,6 +288,7 @@ def create_async_public_client(
         provider_url: HTTP(S) or WS(S) URL of the Seismic node.
         ws: If ``True``, uses ``WebSocketProvider``.
             Otherwise uses ``AsyncHTTPProvider``.
+        chain: Optional Seismic chain configuration.
 
     Returns:
         An ``AsyncWeb3`` instance with ``w3.seismic`` namespace attached.
@@ -274,7 +299,10 @@ def create_async_public_client(
         provider = AsyncHTTPProvider(provider_url)
 
     w3 = AsyncWeb3(provider)
-    w3.seismic = AsyncSeismicPublicNamespace(w3)  # type: ignore[attr-defined]
+    w3.seismic = AsyncSeismicPublicNamespace(
+        w3,
+        chain=chain,
+    )  # type: ignore[attr-defined]
     return w3
 
 

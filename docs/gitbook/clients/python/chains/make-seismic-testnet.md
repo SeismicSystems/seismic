@@ -18,6 +18,7 @@ def make_seismic_testnet(
     n: int = 1,
     *,
     host: str | None = None,
+    explorer_url: str | None = "https://seismic-testnet.socialscan.io",
 ) -> ChainConfig:
 ```
 
@@ -27,6 +28,7 @@ def make_seismic_testnet(
 |-----------|------|----------|---------|-------------|
 | `n` | `int` | No | `1` | GCP node number |
 | `host` | `str \| None` | No | `None` | Custom hostname. Mutually exclusive with `n` |
+| `explorer_url` | `str \| None` | No | `"https://seismic-testnet.socialscan.io"` | Block explorer URL |
 
 Raises `ValueError` if both `n` and `host` are provided.
 

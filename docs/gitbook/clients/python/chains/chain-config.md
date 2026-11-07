@@ -30,6 +30,7 @@ class ChainConfig:
     rpc_url: str
     ws_url: str | None = None
     name: str = ""
+    explorer_url: str | None = None
 ```
 
 ## Attributes
@@ -40,6 +41,7 @@ class ChainConfig:
 | `rpc_url` | `str` | Yes | HTTP(S) JSON-RPC endpoint |
 | `ws_url` | `str \| None` | No | WebSocket endpoint (default: `None`) |
 | `name` | `str` | No | Human-readable network name (default: `""`) |
+| `explorer_url` | `str \| None` | No | Block explorer URL (default: `None`) |
 
 ## Construction
 
@@ -236,6 +238,44 @@ public = SEISMIC_TESTNET.async_public_client(ws=True)
 
 # Read-only operations
 block = await public.eth.get_block("latest")
+```
+
+***
+
+### Explorer URL Helpers
+
+When a `ChainConfig` has an `explorer_url` configured (such as [`SEISMIC_TESTNET`](seismic-testnet.md)), you can generate block explorer URLs for transactions, addresses, tokens, and blocks directly from the configuration or via attached clients.
+
+#### Methods
+
+- `tx_explorer_url(tx_hash, *, tab=None)` - Explorer URL for a transaction
+- `address_explorer_url(address, *, tab=None)` - Explorer URL for an account or contract address
+- `block_explorer_url(block_number, *, tab=None)` - Explorer URL for a block
+- `token_explorer_url(address, *, tab=None)` - Explorer URL for an SRC20 or ERC20 token
+- `get_explorer_url(*, item=None, id=None, tab=None)` - Low-level URL generator
+
+Each helper accepts an optional `tab` parameter to deep-link into a specific explorer view, and returns `None` if the chain has no configured explorer (such as local [`SANVIL`](sanvil.md)).
+
+#### Example
+
+```python
+from seismic_web3 import SEISMIC_TESTNET
+
+# Transaction URL
+tx_url = SEISMIC_TESTNET.tx_explorer_url("0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
+# "https://seismic-testnet.socialscan.io/tx/0xabcdef..."
+
+# Transaction URL with tab
+tx_logs = SEISMIC_TESTNET.tx_explorer_url("0xabcdef...", tab="logs")
+# "https://seismic-testnet.socialscan.io/tx/0xabcdef...?tab=logs"
+
+# Address URL
+addr_url = SEISMIC_TESTNET.address_explorer_url("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+# "https://seismic-testnet.socialscan.io/address/0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+
+# Token URL
+token_url = SEISMIC_TESTNET.token_explorer_url("0xYourTokenAddress", tab="holders")
+# "https://seismic-testnet.socialscan.io/token/0xYourTokenAddress?tab=holders"
 ```
 
 ## Deprecated Methods

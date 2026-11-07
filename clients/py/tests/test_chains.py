@@ -38,6 +38,7 @@ class TestChainConfig:
         cfg = ChainConfig(chain_id=1, rpc_url="http://localhost")
         assert cfg.ws_url is None
         assert cfg.name == ""
+        assert cfg.explorer_url is None
 
 
 class TestSeismicTestnet:
@@ -53,6 +54,9 @@ class TestSeismicTestnet:
     def test_name(self):
         assert "Testnet" in SEISMIC_TESTNET.name
 
+    def test_explorer_url(self):
+        assert SEISMIC_TESTNET.explorer_url == "https://seismic-testnet.socialscan.io"
+
 
 class TestMakeSeismicTestnet:
     def test_instance_2(self):
@@ -60,10 +64,19 @@ class TestMakeSeismicTestnet:
         assert cfg.chain_id == 5124
         assert "testnet-2" in cfg.rpc_url
         assert "testnet-2" in (cfg.ws_url or "")
+        assert cfg.explorer_url == "https://seismic-testnet.socialscan.io"
 
     def test_default_is_1(self):
         cfg = make_seismic_testnet()
         assert cfg.rpc_url == SEISMIC_TESTNET.rpc_url
+        assert cfg.explorer_url == SEISMIC_TESTNET.explorer_url
+
+    def test_custom_explorer_url(self):
+        cfg = make_seismic_testnet(
+            host="custom.node",
+            explorer_url="https://custom.explorer",
+        )
+        assert cfg.explorer_url == "https://custom.explorer"
 
 
 class TestSanvil:
@@ -75,6 +88,9 @@ class TestSanvil:
 
     def test_ws_url(self):
         assert SANVIL.ws_url == "ws://127.0.0.1:8545"
+
+    def test_explorer_url(self):
+        assert SANVIL.explorer_url is None
 
 
 class TestChainConfigClientMethods:

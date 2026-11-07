@@ -27,6 +27,7 @@ ChainConfig(
     rpc_url="https://testnet-1.seismictest.net/rpc",
     ws_url="wss://testnet-1.seismictest.net/ws",
     name="Seismic Testnet",
+    explorer_url="https://seismic-testnet.socialscan.io",
 )
 ```
 
@@ -38,6 +39,7 @@ ChainConfig(
 | `rpc_url` | `"https://testnet-1.seismictest.net/rpc"` |
 | `ws_url` | `"wss://testnet-1.seismictest.net/ws"` |
 | `name` | `"Seismic Testnet"` |
+| `explorer_url` | `"https://seismic-testnet.socialscan.io"` |
 
 ## Usage
 
