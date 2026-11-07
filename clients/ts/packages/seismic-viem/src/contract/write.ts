@@ -71,8 +71,11 @@ export async function smartWriteContract<
   const writeArgs = parameters as unknown as {
     abi: Abi
     functionName: string
+    args?: readonly unknown[]
   }
-  if (hasShieldedParams(writeArgs.abi, writeArgs.functionName)) {
+  if (
+    hasShieldedParams(writeArgs.abi, writeArgs.functionName, writeArgs.args)
+  ) {
     return shieldedWriteContract(
       client as unknown as Parameters<typeof shieldedWriteContract>[0],
       parameters as unknown as Parameters<typeof shieldedWriteContract>[1]
